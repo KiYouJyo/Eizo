@@ -503,7 +503,7 @@
     <value>Display version</value>
   </data>
   <data name="About_InternalVersion" xml:space="preserve">
-    <value>Internal version</value>
+    <value>Package version</value>
   </data>
   <data name="About_Architecture" xml:space="preserve">
     <value>Architecture</value>
