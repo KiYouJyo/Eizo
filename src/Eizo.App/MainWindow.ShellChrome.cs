@@ -61,7 +61,7 @@ public sealed partial class MainWindow
         if (sender is FrameworkElement element)
             element.Unloaded -= ShellTab_Unloaded;
 
-        DispatcherQueue.TryEnqueue(ApplyAdaptiveTabWidths);
+        DispatcherQueue.TryEnqueue(() => ApplyAdaptiveTabWidths());
     }
 
     private double ApplyAdaptiveTabWidths(Border? openingTab = null, double preferredWidth = PreferredTabWidth)
