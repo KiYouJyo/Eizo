@@ -1,5 +1,7 @@
 name: Stage 7 playback integration
 
+# Final signed acceptance packaging trigger
+
 on:
   push:
     branches:
