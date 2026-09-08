@@ -22,6 +22,7 @@ public sealed partial class PlayerView : UserControl
 
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
     private readonly SemaphoreSlim _sourceGate = new(1, 1);
+    private readonly PlaybackView _playbackSurface = new();
 
     private IPlaybackEngine? _engine;
     private PlaybackSource? _currentSource;
@@ -47,8 +48,12 @@ public sealed partial class PlayerView : UserControl
             new EpisodeItemModel("21", "魔法的世界", "魔法の世界", "24:11", T("Category_Unwatched"))
         };
 
-        PlaybackSurface.EngineChanged += PlaybackSurface_EngineChanged;
-        PlaybackSurface.InitializationFailed += PlaybackSurface_InitializationFailed;
+        _playbackSurface.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _playbackSurface.VerticalAlignment = VerticalAlignment.Stretch;
+        PlaybackSurfaceHost.Children.Insert(0, _playbackSurface);
+
+        _playbackSurface.EngineChanged += PlaybackSurface_EngineChanged;
+        _playbackSurface.InitializationFailed += PlaybackSurface_InitializationFailed;
 
         ApplyText();
         ResetTimeline();
