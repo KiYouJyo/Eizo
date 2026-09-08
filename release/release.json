@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.1.0",
-    "packageVersion": "0.1.0.0",
+    "version": "0.2.0",
+    "packageVersion": "0.2.0.0",
     "title": {
-      "zh-CN": "WinUI 3 UI 基础版本",
-      "ja-JP": "WinUI 3 UI 基盤版",
-      "en-US": "WinUI 3 UI Foundation"
+      "zh-CN": "UI 稳定性、三语与应用内更新",
+      "ja-JP": "UI 安定性・3言語・アプリ内更新",
+      "en-US": "UI Stability, Localization & In-App Update"
     }
   },
   "channels": {
