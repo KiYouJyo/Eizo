@@ -503,7 +503,7 @@
     <value>表示バージョン</value>
   </data>
   <data name="About_InternalVersion" xml:space="preserve">
-    <value>内部バージョン</value>
+    <value>パッケージ バージョン</value>
   </data>
   <data name="About_Architecture" xml:space="preserve">
     <value>アーキテクチャ</value>
