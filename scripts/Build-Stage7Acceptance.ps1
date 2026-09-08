@@ -53,6 +53,14 @@ if (-not $pkg) { throw 'Eizo package was not registered after installation.' }
 $manifest = Get-AppxPackageManifest -Package $pkg
 $appId = [string]$manifest.Package.Applications.Application.Id
 $activation = "shell:AppsFolder\$($pkg.PackageFamilyName)!$appId"
+
+$dumpFolder = Join-Path $env:RUNNER_TEMP 'Eizo-crash-dumps'
+New-Item -ItemType Directory -Force -Path $dumpFolder | Out-Null
+$dumpKey = 'HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Eizo.App.exe'
+New-Item -Path $dumpKey -Force | Out-Null
+New-ItemProperty -Path $dumpKey -Name DumpFolder -PropertyType ExpandString -Value $dumpFolder -Force | Out-Null
+New-ItemProperty -Path $dumpKey -Name DumpType -PropertyType DWord -Value 2 -Force | Out-Null
+
 Start-Process explorer.exe -ArgumentList $activation
 Start-Sleep -Seconds 8
 
@@ -90,6 +98,19 @@ if ($running.Count -eq 0) {
         } |
         Select-Object TimeCreated, ProviderName, Id, LevelDisplayName, Message |
         Format-List | Out-Host
+
+    $dump = @(Get-ChildItem $dumpFolder -Filter '*.dmp' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending) | Select-Object -First 1
+    if ($dump) {
+        Write-Host "===== Crash dump: $($dump.FullName) ====="
+        $debuggersRoot = Join-Path ([Environment]::GetEnvironmentVariable('ProgramFiles(x86)')) 'Windows Kits\10\Debuggers\x64'
+        $cdb = Join-Path $debuggersRoot 'cdb.exe'
+        if (Test-Path -LiteralPath $cdb) {
+            & $cdb -z $dump.FullName -c '!analyze -v; .ecxr; kv; q' 2>&1 | Out-Host
+        }
+        else {
+            Write-Host "cdb.exe not found at $cdb"
+        }
+    }
 
     throw 'Eizo failed the signed Stage 7 launch smoke test.'
 }
