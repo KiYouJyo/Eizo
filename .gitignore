@@ -61,3 +61,7 @@ appsettings.Development.local.json
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Stage 7 local dependency bootstrap
+.deps/
+.packages/
