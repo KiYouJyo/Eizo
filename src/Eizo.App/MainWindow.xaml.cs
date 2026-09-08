@@ -26,13 +26,15 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
-        RootGrid.RequestedTheme = ThemePreferenceStore.Load();
+        WindowRoot.RequestedTheme = ThemePreferenceStore.Load();
         UpdateTitleBarColors();
 
         AppWindow.Resize(new SizeInt32(1440, 960));
         ApplyLocalizedShellText();
+        _localization.LanguageChanged += ShellLocalization_LanguageChanged;
+        Closed += MainWindow_Closed;
 
-        RootGrid.ActualThemeChanged += (_, _) =>
+        WindowRoot.ActualThemeChanged += (_, _) =>
         {
             UpdateTitleBarColors();
             RefreshTabVisuals();
@@ -233,6 +235,7 @@ public sealed partial class MainWindow : Window
         };
 
         state.MediaTitle = title;
+        state.Episode = null;
         state.View = view;
         state.Title = title;
         state.Glyph = "\uE8B2";
@@ -242,6 +245,7 @@ public sealed partial class MainWindow : Window
     private void ShowPlayerInDetailTab(ShellTabState state, string title, string episode)
     {
         state.MediaTitle = title;
+        state.Episode = episode;
         state.View = new PlayerView(title, episode);
         state.Title = title + "—" + episode;
         state.Glyph = "\uE768";
@@ -459,6 +463,7 @@ public sealed partial class MainWindow : Window
         public NavigationViewItem? NavItem { get; set; } = navItem;
         public double PreferredWidth { get; } = preferredWidth;
         public string? MediaTitle { get; set; }
+        public string? Episode { get; set; }
         public ShellTabVisual? Visual { get; set; }
     }
 }
