@@ -43,12 +43,30 @@ public partial class App : Application
                 "Logs");
             Directory.CreateDirectory(directory);
 
-            var path = Path.Combine(directory, "startup-failure.log");
-            File.WriteAllText(
-                path,
+            var text =
                 $"Stage: {stage}{Environment.NewLine}" +
                 $"UTC: {DateTimeOffset.UtcNow:O}{Environment.NewLine}" +
-                exception);
+                exception;
+
+            File.WriteAllText(Path.Combine(directory, "startup-failure.log"), text);
+
+            try
+            {
+                File.WriteAllText(Path.Combine(Path.GetTempPath(), "Eizo-startup-failure.log"), text);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                File.WriteAllText(Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "Eizo-startup-failure.log"), text);
+            }
+            catch
+            {
+            }
         }
         catch
         {
