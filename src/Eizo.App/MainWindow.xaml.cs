@@ -1,6 +1,7 @@
 using Eizo.Localization;
 using Eizo.Models;
 using Eizo.Views;
+using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -15,6 +16,9 @@ public sealed partial class MainWindow : Window
 {
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
     private readonly Dictionary<string, ShellTabState> _tabs = new(StringComparer.Ordinal);
+    private readonly WindowPlacementService _windowPlacement = new();
+    private SizeInt32 _lastNormalWindowSize;
+    private bool _wasWindowMaximized;
     private string? _selectedTabKey;
     private bool _navigationChromeHiddenForImmersive;
 
@@ -30,7 +34,10 @@ public sealed partial class MainWindow : Window
         WindowRoot.RequestedTheme = ThemePreferenceStore.Load();
         UpdateTitleBarColors();
 
-        AppWindow.Resize(new SizeInt32(1440, 960));
+        RestoreWindowPlacement();
+        AppWindow.Changed += MainWindow_AppWindowChanged;
+        Closed += MainWindow_WindowPlacementClosed;
+
         ApplyLocalizedShellText();
         _localization.LanguageChanged += ShellLocalization_LanguageChanged;
         Closed += MainWindow_Closed;
@@ -44,6 +51,84 @@ public sealed partial class MainWindow : Window
 
         CreateWorkspaceTab(select: true);
     }
+
+    private void RestoreWindowPlacement()
+    {
+        var workArea = DisplayArea
+            .GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary)
+            .WorkArea;
+
+        var placement = _windowPlacement.Load(
+            new SizeInt32(workArea.Width, workArea.Height));
+
+        _lastNormalWindowSize = new SizeInt32(placement.Width, placement.Height);
+        _wasWindowMaximized = placement.WasMaximized;
+
+        AppWindow.Resize(_lastNormalWindowSize);
+
+        if (_wasWindowMaximized &&
+            AppWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.Maximize();
+        }
+    }
+
+    private void MainWindow_AppWindowChanged(
+        AppWindow sender,
+        AppWindowChangedEventArgs args)
+    {
+        if (AppWindow.Presenter is not OverlappedPresenter presenter) return;
+
+        switch (presenter.State)
+        {
+            case OverlappedPresenterState.Maximized:
+                _wasWindowMaximized = true;
+                break;
+
+            case OverlappedPresenterState.Restored:
+                _wasWindowMaximized = false;
+                if (args.DidSizeChange)
+                    _lastNormalWindowSize = AppWindow.Size;
+                break;
+
+            case OverlappedPresenterState.Minimized:
+                // Never persist a minimized state; retain the last usable size.
+                break;
+        }
+    }
+
+    private void MainWindow_WindowPlacementClosed(object sender, WindowEventArgs e)
+    {
+        AppWindow.Changed -= MainWindow_AppWindowChanged;
+        Closed -= MainWindow_WindowPlacementClosed;
+
+        try
+        {
+            _windowPlacement.Save(_lastNormalWindowSize, _wasWindowMaximized);
+        }
+        catch
+        {
+            // Window placement persistence must never turn a normal close into a crash.
+        }
+    }
+
+    public void RestoreAndActivate()
+    {
+        AppWindow.Show();
+
+        if (AppWindow.Presenter is OverlappedPresenter presenter &&
+            presenter.State == OverlappedPresenterState.Minimized)
+        {
+            presenter.Restore();
+        }
+
+        Activate();
+        SetForegroundWindow(WinRT.Interop.WindowNative.GetWindowHandle(this));
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(nint hWnd);
 
     private string T(string key) => _localization.GetString(key);
 
