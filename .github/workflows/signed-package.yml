@@ -284,80 +284,67 @@ jobs:
           $running | Stop-Process -Force -ErrorAction SilentlyContinue
           Get-AppxPackage -Name Eizo | Remove-AppxPackage -ErrorAction SilentlyContinue
 
-      - name: Create one-click sideload package
+      - name: Generate and validate lightweight one-click package
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $packageRoot = Join-Path $env:ASSETS_DIR 'Eizo-v0.1.0-x64-one-click'
-          New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
+          $staging = Join-Path $env:RUNNER_TEMP 'Eizo-one-click-staging'
+          New-Item -ItemType Directory -Force -Path $staging | Out-Null
 
-          Copy-Item -LiteralPath $env:BUNDLE_PATH -Destination $packageRoot -Force
-          Copy-Item -LiteralPath $env:CERTIFICATE_PATH -Destination $packageRoot -Force
-
-          $installPs1 = @'
-          $ErrorActionPreference = "Stop"
-          $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-          $cer = Join-Path $root "Eizo-v0.1.0-AppPublisher.cer"
-          $bundle = Join-Path $root "Eizo_0.1.0.0_x64.msixbundle"
-          $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($cer)
-
-          $isAdmin = ([Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-          if (-not $isAdmin) {
-            $args = '-NoProfile -ExecutionPolicy Bypass -File "' + $PSCommandPath + '"'
-            $child = Start-Process powershell.exe -ArgumentList $args -Verb RunAs -Wait -PassThru
-            exit $child.ExitCode
+          $buildArgs = @{
+            SignedBundlePath = $env:BUNDLE_PATH
+            PublicCertificatePath = $env:CERTIFICATE_PATH
+            OutputDirectory = $staging
+            DisplayVersion = '0.1.0'
+            PackageVersion = '0.1.0.0'
           }
+          & ./packaging/New-GitHubOneClickInstallerPackage.ps1 @buildArgs
 
-          $trustedStore = 'Cert:\LocalMachine\TrustedPeople'
-          $trusted = Get-ChildItem -Path $trustedStore -ErrorAction SilentlyContinue | Where-Object Thumbprint -eq $cert.Thumbprint | Select-Object -First 1
-          if (-not $trusted) {
-            Import-Certificate -FilePath $cer -CertStoreLocation $trustedStore | Out-Null
-          }
+          $packageRoot = Join-Path $staging 'Eizo-v0.1.0-x64-one-click'
+          & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $packageRoot
 
-          Add-AppxPackage -Path $bundle -ForceApplicationShutdown
-          Write-Host "Eizo v0.1.0 installed." -ForegroundColor Green
-          '@
-          Set-Content -LiteralPath (Join-Path $packageRoot 'Install-Eizo.ps1') -Value $installPs1 -Encoding utf8
-
-          $cmd = '@echo off' + [Environment]::NewLine +
-                 'powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Install-Eizo.ps1"' + [Environment]::NewLine +
-                 'pause' + [Environment]::NewLine
-          Set-Content -LiteralPath (Join-Path $packageRoot 'Install-Eizo.cmd') -Value $cmd -Encoding ascii
-
-          $readme = @'
-          Eizo v0.1.0 x64 signed acceptance package
-
-          1. Double-click Install-Eizo.cmd.
-          2. The installer requests UAC once, imports only the included AppPublisher public certificate into LocalMachine\TrustedPeople.
-          3. Windows App Runtime 1.8 x64 is expected to already be installed on this test machine.
-          4. It then installs the signed Eizo MSIX bundle.
-
-          Signer: CN=AppPublisher
-          Certificate thumbprint: BD85AD77A651C86CA01A480C8E9BC64952993F98
-          '@
-          Set-Content -LiteralPath (Join-Path $packageRoot 'README.txt') -Value $readme -Encoding utf8
-
-          $zip = Join-Path $env:ASSETS_DIR 'Eizo-v0.1.0-x64-signed-installer.zip'
+          $zip = Join-Path $env:ASSETS_DIR 'Eizo-v0.1.0-x64-one-click.zip'
           Compress-Archive -LiteralPath $packageRoot -DestinationPath $zip -CompressionLevel Optimal
+
+          $extracted = Join-Path $env:RUNNER_TEMP 'Eizo-one-click-extracted'
+          Expand-Archive -LiteralPath $zip -DestinationPath $extracted -Force
+          $extractedRoot = Join-Path $extracted 'Eizo-v0.1.0-x64-one-click'
+          & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $extractedRoot -ZipPath $zip
+
+          $installPayload = Join-Path $extractedRoot 'payload\Install.ps1'
+          & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $installPayload -BundlePathOverride $env:BUNDLE_PATH
+          if ($LASTEXITCODE -ne 0) { throw "One-click local install validation failed: $LASTEXITCODE" }
+
+          $installed = Get-AppxPackage -Name Eizo
+          if (-not $installed -or [string]$installed.Version -ne '0.1.0.0') {
+            throw 'One-click bootstrap did not install Eizo 0.1.0.0.'
+          }
+
+          $uninstallPayload = Join-Path $extractedRoot 'payload\Uninstall.ps1'
+          & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $uninstallPayload -RemoveCertificate
+          if ($LASTEXITCODE -ne 0) { throw "One-click uninstall validation failed: $LASTEXITCODE" }
 
       - name: Generate SHA-256 manifest
         shell: pwsh
         run: |
-          $files = Get-ChildItem $env:ASSETS_DIR -File | Sort-Object Name
+          $files = @(
+            $env:BUNDLE_PATH,
+            (Join-Path $env:ASSETS_DIR 'Eizo-v0.1.0-x64-one-click.zip')
+          )
           $lines = foreach ($file in $files) {
-            "{0}  {1}" -f (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $file.Name
+            $item = Get-Item -LiteralPath $file
+            "{0}  {1}" -f (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant(), $item.Name
           }
           Set-Content -LiteralPath (Join-Path $env:ASSETS_DIR 'SHA256SUMS.txt') -Value $lines -Encoding ascii
           Get-Content (Join-Path $env:ASSETS_DIR 'SHA256SUMS.txt')
 
-      - name: Upload signed installer
-        uses: actions/upload-artifact@v6
+      - name: Upload signed release-contract assets
+        uses: actions/upload-artifact@v7
         with:
-          name: Eizo-v0.1.0-x64-signed-installer
+          name: Eizo-v0.1.0-github-release-assets
           path: |
             ${{ env.ASSETS_DIR }}/Eizo_0.1.0.0_x64.msixbundle
-            ${{ env.ASSETS_DIR }}/Eizo-v0.1.0-AppPublisher.cer
-            ${{ env.ASSETS_DIR }}/Eizo-v0.1.0-x64-signed-installer.zip
+            ${{ env.ASSETS_DIR }}/Eizo-v0.1.0-x64-one-click.zip
             ${{ env.ASSETS_DIR }}/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
