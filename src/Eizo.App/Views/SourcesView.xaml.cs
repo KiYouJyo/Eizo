@@ -1,3 +1,4 @@
+using Eizo.Controls;
 using Eizo.Localization;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
@@ -61,6 +62,8 @@ public sealed partial class SourcesView : UserControl
             ItemsSource = new[] { T("Source_Local"), "WebDAV", "OneDrive", "Google Drive" },
             SelectedIndex = 1
         };
+
+        TransientComboBoxTheme.SetApply(provider, true);
 
         var content = new StackPanel { Spacing = 12, MinWidth = 360 };
         content.Children.Add(provider);
