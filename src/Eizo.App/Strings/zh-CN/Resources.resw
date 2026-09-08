@@ -503,7 +503,7 @@
     <value>显示版本</value>
   </data>
   <data name="About_InternalVersion" xml:space="preserve">
-    <value>内部版本</value>
+    <value>包版本</value>
   </data>
   <data name="About_Architecture" xml:space="preserve">
     <value>当前架构</value>
