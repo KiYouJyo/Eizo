@@ -4,8 +4,8 @@ namespace Eizo;
 
 internal static class AppVersionProvider
 {
-    public const string Version = "0.1.0";
-    public const string DisplayVersion = "v0.1.0";
+    public const string Version = "0.2.0";
+    public const string DisplayVersion = "v0.2.0";
 
     public static Version GetCurrentVersion()
     {
@@ -16,7 +16,7 @@ internal static class AppVersionProvider
         }
         catch (Exception) when (OperatingSystem.IsWindows())
         {
-            var assemblyVersion = typeof(AppVersionProvider).Assembly.GetName().Version ?? new Version(0, 1, 0, 0);
+            var assemblyVersion = typeof(AppVersionProvider).Assembly.GetName().Version ?? new Version(0, 2, 0, 0);
             return new Version(
                 assemblyVersion.Major,
                 assemblyVersion.Minor,

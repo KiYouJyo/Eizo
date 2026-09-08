@@ -11,28 +11,83 @@ namespace Eizo;
 public sealed partial class MainWindow
 {
     internal const double PreferredTabWidth = 220;
+    private const double MinimumTabWidth = 72;
+    private const double ShellTabSpacing = 8;
+    private const double NewTabButtonWidth = 32;
     private static readonly Duration TabOpenDuration = new(TimeSpan.FromMilliseconds(190));
 
+    private bool _adaptiveTabSizingInitialized;
     private SplitView? _navigationSplitView;
     private bool _navigationPaneBackgroundHooked;
+    private bool _shellReady;
 
     private void ShellNavigation_Loaded(object sender, RoutedEventArgs e)
     {
         HookNavigationPaneBackground();
+        _shellReady = true;
+        ApplyResponsiveLayout(force: true);
+        DispatcherQueue.TryEnqueue(() => ApplyResponsiveLayout(force: true));
     }
 
     private void RootGrid_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        // Match SpatialViewer: title-bar tabs stay at a stable 220-DIP width and
-        // the title strip scrolls when the window becomes narrow. Mutating tab
-        // widths from SizeChanged used to re-enter layout while NavigationView
-        // was also changing display mode, which could crash after a tiny-window
-        // resize followed by expansion.
+        if (_shellReady) ApplyResponsiveLayout();
     }
 
     private void ConfigureTabInteractions(Border container, double preferredWidth)
     {
-        AnimateTabOpen(container, Math.Max(1, preferredWidth));
+        EnsureAdaptiveTabSizing();
+        container.Unloaded += ShellTab_Unloaded;
+
+        var adaptiveTargetWidth = ApplyAdaptiveTabWidths(container, preferredWidth);
+        AnimateTabOpen(container, adaptiveTargetWidth);
+    }
+
+    private void EnsureAdaptiveTabSizing()
+    {
+        if (_adaptiveTabSizingInitialized) return;
+        _adaptiveTabSizingInitialized = true;
+        AppTitleBar.SizeChanged += AppTitleBar_AdaptiveTabsSizeChanged;
+    }
+
+    private void AppTitleBar_AdaptiveTabsSizeChanged(object sender, SizeChangedEventArgs e) =>
+        ApplyAdaptiveTabWidths();
+
+    private void ShellTab_Unloaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement element)
+            element.Unloaded -= ShellTab_Unloaded;
+
+        DispatcherQueue.TryEnqueue(() => ApplyAdaptiveTabWidths());
+    }
+
+    private double ApplyAdaptiveTabWidths(Border? openingTab = null, double preferredWidth = PreferredTabWidth)
+    {
+        var tabCount = ShellTabItems.Children.Count;
+        if (tabCount <= 0) return preferredWidth;
+
+        var titleBarWidth = AppTitleBar.ActualWidth;
+        if (!double.IsFinite(titleBarWidth) || titleBarWidth <= 0) return preferredWidth;
+
+        // Same algorithm as SpatialViewer. Eizo uses a 128-DIP product column
+        // instead of SpatialViewer's 104-DIP product column.
+        const double fixedTitleBarWidth = 128 + 132 + 12 + 12;
+        var tabViewportWidth = Math.Max(0, titleBarWidth - fixedTitleBarWidth);
+        var spacingWidth = ShellTabSpacing * tabCount;
+        var usableTabWidth = Math.Max(0, tabViewportWidth - NewTabButtonWidth - spacingWidth);
+        var calculatedWidth = usableTabWidth / tabCount;
+        var targetWidth = Math.Clamp(
+            calculatedWidth,
+            MinimumTabWidth,
+            Math.Min(PreferredTabWidth, preferredWidth));
+
+        foreach (var child in ShellTabItems.Children)
+        {
+            if (child is not Border tab || ReferenceEquals(tab, openingTab)) continue;
+            tab.Width = targetWidth;
+        }
+
+        return targetWidth;
     }
 
     private void AnimateTabOpen(Border container, double targetWidth)
@@ -75,8 +130,8 @@ public sealed partial class MainWindow
         storyboard.Completed += (_, _) =>
         {
             if (container.Parent is null) return;
-            container.Width = targetWidth;
             container.Opacity = 1;
+            ApplyAdaptiveTabWidths();
         };
         storyboard.Begin();
     }
