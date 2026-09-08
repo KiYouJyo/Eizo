@@ -121,11 +121,7 @@
                             MaxWidth="250"
                             HorizontalAlignment="Right"
                             controls:TransientComboBoxTheme.Apply="True"
-                            SelectedIndex="0">
-                    <ComboBoxItem Content="简体中文" />
-                    <ComboBoxItem Content="日本語" />
-                    <ComboBoxItem Content="English" />
-                  </ComboBox>
+                            SelectionChanged="LanguagePicker_SelectionChanged" />
                 </Grid>
 
                 <Border Height="1"
