@@ -139,7 +139,9 @@ jobs:
           }
 
           Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
-          Add-AppxPackage -Path $env:BUNDLE_PATH -DependencyPath $env:RUNTIME_DEPENDENCY_PATH -ForceApplicationShutdown
+          & $env:RUNTIME_INSTALLER_PATH --quiet
+          if ($LASTEXITCODE -ne 0) { throw "Windows App Runtime installer failed: $LASTEXITCODE" }
+          Add-AppxPackage -Path $env:BUNDLE_PATH -ForceApplicationShutdown
 
           $pkg = Get-AppxPackage -Name Eizo
           if (-not $pkg) { throw 'Eizo package was not registered after installation.' }
