@@ -601,4 +601,25 @@
   <data name="Settings_LanguageSystem" xml:space="preserve">
     <value>跟随系统</value>
   </data>
+  <data name="Playback_OpenLocalMedia" xml:space="preserve">
+    <value>打开本地媒体</value>
+  </data>
+  <data name="Playback_SelectLocalMedia" xml:space="preserve">
+    <value>选择本地媒体开始播放</value>
+  </data>
+  <data name="Playback_Ended" xml:space="preserve">
+    <value>播放结束</value>
+  </data>
+  <data name="Playback_PreviousChapter" xml:space="preserve">
+    <value>上一章节</value>
+  </data>
+  <data name="Playback_NextChapter" xml:space="preserve">
+    <value>下一章节</value>
+  </data>
+  <data name="Playback_Back10Seconds" xml:space="preserve">
+    <value>后退 10 秒</value>
+  </data>
+  <data name="Playback_Forward10Seconds" xml:space="preserve">
+    <value>前进 10 秒</value>
+  </data>
 </root>

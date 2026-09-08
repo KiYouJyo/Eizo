@@ -601,4 +601,25 @@
   <data name="Settings_LanguageSystem" xml:space="preserve">
     <value>システム設定に従う</value>
   </data>
+  <data name="Playback_OpenLocalMedia" xml:space="preserve">
+    <value>ローカルメディアを開く</value>
+  </data>
+  <data name="Playback_SelectLocalMedia" xml:space="preserve">
+    <value>ローカルメディアを選択して再生を開始</value>
+  </data>
+  <data name="Playback_Ended" xml:space="preserve">
+    <value>再生終了</value>
+  </data>
+  <data name="Playback_PreviousChapter" xml:space="preserve">
+    <value>前のチャプター</value>
+  </data>
+  <data name="Playback_NextChapter" xml:space="preserve">
+    <value>次のチャプター</value>
+  </data>
+  <data name="Playback_Back10Seconds" xml:space="preserve">
+    <value>10秒戻る</value>
+  </data>
+  <data name="Playback_Forward10Seconds" xml:space="preserve">
+    <value>10秒進む</value>
+  </data>
 </root>
