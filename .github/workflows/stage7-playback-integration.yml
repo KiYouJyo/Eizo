@@ -19,7 +19,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-2025-vs2026
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     steps:
       - name: Checkout Eizo
@@ -46,16 +46,87 @@ jobs:
       - name: Verify playback dependency boundary
         shell: pwsh
         run: |
-          $assets = Get-ChildItem src\Eizo.App\bin\x64\Release -Recurse -File -ErrorAction SilentlyContinue
-          $expected = @(
+          $assets = @(Get-ChildItem src\Eizo.App\bin\x64\Release -Recurse -File -ErrorAction SilentlyContinue)
+          $expectedManaged = @(
             'Eizo.Playback.Abstractions.dll',
             'Eizo.Playback.Core.dll',
             'Eizo.Playback.LibVLC.dll',
             'Eizo.Playback.LibVLC.WinUI.dll'
           )
 
-          foreach ($name in $expected) {
+          foreach ($name in $expectedManaged) {
             if (-not ($assets | Where-Object Name -eq $name | Select-Object -First 1)) {
               throw "Playback integration output is missing $name"
             }
           }
+
+          foreach ($name in @('libvlc.dll', 'libvlccore.dll')) {
+            if (-not ($assets | Where-Object Name -eq $name | Select-Object -First 1)) {
+              throw "Playback native runtime output is missing $name"
+            }
+          }
+
+          $pluginDlls = @($assets | Where-Object {
+            $_.Extension -eq '.dll' -and
+            $_.FullName -match '[\\/]plugins[\\/]'
+          })
+
+          if ($pluginDlls.Count -eq 0) {
+            throw 'Playback native runtime output does not contain LibVLC plugins.'
+          }
+
+          Write-Host "Managed playback assemblies PASS: $($expectedManaged.Count)"
+          Write-Host "LibVLC plugin DLLs PASS: $($pluginDlls.Count)"
+
+      - name: Build unsigned playback integration MSIX
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:RUNNER_TEMP 'Eizo-Playback-AppPackages'
+
+          msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir="$output\"
+          if ($LASTEXITCODE -ne 0) { throw "Playback integration MSIX build failed: $LASTEXITCODE" }
+
+          $msix = @(Get-ChildItem $output -Recurse -Filter '*.msix' -File) | Select-Object -First 1
+          if (-not $msix) {
+            throw 'Playback integration MSIX was not produced.'
+          }
+
+          "PLAYBACK_MSIX=$($msix.FullName)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Verify LibVLC payload inside MSIX
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($env:PLAYBACK_MSIX)
+          try {
+            $entries = @($archive.Entries | ForEach-Object FullName)
+
+            foreach ($name in @('libvlc.dll', 'libvlccore.dll')) {
+              if (-not ($entries | Where-Object { $_ -match "(^|[\\/])$([regex]::Escape($name))$" })) {
+                throw "MSIX does not contain $name"
+              }
+            }
+
+            $pluginEntries = @($entries | Where-Object {
+              $_ -match '(^|[\\/])plugins[\\/].+\.dll$'
+            })
+
+            if ($pluginEntries.Count -eq 0) {
+              throw 'MSIX does not contain LibVLC plugin DLLs.'
+            }
+
+            Write-Host "MSIX LibVLC payload PASS. Plugins=$($pluginEntries.Count)"
+          }
+          finally {
+            $archive.Dispose()
+          }
+
+      - name: Upload unsigned integration MSIX
+        uses: actions/upload-artifact@v7
+        with:
+          name: Eizo-Stage7-playback-integration-\${{ github.sha }}
+          path: \${{ env.PLAYBACK_MSIX }}
+          if-no-files-found: error
+          retention-days: 14
