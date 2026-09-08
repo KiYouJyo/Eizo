@@ -117,12 +117,11 @@ jobs:
           $ErrorActionPreference = 'Stop'
 
           $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($env:CERTIFICATE_PATH)
-          $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("TrustedPeople","CurrentUser")
-          $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-          try {
-            if (-not @($store.Certificates | Where-Object Thumbprint -eq $cert.Thumbprint)) { $store.Add($cert) }
+          $trustedStore = 'Cert:\LocalMachine\TrustedPeople'
+          $trusted = Get-ChildItem -Path $trustedStore -ErrorAction SilentlyContinue | Where-Object Thumbprint -eq $cert.Thumbprint | Select-Object -First 1
+          if (-not $trusted) {
+            Import-Certificate -FilePath $env:CERTIFICATE_PATH -CertStoreLocation $trustedStore | Out-Null
           }
-          finally { $store.Close() }
 
           Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
           Add-AppxPackage -Path $env:BUNDLE_PATH -ForceApplicationShutdown
