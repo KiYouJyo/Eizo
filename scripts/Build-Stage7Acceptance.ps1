@@ -58,7 +58,41 @@ Start-Sleep -Seconds 8
 
 $installRoot = [IO.Path]::GetFullPath($pkg.InstallLocation)
 $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { try { $_.Path -and ([IO.Path]::GetFullPath($_.Path)).StartsWith($installRoot, [StringComparison]::OrdinalIgnoreCase) } catch { $false } })
-if ($running.Count -eq 0) { throw 'Eizo failed the signed Stage 7 launch smoke test.' }
+if ($running.Count -eq 0) {
+    Write-Host 'Eizo process did not remain alive. Capturing diagnostics.'
+
+    $startupLog = Join-Path $env:LOCALAPPDATA 'Eizo\Logs\startup-failure.log'
+    if (Test-Path -LiteralPath $startupLog) {
+        Write-Host '===== Eizo startup-failure.log ====='
+        Get-Content -LiteralPath $startupLog -Raw | Write-Host
+        Write-Host '===== end startup-failure.log ====='
+    }
+    else {
+        Write-Host "No startup failure log at $startupLog"
+    }
+
+    foreach ($logName in @(
+        'Microsoft-Windows-AppModel-Runtime/Admin',
+        'Microsoft-Windows-TWinUI/Operational'
+    )) {
+        Write-Host "===== $logName ====="
+        Get-WinEvent -FilterHashtable @{ LogName=$logName; StartTime=(Get-Date).AddMinutes(-3) } -ErrorAction SilentlyContinue |
+            Where-Object { $_.Message -match '(?i)Eizo|1z32rh13vfry6' } |
+            Select-Object TimeCreated, ProviderName, Id, LevelDisplayName, Message |
+            Format-List | Out-Host
+    }
+
+    Write-Host '===== Application ====='
+    Get-WinEvent -FilterHashtable @{ LogName='Application'; StartTime=(Get-Date).AddMinutes(-3) } -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.ProviderName -in @('Application Error','.NET Runtime','Windows Error Reporting','Microsoft-Windows-AppModel-Runtime') -or
+            $_.Message -match '(?i)Eizo|Eizo\.App'
+        } |
+        Select-Object TimeCreated, ProviderName, Id, LevelDisplayName, Message |
+        Format-List | Out-Host
+
+    throw 'Eizo failed the signed Stage 7 launch smoke test.'
+}
 
 $running | Stop-Process -Force -ErrorAction SilentlyContinue
 Get-AppxPackage -Name Eizo | Remove-AppxPackage -ErrorAction SilentlyContinue
