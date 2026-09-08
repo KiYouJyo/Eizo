@@ -1,10 +1,15 @@
 using Microsoft.UI.Xaml;
+using Microsoft.Windows.AppLifecycle;
 
 namespace Eizo;
 
 public partial class App : Application
 {
+    private static readonly object ActivationGate = new();
+    private static bool _redirectedActivationPending;
     private Window? _window;
+
+    internal static MainWindow? MainWindow { get; private set; }
 
     public App()
     {
@@ -20,11 +25,41 @@ public partial class App : Application
         }
     }
 
+    internal static void OnRedirectedActivation(AppActivationArguments activationArguments)
+    {
+        MainWindow? existingWindow;
+        lock (ActivationGate)
+        {
+            existingWindow = MainWindow;
+            if (existingWindow is null)
+            {
+                _redirectedActivationPending = true;
+                return;
+            }
+        }
+
+        existingWindow.DispatcherQueue.TryEnqueue(existingWindow.RestoreAndActivate);
+    }
+
+    private static void ActivatePendingRedirectedWindow()
+    {
+        MainWindow? existingWindow;
+        lock (ActivationGate)
+        {
+            if (!_redirectedActivationPending || MainWindow is null) return;
+            _redirectedActivationPending = false;
+            existingWindow = MainWindow;
+        }
+
+        existingWindow.DispatcherQueue.TryEnqueue(existingWindow.RestoreAndActivate);
+    }
+
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         try
         {
-            _window = new MainWindow();
+            _window = MainWindow = new MainWindow();
+            ActivatePendingRedirectedWindow();
             _window.Activate();
         }
         catch (Exception ex)
