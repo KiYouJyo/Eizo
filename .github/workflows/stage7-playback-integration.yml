@@ -3,7 +3,13 @@ name: Stage 7 playback integration
 on:
   push:
     branches:
-      - "feat/stage7-playback-integration"
+      - main
+    paths:
+      - "eng/Eizo.Playback.json"
+      - "NuGet.config"
+      - "scripts/Restore-EizoPlayback.ps1"
+      - "src/Eizo.App/**"
+      - ".github/workflows/stage7-playback-integration.yml"
   pull_request:
     paths:
       - "eng/Eizo.Playback.json"
