@@ -598,4 +598,7 @@
   <data name="Playback_Info" xml:space="preserve">
     <value>Playback info</value>
   </data>
+  <data name="Settings_LanguageSystem" xml:space="preserve">
+    <value>Follow system</value>
+  </data>
 </root>
