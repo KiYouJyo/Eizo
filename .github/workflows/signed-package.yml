@@ -352,8 +352,8 @@ jobs:
 
           # Window-size persistence contract. End at a deterministic restored size,
           # close normally so Closed persists it, then relaunch and verify the same size.
-          $persistWidth = 1110
-          $persistHeight = 710
+          $persistWidth = 900
+          $persistHeight = 650
           if (-not [EizoWindowNative]::MoveWindow(
               $appProcess.MainWindowHandle, 100, 100, $persistWidth, $persistHeight, $true)) {
             throw 'Could not set deterministic size for persistence validation.'
