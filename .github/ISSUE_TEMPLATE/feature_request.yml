@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest an improvement or new capability.
+title: "[Feature] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What user need should this feature solve?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Japanese anime
+        - Japanese drama
+        - Metadata
+        - Playback
+        - Subtitles
+        - Local library
+        - WebDAV
+        - Cloud storage
+        - Streaming / cache
+        - UI / localization
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the experience rather than only the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples
+      description: For media-recognition requests, anonymized filename examples are especially useful.

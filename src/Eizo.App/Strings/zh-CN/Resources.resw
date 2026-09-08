@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <data name="App_DisplayName" xml:space="preserve">
+    <value>映藏</value>
+  </data>
+  <data name="App_Description" xml:space="preserve">
+    <value>为日本动漫、日剧而生的原生 Windows 影音库</value>
+  </data>
+  <data name="Nav_Home" xml:space="preserve">
+    <value>主页</value>
+  </data>
+  <data name="Nav_Anime" xml:space="preserve">
+    <value>动漫</value>
+  </data>
+  <data name="Nav_JapaneseDrama" xml:space="preserve">
+    <value>日剧</value>
+  </data>
+  <data name="Nav_Movies" xml:space="preserve">
+    <value>电影</value>
+  </data>
+  <data name="Nav_Series" xml:space="preserve">
+    <value>剧集</value>
+  </data>
+  <data name="Nav_Library" xml:space="preserve">
+    <value>媒体库</value>
+  </data>
+  <data name="Nav_Sources" xml:space="preserve">
+    <value>媒体来源</value>
+  </data>
+  <data name="Nav_Downloads" xml:space="preserve">
+    <value>下载</value>
+  </data>
+  <data name="Nav_Search" xml:space="preserve">
+    <value>搜索</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Section_ContinueWatching" xml:space="preserve">
+    <value>继续观看</value>
+  </data>
+  <data name="Section_CurrentSeason" xml:space="preserve">
+    <value>本季动漫</value>
+  </data>
+  <data name="Section_RecentlyAdded" xml:space="preserve">
+    <value>最近添加</value>
+  </data>
+  <data name="Section_Anime" xml:space="preserve">
+    <value>动漫</value>
+  </data>
+  <data name="Section_JapaneseDrama" xml:space="preserve">
+    <value>日剧</value>
+  </data>
+  <data name="Section_Movies" xml:space="preserve">
+    <value>电影</value>
+  </data>
+  <data name="Common_Play" xml:space="preserve">
+    <value>播放</value>
+  </data>
+  <data name="Common_Continue" xml:space="preserve">
+    <value>继续播放</value>
+  </data>
+  <data name="Common_Pause" xml:space="preserve">
+    <value>暂停</value>
+  </data>
+  <data name="Common_Favorite" xml:space="preserve">
+    <value>收藏</value>
+  </data>
+  <data name="Common_More" xml:space="preserve">
+    <value>更多</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Common_Edit" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="Common_Add" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="Common_Remove" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="Common_Close" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="Common_Back" xml:space="preserve">
+    <value>返回</value>
+  </data>
+  <data name="Common_Retry" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="Common_Refresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="Common_Confirm" xml:space="preserve">
+    <value>确认</value>
+  </data>
+  <data name="Common_Browse" xml:space="preserve">
+    <value>浏览</value>
+  </data>
+  <data name="Common_Unknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="Media_Episodes" xml:space="preserve">
+    <value>剧集</value>
+  </data>
+  <data name="Media_Seasons" xml:space="preserve">
+    <value>季度</value>
+  </data>
+  <data name="Media_Specials" xml:space="preserve">
+    <value>特别篇</value>
+  </data>
+  <data name="Media_Extras" xml:space="preserve">
+    <value>特典</value>
+  </data>
+  <data name="Media_Cast" xml:space="preserve">
+    <value>演员与声优</value>
+  </data>
+  <data name="Media_Staff" xml:space="preserve">
+    <value>制作人员</value>
+  </data>
+  <data name="Media_RelatedWorks" xml:space="preserve">
+    <value>关联作品</value>
+  </data>
+  <data name="Media_Versions" xml:space="preserve">
+    <value>媒体版本</value>
+  </data>
+  <data name="Media_Overview" xml:space="preserve">
+    <value>简介</value>
+  </data>
+  <data name="Media_ReleaseDate" xml:space="preserve">
+    <value>上映日期</value>
+  </data>
+  <data name="Media_AirDate" xml:space="preserve">
+    <value>播出日期</value>
+  </data>
+  <data name="Media_Studio" xml:space="preserve">
+    <value>动画制作</value>
+  </data>
+  <data name="Media_SourceMaterial" xml:space="preserve">
+    <value>原作</value>
+  </data>
+  <data name="Anime_TV" xml:space="preserve">
+    <value>电视动画</value>
+  </data>
+  <data name="Anime_Movie" xml:space="preserve">
+    <value>剧场版</value>
+  </data>
+  <data name="Anime_OVA" xml:space="preserve">
+    <value>OVA</value>
+  </data>
+  <data name="Anime_OAD" xml:space="preserve">
+    <value>OAD</value>
+  </data>
+  <data name="Anime_ONA" xml:space="preserve">
+    <value>ONA</value>
+  </data>
+  <data name="Anime_Special" xml:space="preserve">
+    <value>特别篇</value>
+  </data>
+  <data name="Anime_Season_Winter" xml:space="preserve">
+    <value>冬季</value>
+  </data>
+  <data name="Anime_Season_Spring" xml:space="preserve">
+    <value>春季</value>
+  </data>
+  <data name="Anime_Season_Summer" xml:space="preserve">
+    <value>夏季</value>
+  </data>
+  <data name="Anime_Season_Fall" xml:space="preserve">
+    <value>秋季</value>
+  </data>
+  <data name="Playback_AudioTrack" xml:space="preserve">
+    <value>音轨</value>
+  </data>
+  <data name="Playback_SubtitleTrack" xml:space="preserve">
+    <value>字幕</value>
+  </data>
+  <data name="Playback_Speed" xml:space="preserve">
+    <value>播放速度</value>
+  </data>
+  <data name="Playback_FullScreen" xml:space="preserve">
+    <value>全屏</value>
+  </data>
+  <data name="Playback_NextEpisode" xml:space="preserve">
+    <value>下一集</value>
+  </data>
+  <data name="Playback_PreviousEpisode" xml:space="preserve">
+    <value>上一集</value>
+  </data>
+  <data name="Playback_NoSubtitle" xml:space="preserve">
+    <value>关闭字幕</value>
+  </data>
+  <data name="Source_Local" xml:space="preserve">
+    <value>本地</value>
+  </data>
+  <data name="Source_WebDAV" xml:space="preserve">
+    <value>WebDAV</value>
+  </data>
+  <data name="Source_OneDrive" xml:space="preserve">
+    <value>OneDrive</value>
+  </data>
+  <data name="Source_GoogleDrive" xml:space="preserve">
+    <value>Google Drive</value>
+  </data>
+  <data name="Source_Add" xml:space="preserve">
+    <value>添加媒体来源</value>
+  </data>
+  <data name="Source_StatusConnected" xml:space="preserve">
+    <value>已连接</value>
+  </data>
+  <data name="Source_StatusDisconnected" xml:space="preserve">
+    <value>未连接</value>
+  </data>
+  <data name="Settings_Language" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="Settings_Appearance" xml:space="preserve">
+    <value>外观</value>
+  </data>
+  <data name="Settings_Playback" xml:space="preserve">
+    <value>播放</value>
+  </data>
+  <data name="Settings_Metadata" xml:space="preserve">
+    <value>元数据</value>
+  </data>
+  <data name="Settings_Sources" xml:space="preserve">
+    <value>媒体来源</value>
+  </data>
+  <data name="Settings_About" xml:space="preserve">
+    <value>关于 Eizo</value>
+  </data>
+  <data name="Status_Loading" xml:space="preserve">
+    <value>正在加载…</value>
+  </data>
+  <data name="Status_EmptyLibrary" xml:space="preserve">
+    <value>媒体库还是空的</value>
+  </data>
+  <data name="Status_NoResults" xml:space="preserve">
+    <value>没有找到结果</value>
+  </data>
+  <data name="Status_Error" xml:space="preserve">
+    <value>发生错误</value>
+  </data>
+  <data name="Error_TryAgain" xml:space="preserve">
+    <value>请重试。</value>
+  </data>
+  <data name="Search_Placeholder" xml:space="preserve">
+    <value>搜索动漫、日剧和电影</value>
+  </data>
+  <data name="Library_AddSourcePrompt" xml:space="preserve">
+    <value>添加一个媒体来源，开始建立你的影音库</value>
+  </data>
+</root>

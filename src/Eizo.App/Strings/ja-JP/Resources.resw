@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <data name="App_DisplayName" xml:space="preserve">
+    <value>映蔵</value>
+  </data>
+  <data name="App_Description" xml:space="preserve">
+    <value>日本のアニメ・ドラマを中心に楽しむネイティブ Windows メディアライブラリ</value>
+  </data>
+  <data name="Nav_Home" xml:space="preserve">
+    <value>ホーム</value>
+  </data>
+  <data name="Nav_Anime" xml:space="preserve">
+    <value>アニメ</value>
+  </data>
+  <data name="Nav_JapaneseDrama" xml:space="preserve">
+    <value>日本ドラマ</value>
+  </data>
+  <data name="Nav_Movies" xml:space="preserve">
+    <value>映画</value>
+  </data>
+  <data name="Nav_Series" xml:space="preserve">
+    <value>シリーズ</value>
+  </data>
+  <data name="Nav_Library" xml:space="preserve">
+    <value>ライブラリ</value>
+  </data>
+  <data name="Nav_Sources" xml:space="preserve">
+    <value>メディアソース</value>
+  </data>
+  <data name="Nav_Downloads" xml:space="preserve">
+    <value>ダウンロード</value>
+  </data>
+  <data name="Nav_Search" xml:space="preserve">
+    <value>検索</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Section_ContinueWatching" xml:space="preserve">
+    <value>視聴を続ける</value>
+  </data>
+  <data name="Section_CurrentSeason" xml:space="preserve">
+    <value>今期のアニメ</value>
+  </data>
+  <data name="Section_RecentlyAdded" xml:space="preserve">
+    <value>最近追加した項目</value>
+  </data>
+  <data name="Section_Anime" xml:space="preserve">
+    <value>アニメ</value>
+  </data>
+  <data name="Section_JapaneseDrama" xml:space="preserve">
+    <value>日本ドラマ</value>
+  </data>
+  <data name="Section_Movies" xml:space="preserve">
+    <value>映画</value>
+  </data>
+  <data name="Common_Play" xml:space="preserve">
+    <value>再生</value>
+  </data>
+  <data name="Common_Continue" xml:space="preserve">
+    <value>続きから再生</value>
+  </data>
+  <data name="Common_Pause" xml:space="preserve">
+    <value>一時停止</value>
+  </data>
+  <data name="Common_Favorite" xml:space="preserve">
+    <value>お気に入り</value>
+  </data>
+  <data name="Common_More" xml:space="preserve">
+    <value>その他</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="Common_Edit" xml:space="preserve">
+    <value>編集</value>
+  </data>
+  <data name="Common_Add" xml:space="preserve">
+    <value>追加</value>
+  </data>
+  <data name="Common_Remove" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="Common_Close" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="Common_Back" xml:space="preserve">
+    <value>戻る</value>
+  </data>
+  <data name="Common_Retry" xml:space="preserve">
+    <value>再試行</value>
+  </data>
+  <data name="Common_Refresh" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="Common_Confirm" xml:space="preserve">
+    <value>確認</value>
+  </data>
+  <data name="Common_Browse" xml:space="preserve">
+    <value>参照</value>
+  </data>
+  <data name="Common_Unknown" xml:space="preserve">
+    <value>不明</value>
+  </data>
+  <data name="Media_Episodes" xml:space="preserve">
+    <value>エピソード</value>
+  </data>
+  <data name="Media_Seasons" xml:space="preserve">
+    <value>シーズン</value>
+  </data>
+  <data name="Media_Specials" xml:space="preserve">
+    <value>特別編</value>
+  </data>
+  <data name="Media_Extras" xml:space="preserve">
+    <value>特典</value>
+  </data>
+  <data name="Media_Cast" xml:space="preserve">
+    <value>キャスト・声優</value>
+  </data>
+  <data name="Media_Staff" xml:space="preserve">
+    <value>スタッフ</value>
+  </data>
+  <data name="Media_RelatedWorks" xml:space="preserve">
+    <value>関連作品</value>
+  </data>
+  <data name="Media_Versions" xml:space="preserve">
+    <value>メディアバージョン</value>
+  </data>
+  <data name="Media_Overview" xml:space="preserve">
+    <value>あらすじ</value>
+  </data>
+  <data name="Media_ReleaseDate" xml:space="preserve">
+    <value>公開日</value>
+  </data>
+  <data name="Media_AirDate" xml:space="preserve">
+    <value>放送日</value>
+  </data>
+  <data name="Media_Studio" xml:space="preserve">
+    <value>アニメーション制作</value>
+  </data>
+  <data name="Media_SourceMaterial" xml:space="preserve">
+    <value>原作</value>
+  </data>
+  <data name="Anime_TV" xml:space="preserve">
+    <value>TVアニメ</value>
+  </data>
+  <data name="Anime_Movie" xml:space="preserve">
+    <value>劇場版</value>
+  </data>
+  <data name="Anime_OVA" xml:space="preserve">
+    <value>OVA</value>
+  </data>
+  <data name="Anime_OAD" xml:space="preserve">
+    <value>OAD</value>
+  </data>
+  <data name="Anime_ONA" xml:space="preserve">
+    <value>ONA</value>
+  </data>
+  <data name="Anime_Special" xml:space="preserve">
+    <value>スペシャル</value>
+  </data>
+  <data name="Anime_Season_Winter" xml:space="preserve">
+    <value>冬</value>
+  </data>
+  <data name="Anime_Season_Spring" xml:space="preserve">
+    <value>春</value>
+  </data>
+  <data name="Anime_Season_Summer" xml:space="preserve">
+    <value>夏</value>
+  </data>
+  <data name="Anime_Season_Fall" xml:space="preserve">
+    <value>秋</value>
+  </data>
+  <data name="Playback_AudioTrack" xml:space="preserve">
+    <value>音声トラック</value>
+  </data>
+  <data name="Playback_SubtitleTrack" xml:space="preserve">
+    <value>字幕</value>
+  </data>
+  <data name="Playback_Speed" xml:space="preserve">
+    <value>再生速度</value>
+  </data>
+  <data name="Playback_FullScreen" xml:space="preserve">
+    <value>全画面</value>
+  </data>
+  <data name="Playback_NextEpisode" xml:space="preserve">
+    <value>次のエピソード</value>
+  </data>
+  <data name="Playback_PreviousEpisode" xml:space="preserve">
+    <value>前のエピソード</value>
+  </data>
+  <data name="Playback_NoSubtitle" xml:space="preserve">
+    <value>字幕なし</value>
+  </data>
+  <data name="Source_Local" xml:space="preserve">
+    <value>ローカル</value>
+  </data>
+  <data name="Source_WebDAV" xml:space="preserve">
+    <value>WebDAV</value>
+  </data>
+  <data name="Source_OneDrive" xml:space="preserve">
+    <value>OneDrive</value>
+  </data>
+  <data name="Source_GoogleDrive" xml:space="preserve">
+    <value>Google Drive</value>
+  </data>
+  <data name="Source_Add" xml:space="preserve">
+    <value>メディアソースを追加</value>
+  </data>
+  <data name="Source_StatusConnected" xml:space="preserve">
+    <value>接続済み</value>
+  </data>
+  <data name="Source_StatusDisconnected" xml:space="preserve">
+    <value>未接続</value>
+  </data>
+  <data name="Settings_Language" xml:space="preserve">
+    <value>言語</value>
+  </data>
+  <data name="Settings_Appearance" xml:space="preserve">
+    <value>外観</value>
+  </data>
+  <data name="Settings_Playback" xml:space="preserve">
+    <value>再生</value>
+  </data>
+  <data name="Settings_Metadata" xml:space="preserve">
+    <value>メタデータ</value>
+  </data>
+  <data name="Settings_Sources" xml:space="preserve">
+    <value>メディアソース</value>
+  </data>
+  <data name="Settings_About" xml:space="preserve">
+    <value>Eizo について</value>
+  </data>
+  <data name="Status_Loading" xml:space="preserve">
+    <value>読み込み中…</value>
+  </data>
+  <data name="Status_EmptyLibrary" xml:space="preserve">
+    <value>ライブラリは空です</value>
+  </data>
+  <data name="Status_NoResults" xml:space="preserve">
+    <value>結果が見つかりません</value>
+  </data>
+  <data name="Status_Error" xml:space="preserve">
+    <value>エラーが発生しました</value>
+  </data>
+  <data name="Error_TryAgain" xml:space="preserve">
+    <value>もう一度お試しください。</value>
+  </data>
+  <data name="Search_Placeholder" xml:space="preserve">
+    <value>アニメ、ドラマ、映画を検索</value>
+  </data>
+  <data name="Library_AddSourcePrompt" xml:space="preserve">
+    <value>メディアソースを追加してライブラリを始めましょう</value>
+  </data>
+</root>
