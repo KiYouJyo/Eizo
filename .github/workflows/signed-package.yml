@@ -285,7 +285,40 @@ jobs:
             Write-Host "Resize PASS: $($width)x$($height)"
           }
 
-          Write-Host 'Eizo resize stress PASS.'
+          Write-Host 'Discrete extreme resize PASS.'
+
+          # Simulate a real mouse drag: many SizeChanged/layout passes with almost no
+          # idle time between them, then expand again. This catches re-entrant layout
+          # failures that a sequence of slow MoveWindow calls cannot reproduce.
+          for ($cycle = 0; $cycle -lt 6; $cycle++) {
+            for ($width = 1200; $width -ge 180; $width -= 30) {
+              $height = [Math]::Max(120, [int]($width * 0.67))
+              if (-not [EizoWindowNative]::MoveWindow($appProcess.MainWindowHandle, 80, 80, $width, $height, $true)) {
+                throw "Rapid MoveWindow failed at $($width)x$($height)."
+              }
+              Start-Sleep -Milliseconds 25
+              if (-not (Get-Process -Id $appProcess.Id -ErrorAction SilentlyContinue)) {
+                throw "Eizo exited during rapid shrink cycle $cycle at width $width."
+              }
+            }
+
+            for ($width = 180; $width -le 1200; $width += 30) {
+              $height = [Math]::Max(120, [int]($width * 0.67))
+              if (-not [EizoWindowNative]::MoveWindow($appProcess.MainWindowHandle, 80, 80, $width, $height, $true)) {
+                throw "Rapid MoveWindow failed at $($width)x$($height)."
+              }
+              Start-Sleep -Milliseconds 25
+              if (-not (Get-Process -Id $appProcess.Id -ErrorAction SilentlyContinue)) {
+                throw "Eizo exited during rapid expand cycle $cycle at width $width."
+              }
+            }
+          }
+
+          Start-Sleep -Seconds 2
+          if (-not (Get-Process -Id $appProcess.Id -ErrorAction SilentlyContinue)) {
+            throw 'Eizo exited after rapid resize settling.'
+          }
+          Write-Host 'Eizo rapid drag-like resize stress PASS.'
           $running | Stop-Process -Force -ErrorAction SilentlyContinue
           Get-AppxPackage -Name Eizo | Remove-AppxPackage -ErrorAction SilentlyContinue
 
