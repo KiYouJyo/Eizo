@@ -26,6 +26,7 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+        WindowRoot.Loaded += WindowRoot_Loaded;
         WindowRoot.RequestedTheme = ThemePreferenceStore.Load();
         UpdateTitleBarColors();
 
