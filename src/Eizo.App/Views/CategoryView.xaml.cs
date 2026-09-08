@@ -84,14 +84,14 @@ public sealed partial class CategoryView : UserControl
         FeaturedPlayButton.Content = T("Common_Play");
         FeaturedDetailsButton.Content = T("Common_ViewDetails");
 
-        FilterList.ItemsSource =
-        [
+        FilterList.ItemsSource = new[]
+        {
             T("Common_All"),
             _kind == MediaCategoryKind.Anime ? "2026 秋" : T("Common_Recent"),
             T("Category_Following"),
             T("Category_Unwatched"),
             _kind == MediaCategoryKind.Anime ? "OVA / OAD" : T("Common_Favorites")
-        ];
+        };
     }
 
     private void ConfigureDemoContent()
