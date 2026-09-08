@@ -120,7 +120,7 @@
                             VerticalScrollBarVisibility="Disabled">
                 <Grid MinWidth="900"
                       MinHeight="44"
-                      ColumnDefinitions="2*,110,32,110,150,150,Auto,Auto,Auto"
+                      ColumnDefinitions="2*,110,32,110,150,150,Auto,Auto"
                       ColumnSpacing="10">
                   <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Eizo" FontWeight="SemiBold" />
@@ -171,14 +171,13 @@
                           MinWidth="108"
                           VerticalAlignment="Center"
                           Click="CheckUpdateButton_Click" />
-                  <Button x:Name="RestartAppButton"
-                          Grid.Column="8"
-                          MinWidth="96"
-                          VerticalAlignment="Center"
-                          Click="RestartAppButton_Click" />
                 </Grid>
               </ScrollViewer>
             </Border>
+            <ProgressBar x:Name="AppUpdateProgressBar"
+                         Visibility="Collapsed"
+                         IsIndeterminate="True"
+                         MinHeight="4" />
 
             <TextBlock x:Name="IndependentComponentsTitle"
                        Style="{StaticResource BodyText}"
