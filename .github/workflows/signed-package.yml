@@ -58,15 +58,32 @@ jobs:
           $bundle = @(Get-ChildItem $output -Recurse -Filter '*.msixbundle' -File) | Select-Object -First 1
           if (-not $bundle) { throw 'MSIX bundle was not produced.' }
 
-          $runtimeDependency = @(Get-ChildItem $output -Recurse -Filter 'Microsoft.WindowsAppRuntime.1.8*.msix' -File |
+          $runtimeSearchRoots = @(
+            $output,
+            (Join-Path $env:USERPROFILE '.nuget\packages\microsoft.windowsappsdk\1.8.260710003')
+          )
+          $runtimeCandidates = @()
+          foreach ($root in $runtimeSearchRoots) {
+            if (Test-Path -LiteralPath $root) {
+              $runtimeCandidates += @(Get-ChildItem $root -Recurse -Filter 'Microsoft.WindowsAppRuntime.1.8*.msix' -File -ErrorAction SilentlyContinue)
+            }
+          }
+          $runtimeDependency = @($runtimeCandidates |
+            Where-Object {
+              $_.Name -eq 'Microsoft.WindowsAppRuntime.1.8.msix' -and
+              ($_.FullName -match '(?i)win10-x64|\\x64\\')
+            } |
             Sort-Object FullName |
-            Where-Object { $_.FullName -match '\\x64\\' } |
             Select-Object -First 1)
           if (-not $runtimeDependency) {
-            $runtimeDependency = @(Get-ChildItem $output -Recurse -Filter 'Microsoft.WindowsAppRuntime.1.8*.msix' -File | Select-Object -First 1)
+            $runtimeDependency = @($runtimeCandidates |
+              Where-Object Name -eq 'Microsoft.WindowsAppRuntime.1.8.msix' |
+              Select-Object -First 1)
           }
           if (-not $runtimeDependency) {
-            throw 'Windows App Runtime 1.8 x64 dependency was not produced by the sideload build.'
+            Write-Host 'Windows App Runtime candidates found:'
+            $runtimeCandidates | Select-Object FullName | Format-Table -AutoSize | Out-Host
+            throw 'Windows App Runtime 1.8 framework dependency was not found in build output or the restored NuGet package.'
           }
 
           $assets = Join-Path $env:RUNNER_TEMP 'Eizo-v0.1.0-signed'
