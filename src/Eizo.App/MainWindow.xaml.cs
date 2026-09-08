@@ -129,7 +129,7 @@ public sealed partial class MainWindow : Window
     }
 
     private void ShellTabSelect_Click(object sender,RoutedEventArgs e){if(sender is Button{Tag:string key})SelectTab(key);}
-    private void ShellTabClose_Click(object sender,RoutedEventArgs e){if(sender is Button{Tag:string key}){CloseTab(key);e.Handled=true;}}
+    private void ShellTabClose_Click(object sender,RoutedEventArgs e){if(sender is Button{Tag:string key}){CloseTab(key);}}
 
     private void CloseTab(string key)
     {
