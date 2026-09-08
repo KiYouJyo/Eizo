@@ -17,6 +17,7 @@ public sealed partial class MainWindow
     private static readonly Duration TabOpenDuration = new(TimeSpan.FromMilliseconds(190));
 
     private bool _adaptiveTabSizingInitialized;
+    private bool _adaptiveTabResizeQueued;
     private SplitView? _navigationSplitView;
     private bool _navigationPaneBackgroundHooked;
     private bool _shellReady;
@@ -26,14 +27,11 @@ public sealed partial class MainWindow
         HookNavigationPaneBackground();
         _shellReady = true;
         ApplyAdaptiveTabWidths();
-        DispatcherQueue.TryEnqueue(() => ApplyAdaptiveTabWidths());
+        QueueAdaptiveTabWidths();
     }
 
-    private void RootGrid_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        if (!_shellReady) return;
-        ApplyAdaptiveTabWidths();
-    }
+    private void RootGrid_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        QueueAdaptiveTabWidths();
 
     private void ConfigureTabInteractions(Border container, double preferredWidth)
     {
@@ -52,7 +50,22 @@ public sealed partial class MainWindow
     }
 
     private void AppTitleBar_AdaptiveTabsSizeChanged(object sender, SizeChangedEventArgs e) =>
-        ApplyAdaptiveTabWidths();
+        QueueAdaptiveTabWidths();
+
+    private void QueueAdaptiveTabWidths()
+    {
+        if (!_shellReady || _adaptiveTabResizeQueued) return;
+        _adaptiveTabResizeQueued = true;
+
+        if (!DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                _adaptiveTabResizeQueued = false;
+                if (_shellReady) ApplyAdaptiveTabWidths();
+            }))
+        {
+            _adaptiveTabResizeQueued = false;
+        }
+    }
 
     private void ShellTab_Unloaded(object sender, RoutedEventArgs e)
     {
@@ -77,10 +90,9 @@ public sealed partial class MainWindow
         var spacingWidth = ShellTabSpacing * tabCount;
         var usableTabWidth = Math.Max(0, tabViewportWidth - NewTabButtonWidth - spacingWidth);
         var calculatedWidth = usableTabWidth / tabCount;
-        var targetWidth = Math.Clamp(
-            calculatedWidth,
-            MinimumTabWidth,
-            Math.Min(PreferredTabWidth, preferredWidth));
+        if (!double.IsFinite(calculatedWidth)) return preferredWidth;
+        var maximumWidth = Math.Max(MinimumTabWidth, Math.Min(PreferredTabWidth, preferredWidth));
+        var targetWidth = Math.Clamp(calculatedWidth, MinimumTabWidth, maximumWidth);
 
         foreach (var child in ShellTabItems.Children)
         {
@@ -139,7 +151,7 @@ public sealed partial class MainWindow
 
     private void RefreshTabVisuals()
     {
-        var dark = RootGrid.ActualTheme == ElementTheme.Dark;
+        var dark = WindowRoot.ActualTheme == ElementTheme.Dark;
         foreach (var state in _tabs.Values)
         {
             if (state.Visual is null) continue;
@@ -174,7 +186,7 @@ public sealed partial class MainWindow
 
     private void UpdateTitleBarColors()
     {
-        var dark = RootGrid.ActualTheme == ElementTheme.Dark;
+        var dark = WindowRoot.ActualTheme == ElementTheme.Dark;
 
         if (AppWindowTitleBar.IsCustomizationSupported())
             AppWindow.TitleBar.PreferredTheme = dark ? TitleBarTheme.Dark : TitleBarTheme.Light;
@@ -219,7 +231,7 @@ public sealed partial class MainWindow
 
         var themeKey = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast
             ? "HighContrast"
-            : RootGrid.ActualTheme == ElementTheme.Dark ? "Dark" : "Light";
+            : WindowRoot.ActualTheme == ElementTheme.Dark ? "Dark" : "Light";
 
         var themeResources = Application.Current.Resources.ThemeDictionaries[themeKey] as ResourceDictionary;
         if (_navigationSplitView is not null &&
