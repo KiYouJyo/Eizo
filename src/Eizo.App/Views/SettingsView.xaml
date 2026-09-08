@@ -1,0 +1,24 @@
+<UserControl x:Class="Eizo.Views.SettingsView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <ScrollViewer><Grid MaxWidth="1200" Margin="32" HorizontalAlignment="Stretch" RowDefinitions="Auto,Auto,Auto" RowSpacing="18">
+  <StackPanel Spacing="4"><TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleText}"/><TextBlock x:Name="PageSubtitle" Style="{StaticResource MetadataText}"/></StackPanel>
+  <ScrollViewer Grid.Row="1" HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled"><StackPanel Orientation="Horizontal"><ToggleButton x:Name="GeneralTab" IsChecked="True" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="MetadataTab" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="PlaybackTab" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="SubtitleTab" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="NetworkTab" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="PrivacyTab" Style="{StaticResource FilterToggleButton}"/></StackPanel></ScrollViewer>
+  <StackPanel Grid.Row="2" Spacing="14">
+   <Border Style="{StaticResource SectionCardStyle}"><StackPanel Spacing="14">
+    <TextBlock x:Name="LanguageSectionTitle" Style="{StaticResource SectionTitleText}"/>
+    <Grid ColumnDefinitions="*,280"><StackPanel><TextBlock x:Name="LanguageTitle" Style="{StaticResource CardTitleText}"/><TextBlock x:Name="LanguageDescription" Style="{StaticResource MetadataText}"/></StackPanel><ComboBox Grid.Column="1" SelectedIndex="0"><ComboBoxItem Content="简体中文"/><ComboBoxItem Content="日本語"/><ComboBoxItem Content="English"/></ComboBox></Grid>
+    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+    <Grid ColumnDefinitions="*,280"><StackPanel><TextBlock x:Name="AppearanceTitle" Style="{StaticResource CardTitleText}"/><TextBlock x:Name="AppearanceDescription" Style="{StaticResource MetadataText}"/></StackPanel><ComboBox x:Name="AppearanceCombo" Grid.Column="1" SelectedIndex="0"/></Grid>
+   </StackPanel></Border>
+   <Border Style="{StaticResource SectionCardStyle}"><StackPanel Spacing="14">
+    <TextBlock x:Name="JapaneseMediaTitle" Style="{StaticResource SectionTitleText}"/>
+    <Grid ColumnDefinitions="*,280"><StackPanel><TextBlock x:Name="PreferredTitleLabel" Style="{StaticResource CardTitleText}"/><TextBlock x:Name="PreferredTitleDescription" Style="{StaticResource MetadataText}"/></StackPanel><ComboBox x:Name="PreferredTitleCombo" Grid.Column="1" SelectedIndex="0"/></Grid>
+    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+    <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock x:Name="JapaneseTitleLabel" Style="{StaticResource CardTitleText}"/><TextBlock x:Name="JapaneseTitleDescription" Style="{StaticResource MetadataText}"/></StackPanel><ToggleSwitch Grid.Column="1" IsOn="True"/></Grid>
+    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+    <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock x:Name="RomajiLabel" Style="{StaticResource CardTitleText}"/><TextBlock x:Name="RomajiDescription" Style="{StaticResource MetadataText}"/></StackPanel><ToggleSwitch Grid.Column="1"/></Grid>
+   </StackPanel></Border>
+  </StackPanel>
+ </Grid></ScrollViewer>
+</UserControl>
