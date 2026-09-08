@@ -4,9 +4,9 @@
     "version": "0.2.0",
     "packageVersion": "0.2.0.0",
     "title": {
-      "zh-CN": "UI 稳定性、三语与应用内更新",
-      "ja-JP": "UI 安定性・3言語・アプリ内更新",
-      "en-US": "UI Stability, Localization & In-App Update"
+      "zh-CN": "稳定性、三语、应用内更新与单实例",
+      "ja-JP": "安定性・3言語・アプリ内更新・単一インスタンス",
+      "en-US": "Stability, Localization, In-App Update & Single Instance"
     }
   },
   "channels": {
