@@ -203,7 +203,7 @@ public sealed partial class MainWindow
     }
 
     private void QueueNavigationPaneBackgroundUpdate() =>
-        DispatcherQueue.TryEnqueue(ApplySharedNavigationPaneBackground);
+        DispatcherQueue.TryEnqueue(() => ApplySharedNavigationPaneBackground());
 
     private void ApplySharedNavigationPaneBackground()
     {
