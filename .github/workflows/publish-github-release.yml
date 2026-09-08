@@ -5,11 +5,10 @@ on:
     branches:
       - main
     paths:
+      # release/release.json is the single publication gate. Ordinary source,
+      # dependency, packaging, workflow, or note edits must not republish the
+      # current version; use workflow_dispatch for an intentional rerun.
       - "release/release.json"
-      - ".github/workflows/publish-github-release.yml"
-      - "docs/RELEASE-NOTES-v0.1.0*"
-      - "packaging/**"
-      - "src/Eizo.App/Eizo.App.csproj"
   workflow_dispatch:
 
 permissions:
