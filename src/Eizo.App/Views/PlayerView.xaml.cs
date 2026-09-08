@@ -589,7 +589,9 @@ public sealed partial class PlayerView : UserControl
 
             AudioTrackCombo.SelectedItem =
                 selectedAudioItem ??
-                AudioTrackCombo.Items.FirstOrDefault();
+                (AudioTrackCombo.Items.Count > 0
+                    ? AudioTrackCombo.Items[0]
+                    : null);
 
             SubtitleQuickButton.Content =
                 tracks.SubtitleTracks.FirstOrDefault(track => track.IsSelected) is { } subtitle
