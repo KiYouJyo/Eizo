@@ -146,7 +146,17 @@ jobs:
           })
 
           if ($running.Count -eq 0) {
-            Write-Host 'Eizo process did not remain alive. Capturing recent Application log entries.'
+            Write-Host 'Eizo process did not remain alive. Capturing startup diagnostics and recent Application log entries.'
+            $startupLog = Join-Path $env:LOCALAPPDATA 'Eizo\Logs\startup-failure.log'
+            if (Test-Path -LiteralPath $startupLog) {
+              Write-Host '===== Eizo startup-failure.log ====='
+              Get-Content -LiteralPath $startupLog -Raw | Write-Host
+              Write-Host '===== end startup-failure.log ====='
+            }
+            else {
+              Write-Host "No managed startup failure log was produced at $startupLog"
+            }
+
             $since = (Get-Date).AddMinutes(-3)
             Get-WinEvent -FilterHashtable @{ LogName='Application'; StartTime=$since } -ErrorAction SilentlyContinue |
               Where-Object {
