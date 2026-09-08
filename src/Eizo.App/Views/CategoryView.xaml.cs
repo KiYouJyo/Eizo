@@ -32,13 +32,6 @@ public sealed partial class CategoryView : UserControl
             _ => T("Nav_Series")
         };
 
-        PageSubtitle.Text = _kind switch
-        {
-            MediaCategoryKind.Anime => T("Category_AnimeSubtitle"),
-            MediaCategoryKind.Movies => T("Category_MoviesSubtitle"),
-            _ => T("Category_SeriesSubtitle")
-        };
-
         SearchBox.PlaceholderText = T("Search_Placeholder");
         LibraryTitle.Text = T("Category_MyLibrary");
         FeaturedPlayButton.Content = T("Common_Play");
