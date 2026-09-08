@@ -9,28 +9,24 @@
     <Grid x:Name="HomeRoot"
           Padding="24,16,24,32"
           HorizontalAlignment="Stretch"
-          RowDefinitions="Auto,18,Auto,18,Auto,12,Auto,18,Auto,12,Auto"
+          RowDefinitions="Auto,18,Auto,18,Auto,18,Auto,12,Auto,18,Auto,12,Auto"
           UseLayoutRounding="True">
       <VisualStateManager.VisualStateGroups>
         <VisualStateGroup>
           <VisualState x:Name="HomeCompact">
-            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="0" /></VisualState.StateTriggers>
+            <VisualState.StateTriggers>
+              <AdaptiveTrigger MinWindowWidth="0" />
+            </VisualState.StateTriggers>
             <VisualState.Setters>
-              <Setter Target="SearchBox.(Grid.Row)" Value="1" />
-              <Setter Target="SearchBox.(Grid.Column)" Value="0" />
-              <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="2" />
-              <Setter Target="SearchBox.Margin" Value="0,10,0,0" />
               <Setter Target="HeroText.(Grid.ColumnSpan)" Value="2" />
               <Setter Target="HeroArtwork.Visibility" Value="Collapsed" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="HomeWide">
-            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="900" /></VisualState.StateTriggers>
+            <VisualState.StateTriggers>
+              <AdaptiveTrigger MinWindowWidth="900" />
+            </VisualState.StateTriggers>
             <VisualState.Setters>
-              <Setter Target="SearchBox.(Grid.Row)" Value="0" />
-              <Setter Target="SearchBox.(Grid.Column)" Value="1" />
-              <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
-              <Setter Target="SearchBox.Margin" Value="0" />
               <Setter Target="HeroText.(Grid.ColumnSpan)" Value="1" />
               <Setter Target="HeroArtwork.Visibility" Value="Visible" />
             </VisualState.Setters>
@@ -38,19 +34,16 @@
         </VisualStateGroup>
       </VisualStateManager.VisualStateGroups>
 
-      <Grid RowDefinitions="Auto,Auto"
-            ColumnDefinitions="*,380">
-        <TextBlock x:Name="PageTitle"
-                   Style="{StaticResource PageTitleText}" />
-        <AutoSuggestBox x:Name="SearchBox"
-                        Grid.Row="1"
-                        Grid.ColumnSpan="2"
-                        Height="38"
-                        QueryIcon="Find"
-                        HorizontalAlignment="Stretch" />
-      </Grid>
+      <TextBlock x:Name="PageTitle"
+                 Style="{StaticResource PageTitleText}" />
 
-      <Border Grid.Row="2"
+      <AutoSuggestBox x:Name="SearchBox"
+                      Grid.Row="2"
+                      Height="38"
+                      QueryIcon="Find"
+                      HorizontalAlignment="Stretch" />
+
+      <Border Grid.Row="4"
               MinHeight="250"
               CornerRadius="10"
               Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -104,7 +97,8 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
+      <Grid Grid.Row="6"
+            ColumnDefinitions="*,Auto">
         <TextBlock x:Name="ContinueTitle"
                    Style="{StaticResource SectionTitleText}" />
         <Button x:Name="ContinueAllButton"
@@ -112,7 +106,8 @@
                 Style="{StaticResource CompactActionButton}" />
       </Grid>
 
-      <ItemsRepeater x:Name="ContinueRepeater" Grid.Row="6">
+      <ItemsRepeater x:Name="ContinueRepeater"
+                     Grid.Row="8">
         <ItemsRepeater.Layout>
           <UniformGridLayout MinItemWidth="245"
                              MinItemHeight="156"
@@ -128,11 +123,18 @@
               <Grid RowDefinitions="86,*">
                 <Border Background="{ThemeResource EizoSelectionBrush}"
                         CornerRadius="8,8,0,0">
-                  <FontIcon Glyph="&#xE8B9;" FontSize="30" Opacity="0.28" />
+                  <FontIcon Glyph="&#xE8B9;"
+                            FontSize="30"
+                            Opacity="0.28" />
                 </Border>
-                <Grid Grid.Row="1" Padding="12,8" RowDefinitions="Auto,Auto,*">
-                  <TextBlock Text="{x:Bind Title}" Style="{StaticResource CardTitleText}" />
-                  <TextBlock Grid.Row="1" Text="{x:Bind NativeTitle}" Style="{StaticResource MetadataText}" />
+                <Grid Grid.Row="1"
+                      Padding="12,8"
+                      RowDefinitions="Auto,Auto,*">
+                  <TextBlock Text="{x:Bind Title}"
+                             Style="{StaticResource CardTitleText}" />
+                  <TextBlock Grid.Row="1"
+                             Text="{x:Bind NativeTitle}"
+                             Style="{StaticResource MetadataText}" />
                   <ProgressBar Grid.Row="2"
                                Value="{x:Bind Progress}"
                                Maximum="100"
@@ -146,14 +148,17 @@
         </ItemsRepeater.ItemTemplate>
       </ItemsRepeater>
 
-      <Grid Grid.Row="8" ColumnDefinitions="*,Auto">
-        <TextBlock x:Name="SeasonTitle" Style="{StaticResource SectionTitleText}" />
+      <Grid Grid.Row="10"
+            ColumnDefinitions="*,Auto">
+        <TextBlock x:Name="SeasonTitle"
+                   Style="{StaticResource SectionTitleText}" />
         <Button x:Name="SeasonAllButton"
                 Grid.Column="1"
                 Style="{StaticResource CompactActionButton}" />
       </Grid>
 
-      <ItemsRepeater x:Name="SeasonRepeater" Grid.Row="10">
+      <ItemsRepeater x:Name="SeasonRepeater"
+                     Grid.Row="12">
         <ItemsRepeater.Layout>
           <UniformGridLayout MinItemWidth="205"
                              MinItemHeight="182"
@@ -170,11 +175,17 @@
               <Grid RowDefinitions="108,*">
                 <Border Background="{ThemeResource EizoSelectionBrush}"
                         CornerRadius="8,8,0,0">
-                  <FontIcon Glyph="&#xE8B9;" FontSize="34" Opacity="0.25" />
+                  <FontIcon Glyph="&#xE8B9;"
+                            FontSize="34"
+                            Opacity="0.25" />
                 </Border>
-                <StackPanel Grid.Row="1" Padding="12,8" Spacing="2">
-                  <TextBlock Text="{x:Bind Title}" Style="{StaticResource CardTitleText}" />
-                  <TextBlock Text="{x:Bind NativeTitle}" Style="{StaticResource MetadataText}" />
+                <StackPanel Grid.Row="1"
+                            Padding="12,8"
+                            Spacing="2">
+                  <TextBlock Text="{x:Bind Title}"
+                             Style="{StaticResource CardTitleText}" />
+                  <TextBlock Text="{x:Bind NativeTitle}"
+                             Style="{StaticResource MetadataText}" />
                   <TextBlock Text="{x:Bind Meta}"
                              Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                              FontSize="10" />

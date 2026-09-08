@@ -1,6 +1,7 @@
 <UserControl x:Class="Eizo.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Eizo.Controls">
   <ScrollViewer Background="Transparent"
                 HorizontalScrollMode="Disabled"
                 HorizontalScrollBarVisibility="Disabled"
@@ -108,8 +109,10 @@
                       ColumnDefinitions="*,Auto"
                       RowDefinitions="Auto,Auto">
                   <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock x:Name="LanguageTitle" Style="{StaticResource SettingsRowLabelStyle}" />
-                    <TextBlock x:Name="LanguageDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                    <TextBlock x:Name="LanguageTitle"
+                               Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="LanguageDescription"
+                               Style="{StaticResource SettingsDescriptionStyle}" />
                   </StackPanel>
                   <ComboBox x:Name="LanguagePicker"
                             Grid.Column="1"
@@ -117,6 +120,7 @@
                             MinWidth="180"
                             MaxWidth="250"
                             HorizontalAlignment="Right"
+                            controls:TransientComboBoxTheme.Apply="True"
                             SelectedIndex="0">
                     <ComboBoxItem Content="简体中文" />
                     <ComboBoxItem Content="日本語" />
@@ -134,8 +138,10 @@
                       ColumnDefinitions="*,Auto"
                       RowDefinitions="Auto,Auto">
                   <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock x:Name="AppearanceTitle" Style="{StaticResource SettingsRowLabelStyle}" />
-                    <TextBlock x:Name="AppearanceDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                    <TextBlock x:Name="AppearanceTitle"
+                               Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="AppearanceDescription"
+                               Style="{StaticResource SettingsDescriptionStyle}" />
                   </StackPanel>
                   <ComboBox x:Name="AppearanceCombo"
                             Grid.Column="1"
@@ -143,7 +149,8 @@
                             MinWidth="180"
                             MaxWidth="250"
                             HorizontalAlignment="Right"
-                            SelectedIndex="0" />
+                            controls:TransientComboBoxTheme.Apply="True"
+                            SelectionChanged="AppearanceCombo_SelectionChanged" />
                 </Grid>
               </StackPanel>
             </Border>
@@ -165,8 +172,10 @@
                       ColumnDefinitions="*,Auto"
                       RowDefinitions="Auto,Auto">
                   <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock x:Name="PreferredTitleLabel" Style="{StaticResource SettingsRowLabelStyle}" />
-                    <TextBlock x:Name="PreferredTitleDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                    <TextBlock x:Name="PreferredTitleLabel"
+                               Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="PreferredTitleDescription"
+                               Style="{StaticResource SettingsDescriptionStyle}" />
                   </StackPanel>
                   <ComboBox x:Name="PreferredTitleCombo"
                             Grid.Column="1"
@@ -174,6 +183,7 @@
                             MinWidth="180"
                             MaxWidth="250"
                             HorizontalAlignment="Right"
+                            controls:TransientComboBoxTheme.Apply="True"
                             SelectedIndex="0" />
                 </Grid>
 
@@ -187,8 +197,10 @@
                       ColumnDefinitions="*,Auto"
                       RowDefinitions="Auto,Auto">
                   <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock x:Name="JapaneseTitleLabel" Style="{StaticResource SettingsRowLabelStyle}" />
-                    <TextBlock x:Name="JapaneseTitleDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                    <TextBlock x:Name="JapaneseTitleLabel"
+                               Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="JapaneseTitleDescription"
+                               Style="{StaticResource SettingsDescriptionStyle}" />
                   </StackPanel>
                   <ToggleSwitch x:Name="JapaneseTitleToggle"
                                 Grid.Column="1"
@@ -210,8 +222,10 @@
                       ColumnDefinitions="*,Auto"
                       RowDefinitions="Auto,Auto">
                   <StackPanel VerticalAlignment="Center" Spacing="2">
-                    <TextBlock x:Name="RomajiLabel" Style="{StaticResource SettingsRowLabelStyle}" />
-                    <TextBlock x:Name="RomajiDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                    <TextBlock x:Name="RomajiLabel"
+                               Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="RomajiDescription"
+                               Style="{StaticResource SettingsDescriptionStyle}" />
                   </StackPanel>
                   <ToggleSwitch x:Name="RomajiToggle"
                                 Grid.Column="1"

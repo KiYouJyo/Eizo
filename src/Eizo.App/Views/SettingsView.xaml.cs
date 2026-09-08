@@ -1,4 +1,5 @@
 using Eizo.Localization;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace Eizo.Views;
@@ -6,14 +7,58 @@ namespace Eizo.Views;
 public sealed partial class SettingsView : UserControl
 {
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
+    private bool _isSynchronizingTheme;
 
     public SettingsView()
     {
         InitializeComponent();
         ApplyText();
+        Loaded += SettingsView_Loaded;
     }
 
     private string T(string key) => _localization.GetString(key);
+
+    private void SettingsView_Loaded(object sender, RoutedEventArgs e)
+    {
+        _isSynchronizingTheme = true;
+        try
+        {
+            var requestedTheme =
+                (XamlRoot?.Content as FrameworkElement)?.RequestedTheme
+                ?? ThemePreferenceStore.Load();
+
+            AppearanceCombo.SelectedIndex = requestedTheme switch
+            {
+                ElementTheme.Light => 1,
+                ElementTheme.Dark => 2,
+                _ => 0
+            };
+        }
+        finally
+        {
+            _isSynchronizingTheme = false;
+        }
+    }
+
+    private void AppearanceCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isSynchronizingTheme ||
+            AppearanceCombo.SelectedIndex < 0 ||
+            XamlRoot?.Content is not FrameworkElement root)
+        {
+            return;
+        }
+
+        var theme = AppearanceCombo.SelectedIndex switch
+        {
+            1 => ElementTheme.Light,
+            2 => ElementTheme.Dark,
+            _ => ElementTheme.Default
+        };
+
+        root.RequestedTheme = theme;
+        ThemePreferenceStore.Save(theme);
+    }
 
     private void ApplyText()
     {

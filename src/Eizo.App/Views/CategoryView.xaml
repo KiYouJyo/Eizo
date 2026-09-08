@@ -9,29 +9,25 @@
     <Grid x:Name="CategoryRoot"
           Padding="24,16,24,32"
           HorizontalAlignment="Stretch"
-          RowDefinitions="Auto,18,Auto,18,Auto,12,Auto"
+          RowDefinitions="Auto,18,Auto,18,Auto,18,Auto,12,Auto"
           UseLayoutRounding="True">
       <VisualStateManager.VisualStateGroups>
         <VisualStateGroup>
           <VisualState x:Name="CategoryCompact">
-            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="0" /></VisualState.StateTriggers>
+            <VisualState.StateTriggers>
+              <AdaptiveTrigger MinWindowWidth="0" />
+            </VisualState.StateTriggers>
             <VisualState.Setters>
-              <Setter Target="SearchBox.(Grid.Row)" Value="1" />
-              <Setter Target="SearchBox.(Grid.Column)" Value="0" />
-              <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="2" />
-              <Setter Target="SearchBox.Margin" Value="0,10,0,0" />
               <Setter Target="FeaturedArtwork.Visibility" Value="Collapsed" />
               <Setter Target="FeaturedText.(Grid.Column)" Value="0" />
               <Setter Target="FeaturedText.(Grid.ColumnSpan)" Value="2" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="CategoryWide">
-            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="900" /></VisualState.StateTriggers>
+            <VisualState.StateTriggers>
+              <AdaptiveTrigger MinWindowWidth="900" />
+            </VisualState.StateTriggers>
             <VisualState.Setters>
-              <Setter Target="SearchBox.(Grid.Row)" Value="0" />
-              <Setter Target="SearchBox.(Grid.Column)" Value="1" />
-              <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
-              <Setter Target="SearchBox.Margin" Value="0" />
               <Setter Target="FeaturedArtwork.Visibility" Value="Visible" />
               <Setter Target="FeaturedText.(Grid.Column)" Value="1" />
               <Setter Target="FeaturedText.(Grid.ColumnSpan)" Value="1" />
@@ -40,21 +36,16 @@
         </VisualStateGroup>
       </VisualStateManager.VisualStateGroups>
 
-      <Grid RowDefinitions="Auto,Auto"
-            ColumnDefinitions="*,380">
-        <StackPanel Spacing="4">
-          <TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleText}" />
-          <TextBlock x:Name="PageSubtitle" Style="{StaticResource MetadataText}" />
-        </StackPanel>
-        <AutoSuggestBox x:Name="SearchBox"
-                        Grid.Row="1"
-                        Grid.ColumnSpan="2"
-                        Height="38"
-                        QueryIcon="Find"
-                        HorizontalAlignment="Stretch" />
-      </Grid>
+      <TextBlock x:Name="PageTitle"
+                 Style="{StaticResource PageTitleText}" />
 
-      <Border Grid.Row="2"
+      <AutoSuggestBox x:Name="SearchBox"
+                      Grid.Row="2"
+                      Height="38"
+                      QueryIcon="Find"
+                      HorizontalAlignment="Stretch" />
+
+      <Border Grid.Row="4"
               MinHeight="250"
               CornerRadius="10"
               Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -100,11 +91,10 @@
         </Grid>
       </Border>
 
-      <StackPanel Grid.Row="4" Spacing="10">
+      <StackPanel Grid.Row="6"
+                  Spacing="10">
         <TextBlock x:Name="LibraryTitle"
                    Style="{StaticResource SectionTitleText}" />
-        <!-- Same native ListView selector used by SpatialViewer/UrbanPlanToolbox.
-             This preserves WinUI's Fluent selection indicator and hover states. -->
         <ListView x:Name="FilterList"
                   SelectedIndex="0"
                   IsItemClickEnabled="True"
@@ -130,7 +120,8 @@
         </ListView>
       </StackPanel>
 
-      <ItemsRepeater x:Name="LibraryRepeater" Grid.Row="6">
+      <ItemsRepeater x:Name="LibraryRepeater"
+                     Grid.Row="8">
         <ItemsRepeater.Layout>
           <UniformGridLayout MinItemWidth="250"
                              MinItemHeight="174"
