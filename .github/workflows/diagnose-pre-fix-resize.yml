@@ -113,6 +113,32 @@ jobs:
             $process = $survivor
           }
 
+          if (-not $crashed) {
+            for ($cycle = 0; $cycle -lt 8 -and -not $crashed; $cycle++) {
+              for ($w = 1200; $w -ge 180; $w -= 30) {
+                $h = [Math]::Max(120, [int]($w * 0.67))
+                [ResizeNative]::MoveWindow($handle,80,80,$w,$h,$true) | Out-Null
+                Start-Sleep -Milliseconds 20
+                if (-not (Get-Process -Id $process.Id -ErrorAction SilentlyContinue)) {
+                  Write-Host "PRE_FIX_CRASH reproduced during rapid shrink cycle=$cycle width=$w"
+                  $crashed = $true
+                  break
+                }
+              }
+              if ($crashed) { break }
+              for ($w = 180; $w -le 1200; $w += 30) {
+                $h = [Math]::Max(120, [int]($w * 0.67))
+                [ResizeNative]::MoveWindow($handle,80,80,$w,$h,$true) | Out-Null
+                Start-Sleep -Milliseconds 20
+                if (-not (Get-Process -Id $process.Id -ErrorAction SilentlyContinue)) {
+                  Write-Host "PRE_FIX_CRASH reproduced during rapid expand cycle=$cycle width=$w"
+                  $crashed = $true
+                  break
+                }
+              }
+            }
+          }
+
           if ($crashed) {
             Write-Host '===== recent Eizo Application events ====='
             Get-WinEvent -FilterHashtable @{ LogName='Application'; StartTime=(Get-Date).AddMinutes(-3) } -ErrorAction SilentlyContinue |
