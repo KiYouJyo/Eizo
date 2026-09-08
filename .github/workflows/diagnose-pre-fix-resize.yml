@@ -1,0 +1,128 @@
+name: Diagnose pre-fix resize crash
+
+on:
+  push:
+    branches:
+      - "codex/ui-stability-update-localization"
+    paths:
+      - ".github/workflows/diagnose-pre-fix-resize.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  diagnose:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 20
+    steps:
+      - name: Download pre-fix v0.2 acceptance artifact
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'old-eizo'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          gh run download 34223285187 -R ${{ github.repository }} -n Eizo-v0.2.0-acceptance-assets -D $out
+          $bundle = Get-ChildItem $out -Recurse -Filter 'Eizo_0.2.0.0_x64.msixbundle' | Select-Object -First 1
+          if (-not $bundle) { throw 'Pre-fix bundle not found.' }
+          "OLD_BUNDLE=$($bundle.FullName)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Trust existing release signer and install runtime
+        shell: pwsh
+        env:
+          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
+          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'eizo-release-signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:RELEASE_CERTIFICATE_BASE64))
+          $password = ConvertTo-SecureString $env:RELEASE_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $certificate = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          Export-Certificate -Cert $certificate -FilePath (Join-Path $env:RUNNER_TEMP 'Eizo.cer') | Out-Null
+          Import-Certificate -FilePath (Join-Path $env:RUNNER_TEMP 'Eizo.cer') -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+
+          $runtime = Join-Path $env:RUNNER_TEMP 'WindowsAppRuntimeInstall-x64.exe'
+          Invoke-WebRequest -Uri 'https://aka.ms/windowsappsdk/1.8/1.8.260710003/windowsappruntimeinstall-x64.exe' -OutFile $runtime -UseBasicParsing
+          & $runtime --quiet
+          if ($LASTEXITCODE -ne 0) { throw "Windows App Runtime setup failed: $LASTEXITCODE" }
+
+      - name: Exercise pre-fix package below the old smoke-test floor
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
+          Add-AppxPackage -Path $env:OLD_BUNDLE -ForceApplicationShutdown
+
+          $pkg = Get-AppxPackage -Name Eizo
+          $manifest = Get-AppxPackageManifest -Package $pkg
+          $appId = [string]$manifest.Package.Applications.Application.Id
+          Start-Process explorer.exe -ArgumentList "shell:AppsFolder\$($pkg.PackageFamilyName)!$appId"
+          Start-Sleep -Seconds 6
+
+          $installRoot = [IO.Path]::GetFullPath($pkg.InstallLocation)
+          $process = Get-Process -ErrorAction SilentlyContinue | Where-Object {
+            try { $_.Path -and ([IO.Path]::GetFullPath($_.Path)).StartsWith($installRoot,[StringComparison]::OrdinalIgnoreCase) }
+            catch { $false }
+          } | Select-Object -First 1
+          if (-not $process) { throw 'Pre-fix Eizo did not launch.' }
+
+          Add-Type @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class ResizeNative
+          {
+              [DllImport("user32.dll", SetLastError=true)]
+              [return: MarshalAs(UnmanagedType.Bool)]
+              public static extern bool MoveWindow(IntPtr hWnd,int x,int y,int w,int h,bool repaint);
+              [DllImport("user32.dll")]
+              [return: MarshalAs(UnmanagedType.Bool)]
+              public static extern bool GetWindowRect(IntPtr hWnd,out RECT rect);
+              public struct RECT { public int Left,Top,Right,Bottom; }
+          }
+          '@
+
+          for ($i=0; $i -lt 20; $i++) {
+            $process.Refresh()
+            if ($process.MainWindowHandle -ne [IntPtr]::Zero) { break }
+            Start-Sleep -Milliseconds 250
+          }
+          $handle = $process.MainWindowHandle
+          if ($handle -eq [IntPtr]::Zero) { throw 'No main window handle.' }
+
+          $sequence = @(
+            @(420,320), @(360,260), @(300,220), @(260,190),
+            @(220,160), @(180,120), @(1200,800)
+          )
+
+          $crashed = $false
+          foreach ($size in $sequence) {
+            $w=[int]$size[0]; $h=[int]$size[1]
+            [ResizeNative]::MoveWindow($handle,80,80,$w,$h,$true) | Out-Null
+            Start-Sleep -Milliseconds 1600
+
+            $survivor = Get-Process -Id $process.Id -ErrorAction SilentlyContinue
+            if (-not $survivor) {
+              Write-Host "PRE_FIX_CRASH reproduced after request $($w)x$($h)"
+              $crashed = $true
+              break
+            }
+
+            $rect = New-Object ResizeNative+RECT
+            [ResizeNative]::GetWindowRect($handle,[ref]$rect) | Out-Null
+            Write-Host "PRE_FIX_SURVIVED request=$($w)x$($h) actual=$($rect.Right-$rect.Left)x$($rect.Bottom-$rect.Top)"
+            $process = $survivor
+          }
+
+          if ($crashed) {
+            Write-Host '===== recent Eizo Application events ====='
+            Get-WinEvent -FilterHashtable @{ LogName='Application'; StartTime=(Get-Date).AddMinutes(-3) } -ErrorAction SilentlyContinue |
+              Where-Object { $_.Message -match '(?i)Eizo|Microsoft\.UI\.Xaml' } |
+              Select-Object TimeCreated,ProviderName,Id,LevelDisplayName,Message |
+              Format-List | Out-Host
+          }
+          else {
+            Write-Host 'PRE_FIX_CRASH not reproduced on the clean CI VM; user-device reproduction remains authoritative.'
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+
+          Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
