@@ -114,11 +114,11 @@
                         Glyph="&#xE768;"
                         FontSize="12" />
             </Button>
-            <Button x:Name="StopButton"
+            <Button x:Name="NextJumpButton"
                     Width="44"
                     Height="36"
-                    Click="StopButton_Click">
-              <FontIcon Glyph="&#xE71A;" FontSize="12" />
+                    Click="NextJumpButton_Click">
+              <FontIcon Glyph="&#xE101;" FontSize="12" />
             </Button>
             <Button x:Name="NextChapterButton"
                     Width="48"
