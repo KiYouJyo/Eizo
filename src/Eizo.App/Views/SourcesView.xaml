@@ -1,0 +1,64 @@
+<UserControl x:Class="Eizo.Views.SourcesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Eizo.Models">
+  <Grid Padding="24,16,24,32"
+        HorizontalAlignment="Stretch"
+        RowDefinitions="Auto,14,Auto,14,*"
+        UseLayoutRounding="True">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="4">
+        <TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleText}" />
+        <TextBlock x:Name="PageSubtitle" Style="{StaticResource MetadataText}" />
+      </StackPanel>
+      <Button x:Name="AddSourceButton"
+              Grid.Column="1"
+              VerticalAlignment="Top"
+              Style="{StaticResource CompactActionButton}"
+              Click="AddSourceButton_Click" />
+    </Grid>
+
+    <ListView x:Name="SectionList"
+              Grid.Row="2"
+              SelectedIndex="0"
+              IsItemClickEnabled="True"
+              SelectionMode="Single"
+              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+              ScrollViewer.HorizontalScrollMode="Auto"
+              ScrollViewer.VerticalScrollBarVisibility="Disabled"
+              ScrollViewer.VerticalScrollMode="Disabled">
+      <ListView.ItemsPanel>
+        <ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+      </ListView.ItemsPanel>
+      <ListView.ItemTemplate>
+        <DataTemplate>
+          <TextBlock Text="{Binding}"
+                     Margin="8,2"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center" />
+        </DataTemplate>
+      </ListView.ItemTemplate>
+    </ListView>
+
+    <ListView x:Name="SourceList"
+              Grid.Row="4"
+              SelectionMode="None"
+              ItemContainerStyle="{StaticResource SourceListItemStyle}"
+              ContainerContentChanging="SourceList_ContainerContentChanging">
+      <ListView.ItemTemplate>
+        <DataTemplate x:DataType="models:SourceItemModel">
+          <Grid Height="58"
+                ColumnDefinitions="*,Auto">
+            <TextBlock Text="{x:Bind Name}"
+                       VerticalAlignment="Center"
+                       Style="{StaticResource CardTitleText}" />
+            <TextBlock Grid.Column="1"
+                       Text="{x:Bind Summary}"
+                       VerticalAlignment="Center"
+                       Style="{StaticResource MetadataText}" />
+          </Grid>
+        </DataTemplate>
+      </ListView.ItemTemplate>
+    </ListView>
+  </Grid>
+</UserControl>

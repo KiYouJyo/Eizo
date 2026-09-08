@@ -1,0 +1,195 @@
+<UserControl x:Class="Eizo.Views.CacheView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Eizo.Models"
+             xmlns:controls="using:Eizo.Controls">
+  <ScrollViewer Background="Transparent"
+                HorizontalScrollMode="Disabled"
+                HorizontalScrollBarVisibility="Disabled"
+                HorizontalContentAlignment="Stretch"
+                VerticalScrollBarVisibility="Auto">
+    <Grid x:Name="CacheRoot"
+          Padding="24,16,24,32"
+          HorizontalAlignment="Stretch"
+          UseLayoutRounding="True">
+      <StackPanel Spacing="18"
+                  HorizontalAlignment="Stretch">
+        <StackPanel Spacing="4">
+          <TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleText}" />
+          <TextBlock x:Name="PageSubtitle" Style="{StaticResource MetadataText}" />
+        </StackPanel>
+
+        <Border Style="{StaticResource SettingsSectionCardStyle}">
+          <Grid ColumnDefinitions="*,Auto"
+                RowDefinitions="Auto,Auto,Auto">
+            <StackPanel>
+              <TextBlock x:Name="OverviewTitle"
+                         Style="{StaticResource SectionTitleText}" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="8.6 GB"
+                           FontSize="30"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="OverviewLimit"
+                           Style="{StaticResource MetadataText}"
+                           VerticalAlignment="Bottom"
+                           Margin="0,0,0,5" />
+              </StackPanel>
+            </StackPanel>
+
+            <Button x:Name="ClearCacheButton"
+                    Grid.Column="1"
+                    VerticalAlignment="Top"
+                    Style="{StaticResource CompactActionButton}" />
+
+            <ProgressBar Grid.Row="1"
+                         Grid.ColumnSpan="2"
+                         Value="27"
+                         Maximum="100"
+                         Height="6"
+                         Margin="0,12,0,8" />
+
+            <Grid Grid.Row="2"
+                  Grid.ColumnSpan="2"
+                  ColumnDefinitions="*,*,Auto">
+              <TextBlock Text="Video 6.9 GB"
+                         Style="{StaticResource MetadataText}" />
+              <TextBlock Grid.Column="1"
+                         Text="Artwork 1.7 GB"
+                         Style="{StaticResource MetadataText}" />
+              <TextBlock Grid.Column="2"
+                         Text="26.9%"
+                         Style="{StaticResource MetadataText}" />
+            </Grid>
+          </Grid>
+        </Border>
+
+        <Border Style="{StaticResource SettingsSectionCardStyle}">
+          <StackPanel Spacing="14">
+            <TextBlock x:Name="PolicyTitle"
+                       Style="{StaticResource SectionTitleText}" />
+
+            <Border Style="{StaticResource SettingsInnerCardStyle}">
+              <StackPanel>
+                <Grid Padding="14"
+                      MinHeight="72"
+                      ColumnDefinitions="*,Auto"
+                      ColumnSpacing="24">
+                  <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="AutoCleanupTitle"
+                               Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="AutoCleanupDescription"
+                               Style="{StaticResource SettingsDescriptionStyle}" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                Width="44"
+                                MinWidth="44"
+                                OnContent=""
+                                OffContent=""
+                                HorizontalAlignment="Right"
+                                IsOn="True" />
+                </Grid>
+
+                <Border Height="1"
+                        Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                <Grid Padding="14"
+                      MinHeight="72"
+                      ColumnDefinitions="*,Auto"
+                      ColumnSpacing="24">
+                  <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="PrecacheTitle"
+                               Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="PrecacheDescription"
+                               Style="{StaticResource SettingsDescriptionStyle}" />
+                  </StackPanel>
+                  <ComboBox Grid.Column="1"
+                            Width="180"
+                            controls:TransientComboBoxTheme.Apply="True"
+                            HorizontalAlignment="Right"
+                            SelectedIndex="2">
+                    <ComboBoxItem Content="64 MB" />
+                    <ComboBoxItem Content="128 MB" />
+                    <ComboBoxItem Content="256 MB" />
+                    <ComboBoxItem Content="512 MB" />
+                    <ComboBoxItem Content="1 GB" />
+                  </ComboBox>
+                </Grid>
+
+                <Border Height="1"
+                        Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                <Grid Padding="14"
+                      MinHeight="72"
+                      ColumnDefinitions="*,Auto"
+                      ColumnSpacing="24">
+                  <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="KeepOfflineTitle"
+                               Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="KeepOfflineDescription"
+                               Style="{StaticResource SettingsDescriptionStyle}" />
+                  </StackPanel>
+                  <ToggleSwitch Grid.Column="1"
+                                Width="44"
+                                MinWidth="44"
+                                OnContent=""
+                                OffContent=""
+                                HorizontalAlignment="Right"
+                                IsOn="True" />
+                </Grid>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+
+        <StackPanel Spacing="10"
+                    Margin="0,0,0,24">
+          <TextBlock x:Name="ContentsTitle"
+                     Style="{StaticResource SectionTitleText}" />
+
+          <ListView x:Name="CacheList"
+                    SelectionMode="None"
+                    ItemContainerStyle="{StaticResource SourceListItemStyle}">
+            <ListView.ItemTemplate>
+              <DataTemplate x:DataType="models:CacheItemModel">
+                <Grid MinHeight="64"
+                      ColumnDefinitions="*,Auto,44"
+                      ColumnSpacing="16">
+                  <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{x:Bind Title}"
+                               Style="{StaticResource CardTitleText}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Source}"
+                               Style="{StaticResource MetadataText}"
+                               TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+
+                  <StackPanel Grid.Column="1"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Right"
+                              Spacing="2">
+                    <TextBlock Text="{x:Bind Size}"
+                               HorizontalAlignment="Right"
+                               Style="{StaticResource BodyText}" />
+                    <TextBlock Text="{x:Bind LastAccessed}"
+                               HorizontalAlignment="Right"
+                               Style="{StaticResource MetadataText}" />
+                  </StackPanel>
+
+                  <Button Grid.Column="2"
+                          Tag="{x:Bind Title}"
+                          Click="DeleteCacheItem_Click"
+                          Width="36"
+                          Height="32"
+                          MinWidth="36"
+                          Padding="0">
+                    <FontIcon Glyph="&#xE74D;" FontSize="12" />
+                  </Button>
+                </Grid>
+              </DataTemplate>
+            </ListView.ItemTemplate>
+          </ListView>
+        </StackPanel>
+      </StackPanel>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

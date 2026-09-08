@@ -71,7 +71,7 @@
     <value>映画</value>
   </data>
   <data name="Nav_Series" xml:space="preserve">
-    <value>シリーズ</value>
+    <value>ドラマ</value>
   </data>
   <data name="Nav_Library" xml:space="preserve">
     <value>ライブラリ</value>
@@ -309,5 +309,293 @@
   </data>
   <data name="Library_AddSourcePrompt" xml:space="preserve">
     <value>メディアソースを追加してライブラリを始めましょう</value>
+  </data>
+  <data name="Nav_Categories" xml:space="preserve">
+    <value>カテゴリー</value>
+  </data>
+  <data name="Nav_Cache" xml:space="preserve">
+    <value>キャッシュ</value>
+  </data>
+  <data name="Nav_About" xml:space="preserve">
+    <value>Eizo について</value>
+  </data>
+  <data name="Home_Subtitle" xml:space="preserve">
+    <value>次に観たい作品を見つけましょう。</value>
+  </data>
+  <data name="Home_Featured" xml:space="preserve">
+    <value>今日のおすすめ</value>
+  </data>
+  <data name="Home_FeaturedDescription" xml:space="preserve">
+    <value>ライブラリから、続きを観たい作品やもう一度出会いたい作品をおすすめします。</value>
+  </data>
+  <data name="Common_ViewDetails" xml:space="preserve">
+    <value>詳細を見る</value>
+  </data>
+  <data name="Common_ViewAll" xml:space="preserve">
+    <value>すべて表示</value>
+  </data>
+  <data name="Common_All" xml:space="preserve">
+    <value>すべて</value>
+  </data>
+  <data name="Common_Recent" xml:space="preserve">
+    <value>最近</value>
+  </data>
+  <data name="Common_Favorites" xml:space="preserve">
+    <value>お気に入り</value>
+  </data>
+  <data name="Common_Now" xml:space="preserve">
+    <value>たった今</value>
+  </data>
+  <data name="Category_AnimeSubtitle" xml:space="preserve">
+    <value>シーズン、視聴状態、種類からアニメを閲覧します。</value>
+  </data>
+  <data name="Category_MoviesSubtitle" xml:space="preserve">
+    <value>映画ライブラリを閲覧します。</value>
+  </data>
+  <data name="Category_SeriesSubtitle" xml:space="preserve">
+    <value>ドラマとシリーズを閲覧します。</value>
+  </data>
+  <data name="Category_MyLibrary" xml:space="preserve">
+    <value>マイライブラリ</value>
+  </data>
+  <data name="Category_Following" xml:space="preserve">
+    <value>視聴中</value>
+  </data>
+  <data name="Category_Unwatched" xml:space="preserve">
+    <value>未視聴</value>
+  </data>
+  <data name="Category_FeaturedDescription" xml:space="preserve">
+    <value>ライブラリから作品をランダムにおすすめします。</value>
+  </data>
+  <data name="Sources_Subtitle" xml:space="preserve">
+    <value>ローカル、WebDAV、クラウドのメディアソースを管理します。</value>
+  </data>
+  <data name="Sources_TabSources" xml:space="preserve">
+    <value>ソース</value>
+  </data>
+  <data name="Sources_TabScan" xml:space="preserve">
+    <value>スキャン</value>
+  </data>
+  <data name="Source_ScanNow" xml:space="preserve">
+    <value>今すぐスキャン</value>
+  </data>
+  <data name="Source_ScanHistory" xml:space="preserve">
+    <value>スキャン履歴</value>
+  </data>
+  <data name="Source_Disconnect" xml:space="preserve">
+    <value>切断</value>
+  </data>
+  <data name="Sources_Provider" xml:space="preserve">
+    <value>ソース種類</value>
+  </data>
+  <data name="Sources_DisplayName" xml:space="preserve">
+    <value>表示名</value>
+  </data>
+  <data name="Sources_Address" xml:space="preserve">
+    <value>サーバーアドレス</value>
+  </data>
+  <data name="Sources_Username" xml:space="preserve">
+    <value>ユーザー名</value>
+  </data>
+  <data name="Sources_Password" xml:space="preserve">
+    <value>パスワード</value>
+  </data>
+  <data name="Cache_Subtitle" xml:space="preserve">
+    <value>リモート再生キャッシュとオフラインコンテンツを管理します。</value>
+  </data>
+  <data name="Cache_Overview" xml:space="preserve">
+    <value>キャッシュ概要</value>
+  </data>
+  <data name="Cache_OverviewLimit" xml:space="preserve">
+    <value>使用中 / 上限 32 GB</value>
+  </data>
+  <data name="Cache_Clear" xml:space="preserve">
+    <value>キャッシュを削除</value>
+  </data>
+  <data name="Cache_Policy" xml:space="preserve">
+    <value>キャッシュポリシー</value>
+  </data>
+  <data name="Cache_AutoCleanup" xml:space="preserve">
+    <value>自動クリーンアップ</value>
+  </data>
+  <data name="Cache_AutoCleanupDescription" xml:space="preserve">
+    <value>上限に近づくと古いキャッシュから削除します。</value>
+  </data>
+  <data name="Cache_Precache" xml:space="preserve">
+    <value>リモート先読み</value>
+  </data>
+  <data name="Cache_PrecacheDescription" xml:space="preserve">
+    <value>リモート再生時に後続データを先読みします。</value>
+  </data>
+  <data name="Cache_KeepOffline" xml:space="preserve">
+    <value>オフラインを保持</value>
+  </data>
+  <data name="Cache_KeepOfflineDescription" xml:space="preserve">
+    <value>オフライン指定した項目は自動削除しません。</value>
+  </data>
+  <data name="Cache_Contents" xml:space="preserve">
+    <value>キャッシュ内容</value>
+  </data>
+  <data name="Settings_Subtitle" xml:space="preserve">
+    <value>Eizo の表示、メディア認識、再生動作を調整します。</value>
+  </data>
+  <data name="Settings_General" xml:space="preserve">
+    <value>一般</value>
+  </data>
+  <data name="Settings_SubtitlesAudio" xml:space="preserve">
+    <value>字幕と音声</value>
+  </data>
+  <data name="Settings_Network" xml:space="preserve">
+    <value>ネットワーク</value>
+  </data>
+  <data name="Settings_Privacy" xml:space="preserve">
+    <value>プライバシーと安全</value>
+  </data>
+  <data name="Settings_LanguageAppearance" xml:space="preserve">
+    <value>言語と外観</value>
+  </data>
+  <data name="Settings_LanguageDescription" xml:space="preserve">
+    <value>Eizo のメニューと画面の表示言語です。</value>
+  </data>
+  <data name="Settings_AppearanceDescription" xml:space="preserve">
+    <value>Windows に合わせるか、ライト/ダークを固定します。</value>
+  </data>
+  <data name="Settings_AppearanceSystem" xml:space="preserve">
+    <value>システム設定</value>
+  </data>
+  <data name="Settings_AppearanceLight" xml:space="preserve">
+    <value>ライト</value>
+  </data>
+  <data name="Settings_AppearanceDark" xml:space="preserve">
+    <value>ダーク</value>
+  </data>
+  <data name="Settings_JapaneseMedia" xml:space="preserve">
+    <value>日本コンテンツ表示</value>
+  </data>
+  <data name="Settings_PreferredTitle" xml:space="preserve">
+    <value>優先タイトル</value>
+  </data>
+  <data name="Settings_PreferredTitleDescription" xml:space="preserve">
+    <value>ライブラリで主に表示するタイトル言語です。</value>
+  </data>
+  <data name="Settings_TitleChineseJapanese" xml:space="preserve">
+    <value>簡体字中国語 · 日本語原題を併記</value>
+  </data>
+  <data name="Settings_TitleJapanese" xml:space="preserve">
+    <value>日本語原題</value>
+  </data>
+  <data name="Settings_TitleEnglish" xml:space="preserve">
+    <value>英語タイトル</value>
+  </data>
+  <data name="Settings_ShowJapaneseTitle" xml:space="preserve">
+    <value>日本語原題を表示</value>
+  </data>
+  <data name="Settings_ShowJapaneseTitleDescription" xml:space="preserve">
+    <value>ローカライズタイトルの下に原題を表示します。</value>
+  </data>
+  <data name="Settings_ShowRomaji" xml:space="preserve">
+    <value>ローマ字を表示</value>
+  </data>
+  <data name="Settings_ShowRomajiDescription" xml:space="preserve">
+    <value>適切なローカライズタイトルがない場合に表示します。</value>
+  </data>
+  <data name="About_DisplayVersion" xml:space="preserve">
+    <value>表示バージョン</value>
+  </data>
+  <data name="About_InternalVersion" xml:space="preserve">
+    <value>パッケージ バージョン</value>
+  </data>
+  <data name="About_Architecture" xml:space="preserve">
+    <value>アーキテクチャ</value>
+  </data>
+  <data name="About_Channel" xml:space="preserve">
+    <value>配布チャネル</value>
+  </data>
+  <data name="About_Publisher" xml:space="preserve">
+    <value>発行元</value>
+  </data>
+  <data name="About_TechStack" xml:space="preserve">
+    <value>技術スタック</value>
+  </data>
+  <data name="About_UpdateManagement" xml:space="preserve">
+    <value>更新管理</value>
+  </data>
+  <data name="About_ApplicationUpdate" xml:space="preserve">
+    <value>アプリ更新</value>
+  </data>
+  <data name="About_CurrentVersion" xml:space="preserve">
+    <value>現在のバージョン</value>
+  </data>
+  <data name="About_AvailableVersion" xml:space="preserve">
+    <value>利用可能</value>
+  </data>
+  <data name="About_UpdateSource" xml:space="preserve">
+    <value>更新元</value>
+  </data>
+  <data name="About_Status" xml:space="preserve">
+    <value>状態</value>
+  </data>
+  <data name="About_NotChecked" xml:space="preserve">
+    <value>未確認</value>
+  </data>
+  <data name="About_ReleaseNotes" xml:space="preserve">
+    <value>リリースノート</value>
+  </data>
+  <data name="About_CheckUpdates" xml:space="preserve">
+    <value>更新を確認</value>
+  </data>
+  <data name="About_IndependentComponents" xml:space="preserve">
+    <value>個別更新コンポーネント</value>
+  </data>
+  <data name="About_PlayerCore" xml:space="preserve">
+    <value>プレイヤーコア</value>
+  </data>
+  <data name="About_IndependentUpdate" xml:space="preserve">
+    <value>個別更新</value>
+  </data>
+  <data name="About_ProjectOpenSource" xml:space="preserve">
+    <value>プロジェクトとオープンソース</value>
+  </data>
+  <data name="About_GitHubDescription" xml:space="preserve">
+    <value>ソース、README、開発状況を確認します。</value>
+  </data>
+  <data name="About_ReleasesDescription" xml:space="preserve">
+    <value>過去のバージョンと配布物を確認します。</value>
+  </data>
+  <data name="About_Privacy" xml:space="preserve">
+    <value>ライセンスとプライバシー</value>
+  </data>
+  <data name="About_PrivacyDescription" xml:space="preserve">
+    <value>第三者ライセンスとローカルデータ方針を確認します。</value>
+  </data>
+  <data name="About_OpenRepository" xml:space="preserve">
+    <value>リポジトリを開く</value>
+  </data>
+  <data name="About_OpenReleases" xml:space="preserve">
+    <value>バージョンを見る</value>
+  </data>
+  <data name="About_OpenPrivacy" xml:space="preserve">
+    <value>説明を見る</value>
+  </data>
+  <data name="Detail_Overview" xml:space="preserve">
+    <value>魔王が倒された後の世界で、エルフの魔法使いが時間と記憶、人とのつながりを見つめ直します。</value>
+  </data>
+  <data name="Detail_Director" xml:space="preserve">
+    <value>監督</value>
+  </data>
+  <data name="Detail_SeriesComposition" xml:space="preserve">
+    <value>シリーズ構成</value>
+  </data>
+  <data name="Playback_Playing" xml:space="preserve">
+    <value>再生中</value>
+  </data>
+  <data name="Playback_Queue" xml:space="preserve">
+    <value>再生キュー</value>
+  </data>
+  <data name="Playback_Tracks" xml:space="preserve">
+    <value>字幕と音声</value>
+  </data>
+  <data name="Playback_Info" xml:space="preserve">
+    <value>再生情報</value>
   </data>
 </root>

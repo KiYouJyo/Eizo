@@ -1,0 +1,350 @@
+name: Signed v0.1 package
+
+on:
+  push:
+    branches:
+      - "codex/v0.1-ui-foundation"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eizo-v0.1-signed-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Build, sign and package x64
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Validate signing configuration
+        shell: pwsh
+        env:
+          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
+          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:RELEASE_CERTIFICATE_BASE64) -or [string]::IsNullOrWhiteSpace($env:RELEASE_CERTIFICATE_PASSWORD)) {
+            throw 'GitHub release signing secrets are not configured.'
+          }
+
+      - name: Restore and compile Release
+        shell: pwsh
+        run: |
+          msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:AppxPackageSigningEnabled=false /p:GenerateAppxPackageOnBuild=false
+
+      - name: Build unsigned x64 MSIX bundle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:RUNNER_TEMP 'Eizo-AppPackages'
+          msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Always /p:AppxBundlePlatforms=x64 /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir="$output\"
+          if ($LASTEXITCODE -ne 0) { throw "MSIX build failed: $LASTEXITCODE" }
+          $bundle = @(Get-ChildItem $output -Recurse -Filter '*.msixbundle' -File) | Select-Object -First 1
+          if (-not $bundle) { throw 'MSIX bundle was not produced.' }
+
+          $runtimeInstaller = Join-Path $env:RUNNER_TEMP 'WindowsAppRuntimeInstall-x64.exe'
+          Invoke-WebRequest -Uri 'https://aka.ms/windowsappsdk/1.8/1.8.260710003/windowsappruntimeinstall-x64.exe' -OutFile $runtimeInstaller -UseBasicParsing
+          if (-not (Test-Path -LiteralPath $runtimeInstaller -PathType Leaf)) {
+            throw 'Windows App Runtime 1.8 x64 installer download failed.'
+          }
+
+          $runtimeSignature = Get-AuthenticodeSignature -FilePath $runtimeInstaller
+          if (-not $runtimeSignature.SignerCertificate -or
+              $runtimeSignature.Status -ne 'Valid' -or
+              $runtimeSignature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
+            throw "Windows App Runtime installer signature validation failed: $($runtimeSignature.Status) / $($runtimeSignature.SignerCertificate.Subject)"
+          }
+
+          $assets = Join-Path $env:RUNNER_TEMP 'Eizo-v0.1.0-signed'
+          New-Item -ItemType Directory -Force -Path $assets | Out-Null
+          $finalBundle = Join-Path $assets 'Eizo_0.1.0.0_x64.msixbundle'
+          Copy-Item -LiteralPath $bundle.FullName -Destination $finalBundle -Force
+          "BUNDLE_PATH=$finalBundle" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "RUNTIME_INSTALLER_PATH=$runtimeInstaller" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "ASSETS_DIR=$assets" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Runtime installer: $runtimeInstaller"
+
+      - name: Sign and verify bundle
+        shell: pwsh
+        env:
+          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
+          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pfx = Join-Path $env:RUNNER_TEMP 'eizo-release-signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:RELEASE_CERTIFICATE_BASE64))
+          $password = ConvertTo-SecureString $env:RELEASE_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $certificate = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          if ($certificate.Subject -cne 'CN=AppPublisher' -or $certificate.Thumbprint -cne 'BD85AD77A651C86CA01A480C8E9BC64952993F98' -or -not $certificate.HasPrivateKey) {
+            throw "Unexpected signing certificate: Subject=$($certificate.Subject); Thumbprint=$($certificate.Thumbprint); HasPrivateKey=$($certificate.HasPrivateKey)"
+          }
+
+          $cer = Join-Path $env:ASSETS_DIR 'Eizo-v0.1.0-AppPublisher.cer'
+          Export-Certificate -Cert $certificate -FilePath $cer | Out-Null
+
+          $kitsRoot = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
+          $signtool = Get-ChildItem (Join-Path $kitsRoot 'Windows Kits\10\bin') -Recurse -Filter signtool.exe |
+            Where-Object FullName -match '\\x64\\signtool.exe$' |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signtool) { throw 'x64 signtool.exe was not found.' }
+
+          & $signtool.FullName sign /fd SHA256 /sha1 $certificate.Thumbprint /tr http://timestamp.digicert.com /td SHA256 $env:BUNDLE_PATH
+          if ($LASTEXITCODE -ne 0) { throw "signtool sign failed: $LASTEXITCODE" }
+
+          $signature = Get-AuthenticodeSignature -FilePath $env:BUNDLE_PATH
+          if (-not $signature.SignerCertificate) { throw "Signed bundle has no signer certificate. Status=$($signature.Status)" }
+          if ($signature.SignerCertificate.Subject -cne 'CN=AppPublisher' -or $signature.SignerCertificate.Thumbprint -cne $certificate.Thumbprint) {
+            throw 'Signed bundle signer mismatch.'
+          }
+          if ($signature.Status -eq 'UnknownError') {
+            if ($signature.StatusMessage -notmatch '(?i)not trusted|trust provider|untrusted|self-signed') {
+              throw "Unexpected Authenticode status: $($signature.StatusMessage)"
+            }
+          }
+          elseif ($signature.Status -ne 'Valid') {
+            throw "Signed bundle Authenticode status is not acceptable: $($signature.Status) / $($signature.StatusMessage)"
+          }
+
+          Remove-Item -LiteralPath $pfx -Force
+          "CERTIFICATE_PATH=$cer" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Signer verified: $($signature.SignerCertificate.Subject) / $($signature.SignerCertificate.Thumbprint); status=$($signature.Status)"
+
+      - name: Install and launch smoke test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($env:CERTIFICATE_PATH)
+          $trustedStore = 'Cert:\LocalMachine\TrustedPeople'
+          $trusted = Get-ChildItem -Path $trustedStore -ErrorAction SilentlyContinue | Where-Object Thumbprint -eq $cert.Thumbprint | Select-Object -First 1
+          if (-not $trusted) {
+            Import-Certificate -FilePath $env:CERTIFICATE_PATH -CertStoreLocation $trustedStore | Out-Null
+          }
+
+          Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
+          & $env:RUNTIME_INSTALLER_PATH --quiet
+          if ($LASTEXITCODE -ne 0) { throw "Windows App Runtime installer failed: $LASTEXITCODE" }
+          Add-AppxPackage -Path $env:BUNDLE_PATH -ForceApplicationShutdown
+
+          $pkg = Get-AppxPackage -Name Eizo
+          if (-not $pkg) { throw 'Eizo package was not registered after installation.' }
+
+          $manifest = Get-AppxPackageManifest -Package $pkg
+          $appId = [string]$manifest.Package.Applications.Application.Id
+          if ([string]::IsNullOrWhiteSpace($appId)) { throw 'Unable to resolve AppUserModel application id.' }
+
+          $activation = "shell:AppsFolder\$($pkg.PackageFamilyName)!$appId"
+          Write-Host "Launching $activation"
+          Start-Process explorer.exe -ArgumentList $activation
+
+          Start-Sleep -Seconds 8
+
+          $installRoot = [IO.Path]::GetFullPath($pkg.InstallLocation)
+          $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+            try { $_.Path -and ([IO.Path]::GetFullPath($_.Path)).StartsWith($installRoot, [StringComparison]::OrdinalIgnoreCase) }
+            catch { $false }
+          })
+
+          if ($running.Count -eq 0) {
+            Write-Host 'Eizo process did not remain alive. Capturing startup diagnostics and recent Application log entries.'
+            $startupLog = Join-Path $env:LOCALAPPDATA 'Eizo\Logs\startup-failure.log'
+            if (Test-Path -LiteralPath $startupLog) {
+              Write-Host '===== Eizo startup-failure.log ====='
+              Get-Content -LiteralPath $startupLog -Raw | Write-Host
+              Write-Host '===== end startup-failure.log ====='
+            }
+            else {
+              Write-Host "No managed startup failure log was produced at $startupLog"
+            }
+
+            $diagnosticCandidates = @(
+              (Join-Path $env:TEMP 'Eizo-startup-failure.log'),
+              (Join-Path $env:ProgramData 'Eizo-startup-failure.log')
+            )
+            $diagnosticCandidates += @(Get-ChildItem $env:LOCALAPPDATA -Recurse -Filter 'startup-failure.log' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+            foreach ($candidate in ($diagnosticCandidates | Select-Object -Unique)) {
+              if (Test-Path -LiteralPath $candidate) {
+                Write-Host "===== managed startup diagnostic: $candidate ====="
+                Get-Content -LiteralPath $candidate -Raw | Write-Host
+                Write-Host '===== end managed startup diagnostic ====='
+              }
+            }
+
+            foreach ($logName in @(
+              'Microsoft-Windows-AppModel-Runtime/Admin',
+              'Microsoft-Windows-TWinUI/Operational'
+            )) {
+              Write-Host "===== $logName ====="
+              Get-WinEvent -FilterHashtable @{ LogName=$logName; StartTime=(Get-Date).AddMinutes(-3) } -ErrorAction SilentlyContinue |
+                Where-Object { $_.Message -match '(?i)Eizo|1z32rh13vfry6' } |
+                Select-Object TimeCreated, ProviderName, Id, LevelDisplayName, Message |
+                Format-List | Out-Host
+            }
+
+            $since = (Get-Date).AddMinutes(-3)
+            Get-WinEvent -FilterHashtable @{ LogName='Application'; StartTime=$since } -ErrorAction SilentlyContinue |
+              Where-Object {
+                $_.ProviderName -in @('Application Error','.NET Runtime','Windows Error Reporting','Microsoft-Windows-AppModel-Runtime') -or
+                $_.Message -match '(?i)Eizo|Eizo\.App'
+              } |
+              Select-Object TimeCreated, ProviderName, Id, LevelDisplayName, Message |
+              Format-List | Out-Host
+            throw 'Eizo failed the post-install launch smoke test.'
+          }
+
+          Write-Host "Eizo launch smoke PASS. Running process(es): $($running.ProcessName -join ', ')"
+
+          Add-Type @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class EizoWindowNative
+          {
+              [DllImport("user32.dll", SetLastError = true)]
+              [return: MarshalAs(UnmanagedType.Bool)]
+              public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
+          }
+          '@
+
+          $appProcess = $null
+          foreach ($candidate in $running) {
+            for ($attempt = 0; $attempt -lt 20; $attempt++) {
+              $candidate.Refresh()
+              if ($candidate.HasExited) { break }
+              if ($candidate.MainWindowHandle -ne [IntPtr]::Zero) {
+                $appProcess = $candidate
+                break
+              }
+              Start-Sleep -Milliseconds 250
+            }
+            if ($appProcess) { break }
+          }
+
+          if (-not $appProcess) {
+            throw 'Eizo launched but no main-window handle became available for resize validation.'
+          }
+
+          $resizeSequence = @(
+            @(1280, 800),
+            @(900, 650),
+            @(760, 560),
+            @(620, 460),
+            @(520, 400),
+            @(420, 320),
+            @(1200, 800)
+          )
+
+          foreach ($size in $resizeSequence) {
+            $width = [int]$size[0]
+            $height = [int]$size[1]
+
+            $appProcess.Refresh()
+            if ($appProcess.HasExited) {
+              throw "Eizo exited before resize validation at $($width)x$($height)."
+            }
+
+            if (-not [EizoWindowNative]::MoveWindow($appProcess.MainWindowHandle, 80, 80, $width, $height, $true)) {
+              $errorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+              throw "MoveWindow failed for $($width)x$($height), Win32=$errorCode."
+            }
+
+            Start-Sleep -Milliseconds 1400
+
+            $survivor = Get-Process -Id $appProcess.Id -ErrorAction SilentlyContinue
+            if (-not $survivor) {
+              Write-Host "Eizo exited while resizing to $($width)x$($height). Capturing recent Application events."
+              Get-WinEvent -FilterHashtable @{ LogName='Application'; StartTime=(Get-Date).AddMinutes(-2) } -ErrorAction SilentlyContinue |
+                Where-Object { $_.Message -match '(?i)Eizo|Eizo\.App' } |
+                Select-Object TimeCreated, ProviderName, Id, LevelDisplayName, Message |
+                Format-List | Out-Host
+              throw "Eizo failed resize smoke at $($width)x$($height)."
+            }
+
+            $appProcess = $survivor
+            Write-Host "Resize PASS: $($width)x$($height)"
+          }
+
+          Write-Host 'Eizo resize stress PASS.'
+          $running | Stop-Process -Force -ErrorAction SilentlyContinue
+          Get-AppxPackage -Name Eizo | Remove-AppxPackage -ErrorAction SilentlyContinue
+
+      - name: Generate and validate lightweight one-click package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $staging = Join-Path $env:RUNNER_TEMP 'Eizo-one-click-staging'
+          New-Item -ItemType Directory -Force -Path $staging | Out-Null
+
+          $buildArgs = @{
+            SignedBundlePath = $env:BUNDLE_PATH
+            PublicCertificatePath = $env:CERTIFICATE_PATH
+            OutputDirectory = $staging
+            DisplayVersion = '0.1.0'
+            PackageVersion = '0.1.0.0'
+          }
+          & ./packaging/New-GitHubOneClickInstallerPackage.ps1 @buildArgs
+
+          $packageRoot = Join-Path $staging 'Eizo-v0.1.0-x64-one-click'
+          & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $packageRoot
+
+          $zip = Join-Path $env:ASSETS_DIR 'Eizo-v0.1.0-x64-one-click.zip'
+          Compress-Archive -LiteralPath $packageRoot -DestinationPath $zip -CompressionLevel Optimal
+
+          $extracted = Join-Path $env:RUNNER_TEMP 'Eizo-one-click-extracted'
+          Expand-Archive -LiteralPath $zip -DestinationPath $extracted -Force
+          $extractedRoot = Join-Path $extracted 'Eizo-v0.1.0-x64-one-click'
+          & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $extractedRoot -ZipPath $zip
+
+          $installPayload = Join-Path $extractedRoot 'payload\Install.ps1'
+          & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $installPayload -BundlePathOverride $env:BUNDLE_PATH
+          if ($LASTEXITCODE -ne 0) { throw "One-click local install validation failed: $LASTEXITCODE" }
+
+          $installed = Get-AppxPackage -Name Eizo
+          if (-not $installed -or [string]$installed.Version -ne '0.1.0.0') {
+            throw 'One-click bootstrap did not install Eizo 0.1.0.0.'
+          }
+
+          $uninstallPayload = Join-Path $extractedRoot 'payload\Uninstall.ps1'
+          & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $uninstallPayload -RemoveCertificate
+          if ($LASTEXITCODE -ne 0) { throw "One-click uninstall validation failed: $LASTEXITCODE" }
+
+      - name: Generate SHA-256 manifest
+        shell: pwsh
+        run: |
+          $files = @(
+            $env:BUNDLE_PATH,
+            (Join-Path $env:ASSETS_DIR 'Eizo-v0.1.0-x64-one-click.zip')
+          )
+          $lines = foreach ($file in $files) {
+            $item = Get-Item -LiteralPath $file
+            "{0}  {1}" -f (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant(), $item.Name
+          }
+          Set-Content -LiteralPath (Join-Path $env:ASSETS_DIR 'SHA256SUMS.txt') -Value $lines -Encoding ascii
+          Get-Content (Join-Path $env:ASSETS_DIR 'SHA256SUMS.txt')
+
+      - name: Upload signed release-contract assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: Eizo-v0.1.0-github-release-assets
+          path: |
+            ${{ env.ASSETS_DIR }}/Eizo_0.1.0.0_x64.msixbundle
+            ${{ env.ASSETS_DIR }}/Eizo-v0.1.0-x64-one-click.zip
+            ${{ env.ASSETS_DIR }}/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

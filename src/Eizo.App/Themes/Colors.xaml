@@ -1,0 +1,18 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <ResourceDictionary.ThemeDictionaries>
+  <ResourceDictionary x:Key="Default">
+   <Color x:Key="EizoAppColor">#F2F5F5</Color><Color x:Key="EizoPanelColor">#F6F9F9</Color><Color x:Key="EizoSelectionColor">#E8EEEE</Color><Color x:Key="EizoBorderColor">#D6DEDE</Color><Color x:Key="EizoAccentColor">#087EA4</Color>
+  </ResourceDictionary>
+  <ResourceDictionary x:Key="Light">
+   <Color x:Key="EizoAppColor">#F2F5F5</Color><Color x:Key="EizoPanelColor">#F6F9F9</Color><Color x:Key="EizoSelectionColor">#E8EEEE</Color><Color x:Key="EizoBorderColor">#D6DEDE</Color><Color x:Key="EizoAccentColor">#087EA4</Color>
+  </ResourceDictionary>
+  <ResourceDictionary x:Key="Dark">
+   <Color x:Key="EizoAppColor">#0E1717</Color><Color x:Key="EizoPanelColor">#1D2828</Color><Color x:Key="EizoSelectionColor">#263232</Color><Color x:Key="EizoBorderColor">#3A4848</Color><Color x:Key="EizoAccentColor">#42B8E3</Color>
+  </ResourceDictionary>
+ </ResourceDictionary.ThemeDictionaries>
+ <SolidColorBrush x:Key="EizoAppBrush" Color="{ThemeResource EizoAppColor}" />
+ <SolidColorBrush x:Key="EizoPanelBrush" Color="{ThemeResource EizoPanelColor}" />
+ <SolidColorBrush x:Key="EizoSelectionBrush" Color="{ThemeResource EizoSelectionColor}" />
+ <SolidColorBrush x:Key="EizoBorderBrush" Color="{ThemeResource EizoBorderColor}" />
+ <SolidColorBrush x:Key="EizoAccentBrush" Color="{ThemeResource EizoAccentColor}" />
+</ResourceDictionary>

@@ -71,7 +71,7 @@
     <value>Movies</value>
   </data>
   <data name="Nav_Series" xml:space="preserve">
-    <value>Series</value>
+    <value>TV series</value>
   </data>
   <data name="Nav_Library" xml:space="preserve">
     <value>Library</value>
@@ -309,5 +309,293 @@
   </data>
   <data name="Library_AddSourcePrompt" xml:space="preserve">
     <value>Add a media source to start building your library</value>
+  </data>
+  <data name="Nav_Categories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="Nav_Cache" xml:space="preserve">
+    <value>Cache</value>
+  </data>
+  <data name="Nav_About" xml:space="preserve">
+    <value>About Eizo</value>
+  </data>
+  <data name="Home_Subtitle" xml:space="preserve">
+    <value>Find the next thing you want to watch.</value>
+  </data>
+  <data name="Home_Featured" xml:space="preserve">
+    <value>Featured today</value>
+  </data>
+  <data name="Home_FeaturedDescription" xml:space="preserve">
+    <value>A pick from your library worth continuing or rediscovering.</value>
+  </data>
+  <data name="Common_ViewDetails" xml:space="preserve">
+    <value>View details</value>
+  </data>
+  <data name="Common_ViewAll" xml:space="preserve">
+    <value>View all</value>
+  </data>
+  <data name="Common_All" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="Common_Recent" xml:space="preserve">
+    <value>Recent</value>
+  </data>
+  <data name="Common_Favorites" xml:space="preserve">
+    <value>Favorites</value>
+  </data>
+  <data name="Common_Now" xml:space="preserve">
+    <value>Just now</value>
+  </data>
+  <data name="Category_AnimeSubtitle" xml:space="preserve">
+    <value>Browse anime by season, status, and type.</value>
+  </data>
+  <data name="Category_MoviesSubtitle" xml:space="preserve">
+    <value>Browse your movie library.</value>
+  </data>
+  <data name="Category_SeriesSubtitle" xml:space="preserve">
+    <value>Browse TV and drama series.</value>
+  </data>
+  <data name="Category_MyLibrary" xml:space="preserve">
+    <value>My library</value>
+  </data>
+  <data name="Category_Following" xml:space="preserve">
+    <value>Following</value>
+  </data>
+  <data name="Category_Unwatched" xml:space="preserve">
+    <value>Unwatched</value>
+  </data>
+  <data name="Category_FeaturedDescription" xml:space="preserve">
+    <value>A random recommendation from your library.</value>
+  </data>
+  <data name="Sources_Subtitle" xml:space="preserve">
+    <value>Manage local, WebDAV, and cloud media sources.</value>
+  </data>
+  <data name="Sources_TabSources" xml:space="preserve">
+    <value>Sources</value>
+  </data>
+  <data name="Sources_TabScan" xml:space="preserve">
+    <value>Scan tasks</value>
+  </data>
+  <data name="Source_ScanNow" xml:space="preserve">
+    <value>Scan now</value>
+  </data>
+  <data name="Source_ScanHistory" xml:space="preserve">
+    <value>Scan history</value>
+  </data>
+  <data name="Source_Disconnect" xml:space="preserve">
+    <value>Disconnect</value>
+  </data>
+  <data name="Sources_Provider" xml:space="preserve">
+    <value>Source type</value>
+  </data>
+  <data name="Sources_DisplayName" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="Sources_Address" xml:space="preserve">
+    <value>Server address</value>
+  </data>
+  <data name="Sources_Username" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="Sources_Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Cache_Subtitle" xml:space="preserve">
+    <value>Manage remote playback cache and offline content.</value>
+  </data>
+  <data name="Cache_Overview" xml:space="preserve">
+    <value>Cache overview</value>
+  </data>
+  <data name="Cache_OverviewLimit" xml:space="preserve">
+    <value>used / 32 GB limit</value>
+  </data>
+  <data name="Cache_Clear" xml:space="preserve">
+    <value>Clear cache</value>
+  </data>
+  <data name="Cache_Policy" xml:space="preserve">
+    <value>Cache policy</value>
+  </data>
+  <data name="Cache_AutoCleanup" xml:space="preserve">
+    <value>Automatic cleanup</value>
+  </data>
+  <data name="Cache_AutoCleanupDescription" xml:space="preserve">
+    <value>Remove least recently used cache as the limit approaches.</value>
+  </data>
+  <data name="Cache_Precache" xml:space="preserve">
+    <value>Remote pre-cache</value>
+  </data>
+  <data name="Cache_PrecacheDescription" xml:space="preserve">
+    <value>Prefetch upcoming data while playing remote media.</value>
+  </data>
+  <data name="Cache_KeepOffline" xml:space="preserve">
+    <value>Keep offline content</value>
+  </data>
+  <data name="Cache_KeepOfflineDescription" xml:space="preserve">
+    <value>Items marked offline are excluded from automatic cleanup.</value>
+  </data>
+  <data name="Cache_Contents" xml:space="preserve">
+    <value>Cached content</value>
+  </data>
+  <data name="Settings_Subtitle" xml:space="preserve">
+    <value>Adjust Eizo's interface, media recognition, and playback behavior.</value>
+  </data>
+  <data name="Settings_General" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="Settings_SubtitlesAudio" xml:space="preserve">
+    <value>Subtitles &amp; audio</value>
+  </data>
+  <data name="Settings_Network" xml:space="preserve">
+    <value>Network</value>
+  </data>
+  <data name="Settings_Privacy" xml:space="preserve">
+    <value>Privacy &amp; security</value>
+  </data>
+  <data name="Settings_LanguageAppearance" xml:space="preserve">
+    <value>Language &amp; appearance</value>
+  </data>
+  <data name="Settings_LanguageDescription" xml:space="preserve">
+    <value>Language used by Eizo menus and interface.</value>
+  </data>
+  <data name="Settings_AppearanceDescription" xml:space="preserve">
+    <value>Follow Windows or force light/dark mode.</value>
+  </data>
+  <data name="Settings_AppearanceSystem" xml:space="preserve">
+    <value>Follow system</value>
+  </data>
+  <data name="Settings_AppearanceLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="Settings_AppearanceDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="Settings_JapaneseMedia" xml:space="preserve">
+    <value>Japanese media display</value>
+  </data>
+  <data name="Settings_PreferredTitle" xml:space="preserve">
+    <value>Preferred title</value>
+  </data>
+  <data name="Settings_PreferredTitleDescription" xml:space="preserve">
+    <value>Choose the primary title language in the library.</value>
+  </data>
+  <data name="Settings_TitleChineseJapanese" xml:space="preserve">
+    <value>Simplified Chinese · keep Japanese title</value>
+  </data>
+  <data name="Settings_TitleJapanese" xml:space="preserve">
+    <value>Japanese title</value>
+  </data>
+  <data name="Settings_TitleEnglish" xml:space="preserve">
+    <value>English title</value>
+  </data>
+  <data name="Settings_ShowJapaneseTitle" xml:space="preserve">
+    <value>Show Japanese title</value>
+  </data>
+  <data name="Settings_ShowJapaneseTitleDescription" xml:space="preserve">
+    <value>Keep the original Japanese title below the localized title.</value>
+  </data>
+  <data name="Settings_ShowRomaji" xml:space="preserve">
+    <value>Show romaji</value>
+  </data>
+  <data name="Settings_ShowRomajiDescription" xml:space="preserve">
+    <value>Use romaji when no suitable localized title is available.</value>
+  </data>
+  <data name="About_DisplayVersion" xml:space="preserve">
+    <value>Display version</value>
+  </data>
+  <data name="About_InternalVersion" xml:space="preserve">
+    <value>Package version</value>
+  </data>
+  <data name="About_Architecture" xml:space="preserve">
+    <value>Architecture</value>
+  </data>
+  <data name="About_Channel" xml:space="preserve">
+    <value>Channel</value>
+  </data>
+  <data name="About_Publisher" xml:space="preserve">
+    <value>Publisher</value>
+  </data>
+  <data name="About_TechStack" xml:space="preserve">
+    <value>Technology</value>
+  </data>
+  <data name="About_UpdateManagement" xml:space="preserve">
+    <value>Update management</value>
+  </data>
+  <data name="About_ApplicationUpdate" xml:space="preserve">
+    <value>App update</value>
+  </data>
+  <data name="About_CurrentVersion" xml:space="preserve">
+    <value>Current version</value>
+  </data>
+  <data name="About_AvailableVersion" xml:space="preserve">
+    <value>Available version</value>
+  </data>
+  <data name="About_UpdateSource" xml:space="preserve">
+    <value>Update source</value>
+  </data>
+  <data name="About_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="About_NotChecked" xml:space="preserve">
+    <value>Not checked</value>
+  </data>
+  <data name="About_ReleaseNotes" xml:space="preserve">
+    <value>Release notes</value>
+  </data>
+  <data name="About_CheckUpdates" xml:space="preserve">
+    <value>Check for updates</value>
+  </data>
+  <data name="About_IndependentComponents" xml:space="preserve">
+    <value>Independently updatable components</value>
+  </data>
+  <data name="About_PlayerCore" xml:space="preserve">
+    <value>Player core</value>
+  </data>
+  <data name="About_IndependentUpdate" xml:space="preserve">
+    <value>Independent update</value>
+  </data>
+  <data name="About_ProjectOpenSource" xml:space="preserve">
+    <value>Project &amp; open source</value>
+  </data>
+  <data name="About_GitHubDescription" xml:space="preserve">
+    <value>View source, README, and development progress.</value>
+  </data>
+  <data name="About_ReleasesDescription" xml:space="preserve">
+    <value>View historical releases, packages, and release notes.</value>
+  </data>
+  <data name="About_Privacy" xml:space="preserve">
+    <value>Licenses &amp; privacy</value>
+  </data>
+  <data name="About_PrivacyDescription" xml:space="preserve">
+    <value>View third-party licenses and local-data policy.</value>
+  </data>
+  <data name="About_OpenRepository" xml:space="preserve">
+    <value>Open repository</value>
+  </data>
+  <data name="About_OpenReleases" xml:space="preserve">
+    <value>View releases</value>
+  </data>
+  <data name="About_OpenPrivacy" xml:space="preserve">
+    <value>View details</value>
+  </data>
+  <data name="Detail_Overview" xml:space="preserve">
+    <value>In a world after the Demon King is defeated, an elven mage reconsiders time, memory, and human connections.</value>
+  </data>
+  <data name="Detail_Director" xml:space="preserve">
+    <value>Director</value>
+  </data>
+  <data name="Detail_SeriesComposition" xml:space="preserve">
+    <value>Series composition</value>
+  </data>
+  <data name="Playback_Playing" xml:space="preserve">
+    <value>Playing</value>
+  </data>
+  <data name="Playback_Queue" xml:space="preserve">
+    <value>Play queue</value>
+  </data>
+  <data name="Playback_Tracks" xml:space="preserve">
+    <value>Subtitles &amp; audio</value>
+  </data>
+  <data name="Playback_Info" xml:space="preserve">
+    <value>Playback info</value>
   </data>
 </root>
