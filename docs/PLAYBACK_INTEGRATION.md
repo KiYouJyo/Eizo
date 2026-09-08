@@ -24,11 +24,14 @@ clones that exact commit into the ignored `.deps/Eizo.Playback` directory, build
 
 `NuGet.config` exposes that local feed alongside nuget.org.
 
-The Eizo application references only:
+The Eizo application references the Eizo playback integration package plus the platform-native LibVLC runtime:
 
 ```xml
 <PackageReference Include="Eizo.Playback.LibVLC.WinUI" Version="0.1.0" />
+<PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
 ```
+
+The native package is a deployment responsibility of the final Windows host. Eizo UI code still does not reference LibVLCSharp or native LibVLC APIs.
 
 The remaining Eizo.Playback packages are transitive dependencies.
 
@@ -69,7 +72,7 @@ IPlaybackEngine
 └─ Diagnostics
 ```
 
-The Eizo application does not reference LibVLCSharp or native LibVLC types.
+The Eizo application does not reference LibVLCSharp or native LibVLC types. Its direct `VideoLAN.LibVLC.Windows` PackageReference exists only so the final Windows package contains `libvlc.dll`, `libvlccore.dll`, and the plugin tree.
 
 ## Current Stage 7 UI wiring
 
