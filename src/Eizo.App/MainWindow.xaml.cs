@@ -119,6 +119,7 @@ public sealed partial class MainWindow : Window
         {
             ShowNavigationChrome();
             MainContent.Content = state.View;
+            ApplyResponsiveLayout(force: true);
             SelectShellItem(navItem);
         }
     }
@@ -398,6 +399,7 @@ public sealed partial class MainWindow : Window
         }
 
         MainContent.Content = state.View;
+        ApplyResponsiveLayout(force: true);
 
         var dark = RootGrid.ActualTheme == ElementTheme.Dark;
         if (previousKey is not null &&
