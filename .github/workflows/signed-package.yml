@@ -210,6 +210,77 @@ jobs:
           }
 
           Write-Host "Eizo launch smoke PASS. Running process(es): $($running.ProcessName -join ', ')"
+
+          Add-Type @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class EizoWindowNative
+          {
+              [DllImport("user32.dll", SetLastError = true)]
+              [return: MarshalAs(UnmanagedType.Bool)]
+              public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
+          }
+          '@
+
+          $appProcess = $null
+          foreach ($candidate in $running) {
+            for ($attempt = 0; $attempt -lt 20; $attempt++) {
+              $candidate.Refresh()
+              if ($candidate.HasExited) { break }
+              if ($candidate.MainWindowHandle -ne [IntPtr]::Zero) {
+                $appProcess = $candidate
+                break
+              }
+              Start-Sleep -Milliseconds 250
+            }
+            if ($appProcess) { break }
+          }
+
+          if (-not $appProcess) {
+            throw 'Eizo launched but no main-window handle became available for resize validation.'
+          }
+
+          $resizeSequence = @(
+            @(1280, 800),
+            @(900, 650),
+            @(760, 560),
+            @(620, 460),
+            @(520, 400),
+            @(420, 320),
+            @(1200, 800)
+          )
+
+          foreach ($size in $resizeSequence) {
+            $width = [int]$size[0]
+            $height = [int]$size[1]
+
+            $appProcess.Refresh()
+            if ($appProcess.HasExited) {
+              throw "Eizo exited before resize validation at $($width)x$($height)."
+            }
+
+            if (-not [EizoWindowNative]::MoveWindow($appProcess.MainWindowHandle, 80, 80, $width, $height, $true)) {
+              $errorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+              throw "MoveWindow failed for $($width)x$($height), Win32=$errorCode."
+            }
+
+            Start-Sleep -Milliseconds 1400
+
+            $survivor = Get-Process -Id $appProcess.Id -ErrorAction SilentlyContinue
+            if (-not $survivor) {
+              Write-Host "Eizo exited while resizing to $($width)x$($height). Capturing recent Application events."
+              Get-WinEvent -FilterHashtable @{ LogName='Application'; StartTime=(Get-Date).AddMinutes(-2) } -ErrorAction SilentlyContinue |
+                Where-Object { $_.Message -match '(?i)Eizo|Eizo\.App' } |
+                Select-Object TimeCreated, ProviderName, Id, LevelDisplayName, Message |
+                Format-List | Out-Host
+              throw "Eizo failed resize smoke at $($width)x$($height)."
+            }
+
+            $appProcess = $survivor
+            Write-Host "Resize PASS: $($width)x$($height)"
+          }
+
+          Write-Host 'Eizo resize stress PASS.'
           $running | Stop-Process -Force -ErrorAction SilentlyContinue
           Get-AppxPackage -Name Eizo | Remove-AppxPackage -ErrorAction SilentlyContinue
 
