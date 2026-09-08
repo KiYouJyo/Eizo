@@ -10,6 +10,7 @@ public partial class App : Application
     {
         try
         {
+            Localization.AppLocalizationService.Default.ApplyPersistedLanguage(AppSettingsStore.Current);
             InitializeComponent();
         }
         catch (Exception ex)

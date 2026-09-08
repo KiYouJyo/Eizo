@@ -7,7 +7,7 @@ namespace Eizo.Views;
 public sealed partial class SettingsView : UserControl
 {
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
-    private bool _isSynchronizingTheme;
+    private bool _isSynchronizing;
 
     public SettingsView()
     {
@@ -20,7 +20,7 @@ public sealed partial class SettingsView : UserControl
 
     private void SettingsView_Loaded(object sender, RoutedEventArgs e)
     {
-        _isSynchronizingTheme = true;
+        _isSynchronizing = true;
         try
         {
             var requestedTheme =
@@ -33,16 +33,24 @@ public sealed partial class SettingsView : UserControl
                 ElementTheme.Dark => 2,
                 _ => 0
             };
+
+            LanguagePicker.SelectedIndex = AppSettingsStore.Current.Language switch
+            {
+                AppLanguagePreference.SimplifiedChinese => 1,
+                AppLanguagePreference.Japanese => 2,
+                AppLanguagePreference.English => 3,
+                _ => 0
+            };
         }
         finally
         {
-            _isSynchronizingTheme = false;
+            _isSynchronizing = false;
         }
     }
 
     private void AppearanceCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_isSynchronizingTheme ||
+        if (_isSynchronizing ||
             AppearanceCombo.SelectedIndex < 0 ||
             XamlRoot?.Content is not FrameworkElement root)
         {
@@ -58,6 +66,40 @@ public sealed partial class SettingsView : UserControl
 
         root.RequestedTheme = theme;
         ThemePreferenceStore.Save(theme);
+    }
+
+    private async void LanguagePicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isSynchronizing || LanguagePicker.SelectedIndex < 0) return;
+
+        var preference = LanguagePicker.SelectedIndex switch
+        {
+            1 => AppLanguagePreference.SimplifiedChinese,
+            2 => AppLanguagePreference.Japanese,
+            3 => AppLanguagePreference.English,
+            _ => AppLanguagePreference.System
+        };
+
+        LanguagePicker.IsEnabled = false;
+        var switched = await _localization.SwitchLanguageAsync(preference);
+        LanguagePicker.IsEnabled = true;
+        if (switched) return;
+
+        _isSynchronizing = true;
+        try
+        {
+            LanguagePicker.SelectedIndex = AppSettingsStore.Current.Language switch
+            {
+                AppLanguagePreference.SimplifiedChinese => 1,
+                AppLanguagePreference.Japanese => 2,
+                AppLanguagePreference.English => 3,
+                _ => 0
+            };
+        }
+        finally
+        {
+            _isSynchronizing = false;
+        }
     }
 
     private void ApplyText()
@@ -78,6 +120,13 @@ public sealed partial class SettingsView : UserControl
         LanguageSectionTitle.Text = T("Settings_LanguageAppearance");
         LanguageTitle.Text = T("Settings_Language");
         LanguageDescription.Text = T("Settings_LanguageDescription");
+        LanguagePicker.ItemsSource = new[]
+        {
+            T("Settings_LanguageSystem"),
+            "简体中文",
+            "日本語",
+            "English"
+        };
 
         AppearanceTitle.Text = T("Settings_Appearance");
         AppearanceDescription.Text = T("Settings_AppearanceDescription");
