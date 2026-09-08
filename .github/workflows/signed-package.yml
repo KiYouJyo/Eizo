@@ -111,6 +111,58 @@ jobs:
           "CERTIFICATE_PATH=$cer" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Signer verified: $($signature.SignerCertificate.Subject) / $($signature.SignerCertificate.Thumbprint); status=$($signature.Status)"
 
+      - name: Install and launch smoke test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($env:CERTIFICATE_PATH)
+          $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("TrustedPeople","CurrentUser")
+          $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+          try {
+            if (-not @($store.Certificates | Where-Object Thumbprint -eq $cert.Thumbprint)) { $store.Add($cert) }
+          }
+          finally { $store.Close() }
+
+          Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
+          Add-AppxPackage -Path $env:BUNDLE_PATH -ForceApplicationShutdown
+
+          $pkg = Get-AppxPackage -Name Eizo
+          if (-not $pkg) { throw 'Eizo package was not registered after installation.' }
+
+          $manifest = Get-AppxPackageManifest -Package $pkg
+          $appId = [string]$manifest.Package.Applications.Application.Id
+          if ([string]::IsNullOrWhiteSpace($appId)) { throw 'Unable to resolve AppUserModel application id.' }
+
+          $activation = "shell:AppsFolder\$($pkg.PackageFamilyName)!$appId"
+          Write-Host "Launching $activation"
+          Start-Process explorer.exe -ArgumentList $activation
+
+          Start-Sleep -Seconds 8
+
+          $installRoot = [IO.Path]::GetFullPath($pkg.InstallLocation)
+          $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+            try { $_.Path -and ([IO.Path]::GetFullPath($_.Path)).StartsWith($installRoot, [StringComparison]::OrdinalIgnoreCase) }
+            catch { $false }
+          })
+
+          if ($running.Count -eq 0) {
+            Write-Host 'Eizo process did not remain alive. Capturing recent Application log entries.'
+            $since = (Get-Date).AddMinutes(-3)
+            Get-WinEvent -FilterHashtable @{ LogName='Application'; StartTime=$since } -ErrorAction SilentlyContinue |
+              Where-Object {
+                $_.ProviderName -in @('Application Error','.NET Runtime','Windows Error Reporting','Microsoft-Windows-AppModel-Runtime') -or
+                $_.Message -match '(?i)Eizo|Eizo\.App'
+              } |
+              Select-Object TimeCreated, ProviderName, Id, LevelDisplayName, Message |
+              Format-List | Out-Host
+            throw 'Eizo failed the post-install launch smoke test.'
+          }
+
+          Write-Host "Eizo launch smoke PASS. Running process(es): $($running.ProcessName -join ', ')"
+          $running | Stop-Process -Force -ErrorAction SilentlyContinue
+          Get-AppxPackage -Name Eizo | Remove-AppxPackage -ErrorAction SilentlyContinue
+
       - name: Create one-click sideload package
         shell: pwsh
         run: |
