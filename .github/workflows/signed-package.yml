@@ -222,14 +222,12 @@ jobs:
 
           Copy-Item -LiteralPath $env:BUNDLE_PATH -Destination $packageRoot -Force
           Copy-Item -LiteralPath $env:CERTIFICATE_PATH -Destination $packageRoot -Force
-          Copy-Item -LiteralPath $env:RUNTIME_INSTALLER_PATH -Destination (Join-Path $packageRoot 'WindowsAppRuntimeInstall-x64.exe') -Force
 
           $installPs1 = @'
           $ErrorActionPreference = "Stop"
           $root = Split-Path -Parent $MyInvocation.MyCommand.Path
           $cer = Join-Path $root "Eizo-v0.1.0-AppPublisher.cer"
           $bundle = Join-Path $root "Eizo_0.1.0.0_x64.msixbundle"
-          $runtime = Join-Path $root "WindowsAppRuntimeInstall-x64.exe"
           $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($cer)
 
           $isAdmin = ([Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -244,9 +242,6 @@ jobs:
           if (-not $trusted) {
             Import-Certificate -FilePath $cer -CertStoreLocation $trustedStore | Out-Null
           }
-
-          & $runtime --quiet
-          if ($LASTEXITCODE -ne 0) { throw "Windows App Runtime installation failed: $LASTEXITCODE" }
 
           Add-AppxPackage -Path $bundle -ForceApplicationShutdown
           Write-Host "Eizo v0.1.0 installed." -ForegroundColor Green
@@ -263,7 +258,7 @@ jobs:
 
           1. Double-click Install-Eizo.cmd.
           2. The installer requests UAC once, imports only the included AppPublisher public certificate into LocalMachine\TrustedPeople.
-          3. It installs Microsoft's signed Windows App Runtime 1.8 x64 when needed.
+          3. Windows App Runtime 1.8 x64 is expected to already be installed on this test machine.
           4. It then installs the signed Eizo MSIX bundle.
 
           Signer: CN=AppPublisher
