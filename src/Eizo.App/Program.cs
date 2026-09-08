@@ -33,7 +33,7 @@ public static class Program
         mainInstance.Activated += (_, activationArguments) =>
             App.OnRedirectedActivation(activationArguments);
 
-        Application.Start(_ =>
+        Application.Start(callbackParameters =>
         {
             var synchronizationContext =
                 new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());
