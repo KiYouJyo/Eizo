@@ -10,7 +10,11 @@ internal enum AppLanguagePreference
     System = 3
 }
 
-internal sealed record AppSettings(AppLanguagePreference Language = AppLanguagePreference.System);
+internal sealed record AppSettings(
+    AppLanguagePreference Language = AppLanguagePreference.System,
+    int? LastNormalWindowWidth = null,
+    int? LastNormalWindowHeight = null,
+    bool WasWindowMaximized = false);
 
 internal static class AppSettingsStore
 {
