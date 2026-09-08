@@ -126,7 +126,7 @@ jobs:
       - name: Upload unsigned integration MSIX
         uses: actions/upload-artifact@v7
         with:
-          name: Eizo-Stage7-playback-integration-\${{ github.sha }}
-          path: \${{ env.PLAYBACK_MSIX }}
+          name: Eizo-Stage7-playback-integration-${{ github.sha }}
+          path: ${{ env.PLAYBACK_MSIX }}
           if-no-files-found: error
           retention-days: 14
