@@ -219,6 +219,17 @@ jobs:
               [DllImport("user32.dll", SetLastError = true)]
               [return: MarshalAs(UnmanagedType.Bool)]
               public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
+
+              [DllImport("user32.dll")]
+              [return: MarshalAs(UnmanagedType.Bool)]
+              public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+
+              [DllImport("user32.dll", SetLastError = true)]
+              [return: MarshalAs(UnmanagedType.Bool)]
+              public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+              public const uint WM_CLOSE = 0x0010;
+              public struct RECT { public int Left, Top, Right, Bottom; }
           }
           '@
 
@@ -239,6 +250,25 @@ jobs:
           if (-not $appProcess) {
             throw 'Eizo launched but no main-window handle became available for resize validation.'
           }
+
+          # Single-instance contract: activating the installed app again must redirect
+          # to this process instead of creating another Eizo process/window.
+          $originalProcessId = $appProcess.Id
+          Start-Process explorer.exe -ArgumentList $activation
+          Start-Sleep -Seconds 4
+
+          $packageProcessesAfterSecondActivation = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+            try { $_.Path -and ([IO.Path]::GetFullPath($_.Path)).StartsWith($installRoot, [StringComparison]::OrdinalIgnoreCase) }
+            catch { $false }
+          })
+
+          if ($packageProcessesAfterSecondActivation.Count -ne 1) {
+            throw "Single-instance validation failed: expected exactly 1 Eizo process after second activation, found $($packageProcessesAfterSecondActivation.Count)."
+          }
+          if ($packageProcessesAfterSecondActivation[0].Id -ne $originalProcessId) {
+            throw "Single-instance validation failed: redirected activation did not preserve the original process."
+          }
+          Write-Host "Eizo single-instance activation PASS. PID=$originalProcessId"
 
           $resizeSequence = @(
             @(1280, 800),
@@ -319,7 +349,64 @@ jobs:
             throw 'Eizo exited after rapid resize settling.'
           }
           Write-Host 'Eizo rapid drag-like resize stress PASS.'
-          $running | Stop-Process -Force -ErrorAction SilentlyContinue
+
+          # Window-size persistence contract. End at a deterministic restored size,
+          # close normally so Closed persists it, then relaunch and verify the same size.
+          $persistWidth = 1110
+          $persistHeight = 710
+          if (-not [EizoWindowNative]::MoveWindow(
+              $appProcess.MainWindowHandle, 100, 100, $persistWidth, $persistHeight, $true)) {
+            throw 'Could not set deterministic size for persistence validation.'
+          }
+          Start-Sleep -Seconds 2
+
+          if (-not [EizoWindowNative]::PostMessage(
+              $appProcess.MainWindowHandle,
+              [EizoWindowNative]::WM_CLOSE,
+              [IntPtr]::Zero,
+              [IntPtr]::Zero)) {
+            throw 'Could not close Eizo normally for persistence validation.'
+          }
+
+          for ($attempt = 0; $attempt -lt 30; $attempt++) {
+            if (-not (Get-Process -Id $appProcess.Id -ErrorAction SilentlyContinue)) { break }
+            Start-Sleep -Milliseconds 250
+          }
+          if (Get-Process -Id $appProcess.Id -ErrorAction SilentlyContinue) {
+            throw 'Eizo did not exit after WM_CLOSE during persistence validation.'
+          }
+
+          Start-Process explorer.exe -ArgumentList $activation
+          Start-Sleep -Seconds 6
+
+          $reopened = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+            try { $_.Path -and ([IO.Path]::GetFullPath($_.Path)).StartsWith($installRoot, [StringComparison]::OrdinalIgnoreCase) }
+            catch { $false }
+          }) | Select-Object -First 1
+          if (-not $reopened) { throw 'Eizo did not reopen for window-size persistence validation.' }
+
+          for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            $reopened.Refresh()
+            if ($reopened.MainWindowHandle -ne [IntPtr]::Zero) { break }
+            Start-Sleep -Milliseconds 250
+          }
+          if ($reopened.MainWindowHandle -eq [IntPtr]::Zero) {
+            throw 'Reopened Eizo has no main window handle.'
+          }
+
+          $rect = New-Object EizoWindowNative+RECT
+          if (-not [EizoWindowNative]::GetWindowRect($reopened.MainWindowHandle, [ref]$rect)) {
+            throw 'Could not read reopened Eizo window bounds.'
+          }
+          $restoredWidth = $rect.Right - $rect.Left
+          $restoredHeight = $rect.Bottom - $rect.Top
+          if ([Math]::Abs($restoredWidth - $persistWidth) -gt 2 -or
+              [Math]::Abs($restoredHeight - $persistHeight) -gt 2) {
+            throw "Window-size persistence failed: expected $($persistWidth)x$($persistHeight), got $($restoredWidth)x$($restoredHeight)."
+          }
+          Write-Host "Eizo window-size persistence PASS: $($restoredWidth)x$($restoredHeight)"
+
+          $reopened | Stop-Process -Force -ErrorAction SilentlyContinue
           Get-AppxPackage -Name Eizo | Remove-AppxPackage -ErrorAction SilentlyContinue
 
       - name: Generate and validate lightweight one-click package
