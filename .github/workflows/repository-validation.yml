@@ -1,0 +1,25 @@
+name: Repository validation
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+      - "feat/**"
+      - "fix/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  localization:
+    name: Validate localization resources
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate RESW key parity
+        shell: pwsh
+        run: ./scripts/Test-Localization.ps1

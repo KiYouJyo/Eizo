@@ -1,0 +1,63 @@
+# Visual Studio / .NET
+.vs/
+.vscode/
+.idea/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+TestResults/
+coverage/
+coverage.*
+artifacts/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+# Windows packaging outputs
+AppPackages/
+BundleArtifacts/
+Generated Files/
+*.appx
+*.appxbundle
+*.appxsym
+*.appxupload
+*.msix
+*.msixbundle
+*.msixupload
+
+# Private signing material
+*.pfx
+*.p12
+*.p8
+*.key
+*.pem
+*.snk
+Signing/
+Certificates/Private/
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+secrets.json
+Secrets/
+LocalSettings.json
+appsettings.Local.json
+appsettings.Development.local.json
+
+# Logs / dumps / temporary files
+*.log
+*.dmp
+*.tmp
+*.bak
+*.cache
+Thumbs.db
+Desktop.ini
+.DS_Store
