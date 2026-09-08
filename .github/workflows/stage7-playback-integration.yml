@@ -1,0 +1,61 @@
+name: Stage 7 playback integration
+
+on:
+  push:
+    branches:
+      - "feat/stage7-playback-integration"
+  pull_request:
+    paths:
+      - "eng/Eizo.Playback.json"
+      - "NuGet.config"
+      - "scripts/Restore-EizoPlayback.ps1"
+      - "src/Eizo.App/**"
+      - ".github/workflows/stage7-playback-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Eizo
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore pinned Eizo.Playback packages
+        shell: pwsh
+        run: ./scripts/Restore-EizoPlayback.ps1
+
+      - name: Restore and compile Eizo
+        shell: pwsh
+        run: |
+          msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:AppxPackageSigningEnabled=false /p:GenerateAppxPackageOnBuild=false
+          if ($LASTEXITCODE -ne 0) { throw "Eizo playback integration build failed: $LASTEXITCODE" }
+
+      - name: Verify playback dependency boundary
+        shell: pwsh
+        run: |
+          $assets = Get-ChildItem src\Eizo.App\bin\x64\Release -Recurse -File -ErrorAction SilentlyContinue
+          $expected = @(
+            'Eizo.Playback.Abstractions.dll',
+            'Eizo.Playback.Core.dll',
+            'Eizo.Playback.LibVLC.dll',
+            'Eizo.Playback.LibVLC.WinUI.dll'
+          )
+
+          foreach ($name in $expected) {
+            if (-not ($assets | Where-Object Name -eq $name | Select-Object -First 1)) {
+              throw "Playback integration output is missing $name"
+            }
+          }
