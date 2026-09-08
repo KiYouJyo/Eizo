@@ -29,7 +29,7 @@ public sealed partial class MainWindow
 
         // NavigationView.Auto finishes its first measure after Loaded.
         // Re-evaluate tabs without touching the native pane state.
-        DispatcherQueue.TryEnqueue(ApplyAdaptiveTabWidths);
+        DispatcherQueue.TryEnqueue(() => ApplyAdaptiveTabWidths());
     }
 
     private void RootGrid_SizeChanged(object sender, SizeChangedEventArgs e)
