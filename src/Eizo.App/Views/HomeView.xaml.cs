@@ -7,6 +7,6 @@ public sealed partial class HomeView:UserControl
  private string T(string k)=>_l.GetString(k);
  private void ApplyText(){PageTitle.Text=T("Nav_Home");PageSubtitle.Text=T("Home_Subtitle");SearchBox.PlaceholderText=T("Search_Placeholder");FeaturedEyebrow.Text=T("Home_Featured");FeaturedDescription.Text=T("Home_FeaturedDescription");FeaturedPlayText.Text=T("Common_Play");FeaturedDetailsButton.Content=T("Common_ViewDetails");ContinueTitle.Text=T("Section_ContinueWatching");SeasonTitle.Text=T("Section_CurrentSeason");ContinueAllButton.Content=T("Common_ViewAll");SeasonAllButton.Content=T("Common_ViewAll");}
  private void FeaturedButton_Click(object s,RoutedEventArgs e)=>DetailRequested?.Invoke(this,"葬送的芙莉莲");
- private void FeaturedPlayButton_Click(object s,RoutedEventArgs e){e.Handled=true;PlayRequested?.Invoke(this,"葬送的芙莉莲");}
+ private void FeaturedPlayButton_Click(object s,RoutedEventArgs e){PlayRequested?.Invoke(this,"葬送的芙莉莲");}
  private void MediaCard_Click(object s,RoutedEventArgs e){if(s is Button{Tag:string title})DetailRequested?.Invoke(this,title);}
 }
