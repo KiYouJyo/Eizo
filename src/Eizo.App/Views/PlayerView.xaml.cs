@@ -871,7 +871,7 @@ public sealed partial class PlayerView : UserControl
             return;
         }
 
-        DispatcherQueue.TryEnqueue(action);
+        DispatcherQueue.TryEnqueue(() => action());
     }
 
     private static string FormatSubtitleTrack(SubtitleTrackInfo track)
