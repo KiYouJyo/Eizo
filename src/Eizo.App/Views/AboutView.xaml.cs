@@ -80,13 +80,6 @@ public sealed partial class AboutView : UserControl
         await _updates.CheckProductUpdateAsync();
     }
 
-    private void RestartAppButton_Click(object sender, RoutedEventArgs e)
-    {
-        var failureReason = AppInstance.Restart(string.Empty);
-        AppUpdateStatusText.Text =
-            $"{L("重启失败", "再起動に失敗しました", "Restart failed")} · {failureReason}";
-    }
-
     private async void ReleaseNotesButton_Click(object sender, RoutedEventArgs e)
     {
         var uri = _updates.ProductInfo.Release is { HtmlUrl.Length: > 0 } release
@@ -115,7 +108,7 @@ public sealed partial class AboutView : UserControl
             AppUpdateState.UpdateAvailable =>
                 L("下载并验证", "ダウンロードして検証", "Download & verify"),
             AppUpdateState.ReadyToInstall =>
-                L("安装并重启", "インストールして再起動", "Install & restart"),
+                L("重启并更新", "再起動して更新", "Restart to update"),
             AppUpdateState.Downloading =>
                 L("正在下载", "ダウンロード中", "Downloading"),
             AppUpdateState.Verifying =>
@@ -135,7 +128,17 @@ public sealed partial class AboutView : UserControl
             AppUpdateState.Restarting;
 
         CheckUpdateButton.IsEnabled = _updates.CanOperateProductUpdate && !busy;
-        RestartAppButton.IsEnabled = !busy;
+
+        var progressVisible = info.State is
+            AppUpdateState.Downloading or
+            AppUpdateState.Verifying or
+            AppUpdateState.Installing or
+            AppUpdateState.Restarting;
+        AppUpdateProgressBar.Visibility = progressVisible ? Visibility.Visible : Visibility.Collapsed;
+        AppUpdateProgressBar.IsIndeterminate =
+            info.State is not AppUpdateState.Downloading || _updates.ProductProgress is null;
+        if (_updates.ProductProgress is double progress)
+            AppUpdateProgressBar.Value = progress * 100d;
     }
 
     private string ResolveProductUpdateStatus(AppUpdateInfo info) => info.State switch
@@ -205,7 +208,6 @@ public sealed partial class AboutView : UserControl
         UpdateStatusLabel.Text = T("About_Status");
         ReleaseNotesButton.Content = T("About_ReleaseNotes");
         CheckUpdateButton.Content = T("About_CheckUpdates");
-        RestartAppButton.Content = L("重启应用", "アプリを再起動", "Restart app");
 
         IndependentComponentsTitle.Text = T("About_IndependentComponents");
         PlayerCoreTitle.Text = T("About_PlayerCore");
