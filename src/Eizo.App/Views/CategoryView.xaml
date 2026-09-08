@@ -1,8 +1,175 @@
-<UserControl x:Class="Eizo.Views.CategoryView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:models="using:Eizo.Models">
- <ScrollViewer><Grid MaxWidth="1200" Margin="32" HorizontalAlignment="Stretch" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="18">
-  <Grid ColumnDefinitions="*,380"><StackPanel Spacing="4"><TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleText}"/><TextBlock x:Name="PageSubtitle" Style="{StaticResource MetadataText}"/></StackPanel><AutoSuggestBox x:Name="SearchBox" Grid.Column="1" Height="38" QueryIcon="Find"/></Grid>
-  <Border Grid.Row="1" Height="250" CornerRadius="10" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"><Grid ColumnDefinitions="420,*"><Border Margin="12" CornerRadius="8" Background="{ThemeResource EizoSelectionBrush}"><FontIcon Glyph="&#xE8B9;" FontSize="68" Opacity="0.22"/></Border><StackPanel Grid.Column="1" Padding="24" Spacing="10" VerticalAlignment="Center"><TextBlock x:Name="FeaturedTitle" FontSize="24" FontWeight="SemiBold"/><TextBlock x:Name="FeaturedNativeTitle" Style="{StaticResource BodyText}"/><TextBlock x:Name="FeaturedMeta" Style="{StaticResource MetadataText}"/><TextBlock x:Name="FeaturedDescription" Style="{StaticResource BodyText}" TextWrapping="Wrap"/><StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="FeaturedPlayButton" Width="96" Style="{StaticResource CompactActionButton}" Click="FeaturedPlayButton_Click"/><Button x:Name="FeaturedDetailsButton" Width="108" Style="{StaticResource CompactActionButton}" Click="FeaturedButton_Click"/></StackPanel></StackPanel></Grid></Border>
-  <StackPanel Grid.Row="2" Spacing="12"><TextBlock x:Name="LibraryTitle" Style="{StaticResource SectionTitleText}"/><ScrollViewer HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled"><StackPanel Orientation="Horizontal"><ToggleButton x:Name="AllFilter" IsChecked="True" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="CurrentFilter" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="FollowingFilter" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="UnwatchedFilter" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="SpecialFilter" Style="{StaticResource FilterToggleButton}"/></StackPanel></ScrollViewer></StackPanel>
-  <ItemsRepeater x:Name="LibraryRepeater" Grid.Row="3"><ItemsRepeater.Layout><UniformGridLayout MinItemWidth="250" MinItemHeight="174" MinColumnSpacing="12" MinRowSpacing="12" ItemsStretch="Fill"/></ItemsRepeater.Layout><ItemsRepeater.ItemTemplate><DataTemplate x:DataType="models:MediaCardModel"><Button Style="{StaticResource MediaCardButton}" Height="174" Tag="{x:Bind Title}" Click="MediaCard_Click"><Grid RowDefinitions="104,*"><Border Background="{ThemeResource EizoSelectionBrush}" CornerRadius="8,8,0,0"><FontIcon Glyph="&#xE8B9;" FontSize="34" Opacity="0.25"/></Border><Grid Grid.Row="1" Padding="12,8" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"><TextBlock Text="{x:Bind NativeTitle}" Style="{StaticResource CardTitleText}"/><TextBlock Grid.Row="1" Text="{x:Bind Title}" Style="{StaticResource MetadataText}"/><TextBlock Grid.Column="1" Grid.Row="1" Text="{x:Bind Meta}" Style="{StaticResource MetadataText}"/></Grid></Grid></Button></DataTemplate></ItemsRepeater.ItemTemplate></ItemsRepeater>
- </Grid></ScrollViewer>
+<UserControl x:Class="Eizo.Views.CategoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Eizo.Models">
+  <ScrollViewer Background="Transparent"
+                HorizontalScrollMode="Disabled"
+                HorizontalScrollBarVisibility="Disabled"
+                HorizontalContentAlignment="Stretch">
+    <Grid x:Name="CategoryRoot"
+          Padding="24,16,24,32"
+          HorizontalAlignment="Stretch"
+          RowDefinitions="Auto,18,Auto,18,Auto,12,Auto"
+          UseLayoutRounding="True">
+      <VisualStateManager.VisualStateGroups>
+        <VisualStateGroup>
+          <VisualState x:Name="CategoryCompact">
+            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="0" /></VisualState.StateTriggers>
+            <VisualState.Setters>
+              <Setter Target="SearchBox.(Grid.Row)" Value="1" />
+              <Setter Target="SearchBox.(Grid.Column)" Value="0" />
+              <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="2" />
+              <Setter Target="SearchBox.Margin" Value="0,10,0,0" />
+              <Setter Target="FeaturedArtwork.Visibility" Value="Collapsed" />
+              <Setter Target="FeaturedText.(Grid.Column)" Value="0" />
+              <Setter Target="FeaturedText.(Grid.ColumnSpan)" Value="2" />
+            </VisualState.Setters>
+          </VisualState>
+          <VisualState x:Name="CategoryWide">
+            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="900" /></VisualState.StateTriggers>
+            <VisualState.Setters>
+              <Setter Target="SearchBox.(Grid.Row)" Value="0" />
+              <Setter Target="SearchBox.(Grid.Column)" Value="1" />
+              <Setter Target="SearchBox.(Grid.ColumnSpan)" Value="1" />
+              <Setter Target="SearchBox.Margin" Value="0" />
+              <Setter Target="FeaturedArtwork.Visibility" Value="Visible" />
+              <Setter Target="FeaturedText.(Grid.Column)" Value="1" />
+              <Setter Target="FeaturedText.(Grid.ColumnSpan)" Value="1" />
+            </VisualState.Setters>
+          </VisualState>
+        </VisualStateGroup>
+      </VisualStateManager.VisualStateGroups>
+
+      <Grid RowDefinitions="Auto,Auto"
+            ColumnDefinitions="*,380">
+        <StackPanel Spacing="4">
+          <TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleText}" />
+          <TextBlock x:Name="PageSubtitle" Style="{StaticResource MetadataText}" />
+        </StackPanel>
+        <AutoSuggestBox x:Name="SearchBox"
+                        Grid.Row="1"
+                        Grid.ColumnSpan="2"
+                        Height="38"
+                        QueryIcon="Find"
+                        HorizontalAlignment="Stretch" />
+      </Grid>
+
+      <Border Grid.Row="2"
+              MinHeight="250"
+              CornerRadius="10"
+              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+              BorderThickness="1">
+        <Grid ColumnDefinitions="420,*">
+          <Border x:Name="FeaturedArtwork"
+                  Margin="12"
+                  Visibility="Collapsed"
+                  CornerRadius="8"
+                  Background="{ThemeResource EizoSelectionBrush}">
+            <FontIcon Glyph="&#xE8B9;"
+                      FontSize="68"
+                      Opacity="0.22" />
+          </Border>
+
+          <StackPanel x:Name="FeaturedText"
+                      Grid.ColumnSpan="2"
+                      Padding="24"
+                      Spacing="10"
+                      VerticalAlignment="Center">
+            <TextBlock x:Name="FeaturedTitle"
+                       FontSize="24"
+                       FontWeight="SemiBold" />
+            <TextBlock x:Name="FeaturedNativeTitle"
+                       Style="{StaticResource BodyText}" />
+            <TextBlock x:Name="FeaturedMeta"
+                       Style="{StaticResource MetadataText}" />
+            <TextBlock x:Name="FeaturedDescription"
+                       Style="{StaticResource BodyText}"
+                       TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button x:Name="FeaturedPlayButton"
+                      Width="96"
+                      Style="{StaticResource CompactActionButton}"
+                      Click="FeaturedPlayButton_Click" />
+              <Button x:Name="FeaturedDetailsButton"
+                      Width="108"
+                      Style="{StaticResource CompactActionButton}"
+                      Click="FeaturedButton_Click" />
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <StackPanel Grid.Row="4" Spacing="10">
+        <TextBlock x:Name="LibraryTitle"
+                   Style="{StaticResource SectionTitleText}" />
+        <!-- Same native ListView selector used by SpatialViewer/UrbanPlanToolbox.
+             This preserves WinUI's Fluent selection indicator and hover states. -->
+        <ListView x:Name="FilterList"
+                  SelectedIndex="0"
+                  IsItemClickEnabled="True"
+                  SelectionMode="Single"
+                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                  ScrollViewer.HorizontalScrollMode="Auto"
+                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                  ScrollViewer.VerticalScrollMode="Disabled">
+          <ListView.ItemsPanel>
+            <ItemsPanelTemplate>
+              <ItemsStackPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ListView.ItemsPanel>
+          <ListView.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding}"
+                         Margin="8,2"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         TextAlignment="Center" />
+            </DataTemplate>
+          </ListView.ItemTemplate>
+        </ListView>
+      </StackPanel>
+
+      <ItemsRepeater x:Name="LibraryRepeater" Grid.Row="6">
+        <ItemsRepeater.Layout>
+          <UniformGridLayout MinItemWidth="250"
+                             MinItemHeight="174"
+                             MinColumnSpacing="12"
+                             MinRowSpacing="12"
+                             ItemsStretch="Fill" />
+        </ItemsRepeater.Layout>
+        <ItemsRepeater.ItemTemplate>
+          <DataTemplate x:DataType="models:MediaCardModel">
+            <Button Style="{StaticResource MediaCardButton}"
+                    Height="174"
+                    Tag="{x:Bind Title}"
+                    Click="MediaCard_Click">
+              <Grid RowDefinitions="104,*">
+                <Border Background="{ThemeResource EizoSelectionBrush}"
+                        CornerRadius="8,8,0,0">
+                  <FontIcon Glyph="&#xE8B9;"
+                            FontSize="34"
+                            Opacity="0.25" />
+                </Border>
+                <Grid Grid.Row="1"
+                      Padding="12,8"
+                      ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto">
+                  <TextBlock Text="{x:Bind NativeTitle}"
+                             Style="{StaticResource CardTitleText}" />
+                  <TextBlock Grid.Row="1"
+                             Text="{x:Bind Title}"
+                             Style="{StaticResource MetadataText}" />
+                  <TextBlock Grid.Column="1"
+                             Grid.Row="1"
+                             Text="{x:Bind Meta}"
+                             Style="{StaticResource MetadataText}" />
+                </Grid>
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsRepeater.ItemTemplate>
+      </ItemsRepeater>
+    </Grid>
+  </ScrollViewer>
 </UserControl>

@@ -1,24 +1,231 @@
 <UserControl x:Class="Eizo.Views.SettingsView"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
- xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
- <ScrollViewer><Grid MaxWidth="1200" Margin="32" HorizontalAlignment="Stretch" RowDefinitions="Auto,Auto,Auto" RowSpacing="18">
-  <StackPanel Spacing="4"><TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleText}"/><TextBlock x:Name="PageSubtitle" Style="{StaticResource MetadataText}"/></StackPanel>
-  <ScrollViewer Grid.Row="1" HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled"><StackPanel Orientation="Horizontal"><ToggleButton x:Name="GeneralTab" IsChecked="True" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="MetadataTab" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="PlaybackTab" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="SubtitleTab" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="NetworkTab" Style="{StaticResource FilterToggleButton}"/><ToggleButton x:Name="PrivacyTab" Style="{StaticResource FilterToggleButton}"/></StackPanel></ScrollViewer>
-  <StackPanel Grid.Row="2" Spacing="14">
-   <Border Style="{StaticResource SectionCardStyle}"><StackPanel Spacing="14">
-    <TextBlock x:Name="LanguageSectionTitle" Style="{StaticResource SectionTitleText}"/>
-    <Grid ColumnDefinitions="*,280"><StackPanel><TextBlock x:Name="LanguageTitle" Style="{StaticResource CardTitleText}"/><TextBlock x:Name="LanguageDescription" Style="{StaticResource MetadataText}"/></StackPanel><ComboBox Grid.Column="1" SelectedIndex="0"><ComboBoxItem Content="简体中文"/><ComboBoxItem Content="日本語"/><ComboBoxItem Content="English"/></ComboBox></Grid>
-    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
-    <Grid ColumnDefinitions="*,280"><StackPanel><TextBlock x:Name="AppearanceTitle" Style="{StaticResource CardTitleText}"/><TextBlock x:Name="AppearanceDescription" Style="{StaticResource MetadataText}"/></StackPanel><ComboBox x:Name="AppearanceCombo" Grid.Column="1" SelectedIndex="0"/></Grid>
-   </StackPanel></Border>
-   <Border Style="{StaticResource SectionCardStyle}"><StackPanel Spacing="14">
-    <TextBlock x:Name="JapaneseMediaTitle" Style="{StaticResource SectionTitleText}"/>
-    <Grid ColumnDefinitions="*,280"><StackPanel><TextBlock x:Name="PreferredTitleLabel" Style="{StaticResource CardTitleText}"/><TextBlock x:Name="PreferredTitleDescription" Style="{StaticResource MetadataText}"/></StackPanel><ComboBox x:Name="PreferredTitleCombo" Grid.Column="1" SelectedIndex="0"/></Grid>
-    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
-    <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock x:Name="JapaneseTitleLabel" Style="{StaticResource CardTitleText}"/><TextBlock x:Name="JapaneseTitleDescription" Style="{StaticResource MetadataText}"/></StackPanel><ToggleSwitch Grid.Column="1" IsOn="True"/></Grid>
-    <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}"/>
-    <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock x:Name="RomajiLabel" Style="{StaticResource CardTitleText}"/><TextBlock x:Name="RomajiDescription" Style="{StaticResource MetadataText}"/></StackPanel><ToggleSwitch Grid.Column="1"/></Grid>
-   </StackPanel></Border>
-  </StackPanel>
- </Grid></ScrollViewer>
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ScrollViewer Background="Transparent"
+                HorizontalScrollMode="Disabled"
+                HorizontalScrollBarVisibility="Disabled"
+                HorizontalContentAlignment="Stretch"
+                VerticalScrollBarVisibility="Auto">
+    <Grid x:Name="SettingsRoot"
+          Padding="24,16,24,32"
+          HorizontalAlignment="Stretch"
+          UseLayoutRounding="True">
+      <VisualStateManager.VisualStateGroups>
+        <VisualStateGroup>
+          <VisualState x:Name="SettingsCompact">
+            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="0" /></VisualState.StateTriggers>
+            <VisualState.Setters>
+              <Setter Target="LanguagePicker.(Grid.Row)" Value="1" />
+              <Setter Target="LanguagePicker.(Grid.Column)" Value="0" />
+              <Setter Target="LanguagePicker.(Grid.ColumnSpan)" Value="2" />
+              <Setter Target="LanguagePicker.HorizontalAlignment" Value="Left" />
+              <Setter Target="AppearanceCombo.(Grid.Row)" Value="1" />
+              <Setter Target="AppearanceCombo.(Grid.Column)" Value="0" />
+              <Setter Target="AppearanceCombo.(Grid.ColumnSpan)" Value="2" />
+              <Setter Target="AppearanceCombo.HorizontalAlignment" Value="Left" />
+              <Setter Target="PreferredTitleCombo.(Grid.Row)" Value="1" />
+              <Setter Target="PreferredTitleCombo.(Grid.Column)" Value="0" />
+              <Setter Target="PreferredTitleCombo.(Grid.ColumnSpan)" Value="2" />
+              <Setter Target="PreferredTitleCombo.HorizontalAlignment" Value="Left" />
+              <Setter Target="JapaneseTitleToggle.(Grid.Row)" Value="1" />
+              <Setter Target="JapaneseTitleToggle.(Grid.Column)" Value="0" />
+              <Setter Target="JapaneseTitleToggle.(Grid.ColumnSpan)" Value="2" />
+              <Setter Target="JapaneseTitleToggle.HorizontalAlignment" Value="Left" />
+              <Setter Target="RomajiToggle.(Grid.Row)" Value="1" />
+              <Setter Target="RomajiToggle.(Grid.Column)" Value="0" />
+              <Setter Target="RomajiToggle.(Grid.ColumnSpan)" Value="2" />
+              <Setter Target="RomajiToggle.HorizontalAlignment" Value="Left" />
+            </VisualState.Setters>
+          </VisualState>
+
+          <VisualState x:Name="SettingsWide">
+            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="720" /></VisualState.StateTriggers>
+            <VisualState.Setters>
+              <Setter Target="LanguagePicker.(Grid.Row)" Value="0" />
+              <Setter Target="LanguagePicker.(Grid.Column)" Value="1" />
+              <Setter Target="LanguagePicker.(Grid.ColumnSpan)" Value="1" />
+              <Setter Target="LanguagePicker.HorizontalAlignment" Value="Right" />
+              <Setter Target="AppearanceCombo.(Grid.Row)" Value="0" />
+              <Setter Target="AppearanceCombo.(Grid.Column)" Value="1" />
+              <Setter Target="AppearanceCombo.(Grid.ColumnSpan)" Value="1" />
+              <Setter Target="AppearanceCombo.HorizontalAlignment" Value="Right" />
+              <Setter Target="PreferredTitleCombo.(Grid.Row)" Value="0" />
+              <Setter Target="PreferredTitleCombo.(Grid.Column)" Value="1" />
+              <Setter Target="PreferredTitleCombo.(Grid.ColumnSpan)" Value="1" />
+              <Setter Target="PreferredTitleCombo.HorizontalAlignment" Value="Right" />
+              <Setter Target="JapaneseTitleToggle.(Grid.Row)" Value="0" />
+              <Setter Target="JapaneseTitleToggle.(Grid.Column)" Value="1" />
+              <Setter Target="JapaneseTitleToggle.(Grid.ColumnSpan)" Value="1" />
+              <Setter Target="JapaneseTitleToggle.HorizontalAlignment" Value="Right" />
+              <Setter Target="RomajiToggle.(Grid.Row)" Value="0" />
+              <Setter Target="RomajiToggle.(Grid.Column)" Value="1" />
+              <Setter Target="RomajiToggle.(Grid.ColumnSpan)" Value="1" />
+              <Setter Target="RomajiToggle.HorizontalAlignment" Value="Right" />
+            </VisualState.Setters>
+          </VisualState>
+        </VisualStateGroup>
+      </VisualStateManager.VisualStateGroups>
+
+      <StackPanel Spacing="18"
+                  HorizontalAlignment="Stretch">
+        <StackPanel Spacing="4">
+          <TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleText}" />
+          <TextBlock x:Name="PageSubtitle" Style="{StaticResource MetadataText}" />
+        </StackPanel>
+
+        <ListView x:Name="SettingsSectionList"
+                  SelectedIndex="0"
+                  IsItemClickEnabled="True"
+                  SelectionMode="Single"
+                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                  ScrollViewer.HorizontalScrollMode="Auto"
+                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                  ScrollViewer.VerticalScrollMode="Disabled">
+          <ListView.ItemsPanel>
+            <ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+          </ListView.ItemsPanel>
+          <ListView.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding}"
+                         Margin="8,2"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center" />
+            </DataTemplate>
+          </ListView.ItemTemplate>
+        </ListView>
+
+        <Border Style="{StaticResource SettingsSectionCardStyle}">
+          <StackPanel Spacing="14">
+            <TextBlock x:Name="LanguageSectionTitle"
+                       Style="{StaticResource SectionTitleText}" />
+
+            <Border Style="{StaticResource SettingsInnerCardStyle}">
+              <StackPanel>
+                <Grid Padding="14"
+                      MinHeight="72"
+                      ColumnSpacing="24"
+                      RowSpacing="10"
+                      ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto">
+                  <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="LanguageTitle" Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="LanguageDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                  </StackPanel>
+                  <ComboBox x:Name="LanguagePicker"
+                            Grid.Column="1"
+                            Width="250"
+                            MinWidth="180"
+                            MaxWidth="250"
+                            HorizontalAlignment="Right"
+                            SelectedIndex="0">
+                    <ComboBoxItem Content="简体中文" />
+                    <ComboBoxItem Content="日本語" />
+                    <ComboBoxItem Content="English" />
+                  </ComboBox>
+                </Grid>
+
+                <Border Height="1"
+                        Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                <Grid Padding="14"
+                      MinHeight="72"
+                      ColumnSpacing="24"
+                      RowSpacing="10"
+                      ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto">
+                  <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="AppearanceTitle" Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="AppearanceDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                  </StackPanel>
+                  <ComboBox x:Name="AppearanceCombo"
+                            Grid.Column="1"
+                            Width="250"
+                            MinWidth="180"
+                            MaxWidth="250"
+                            HorizontalAlignment="Right"
+                            SelectedIndex="0" />
+                </Grid>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource SettingsSectionCardStyle}"
+                Margin="0,0,0,24">
+          <StackPanel Spacing="14">
+            <TextBlock x:Name="JapaneseMediaTitle"
+                       Style="{StaticResource SectionTitleText}" />
+
+            <Border Style="{StaticResource SettingsInnerCardStyle}">
+              <StackPanel>
+                <Grid Padding="14"
+                      MinHeight="72"
+                      ColumnSpacing="24"
+                      RowSpacing="10"
+                      ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto">
+                  <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="PreferredTitleLabel" Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="PreferredTitleDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                  </StackPanel>
+                  <ComboBox x:Name="PreferredTitleCombo"
+                            Grid.Column="1"
+                            Width="250"
+                            MinWidth="180"
+                            MaxWidth="250"
+                            HorizontalAlignment="Right"
+                            SelectedIndex="0" />
+                </Grid>
+
+                <Border Height="1"
+                        Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                <Grid Padding="14"
+                      MinHeight="72"
+                      ColumnSpacing="24"
+                      RowSpacing="10"
+                      ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto">
+                  <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="JapaneseTitleLabel" Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="JapaneseTitleDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                  </StackPanel>
+                  <ToggleSwitch x:Name="JapaneseTitleToggle"
+                                Grid.Column="1"
+                                Width="44"
+                                MinWidth="44"
+                                OnContent=""
+                                OffContent=""
+                                HorizontalAlignment="Right"
+                                IsOn="True" />
+                </Grid>
+
+                <Border Height="1"
+                        Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                <Grid Padding="14"
+                      MinHeight="72"
+                      ColumnSpacing="24"
+                      RowSpacing="10"
+                      ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto">
+                  <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="RomajiLabel" Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="RomajiDescription" Style="{StaticResource SettingsDescriptionStyle}" />
+                  </StackPanel>
+                  <ToggleSwitch x:Name="RomajiToggle"
+                                Grid.Column="1"
+                                Width="44"
+                                MinWidth="44"
+                                OnContent=""
+                                OffContent=""
+                                HorizontalAlignment="Right" />
+                </Grid>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+  </ScrollViewer>
 </UserControl>
