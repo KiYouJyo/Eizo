@@ -48,9 +48,9 @@ public sealed partial class SettingsView : UserControl
         PreferredTitleDescription.Text = T("Settings_PreferredTitleDescription");
         PreferredTitleCombo.ItemsSource = new[]
         {
-            T("Settings_TitleChineseJapanese"),
-            T("Settings_TitleJapanese"),
-            T("Settings_TitleEnglish")
+            "简体中文",
+            "日本語",
+            "English"
         };
 
         JapaneseTitleLabel.Text = T("Settings_ShowJapaneseTitle");

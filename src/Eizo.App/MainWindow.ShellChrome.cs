@@ -26,9 +26,6 @@ public sealed partial class MainWindow
         HookNavigationPaneBackground();
         _shellReady = true;
         ApplyAdaptiveTabWidths();
-
-        // NavigationView.Auto finishes its first measure after Loaded.
-        // Re-evaluate tabs without touching the native pane state.
         DispatcherQueue.TryEnqueue(() => ApplyAdaptiveTabWidths());
     }
 
@@ -54,7 +51,8 @@ public sealed partial class MainWindow
         AppTitleBar.SizeChanged += AppTitleBar_AdaptiveTabsSizeChanged;
     }
 
-    private void AppTitleBar_AdaptiveTabsSizeChanged(object sender, SizeChangedEventArgs e) => ApplyAdaptiveTabWidths();
+    private void AppTitleBar_AdaptiveTabsSizeChanged(object sender, SizeChangedEventArgs e) =>
+        ApplyAdaptiveTabWidths();
 
     private void ShellTab_Unloaded(object sender, RoutedEventArgs e)
     {
@@ -72,15 +70,17 @@ public sealed partial class MainWindow
         var titleBarWidth = AppTitleBar.ActualWidth;
         if (!double.IsFinite(titleBarWidth) || titleBarWidth <= 0) return preferredWidth;
 
-        // Exact SpatialViewer geometry:
-        // 104 product column + 132 caption reserve + 16/12 outer padding +
-        // 12-DIP right margin in the tab viewport.
-        const double fixedTitleBarWidth = 104 + 132 + 16 + 12 + 12;
+        // 128-DIP centered product mark + native caption reserve + right padding
+        // + the tab viewport's right margin.
+        const double fixedTitleBarWidth = 128 + 132 + 12 + 12;
         var tabViewportWidth = Math.Max(0, titleBarWidth - fixedTitleBarWidth);
         var spacingWidth = ShellTabSpacing * tabCount;
         var usableTabWidth = Math.Max(0, tabViewportWidth - NewTabButtonWidth - spacingWidth);
         var calculatedWidth = usableTabWidth / tabCount;
-        var targetWidth = Math.Clamp(calculatedWidth, MinimumTabWidth, Math.Min(PreferredTabWidth, preferredWidth));
+        var targetWidth = Math.Clamp(
+            calculatedWidth,
+            MinimumTabWidth,
+            Math.Min(PreferredTabWidth, preferredWidth));
 
         foreach (var child in ShellTabItems.Children)
         {
@@ -93,7 +93,6 @@ public sealed partial class MainWindow
 
     private void AnimateTabOpen(Border container, double targetWidth)
     {
-        // Initial home tab is created before the visual tree loads.
         if (!RootGrid.IsLoaded)
         {
             container.Width = targetWidth;
@@ -144,19 +143,28 @@ public sealed partial class MainWindow
         foreach (var state in _tabs.Values)
         {
             if (state.Visual is null) continue;
-            ApplyTabVisual(state.Visual, string.Equals(state.Key, _selectedTabKey, StringComparison.Ordinal), dark);
+            ApplyTabVisual(
+                state.Visual,
+                string.Equals(state.Key, _selectedTabKey, StringComparison.Ordinal),
+                dark);
         }
     }
 
     private static void ApplyTabVisual(ShellTabVisual visual, bool selected, bool dark)
     {
         visual.Container.Background = new SolidColorBrush(selected
-            ? (dark ? ColorHelper.FromArgb(30, 255, 255, 255) : ColorHelper.FromArgb(214, 255, 255, 255))
-            : (dark ? ColorHelper.FromArgb(10, 255, 255, 255) : ColorHelper.FromArgb(8, 0, 0, 0)));
+            ? (dark
+                ? ColorHelper.FromArgb(30, 255, 255, 255)
+                : ColorHelper.FromArgb(214, 255, 255, 255))
+            : (dark
+                ? ColorHelper.FromArgb(10, 255, 255, 255)
+                : ColorHelper.FromArgb(8, 0, 0, 0)));
 
         visual.Container.BorderThickness = new Thickness(selected ? 1 : 0);
         visual.Container.BorderBrush = new SolidColorBrush(
-            dark ? ColorHelper.FromArgb(38, 255, 255, 255) : ColorHelper.FromArgb(51, 117, 117, 117));
+            dark
+                ? ColorHelper.FromArgb(38, 255, 255, 255)
+                : ColorHelper.FromArgb(51, 117, 117, 117));
 
         visual.HeaderText.FontWeight = selected
             ? Microsoft.UI.Text.FontWeights.SemiBold

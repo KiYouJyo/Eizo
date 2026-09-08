@@ -11,16 +11,15 @@
           RowDefinitions="48,*"
           SizeChanged="RootGrid_SizeChanged"
           UseLayoutRounding="True">
-      <!-- Keep the detached title-tab shell structurally identical to SpatialViewer:
-           48-DIP title region, 32-DIP tabs, native caption-button reserve. -->
       <Grid x:Name="AppTitleBar"
             Grid.Row="0"
             Background="Transparent"
-            ColumnDefinitions="104,*,132"
-            Padding="16,0,12,0">
-        <TextBlock Text="Eizo"
+            ColumnDefinitions="128,*,132"
+            Padding="0,0,12,0">
+        <TextBlock Text="Eizo  映藏"
                    Style="{StaticResource BodyText}"
                    FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
                    VerticalAlignment="Center" />
 
         <ScrollViewer Grid.Column="1"
@@ -57,8 +56,6 @@
         </ScrollViewer>
       </Grid>
 
-      <!-- Do not force a 216-DIP pane. NavigationView.Auto owns pane sizing and
-           compact behavior, matching SpatialViewer and standard WinUI apps. -->
       <NavigationView x:Name="ShellNavigation"
                       Grid.Row="1"
                       Background="Transparent"
@@ -77,20 +74,14 @@
         </NavigationView.Resources>
 
         <NavigationView.MenuItems>
-          <NavigationViewItem x:Name="HomeNav"
-                              Tag="home"
-                              IsSelected="True">
-            <NavigationViewItem.Icon>
-              <SymbolIcon Symbol="Home" />
-            </NavigationViewItem.Icon>
+          <NavigationViewItem x:Name="HomeNav" Tag="home" IsSelected="True">
+            <NavigationViewItem.Icon><SymbolIcon Symbol="Home" /></NavigationViewItem.Icon>
           </NavigationViewItem>
 
           <NavigationViewItem x:Name="CategoryNav"
                               Tag="categories"
                               SelectsOnInvoked="False">
-            <NavigationViewItem.Icon>
-              <SymbolIcon Symbol="Library" />
-            </NavigationViewItem.Icon>
+            <NavigationViewItem.Icon><SymbolIcon Symbol="Library" /></NavigationViewItem.Icon>
             <NavigationViewItem.MenuItems>
               <NavigationViewItem x:Name="AnimeNav" Tag="anime">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B2;" /></NavigationViewItem.Icon>
@@ -105,9 +96,7 @@
           </NavigationViewItem>
 
           <NavigationViewItem x:Name="SourcesNav" Tag="sources">
-            <NavigationViewItem.Icon>
-              <FontIcon Glyph="&#xE753;" />
-            </NavigationViewItem.Icon>
+            <NavigationViewItem.Icon><FontIcon Glyph="&#xE753;" /></NavigationViewItem.Icon>
           </NavigationViewItem>
         </NavigationView.MenuItems>
 

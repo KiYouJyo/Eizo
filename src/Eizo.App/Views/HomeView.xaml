@@ -14,9 +14,7 @@
       <VisualStateManager.VisualStateGroups>
         <VisualStateGroup>
           <VisualState x:Name="HomeCompact">
-            <VisualState.StateTriggers>
-              <AdaptiveTrigger MinWindowWidth="0" />
-            </VisualState.StateTriggers>
+            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="0" /></VisualState.StateTriggers>
             <VisualState.Setters>
               <Setter Target="SearchBox.(Grid.Row)" Value="1" />
               <Setter Target="SearchBox.(Grid.Column)" Value="0" />
@@ -27,9 +25,7 @@
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="HomeWide">
-            <VisualState.StateTriggers>
-              <AdaptiveTrigger MinWindowWidth="900" />
-            </VisualState.StateTriggers>
+            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="900" /></VisualState.StateTriggers>
             <VisualState.Setters>
               <Setter Target="SearchBox.(Grid.Row)" Value="0" />
               <Setter Target="SearchBox.(Grid.Column)" Value="1" />
@@ -42,13 +38,10 @@
         </VisualStateGroup>
       </VisualStateManager.VisualStateGroups>
 
-      <Grid x:Name="HeaderGrid"
-            RowDefinitions="Auto,Auto"
+      <Grid RowDefinitions="Auto,Auto"
             ColumnDefinitions="*,380">
-        <StackPanel Spacing="4">
-          <TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleText}" />
-          <TextBlock x:Name="PageSubtitle" Style="{StaticResource MetadataText}" />
-        </StackPanel>
+        <TextBlock x:Name="PageTitle"
+                   Style="{StaticResource PageTitleText}" />
         <AutoSuggestBox x:Name="SearchBox"
                         Grid.Row="1"
                         Grid.ColumnSpan="2"
@@ -57,8 +50,7 @@
                         HorizontalAlignment="Stretch" />
       </Grid>
 
-      <Border x:Name="HeroCard"
-              Grid.Row="2"
+      <Border Grid.Row="2"
               MinHeight="250"
               CornerRadius="10"
               Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -136,18 +128,11 @@
               <Grid RowDefinitions="86,*">
                 <Border Background="{ThemeResource EizoSelectionBrush}"
                         CornerRadius="8,8,0,0">
-                  <FontIcon Glyph="&#xE8B9;"
-                            FontSize="30"
-                            Opacity="0.28" />
+                  <FontIcon Glyph="&#xE8B9;" FontSize="30" Opacity="0.28" />
                 </Border>
-                <Grid Grid.Row="1"
-                      Padding="12,8"
-                      RowDefinitions="Auto,Auto,*">
-                  <TextBlock Text="{x:Bind Title}"
-                             Style="{StaticResource CardTitleText}" />
-                  <TextBlock Grid.Row="1"
-                             Text="{x:Bind NativeTitle}"
-                             Style="{StaticResource MetadataText}" />
+                <Grid Grid.Row="1" Padding="12,8" RowDefinitions="Auto,Auto,*">
+                  <TextBlock Text="{x:Bind Title}" Style="{StaticResource CardTitleText}" />
+                  <TextBlock Grid.Row="1" Text="{x:Bind NativeTitle}" Style="{StaticResource MetadataText}" />
                   <ProgressBar Grid.Row="2"
                                Value="{x:Bind Progress}"
                                Maximum="100"
@@ -162,8 +147,7 @@
       </ItemsRepeater>
 
       <Grid Grid.Row="8" ColumnDefinitions="*,Auto">
-        <TextBlock x:Name="SeasonTitle"
-                   Style="{StaticResource SectionTitleText}" />
+        <TextBlock x:Name="SeasonTitle" Style="{StaticResource SectionTitleText}" />
         <Button x:Name="SeasonAllButton"
                 Grid.Column="1"
                 Style="{StaticResource CompactActionButton}" />
@@ -186,17 +170,11 @@
               <Grid RowDefinitions="108,*">
                 <Border Background="{ThemeResource EizoSelectionBrush}"
                         CornerRadius="8,8,0,0">
-                  <FontIcon Glyph="&#xE8B9;"
-                            FontSize="34"
-                            Opacity="0.25" />
+                  <FontIcon Glyph="&#xE8B9;" FontSize="34" Opacity="0.25" />
                 </Border>
-                <StackPanel Grid.Row="1"
-                            Padding="12,8"
-                            Spacing="2">
-                  <TextBlock Text="{x:Bind Title}"
-                             Style="{StaticResource CardTitleText}" />
-                  <TextBlock Text="{x:Bind NativeTitle}"
-                             Style="{StaticResource MetadataText}" />
+                <StackPanel Grid.Row="1" Padding="12,8" Spacing="2">
+                  <TextBlock Text="{x:Bind Title}" Style="{StaticResource CardTitleText}" />
+                  <TextBlock Text="{x:Bind NativeTitle}" Style="{StaticResource MetadataText}" />
                   <TextBlock Text="{x:Bind Meta}"
                              Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                              FontSize="10" />

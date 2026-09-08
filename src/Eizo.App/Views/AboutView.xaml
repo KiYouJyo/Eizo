@@ -6,67 +6,25 @@
                 HorizontalScrollBarVisibility="Disabled"
                 HorizontalContentAlignment="Stretch"
                 VerticalScrollBarVisibility="Auto">
-    <Grid x:Name="AboutRoot"
-          Padding="24,16,24,32"
+    <Grid Padding="24,16,24,32"
           HorizontalAlignment="Stretch"
           UseLayoutRounding="True">
-      <VisualStateManager.VisualStateGroups>
-        <VisualStateGroup>
-          <VisualState x:Name="AboutCompact">
-            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="0" /></VisualState.StateTriggers>
-            <VisualState.Setters>
-              <Setter Target="MetadataColumn0.(Grid.Row)" Value="0" />
-              <Setter Target="MetadataColumn0.(Grid.Column)" Value="0" />
-              <Setter Target="MetadataColumn1.(Grid.Row)" Value="1" />
-              <Setter Target="MetadataColumn1.(Grid.Column)" Value="0" />
-              <Setter Target="MetadataColumn2.(Grid.Row)" Value="2" />
-              <Setter Target="MetadataColumn2.(Grid.Column)" Value="0" />
-
-              <Setter Target="RepositoryCard.(Grid.Row)" Value="0" />
-              <Setter Target="RepositoryCard.(Grid.Column)" Value="0" />
-              <Setter Target="ReleasesCard.(Grid.Row)" Value="1" />
-              <Setter Target="ReleasesCard.(Grid.Column)" Value="0" />
-              <Setter Target="PrivacyCard.(Grid.Row)" Value="2" />
-              <Setter Target="PrivacyCard.(Grid.Column)" Value="0" />
-            </VisualState.Setters>
-          </VisualState>
-
-          <VisualState x:Name="AboutWide">
-            <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="900" /></VisualState.StateTriggers>
-            <VisualState.Setters>
-              <Setter Target="MetadataColumn0.(Grid.Row)" Value="0" />
-              <Setter Target="MetadataColumn0.(Grid.Column)" Value="0" />
-              <Setter Target="MetadataColumn1.(Grid.Row)" Value="0" />
-              <Setter Target="MetadataColumn1.(Grid.Column)" Value="1" />
-              <Setter Target="MetadataColumn2.(Grid.Row)" Value="0" />
-              <Setter Target="MetadataColumn2.(Grid.Column)" Value="2" />
-
-              <Setter Target="RepositoryCard.(Grid.Row)" Value="0" />
-              <Setter Target="RepositoryCard.(Grid.Column)" Value="0" />
-              <Setter Target="ReleasesCard.(Grid.Row)" Value="0" />
-              <Setter Target="ReleasesCard.(Grid.Column)" Value="1" />
-              <Setter Target="PrivacyCard.(Grid.Row)" Value="0" />
-              <Setter Target="PrivacyCard.(Grid.Column)" Value="2" />
-            </VisualState.Setters>
-          </VisualState>
-        </VisualStateGroup>
-      </VisualStateManager.VisualStateGroups>
-
       <StackPanel Spacing="18"
                   HorizontalAlignment="Stretch">
         <TextBlock x:Name="PageTitle"
                    Style="{StaticResource PageTitleText}" />
 
+        <!-- Product card: same horizontal information hierarchy used by UrbanPlanToolbox. -->
         <Border Style="{StaticResource SettingsSectionCardStyle}">
-          <StackPanel Spacing="14">
-            <Grid ColumnDefinitions="58,16,*,Auto"
-                  MinHeight="58">
-              <Border Width="58"
-                      Height="58"
-                      CornerRadius="12"
+          <StackPanel Spacing="16">
+            <Grid ColumnDefinitions="64,18,*"
+                  MinHeight="64">
+              <Border Width="64"
+                      Height="64"
+                      CornerRadius="10"
                       Background="{ThemeResource EizoSelectionBrush}">
                 <TextBlock Text="E"
-                           FontSize="28"
+                           FontSize="30"
                            FontWeight="SemiBold"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
@@ -76,69 +34,71 @@
                           VerticalAlignment="Center"
                           Spacing="2">
                 <TextBlock Text="映藏 Eizo"
-                           FontSize="22"
+                           FontSize="24"
                            FontWeight="SemiBold" />
+                <TextBlock Text="映藏"
+                           FontSize="16" />
                 <TextBlock x:Name="AboutDescription"
                            Style="{StaticResource BodyText}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            TextWrapping="Wrap" />
               </StackPanel>
-
-              <Button x:Name="PreviewBadge"
-                      Grid.Column="3"
-                      Style="{StaticResource CompactActionButton}"
-                      IsEnabled="False" />
             </Grid>
 
             <Border Style="{StaticResource SettingsInnerCardStyle}"
-                    Padding="14">
-              <Grid x:Name="MetadataGrid"
-                    ColumnDefinitions="*,*,*"
-                    RowDefinitions="Auto,Auto,Auto"
-                    ColumnSpacing="24"
-                    RowSpacing="14">
-                <StackPanel x:Name="MetadataColumn0"
-                            Spacing="10">
-                  <StackPanel>
-                    <TextBlock x:Name="DisplayVersionLabel" Style="{StaticResource SettingsDescriptionStyle}" />
-                    <TextBlock Text="v0.1 Preview" />
-                  </StackPanel>
-                  <StackPanel>
-                    <TextBlock x:Name="ChannelLabel" Style="{StaticResource SettingsDescriptionStyle}" />
-                    <TextBlock Text="Preview" />
-                  </StackPanel>
+                    Padding="16">
+              <Grid ColumnDefinitions="*,*,*"
+                    RowDefinitions="Auto,Auto"
+                    ColumnSpacing="36"
+                    RowSpacing="18">
+                <StackPanel>
+                  <TextBlock x:Name="DisplayVersionLabel"
+                             Style="{StaticResource SettingsDescriptionStyle}" />
+                  <TextBlock Text="v0.1.0"
+                             FontWeight="SemiBold" />
                 </StackPanel>
 
-                <StackPanel x:Name="MetadataColumn1"
-                            Grid.Row="1"
-                            Spacing="10">
-                  <StackPanel>
-                    <TextBlock x:Name="InternalVersionLabel" Style="{StaticResource SettingsDescriptionStyle}" />
-                    <TextBlock Text="0.1-preview" />
-                  </StackPanel>
-                  <StackPanel>
-                    <TextBlock x:Name="PublisherLabel" Style="{StaticResource SettingsDescriptionStyle}" />
-                    <TextBlock Text="Eizo" />
-                  </StackPanel>
+                <StackPanel Grid.Column="1">
+                  <TextBlock x:Name="InternalVersionLabel"
+                             Style="{StaticResource SettingsDescriptionStyle}" />
+                  <TextBlock Text="0.1.0.0"
+                             FontWeight="SemiBold" />
                 </StackPanel>
 
-                <StackPanel x:Name="MetadataColumn2"
-                            Grid.Row="2"
-                            Spacing="10">
-                  <StackPanel>
-                    <TextBlock x:Name="ArchitectureLabel" Style="{StaticResource SettingsDescriptionStyle}" />
-                    <TextBlock Text="x64" />
-                  </StackPanel>
-                  <StackPanel>
-                    <TextBlock x:Name="TechLabel" Style="{StaticResource SettingsDescriptionStyle}" />
-                    <TextBlock Text="C# · WinUI 3 · Windows App SDK"
-                               TextWrapping="Wrap" />
-                  </StackPanel>
+                <StackPanel Grid.Column="2">
+                  <TextBlock x:Name="ArchitectureLabel"
+                             Style="{StaticResource SettingsDescriptionStyle}" />
+                  <TextBlock Text="X64"
+                             FontWeight="SemiBold" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="1">
+                  <TextBlock x:Name="ChannelLabel"
+                             Style="{StaticResource SettingsDescriptionStyle}" />
+                  <TextBlock Text="GitHub 侧载"
+                             FontWeight="SemiBold" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="1"
+                            Grid.Column="1">
+                  <TextBlock x:Name="PublisherLabel"
+                             Style="{StaticResource SettingsDescriptionStyle}" />
+                  <TextBlock Text="KiYouJyo"
+                             FontWeight="SemiBold" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="1"
+                            Grid.Column="2">
+                  <TextBlock x:Name="TechLabel"
+                             Style="{StaticResource SettingsDescriptionStyle}" />
+                  <TextBlock Text="C# · WinUI 3 · Windows App SDK · MSIX"
+                             FontWeight="SemiBold"
+                             TextWrapping="Wrap" />
                 </StackPanel>
               </Grid>
             </Border>
 
-            <TextBlock Text="© 2026 Eizo contributors"
+            <TextBlock Text="Copyright © 2026 KiYouJyo"
                        Style="{StaticResource MetadataText}" />
           </StackPanel>
         </Border>
@@ -159,15 +119,15 @@
                       ColumnDefinitions="2*,110,32,110,150,130,Auto,Auto"
                       ColumnSpacing="10">
                   <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Eizo"
-                               FontWeight="SemiBold" />
+                    <TextBlock Text="Eizo" FontWeight="SemiBold" />
                     <TextBlock x:Name="ApplicationUpdateLabel"
                                Style="{StaticResource MetadataText}" />
                   </StackPanel>
 
                   <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock x:Name="CurrentVersionLabel" Style="{StaticResource MetadataText}" />
-                    <TextBlock Text="v0.1 Preview" />
+                    <TextBlock x:Name="CurrentVersionLabel"
+                               Style="{StaticResource MetadataText}" />
+                    <TextBlock Text="v0.1.0" />
                   </StackPanel>
 
                   <TextBlock Grid.Column="2"
@@ -177,18 +137,22 @@
                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
                   <StackPanel Grid.Column="3" VerticalAlignment="Center">
-                    <TextBlock x:Name="AvailableVersionLabel" Style="{StaticResource MetadataText}" />
+                    <TextBlock x:Name="AvailableVersionLabel"
+                               Style="{StaticResource MetadataText}" />
                     <TextBlock Text="—" />
                   </StackPanel>
 
                   <StackPanel Grid.Column="4" VerticalAlignment="Center">
-                    <TextBlock x:Name="UpdateSourceLabel" Style="{StaticResource MetadataText}" />
+                    <TextBlock x:Name="UpdateSourceLabel"
+                               Style="{StaticResource MetadataText}" />
                     <TextBlock Text="GitHub Releases" />
                   </StackPanel>
 
                   <StackPanel Grid.Column="5" VerticalAlignment="Center">
-                    <TextBlock x:Name="UpdateStatusLabel" Style="{StaticResource MetadataText}" />
-                    <TextBlock x:Name="NotCheckedText" TextWrapping="Wrap" />
+                    <TextBlock x:Name="UpdateStatusLabel"
+                               Style="{StaticResource MetadataText}" />
+                    <TextBlock x:Name="NotCheckedText"
+                               TextWrapping="Wrap" />
                   </StackPanel>
 
                   <Button x:Name="ReleaseNotesButton"
@@ -218,13 +182,23 @@
                       ColumnDefinitions="2*,110,110,170,140,Auto,Auto"
                       ColumnSpacing="10">
                   <StackPanel VerticalAlignment="Center">
-                    <TextBlock x:Name="PlayerCoreTitle" FontWeight="SemiBold" />
-                    <TextBlock x:Name="IndependentUpdateLabel" Style="{StaticResource MetadataText}" />
+                    <TextBlock x:Name="PlayerCoreTitle"
+                               FontWeight="SemiBold" />
+                    <TextBlock x:Name="IndependentUpdateLabel"
+                               Style="{StaticResource MetadataText}" />
                   </StackPanel>
-                  <TextBlock Grid.Column="1" Text="1.0.0" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="2" Text="—" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="3" Text="GitHub Releases" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="4" x:Name="NotCheckedComponentText" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1"
+                             Text="1.0.0"
+                             VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2"
+                             Text="—"
+                             VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="3"
+                             Text="GitHub Releases"
+                             VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="4"
+                             x:Name="NotCheckedComponentText"
+                             VerticalAlignment="Center" />
                   <Button x:Name="CoreReleaseNotesButton"
                           Grid.Column="5"
                           MinWidth="96"
@@ -245,16 +219,14 @@
             <TextBlock x:Name="ProjectTitle"
                        Style="{StaticResource SectionTitleText}" />
 
-            <Grid x:Name="ProjectLinksGrid"
-                  ColumnDefinitions="*,*,*"
-                  RowDefinitions="Auto,Auto,Auto"
-                  ColumnSpacing="12"
-                  RowSpacing="12">
-              <Border x:Name="RepositoryCard"
-                      Style="{StaticResource SettingsInnerCardStyle}"
+            <Grid ColumnDefinitions="*,*,*"
+                  ColumnSpacing="12">
+              <Border Style="{StaticResource SettingsInnerCardStyle}"
                       Padding="14">
                 <Grid RowDefinitions="Auto,Auto,16,Auto">
-                  <TextBlock Text="GitHub" FontSize="16" FontWeight="SemiBold" />
+                  <TextBlock Text="GitHub"
+                             FontSize="16"
+                             FontWeight="SemiBold" />
                   <TextBlock x:Name="GitHubDescription"
                              Grid.Row="1"
                              Style="{StaticResource SettingsDescriptionStyle}" />
@@ -264,12 +236,13 @@
                 </Grid>
               </Border>
 
-              <Border x:Name="ReleasesCard"
-                      Grid.Row="1"
+              <Border Grid.Column="1"
                       Style="{StaticResource SettingsInnerCardStyle}"
                       Padding="14">
                 <Grid RowDefinitions="Auto,Auto,16,Auto">
-                  <TextBlock Text="Releases" FontSize="16" FontWeight="SemiBold" />
+                  <TextBlock Text="Releases"
+                             FontSize="16"
+                             FontWeight="SemiBold" />
                   <TextBlock x:Name="ReleasesDescription"
                              Grid.Row="1"
                              Style="{StaticResource SettingsDescriptionStyle}" />
@@ -279,8 +252,7 @@
                 </Grid>
               </Border>
 
-              <Border x:Name="PrivacyCard"
-                      Grid.Row="2"
+              <Border Grid.Column="2"
                       Style="{StaticResource SettingsInnerCardStyle}"
                       Padding="14">
                 <Grid RowDefinitions="Auto,Auto,16,Auto">

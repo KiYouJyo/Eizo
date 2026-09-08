@@ -22,7 +22,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
 
-        Title = "Eizo";
+        Title = "Eizo 映藏";
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
@@ -38,7 +38,7 @@ public sealed partial class MainWindow : Window
             QueueNavigationPaneBackgroundUpdate();
         };
 
-        CreateHomeTab(select: true);
+        CreateWorkspaceTab(select: true);
     }
 
     private string T(string key) => _localization.GetString(key);
@@ -59,122 +59,195 @@ public sealed partial class MainWindow : Window
     private void ShellNavigation_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
     {
         if (args.InvokedItemContainer is not NavigationViewItem item) return;
+        var pageKey = item.Tag?.ToString();
 
-        switch (item.Tag?.ToString())
+        if (pageKey is null or "categories") return;
+        NavigateSelectedWorkspace(pageKey, item);
+    }
+
+    private void ShellNewTabButton_Click(object sender, RoutedEventArgs e) =>
+        CreateWorkspaceTab(select: true);
+
+    private void CreateWorkspaceTab(bool select)
+    {
+        var key = "workspace:" + Guid.NewGuid().ToString("N");
+        var view = CreateWorkspaceView("home");
+
+        var state = new ShellTabState(
+            key,
+            ShellTabKind.Workspace,
+            "home",
+            T("Nav_Home"),
+            "\uE80F",
+            view,
+            HomeNav,
+            PreferredTabWidth);
+
+        AddTab(state, select);
+    }
+
+    private void NavigateSelectedWorkspace(string pageKey, NavigationViewItem navItem)
+    {
+        if (_selectedTabKey is null ||
+            !_tabs.TryGetValue(_selectedTabKey, out var state) ||
+            state.Kind != ShellTabKind.Workspace)
+        {
+            CreateWorkspaceTab(select: true);
+            state = _tabs[_selectedTabKey!];
+        }
+
+        if (string.Equals(state.PageKey, pageKey, StringComparison.Ordinal))
+        {
+            SelectShellItem(navItem);
+            return;
+        }
+
+        var descriptor = DescribeWorkspacePage(pageKey);
+        state.PageKey = pageKey;
+        state.Title = descriptor.Title;
+        state.Glyph = descriptor.Glyph;
+        state.NavItem = navItem;
+        state.View = CreateWorkspaceView(pageKey);
+
+        UpdateTabIdentity(state);
+
+        if (string.Equals(_selectedTabKey, state.Key, StringComparison.Ordinal))
+        {
+            ShowNavigationChrome();
+            MainContent.Content = state.View;
+            SelectShellItem(navItem);
+        }
+    }
+
+    private FrameworkElement CreateWorkspaceView(string pageKey)
+    {
+        switch (pageKey)
         {
             case "home":
-                SelectMostRecentHome();
-                break;
+            {
+                var view = new HomeView();
+                WireWorkspaceMediaView(view);
+                return view;
+            }
             case "anime":
-                OpenCategory(MediaCategoryKind.Anime, item);
-                break;
+            {
+                var view = new CategoryView(MediaCategoryKind.Anime);
+                WireWorkspaceMediaView(view);
+                return view;
+            }
             case "movies":
-                OpenCategory(MediaCategoryKind.Movies, item);
-                break;
+            {
+                var view = new CategoryView(MediaCategoryKind.Movies);
+                WireWorkspaceMediaView(view);
+                return view;
+            }
             case "series":
-                OpenCategory(MediaCategoryKind.Series, item);
-                break;
+            {
+                var view = new CategoryView(MediaCategoryKind.Series);
+                WireWorkspaceMediaView(view);
+                return view;
+            }
             case "sources":
-                OpenSingleton("sources", T("Nav_Sources"), "\uE753", new SourcesView(), item);
-                break;
+                return new SourcesView();
             case "cache":
-                OpenSingleton("cache", T("Nav_Cache"), "\uE7C5", new CacheView(), item);
-                break;
+                return new CacheView();
             case "about":
-                OpenSingleton("about", T("Nav_About"), "\uE897", new AboutView(), item);
-                break;
+                return new AboutView();
             case "settings":
-                OpenSingleton("settings", T("Nav_Settings"), "\uE713", new SettingsView(), item);
-                break;
+                return new SettingsView();
+            default:
+                return new HomeView();
         }
     }
 
-    private void ShellNewTabButton_Click(object sender, RoutedEventArgs e) => CreateHomeTab(select: true);
-
-    private void CreateHomeTab(bool select)
+    private void WireWorkspaceMediaView(HomeView view)
     {
-        var key = "home:" + Guid.NewGuid().ToString("N");
-        var view = new HomeView();
-        view.DetailRequested += (_, title) => OpenDetail(title);
-        view.PlayRequested += (_, title) => OpenPlayer(title, "第18话");
-
-        AddTab(
-            new ShellTabState(key, T("Nav_Home"), "\uE80F", view, HomeNav, immersive: false, PreferredTabWidth),
-            select);
+        view.DetailRequested += (_, title) => OpenDetail(title, startPlaying: false);
+        view.PlayRequested += (_, title) => OpenDetail(title, startPlaying: true);
     }
 
-    private void SelectMostRecentHome()
+    private void WireWorkspaceMediaView(CategoryView view)
     {
-        var home = _tabs.Values.LastOrDefault(tab => tab.Key.StartsWith("home:", StringComparison.Ordinal));
-        if (home is null) CreateHomeTab(select: true);
-        else SelectTab(home.Key);
+        view.DetailRequested += (_, title) => OpenDetail(title, startPlaying: false);
+        view.PlayRequested += (_, title) => OpenDetail(title, startPlaying: true);
     }
 
-    private void OpenCategory(MediaCategoryKind kind, NavigationViewItem navItem)
+    private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch
     {
-        var key = kind switch
-        {
-            MediaCategoryKind.Anime => "anime",
-            MediaCategoryKind.Movies => "movies",
-            _ => "series"
-        };
+        "home" => (T("Nav_Home"), "\uE80F"),
+        "anime" => (T("Nav_Anime"), "\uE8B2"),
+        "movies" => (T("Nav_Movies"), "\uE714"),
+        "series" => (T("Nav_Series"), "\uE8FD"),
+        "sources" => (T("Nav_Sources"), "\uE753"),
+        "cache" => (T("Nav_Cache"), "\uE7C5"),
+        "about" => (T("Nav_About"), "\uE897"),
+        "settings" => (T("Nav_Settings"), "\uE713"),
+        _ => (T("Nav_Home"), "\uE80F")
+    };
 
-        var title = kind switch
-        {
-            MediaCategoryKind.Anime => T("Nav_Anime"),
-            MediaCategoryKind.Movies => T("Nav_Movies"),
-            _ => T("Nav_Series")
-        };
-
-        if (_tabs.TryGetValue(key, out var existing))
-        {
-            SelectTab(existing.Key);
-            return;
-        }
-
-        var view = new CategoryView(kind);
-        view.DetailRequested += (_, name) => OpenDetail(name);
-        view.PlayRequested += (_, name) => OpenPlayer(name, "第18话");
-
-        AddTab(new ShellTabState(key, title, "\uE8B2", view, navItem, immersive: false, PreferredTabWidth), select: true);
-    }
-
-    private void OpenSingleton(string key, string title, string glyph, FrameworkElement view, NavigationViewItem navItem)
-    {
-        if (_tabs.TryGetValue(key, out var existing))
-        {
-            SelectTab(existing.Key);
-            return;
-        }
-
-        AddTab(new ShellTabState(key, title, glyph, view, navItem, immersive: false, PreferredTabWidth), select: true);
-    }
-
-    private void OpenDetail(string title)
+    private void OpenDetail(string title, bool startPlaying)
     {
         var key = "detail:" + title;
+
         if (_tabs.TryGetValue(key, out var existing))
         {
+            if (startPlaying)
+                ShowPlayerInDetailTab(existing, title, "第18话");
+            else
+                ShowDetailInTab(existing, title);
+
             SelectTab(existing.Key);
             return;
         }
 
-        var view = new DetailView(title);
-        view.PlayRequested += (_, episode) => OpenPlayer(title, episode);
-        AddTab(new ShellTabState(key, title, "\uE8B2", view, navItem: null, immersive: true, PreferredTabWidth), select: true);
+        var state = new ShellTabState(
+            key,
+            ShellTabKind.Detail,
+            pageKey: null,
+            title,
+            "\uE8B2",
+            new Grid(),
+            navItem: null,
+            PreferredTabWidth)
+        {
+            MediaTitle = title
+        };
+
+        if (startPlaying)
+            ShowPlayerInDetailTab(state, title, "第18话");
+        else
+            ShowDetailInTab(state, title);
+
+        AddTab(state, select: true);
     }
 
-    private void OpenPlayer(string title, string episode)
+    private void ShowDetailInTab(ShellTabState state, string title)
     {
-        var key = "player:" + title + ":" + episode;
-        if (_tabs.TryGetValue(key, out var existing))
+        var view = new DetailView(title);
+        view.PlayRequested += (_, episode) =>
         {
-            SelectTab(existing.Key);
-            return;
-        }
+            ShowPlayerInDetailTab(state, title, episode);
+            if (string.Equals(_selectedTabKey, state.Key, StringComparison.Ordinal))
+                MainContent.Content = state.View;
+        };
 
-        var label = title + "—" + episode;
-        AddTab(new ShellTabState(key, label, "\uE768", new PlayerView(title, episode), navItem: null, immersive: true, PreferredTabWidth), select: true);
+        state.MediaTitle = title;
+        state.View = view;
+        state.Title = title;
+        state.Glyph = "\uE8B2";
+        UpdateTabIdentity(state);
+    }
+
+    private void ShowPlayerInDetailTab(ShellTabState state, string title, string episode)
+    {
+        state.MediaTitle = title;
+        state.View = new PlayerView(title, episode);
+        state.Title = title + "—" + episode;
+        state.Glyph = "\uE768";
+        UpdateTabIdentity(state);
+
+        if (string.Equals(_selectedTabKey, state.Key, StringComparison.Ordinal))
+            MainContent.Content = state.View;
     }
 
     private void AddTab(ShellTabState state, bool select)
@@ -259,11 +332,18 @@ public sealed partial class MainWindow : Window
             Transitions = [new RepositionThemeTransition()]
         };
 
-        var visual = new ShellTabVisual(container, headerText);
+        var visual = new ShellTabVisual(container, headerText, icon);
         ApplyTabVisual(visual, selected: false, RootGrid.ActualTheme == ElementTheme.Dark);
         ShellTabItems.Children.Add(container);
         ConfigureTabInteractions(container, state.PreferredWidth);
         return visual;
+    }
+
+    private static void UpdateTabIdentity(ShellTabState state)
+    {
+        if (state.Visual is null) return;
+        state.Visual.HeaderText.Text = state.Title;
+        state.Visual.Icon.Glyph = state.Glyph;
     }
 
     private void ShellTabSelect_Click(object sender, RoutedEventArgs e)
@@ -286,7 +366,7 @@ public sealed partial class MainWindow : Window
         if (_selectedTabKey == key)
         {
             var next = _tabs.Values.LastOrDefault();
-            if (next is null) CreateHomeTab(select: true);
+            if (next is null) CreateWorkspaceTab(select: true);
             else SelectTab(next.Key);
         }
 
@@ -296,28 +376,31 @@ public sealed partial class MainWindow : Window
     private void SelectTab(string key)
     {
         if (!_tabs.TryGetValue(key, out var state)) return;
-        if (string.Equals(_selectedTabKey, key, StringComparison.Ordinal))
-        {
-            MainContent.Content = state.View;
-            return;
-        }
 
         var previousKey = _selectedTabKey;
         _selectedTabKey = key;
 
-        if (state.Immersive) ShowImmersiveChrome();
-        else ShowNavigationChrome();
+        if (state.Kind == ShellTabKind.Detail)
+        {
+            ShowImmersiveChrome();
+            SelectShellItem(null);
+        }
+        else
+        {
+            ShowNavigationChrome();
+            SelectShellItem(state.NavItem);
+        }
 
         MainContent.Content = state.View;
 
-        if (state.NavItem is not null)
-            SelectShellItem(state.NavItem);
-        else
-            SelectShellItem(null);
-
         var dark = RootGrid.ActualTheme == ElementTheme.Dark;
-        if (previousKey is not null && _tabs.TryGetValue(previousKey, out var previous) && previous.Visual is not null)
+        if (previousKey is not null &&
+            _tabs.TryGetValue(previousKey, out var previous) &&
+            previous.Visual is not null)
+        {
             ApplyTabVisual(previous.Visual, selected: false, dark);
+        }
+
         if (state.Visual is not null)
             ApplyTabVisual(state.Visual, selected: true, dark);
     }
@@ -350,24 +433,33 @@ public sealed partial class MainWindow : Window
         ShellNavigation.IsPaneToggleButtonVisible = false;
     }
 
+    private enum ShellTabKind
+    {
+        Workspace,
+        Detail
+    }
+
     private sealed class ShellTabState(
         string key,
+        ShellTabKind kind,
+        string? pageKey,
         string title,
         string glyph,
         FrameworkElement view,
         NavigationViewItem? navItem,
-        bool immersive,
         double preferredWidth)
     {
         public string Key { get; } = key;
-        public string Title { get; } = title;
-        public string Glyph { get; } = glyph;
-        public FrameworkElement View { get; } = view;
-        public NavigationViewItem? NavItem { get; } = navItem;
-        public bool Immersive { get; } = immersive;
+        public ShellTabKind Kind { get; } = kind;
+        public string? PageKey { get; set; } = pageKey;
+        public string Title { get; set; } = title;
+        public string Glyph { get; set; } = glyph;
+        public FrameworkElement View { get; set; } = view;
+        public NavigationViewItem? NavItem { get; set; } = navItem;
         public double PreferredWidth { get; } = preferredWidth;
+        public string? MediaTitle { get; set; }
         public ShellTabVisual? Visual { get; set; }
     }
 }
 
-internal sealed record ShellTabVisual(Border Container, TextBlock HeaderText);
+internal sealed record ShellTabVisual(Border Container, TextBlock HeaderText, FontIcon Icon);
