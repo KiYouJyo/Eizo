@@ -71,7 +71,7 @@
     <value>电影</value>
   </data>
   <data name="Nav_Series" xml:space="preserve">
-    <value>剧集</value>
+    <value>电视剧</value>
   </data>
   <data name="Nav_Library" xml:space="preserve">
     <value>媒体库</value>
@@ -309,5 +309,293 @@
   </data>
   <data name="Library_AddSourcePrompt" xml:space="preserve">
     <value>添加一个媒体来源，开始建立你的影音库</value>
+  </data>
+  <data name="Nav_Categories" xml:space="preserve">
+    <value>分类</value>
+  </data>
+  <data name="Nav_Cache" xml:space="preserve">
+    <value>缓存</value>
+  </data>
+  <data name="Nav_About" xml:space="preserve">
+    <value>关于</value>
+  </data>
+  <data name="Home_Subtitle" xml:space="preserve">
+    <value>发现你想看的下一部作品。</value>
+  </data>
+  <data name="Home_Featured" xml:space="preserve">
+    <value>今日推荐</value>
+  </data>
+  <data name="Home_FeaturedDescription" xml:space="preserve">
+    <value>从你的媒体库中挑选值得继续观看或重新发现的作品。</value>
+  </data>
+  <data name="Common_ViewDetails" xml:space="preserve">
+    <value>查看详情</value>
+  </data>
+  <data name="Common_ViewAll" xml:space="preserve">
+    <value>查看全部</value>
+  </data>
+  <data name="Common_All" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="Common_Recent" xml:space="preserve">
+    <value>最近</value>
+  </data>
+  <data name="Common_Favorites" xml:space="preserve">
+    <value>收藏</value>
+  </data>
+  <data name="Common_Now" xml:space="preserve">
+    <value>刚刚</value>
+  </data>
+  <data name="Category_AnimeSubtitle" xml:space="preserve">
+    <value>按季度、状态和类型浏览动漫收藏。</value>
+  </data>
+  <data name="Category_MoviesSubtitle" xml:space="preserve">
+    <value>浏览你的电影收藏。</value>
+  </data>
+  <data name="Category_SeriesSubtitle" xml:space="preserve">
+    <value>浏览电视剧与日剧收藏。</value>
+  </data>
+  <data name="Category_MyLibrary" xml:space="preserve">
+    <value>我的媒体库</value>
+  </data>
+  <data name="Category_Following" xml:space="preserve">
+    <value>追番中</value>
+  </data>
+  <data name="Category_Unwatched" xml:space="preserve">
+    <value>未观看</value>
+  </data>
+  <data name="Category_FeaturedDescription" xml:space="preserve">
+    <value>从媒体库中随机推荐一部作品。</value>
+  </data>
+  <data name="Sources_Subtitle" xml:space="preserve">
+    <value>管理本地、WebDAV 与商业网盘来源。</value>
+  </data>
+  <data name="Sources_TabSources" xml:space="preserve">
+    <value>来源</value>
+  </data>
+  <data name="Sources_TabScan" xml:space="preserve">
+    <value>扫描任务</value>
+  </data>
+  <data name="Source_ScanNow" xml:space="preserve">
+    <value>立即扫描</value>
+  </data>
+  <data name="Source_ScanHistory" xml:space="preserve">
+    <value>查看扫描记录</value>
+  </data>
+  <data name="Source_Disconnect" xml:space="preserve">
+    <value>断开连接</value>
+  </data>
+  <data name="Sources_Provider" xml:space="preserve">
+    <value>来源类型</value>
+  </data>
+  <data name="Sources_DisplayName" xml:space="preserve">
+    <value>显示名称</value>
+  </data>
+  <data name="Sources_Address" xml:space="preserve">
+    <value>服务器地址</value>
+  </data>
+  <data name="Sources_Username" xml:space="preserve">
+    <value>用户名</value>
+  </data>
+  <data name="Sources_Password" xml:space="preserve">
+    <value>密码</value>
+  </data>
+  <data name="Cache_Subtitle" xml:space="preserve">
+    <value>管理远程播放缓存与离线内容。</value>
+  </data>
+  <data name="Cache_Overview" xml:space="preserve">
+    <value>缓存总览</value>
+  </data>
+  <data name="Cache_OverviewLimit" xml:space="preserve">
+    <value>已使用 / 32 GB 上限</value>
+  </data>
+  <data name="Cache_Clear" xml:space="preserve">
+    <value>清理缓存</value>
+  </data>
+  <data name="Cache_Policy" xml:space="preserve">
+    <value>缓存策略</value>
+  </data>
+  <data name="Cache_AutoCleanup" xml:space="preserve">
+    <value>自动清理</value>
+  </data>
+  <data name="Cache_AutoCleanupDescription" xml:space="preserve">
+    <value>接近上限时优先删除最久未访问的缓存。</value>
+  </data>
+  <data name="Cache_Precache" xml:space="preserve">
+    <value>远程预缓存</value>
+  </data>
+  <data name="Cache_PrecacheDescription" xml:space="preserve">
+    <value>播放远程媒体时提前缓存后续数据。</value>
+  </data>
+  <data name="Cache_KeepOffline" xml:space="preserve">
+    <value>保留离线内容</value>
+  </data>
+  <data name="Cache_KeepOfflineDescription" xml:space="preserve">
+    <value>手动标记为离线的内容不参与自动清理。</value>
+  </data>
+  <data name="Cache_Contents" xml:space="preserve">
+    <value>缓存内容</value>
+  </data>
+  <data name="Settings_Subtitle" xml:space="preserve">
+    <value>调整 Eizo 的界面、媒体识别与播放行为。</value>
+  </data>
+  <data name="Settings_General" xml:space="preserve">
+    <value>常规</value>
+  </data>
+  <data name="Settings_SubtitlesAudio" xml:space="preserve">
+    <value>字幕与音轨</value>
+  </data>
+  <data name="Settings_Network" xml:space="preserve">
+    <value>网络</value>
+  </data>
+  <data name="Settings_Privacy" xml:space="preserve">
+    <value>隐私与安全</value>
+  </data>
+  <data name="Settings_LanguageAppearance" xml:space="preserve">
+    <value>语言与外观</value>
+  </data>
+  <data name="Settings_LanguageDescription" xml:space="preserve">
+    <value>Eizo 菜单与界面的显示语言。</value>
+  </data>
+  <data name="Settings_AppearanceDescription" xml:space="preserve">
+    <value>跟随 Windows 或固定浅色/深色。</value>
+  </data>
+  <data name="Settings_AppearanceSystem" xml:space="preserve">
+    <value>跟随系统</value>
+  </data>
+  <data name="Settings_AppearanceLight" xml:space="preserve">
+    <value>浅色</value>
+  </data>
+  <data name="Settings_AppearanceDark" xml:space="preserve">
+    <value>深色</value>
+  </data>
+  <data name="Settings_JapaneseMedia" xml:space="preserve">
+    <value>日本媒体显示</value>
+  </data>
+  <data name="Settings_PreferredTitle" xml:space="preserve">
+    <value>首选标题</value>
+  </data>
+  <data name="Settings_PreferredTitleDescription" xml:space="preserve">
+    <value>设置媒体库主标题的显示语言。</value>
+  </data>
+  <data name="Settings_TitleChineseJapanese" xml:space="preserve">
+    <value>简体中文 · 保留日文原名</value>
+  </data>
+  <data name="Settings_TitleJapanese" xml:space="preserve">
+    <value>日文原名</value>
+  </data>
+  <data name="Settings_TitleEnglish" xml:space="preserve">
+    <value>英文标题</value>
+  </data>
+  <data name="Settings_ShowJapaneseTitle" xml:space="preserve">
+    <value>显示日文原名</value>
+  </data>
+  <data name="Settings_ShowJapaneseTitleDescription" xml:space="preserve">
+    <value>在中文标题下方保留原始日文标题。</value>
+  </data>
+  <data name="Settings_ShowRomaji" xml:space="preserve">
+    <value>显示 Romaji</value>
+  </data>
+  <data name="Settings_ShowRomajiDescription" xml:space="preserve">
+    <value>缺少合适本地化标题时显示罗马字。</value>
+  </data>
+  <data name="About_DisplayVersion" xml:space="preserve">
+    <value>显示版本</value>
+  </data>
+  <data name="About_InternalVersion" xml:space="preserve">
+    <value>内部版本</value>
+  </data>
+  <data name="About_Architecture" xml:space="preserve">
+    <value>当前架构</value>
+  </data>
+  <data name="About_Channel" xml:space="preserve">
+    <value>发布渠道</value>
+  </data>
+  <data name="About_Publisher" xml:space="preserve">
+    <value>发行者</value>
+  </data>
+  <data name="About_TechStack" xml:space="preserve">
+    <value>技术栈</value>
+  </data>
+  <data name="About_UpdateManagement" xml:space="preserve">
+    <value>更新管理</value>
+  </data>
+  <data name="About_ApplicationUpdate" xml:space="preserve">
+    <value>应用更新</value>
+  </data>
+  <data name="About_CurrentVersion" xml:space="preserve">
+    <value>当前版本</value>
+  </data>
+  <data name="About_AvailableVersion" xml:space="preserve">
+    <value>可用版本</value>
+  </data>
+  <data name="About_UpdateSource" xml:space="preserve">
+    <value>更新来源</value>
+  </data>
+  <data name="About_Status" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="About_NotChecked" xml:space="preserve">
+    <value>尚未检查</value>
+  </data>
+  <data name="About_ReleaseNotes" xml:space="preserve">
+    <value>发行说明</value>
+  </data>
+  <data name="About_CheckUpdates" xml:space="preserve">
+    <value>检查更新</value>
+  </data>
+  <data name="About_IndependentComponents" xml:space="preserve">
+    <value>独立更新组件</value>
+  </data>
+  <data name="About_PlayerCore" xml:space="preserve">
+    <value>播放器内核</value>
+  </data>
+  <data name="About_IndependentUpdate" xml:space="preserve">
+    <value>独立更新</value>
+  </data>
+  <data name="About_ProjectOpenSource" xml:space="preserve">
+    <value>项目与开源</value>
+  </data>
+  <data name="About_GitHubDescription" xml:space="preserve">
+    <value>查看源码、README 与开发进度。</value>
+  </data>
+  <data name="About_ReleasesDescription" xml:space="preserve">
+    <value>查看历史版本、安装包与发行说明。</value>
+  </data>
+  <data name="About_Privacy" xml:space="preserve">
+    <value>许可与隐私</value>
+  </data>
+  <data name="About_PrivacyDescription" xml:space="preserve">
+    <value>查看第三方许可与本地数据策略。</value>
+  </data>
+  <data name="About_OpenRepository" xml:space="preserve">
+    <value>打开仓库</value>
+  </data>
+  <data name="About_OpenReleases" xml:space="preserve">
+    <value>查看版本</value>
+  </data>
+  <data name="About_OpenPrivacy" xml:space="preserve">
+    <value>查看说明</value>
+  </data>
+  <data name="Detail_Overview" xml:space="preserve">
+    <value>魔王被击败后的世界中，精灵魔法使重新理解时间、记忆与人与人之间的羁绊。</value>
+  </data>
+  <data name="Detail_Director" xml:space="preserve">
+    <value>监督</value>
+  </data>
+  <data name="Detail_SeriesComposition" xml:space="preserve">
+    <value>系列构成</value>
+  </data>
+  <data name="Playback_Playing" xml:space="preserve">
+    <value>播放中</value>
+  </data>
+  <data name="Playback_Queue" xml:space="preserve">
+    <value>播放队列</value>
+  </data>
+  <data name="Playback_Tracks" xml:space="preserve">
+    <value>字幕与音轨</value>
+  </data>
+  <data name="Playback_Info" xml:space="preserve">
+    <value>播放信息</value>
   </data>
 </root>
