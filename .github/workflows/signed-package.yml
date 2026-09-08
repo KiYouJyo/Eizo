@@ -157,6 +157,30 @@ jobs:
               Write-Host "No managed startup failure log was produced at $startupLog"
             }
 
+            $diagnosticCandidates = @(
+              (Join-Path $env:TEMP 'Eizo-startup-failure.log'),
+              (Join-Path $env:ProgramData 'Eizo-startup-failure.log')
+            )
+            $diagnosticCandidates += @(Get-ChildItem $env:LOCALAPPDATA -Recurse -Filter 'startup-failure.log' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+            foreach ($candidate in ($diagnosticCandidates | Select-Object -Unique)) {
+              if (Test-Path -LiteralPath $candidate) {
+                Write-Host "===== managed startup diagnostic: $candidate ====="
+                Get-Content -LiteralPath $candidate -Raw | Write-Host
+                Write-Host '===== end managed startup diagnostic ====='
+              }
+            }
+
+            foreach ($logName in @(
+              'Microsoft-Windows-AppModel-Runtime/Admin',
+              'Microsoft-Windows-TWinUI/Operational'
+            )) {
+              Write-Host "===== $logName ====="
+              Get-WinEvent -FilterHashtable @{ LogName=$logName; StartTime=(Get-Date).AddMinutes(-3) } -ErrorAction SilentlyContinue |
+                Where-Object { $_.Message -match '(?i)Eizo|1z32rh13vfry6' } |
+                Select-Object TimeCreated, ProviderName, Id, LevelDisplayName, Message |
+                Format-List | Out-Host
+            }
+
             $since = (Get-Date).AddMinutes(-3)
             Get-WinEvent -FilterHashtable @{ LogName='Application'; StartTime=$since } -ErrorAction SilentlyContinue |
               Where-Object {
