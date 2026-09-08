@@ -17,7 +17,6 @@
     <InformationalVersion>0.1.0-ui-foundation</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Manifest Include="$(ApplicationManifest)" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260710003" />
   </ItemGroup>
 </Project>

@@ -53,7 +53,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $output = Join-Path $env:RUNNER_TEMP 'Eizo-AppPackages'
-          msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Always /p:AppxBundlePlatforms=x64 /p:UapAppxPackageBuildMode=SideloadOnly /p:WindowsAppSDKSelfContained=true /p:AppxPackageDir="$output\"
+          msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Always /p:AppxBundlePlatforms=x64 /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir="$output\"
           if ($LASTEXITCODE -ne 0) { throw "MSIX build failed: $LASTEXITCODE" }
           $bundle = @(Get-ChildItem $output -Recurse -Filter '*.msixbundle' -File) | Select-Object -First 1
           if (-not $bundle) { throw 'MSIX bundle was not produced.' }
