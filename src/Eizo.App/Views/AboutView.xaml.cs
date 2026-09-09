@@ -11,6 +11,7 @@ public sealed partial class AboutView : UserControl
 {
     private static readonly Uri ProductRepositoryUri = new("https://github.com/KiYouJyo/Eizo");
     private static readonly Uri ReleasesUri = new("https://github.com/KiYouJyo/Eizo/releases");
+    private static readonly Uri PlaybackReleasesUri = new("https://github.com/KiYouJyo/Eizo.Playback/releases");
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
     private readonly AboutUpdateSessionState _updates = AboutUpdateSessionState.Default;
 
@@ -20,6 +21,7 @@ public sealed partial class AboutView : UserControl
         ApplyText();
         PopulateApplicationInfo();
         RenderProductUpdate();
+        RenderPlaybackUpdate();
         Loaded += AboutView_Loaded;
         Unloaded += AboutView_Unloaded;
     }
@@ -39,6 +41,7 @@ public sealed partial class AboutView : UserControl
         _updates.Changed += Updates_Changed;
         PopulateApplicationInfo();
         RenderProductUpdate();
+        RenderPlaybackUpdate();
     }
 
     private void AboutView_Unloaded(object sender, RoutedEventArgs e) =>
@@ -50,6 +53,7 @@ public sealed partial class AboutView : UserControl
         {
             if (XamlRoot is null) return;
             RenderProductUpdate();
+            RenderPlaybackUpdate();
         });
     }
 
@@ -59,6 +63,7 @@ public sealed partial class AboutView : UserControl
         PackageVersionText.Text = AppVersionProvider.GetPackageVersion();
         ArchitectureText.Text = RuntimeInformation.ProcessArchitecture.ToString();
         CurrentAppVersionText.Text = AppVersionProvider.DisplayVersion;
+        CurrentCoreVersionText.Text = PlaybackVersionProvider.DisplayVersion;
         ChannelText.Text = L("GitHub 侧载", "GitHub サイドロード", "GitHub sideload");
     }
 
@@ -85,6 +90,29 @@ public sealed partial class AboutView : UserControl
         var uri = _updates.ProductInfo.Release is { HtmlUrl.Length: > 0 } release
             ? new Uri(release.HtmlUrl)
             : ReleasesUri;
+        await Launcher.LaunchUriAsync(uri);
+    }
+
+    private async void CoreCheckUpdateButton_Click(object sender, RoutedEventArgs e)
+    {
+        var info = _updates.PlaybackInfo;
+
+        if (info.IsUpdateAvailable &&
+            info.Release is { HtmlUrl.Length: > 0 } release)
+        {
+            await Launcher.LaunchUriAsync(new Uri(release.HtmlUrl));
+            return;
+        }
+
+        await _updates.CheckPlaybackUpdateAsync();
+    }
+
+    private async void CoreReleaseNotesButton_Click(object sender, RoutedEventArgs e)
+    {
+        var uri = _updates.PlaybackInfo.Release is { HtmlUrl.Length: > 0 } release
+            ? new Uri(release.HtmlUrl)
+            : PlaybackReleasesUri;
+
         await Launcher.LaunchUriAsync(uri);
     }
 
@@ -140,6 +168,61 @@ public sealed partial class AboutView : UserControl
         if (_updates.ProductProgress is double progress)
             AppUpdateProgressBar.Value = progress * 100d;
     }
+
+    private void RenderPlaybackUpdate()
+    {
+        var info = _updates.PlaybackInfo;
+
+        CurrentCoreVersionText.Text = PlaybackVersionProvider.DisplayVersion;
+        AvailableCoreVersionText.Text = string.IsNullOrWhiteSpace(info.AvailableVersion)
+            ? "—"
+            : $"v{info.AvailableVersion}";
+
+        CoreUpdateStatusText.Text = ResolvePlaybackUpdateStatus(info);
+        ToolTipService.SetToolTip(
+            CoreUpdateStatusText,
+            info.State == AppUpdateState.Failed && !string.IsNullOrWhiteSpace(info.Detail)
+                ? info.Detail
+                : null);
+
+        CoreCheckUpdateButton.Content = info.State switch
+        {
+            AppUpdateState.UpdateAvailable =>
+                L("查看新版", "新しいリリースを開く", "Open update"),
+            AppUpdateState.Checking =>
+                L("正在检查", "確認中", "Checking"),
+            AppUpdateState.Failed or AppUpdateState.Cancelled =>
+                T("Common_Retry"),
+            _ => T("About_CheckUpdates")
+        };
+
+        CoreCheckUpdateButton.IsEnabled =
+            _updates.CanOperatePlaybackUpdate &&
+            info.State != AppUpdateState.Checking;
+    }
+
+    private string ResolvePlaybackUpdateStatus(AppUpdateInfo info) => info.State switch
+    {
+        AppUpdateState.NotChecked => T("About_NotChecked"),
+        AppUpdateState.Checking =>
+            L("正在检查更新…", "更新を確認しています…", "Checking for updates…"),
+        AppUpdateState.UpToDate =>
+            L("已是当前 Eizo 集成的最新内核", "現在の Eizo に統合済みの最新版です", "Latest playback core integrated by this Eizo build"),
+        AppUpdateState.UpdateAvailable =>
+            L(
+                "发现新版内核；需由新版 Eizo 集成",
+                "新しいコアがあります。新しい Eizo への統合が必要です",
+                "New playback core available; integration requires a newer Eizo build"),
+        AppUpdateState.Cancelled =>
+            L("检查已取消", "確認をキャンセルしました", "Check cancelled"),
+        AppUpdateState.Failed when info.ErrorCode == "ReleaseNotFound" =>
+            L("未找到 Eizo.Playback Release", "Eizo.Playback の Release が見つかりません", "No Eizo.Playback Release was found"),
+        AppUpdateState.Failed when info.ErrorCode == "UnableToContactGitHub" =>
+            L("无法连接 GitHub", "GitHub に接続できません", "Unable to contact GitHub"),
+        AppUpdateState.Failed =>
+            L("内核更新检查失败", "コア更新の確認に失敗しました", "Playback-core update check failed"),
+        _ => T("About_NotChecked")
+    };
 
     private string ResolveProductUpdateStatus(AppUpdateInfo info) => info.State switch
     {
@@ -212,7 +295,7 @@ public sealed partial class AboutView : UserControl
         IndependentComponentsTitle.Text = T("About_IndependentComponents");
         PlayerCoreTitle.Text = T("About_PlayerCore");
         IndependentUpdateLabel.Text = T("About_IndependentUpdate");
-        NotCheckedComponentText.Text = T("About_NotChecked");
+        CoreUpdateStatusText.Text = T("About_NotChecked");
         CoreReleaseNotesButton.Content = T("About_ReleaseNotes");
         CoreCheckUpdateButton.Content = T("About_CheckUpdates");
 
