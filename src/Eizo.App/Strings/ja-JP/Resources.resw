@@ -545,13 +545,13 @@
     <value>更新を確認</value>
   </data>
   <data name="About_IndependentComponents" xml:space="preserve">
-    <value>個別更新コンポーネント</value>
+    <value>個別コンポーネントのバージョン</value>
   </data>
   <data name="About_PlayerCore" xml:space="preserve">
     <value>プレイヤーコア</value>
   </data>
   <data name="About_IndependentUpdate" xml:space="preserve">
-    <value>個別更新</value>
+    <value>GitHub Release を個別に追跡</value>
   </data>
   <data name="About_ProjectOpenSource" xml:space="preserve">
     <value>プロジェクトとオープンソース</value>
