@@ -4,8 +4,8 @@ namespace Eizo;
 
 internal static class AppVersionProvider
 {
-    public const string Version = "0.2.2";
-    public const string DisplayVersion = "v0.2.2";
+    public const string Version = "0.2.3";
+    public const string DisplayVersion = "v0.2.3";
 
     public static Version GetCurrentVersion()
     {
