@@ -5,10 +5,8 @@ internal sealed class AboutUpdateSessionState
     private static readonly Lazy<AboutUpdateSessionState> LazyDefault = new(() => new AboutUpdateSessionState());
     private readonly ProductAppUpdateService _productUpdateService = new();
     private AppUpdateInfo _productInfo = new(AppUpdateState.NotChecked);
-    private AppUpdateInfo _playbackInfo = new(AppUpdateState.NotChecked);
     private double? _productProgress;
     private int _productBusy;
-    private int _playbackBusy;
 
     private AboutUpdateSessionState()
     {
@@ -28,17 +26,6 @@ internal sealed class AboutUpdateSessionState
         }
     }
 
-    public AppUpdateInfo PlaybackInfo
-    {
-        get => _playbackInfo;
-        private set
-        {
-            if (_playbackInfo == value) return;
-            _playbackInfo = value;
-            Changed?.Invoke(this, EventArgs.Empty);
-        }
-    }
-
     public double? ProductProgress
     {
         get => _productProgress;
@@ -51,78 +38,6 @@ internal sealed class AboutUpdateSessionState
     }
 
     public bool CanOperateProductUpdate => Volatile.Read(ref _productBusy) == 0;
-    public bool CanOperatePlaybackUpdate => Volatile.Read(ref _playbackBusy) == 0;
-
-    public async Task CheckPlaybackUpdateAsync(CancellationToken cancellationToken = default)
-    {
-        if (Interlocked.Exchange(ref _playbackBusy, 1) != 0) return;
-
-        try
-        {
-            PlaybackInfo = PlaybackInfo with
-            {
-                State = AppUpdateState.Checking,
-                Detail = null,
-                ErrorCode = null
-            };
-
-            var release = await GitHubUpdateService.GetLatestReleaseAsync(
-                "KiYouJyo/Eizo.Playback",
-                cancellationToken: cancellationToken);
-
-            if (release is null)
-            {
-                PlaybackInfo = new(
-                    AppUpdateState.Failed,
-                    ErrorCode: "ReleaseNotFound");
-                return;
-            }
-
-            if (!GitHubUpdateService.TryParseVersionTag(release.TagName, out var remoteVersion))
-            {
-                PlaybackInfo = new(
-                    AppUpdateState.Failed,
-                    release.DisplayVersion,
-                    ErrorCode: "InvalidReleaseResponse",
-                    Release: release);
-                return;
-            }
-
-            var currentVersion = PlaybackVersionProvider.GetCurrentVersion();
-            PlaybackInfo = new(
-                remoteVersion > currentVersion
-                    ? AppUpdateState.UpdateAvailable
-                    : AppUpdateState.UpToDate,
-                release.DisplayVersion,
-                Release: release);
-        }
-        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            PlaybackInfo = new(
-                AppUpdateState.Failed,
-                ErrorCode: "UnableToContactGitHub",
-                Detail: "Timeout");
-        }
-        catch (HttpRequestException exception)
-        {
-            PlaybackInfo = new(
-                AppUpdateState.Failed,
-                ErrorCode: "UnableToContactGitHub",
-                Detail: exception.Message);
-        }
-        catch (OperationCanceledException)
-        {
-            PlaybackInfo = new(
-                AppUpdateState.Cancelled,
-                ErrorCode: "Cancelled",
-                Detail: "Cancelled");
-        }
-        finally
-        {
-            Interlocked.Exchange(ref _playbackBusy, 0);
-            Changed?.Invoke(this, EventArgs.Empty);
-        }
-    }
 
     public async Task CheckProductUpdateAsync(CancellationToken cancellationToken = default)
     {
