@@ -545,13 +545,13 @@
     <value>检查更新</value>
   </data>
   <data name="About_IndependentComponents" xml:space="preserve">
-    <value>独立组件版本</value>
+    <value>独立更新组件</value>
   </data>
   <data name="About_PlayerCore" xml:space="preserve">
     <value>播放器内核</value>
   </data>
   <data name="About_IndependentUpdate" xml:space="preserve">
-    <value>GitHub Release 独立跟踪</value>
+    <value>独立更新</value>
   </data>
   <data name="About_ProjectOpenSource" xml:space="preserve">
     <value>项目与开源</value>
