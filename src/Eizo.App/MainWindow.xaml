@@ -71,6 +71,10 @@
           <Thickness x:Key="NavigationViewMinimalContentGridBorderThickness">0</Thickness>
           <StaticResource x:Key="NavigationViewDefaultPaneBackground"
                           ResourceKey="ShellNavigationPaneBackgroundBrush" />
+          <StaticResource x:Key="NavigationViewExpandedPaneBackground"
+                          ResourceKey="ShellNavigationPaneBackgroundBrush" />
+          <StaticResource x:Key="FlyoutPresenterBackground"
+                          ResourceKey="AppTransientSurfaceBrush" />
         </NavigationView.Resources>
 
         <NavigationView.MenuItems>
