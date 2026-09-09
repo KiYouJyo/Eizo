@@ -34,6 +34,10 @@ public sealed partial class PlayerView : UserControl
     private Point _lastPointerPosition;
     private double _volume = 1d;
     private bool _isUpdatingVolume;
+    private bool _pointerWheelHooked;
+    private bool _isPreparingForDetach;
+    private bool _fullscreenWindowExitQueued;
+    private PointerEventHandler? _pointerWheelHandler;
     private CancellationTokenSource? _seekDebounce;
 
     public PlayerView(string title, string episode)
@@ -869,16 +873,11 @@ public sealed partial class PlayerView : UserControl
         object sender,
         PointerRoutedEventArgs e)
     {
-        if (!PlayerSplitView.IsPaneOpen)
+        if (!_isVideoFullscreen || !PlayerSplitView.IsPaneOpen)
             return;
 
         e.Handled = true;
-
-        if (_isVideoFullscreen)
-            _sidebarVisibleInFullscreen = false;
-        else
-            _sidebarCollapsedByUser = true;
-
+        _sidebarVisibleInFullscreen = false;
         UpdateSidebarVisibility();
     }
 
@@ -980,23 +979,31 @@ public sealed partial class PlayerView : UserControl
 
     private void PlayerView_Loaded(object sender, RoutedEventArgs e)
     {
-        PlayerRoot.AddHandler(
-            UIElement.PointerWheelChangedEvent,
-            new PointerEventHandler(PlayerRoot_PointerWheelChanged),
-            true);
+        if (!_pointerWheelHooked)
+        {
+            _pointerWheelHandler ??= PlayerRoot_PointerWheelChanged;
+            PlayerRoot.AddHandler(
+                UIElement.PointerWheelChangedEvent,
+                _pointerWheelHandler,
+                true);
+            _pointerWheelHooked = true;
+        }
+
         UpdateSidebarVisibility();
     }
 
     private void PlayerView_Unloaded(object sender, RoutedEventArgs e)
     {
         _fullscreenControlsTimer.Stop();
-
-        PlayerRoot.RemoveHandler(
-            UIElement.PointerWheelChangedEvent,
-            new PointerEventHandler(PlayerRoot_PointerWheelChanged));
+        RemovePointerWheelHandler();
 
         if (_isVideoFullscreen)
-            SetVideoFullscreen(false);
+        {
+            _isVideoFullscreen = false;
+            _sidebarVisibleInFullscreen = false;
+            _hasPointerPosition = false;
+            QueueWindowFullscreenExit();
+        }
     }
 
     private void PlayerRoot_SizeChanged(object sender, SizeChangedEventArgs e) =>
@@ -1058,54 +1065,64 @@ public sealed partial class PlayerView : UserControl
 
     private void SetVideoFullscreen(bool enabled)
     {
-        if (_isVideoFullscreen == enabled)
+        if (_isPreparingForDetach || _isVideoFullscreen == enabled)
             return;
 
         _isVideoFullscreen = enabled;
-        App.MainWindow?.SetPlayerVideoFullscreen(enabled);
 
         if (enabled)
         {
-            PlayerRoot.RequestedTheme = ElementTheme.Dark;
-
-            PlayerHeader.Visibility = Visibility.Collapsed;
-            HeaderRow.Height = new GridLength(0);
-            ControlsRow.Height = new GridLength(0);
-
-            PlayerFrame.Margin = new Thickness(0);
-            PlayerFrame.CornerRadius = new CornerRadius(0);
-
-            Grid.SetRow(PlaybackSurfaceHost, 0);
-            Grid.SetRowSpan(PlaybackSurfaceHost, 3);
-
-            Grid.SetRow(PlayerControlsPanel, 0);
-            Grid.SetRowSpan(PlayerControlsPanel, 3);
-            PlayerControlsPanel.VerticalAlignment = VerticalAlignment.Bottom;
-            PlayerControlsPanel.Padding = new Thickness(24, 12, 24, 16);
-            PlayerControlsPanel.Background =
-                new SolidColorBrush(Windows.UI.Color.FromArgb(0xB8, 0, 0, 0));
-
-            _sidebarVisibleInFullscreen = false;
-            _hasPointerPosition = false;
-
-            PlayerSplitView.DisplayMode = SplitViewDisplayMode.Overlay;
-            PlayerSidebar.Margin = new Thickness(0);
-            PlayerSidebar.Background = new SolidColorBrush(Colors.Black);
-            UpdateSidebarVisibility();
-
-            FullscreenIcon.Glyph = "\uE73F";
-            ToolTipService.SetToolTip(
-                FullscreenButton,
-                T("Playback_ExitFullScreen"));
-            AutomationProperties.SetName(
-                FullscreenButton,
-                T("Playback_ExitFullScreen"));
-
-            ShowFullscreenControls(restartAutoHide: true);
-            Focus(FocusState.Programmatic);
+            ApplyFullscreenVisualState();
+            App.MainWindow?.SetPlayerVideoFullscreen(true);
             return;
         }
 
+        ApplyWindowedVisualState();
+        QueueWindowFullscreenExit();
+    }
+
+    private void ApplyFullscreenVisualState()
+    {
+        PlayerRoot.RequestedTheme = ElementTheme.Dark;
+
+        PlayerHeader.Visibility = Visibility.Collapsed;
+        HeaderRow.Height = new GridLength(0);
+        ControlsRow.Height = new GridLength(0);
+
+        PlayerFrame.Margin = new Thickness(0);
+        PlayerFrame.CornerRadius = new CornerRadius(0);
+
+        Grid.SetRow(PlaybackSurfaceHost, 0);
+        Grid.SetRowSpan(PlaybackSurfaceHost, 3);
+
+        Grid.SetRow(PlayerControlsPanel, 0);
+        Grid.SetRowSpan(PlayerControlsPanel, 3);
+        PlayerControlsPanel.VerticalAlignment = VerticalAlignment.Bottom;
+        PlayerControlsPanel.Padding = new Thickness(24, 12, 24, 16);
+        PlayerControlsPanel.Background =
+            new SolidColorBrush(Windows.UI.Color.FromArgb(0xB8, 0, 0, 0));
+
+        _sidebarVisibleInFullscreen = false;
+        _hasPointerPosition = false;
+
+        PlayerSplitView.DisplayMode = SplitViewDisplayMode.Overlay;
+        PlayerSidebar.Margin = new Thickness(0);
+        UpdateSidebarVisibility();
+
+        FullscreenIcon.Glyph = "\uE73F";
+        ToolTipService.SetToolTip(
+            FullscreenButton,
+            T("Playback_ExitFullScreen"));
+        AutomationProperties.SetName(
+            FullscreenButton,
+            T("Playback_ExitFullScreen"));
+
+        ShowFullscreenControls(restartAutoHide: true);
+        Focus(FocusState.Programmatic);
+    }
+
+    private void ApplyWindowedVisualState()
+    {
         _fullscreenControlsTimer.Stop();
         _sidebarVisibleInFullscreen = false;
         _hasPointerPosition = false;
@@ -1133,8 +1150,6 @@ public sealed partial class PlayerView : UserControl
 
         PlayerSplitView.DisplayMode = SplitViewDisplayMode.Inline;
         PlayerSidebar.Margin = new Thickness(0);
-        PlayerSidebar.Background =
-            (Brush)Application.Current.Resources["AppTransientSurfaceBrush"];
         UpdateSidebarVisibility();
 
         FullscreenIcon.Glyph = "\uE740";
@@ -1158,7 +1173,7 @@ public sealed partial class PlayerView : UserControl
 
         PlayerSplitView.IsPaneOpen = shouldShow;
         SidebarDismissLayer.Visibility =
-            shouldShow
+            _isVideoFullscreen && shouldShow
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
@@ -1197,6 +1212,76 @@ public sealed partial class PlayerView : UserControl
         {
             _fullscreenControlsTimer.Start();
         }
+    }
+
+    private void RemovePointerWheelHandler()
+    {
+        if (!_pointerWheelHooked || _pointerWheelHandler is null)
+            return;
+
+        PlayerRoot.RemoveHandler(
+            UIElement.PointerWheelChangedEvent,
+            _pointerWheelHandler);
+        _pointerWheelHooked = false;
+    }
+
+    private void QueueWindowFullscreenExit()
+    {
+        if (_fullscreenWindowExitQueued)
+            return;
+
+        _fullscreenWindowExitQueued = true;
+
+        if (!DispatcherQueue.TryEnqueue(() =>
+        {
+            _fullscreenWindowExitQueued = false;
+
+            if (!_isVideoFullscreen)
+                App.MainWindow?.SetPlayerVideoFullscreen(false);
+        }))
+        {
+            _fullscreenWindowExitQueued = false;
+            App.MainWindow?.SetPlayerVideoFullscreen(false);
+        }
+    }
+
+    internal async ValueTask PrepareForDetachAsync()
+    {
+        if (_isPreparingForDetach)
+            return;
+
+        _isPreparingForDetach = true;
+        _fullscreenControlsTimer.Stop();
+        RemovePointerWheelHandler();
+
+        _seekDebounce?.Cancel();
+        _seekDebounce?.Dispose();
+        _seekDebounce = null;
+
+        _isVideoFullscreen = false;
+        _sidebarVisibleInFullscreen = false;
+        _hasPointerPosition = false;
+
+        if (_engine is { } engine)
+        {
+            DetachEngine(engine);
+            _engine = null;
+        }
+
+        PlaybackSurface.EngineChanged -= PlaybackSurface_EngineChanged;
+        PlaybackSurface.InitializationFailed -= PlaybackSurface_InitializationFailed;
+
+        try
+        {
+            await PlaybackSurface.DisposeAsync();
+        }
+        catch
+        {
+            // Closing a tab must remain responsive even if a backend is already
+            // tearing down because of a concurrent end/stop notification.
+        }
+
+        App.MainWindow?.SetPlayerVideoFullscreen(false);
     }
 
     private void ResetTimeline()
