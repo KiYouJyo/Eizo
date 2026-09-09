@@ -30,9 +30,10 @@ public sealed partial class PlayerView : UserControl
     private bool _isVideoFullscreen;
     private bool _sidebarCollapsedByUser;
     private bool _sidebarVisibleInFullscreen;
-    private bool _pointerOverControls;
     private bool _hasPointerPosition;
     private Point _lastPointerPosition;
+    private double _volume = 1d;
+    private bool _isUpdatingVolume;
     private CancellationTokenSource? _seekDebounce;
 
     public PlayerView(string title, string episode)
@@ -78,6 +79,7 @@ public sealed partial class PlayerView : UserControl
         QueueSubtitle.Text = T("Section_Anime");
         PlaybackInfoTitle.Text = T("Playback_Info");
         PlaybackRateFlyoutTitle.Text = T("Playback_Rate");
+        VolumeFlyoutTitle.Text = T("Playback_Volume");
 
         PlayerSectionList.ItemsSource = new[]
         {
@@ -91,6 +93,7 @@ public sealed partial class PlayerView : UserControl
         ToolTipService.SetToolTip(PlayPauseButton, T("Common_Play"));
         ToolTipService.SetToolTip(NextJumpButton, T("Playback_Forward10Seconds"));
         ToolTipService.SetToolTip(NextChapterButton, T("Playback_NextChapter"));
+        ToolTipService.SetToolTip(VolumeButton, T("Playback_Volume"));
         ToolTipService.SetToolTip(SidebarToggleButton, T("Playback_CollapseSidebar"));
         ToolTipService.SetToolTip(FullscreenButton, T("Playback_FullScreen"));
 
@@ -100,6 +103,7 @@ public sealed partial class PlayerView : UserControl
         AutomationProperties.SetName(PlayPauseButton, T("Common_Play"));
         AutomationProperties.SetName(NextJumpButton, T("Playback_Forward10Seconds"));
         AutomationProperties.SetName(NextChapterButton, T("Playback_NextChapter"));
+        AutomationProperties.SetName(VolumeButton, T("Playback_Volume"));
         AutomationProperties.SetName(SidebarToggleButton, T("Playback_CollapseSidebar"));
         AutomationProperties.SetName(FullscreenButton, T("Playback_FullScreen"));
     }
@@ -149,6 +153,14 @@ public sealed partial class PlayerView : UserControl
         engine.Navigation.NavigationChanged += Navigation_NavigationChanged;
         engine.Diagnostics.DiagnosticsChanged += Diagnostics_DiagnosticsChanged;
 
+        try
+        {
+            engine.Volume = _volume;
+        }
+        catch
+        {
+        }
+
         Dispatch(() =>
         {
             UpdateStateUi(engine.State);
@@ -156,6 +168,7 @@ public sealed partial class PlayerView : UserControl
             UpdateNavigationAvailability();
             UpdateDiagnosticsUi(engine.Diagnostics.Current);
             PlaybackRateSlider.Value = Math.Clamp(engine.PlaybackRate, 0.5d, 2.0d);
+            UpdateVolumeUi(_volume);
         });
     }
 
@@ -829,6 +842,7 @@ public sealed partial class PlayerView : UserControl
         NextJumpButton.IsEnabled = hasEngineAndSource;
         PlaybackSlider.IsEnabled = hasEngineAndSource;
         PlaybackRateButton.IsEnabled = hasEngineAndSource;
+        VolumeButton.IsEnabled = hasEngineAndSource;
 
         SubtitleQuickButton.IsEnabled = hasEngineAndSource;
         AudioQuickButton.IsEnabled = hasEngineAndSource;
@@ -896,12 +910,90 @@ public sealed partial class PlayerView : UserControl
         }
     }
 
-    private void PlayerView_Loaded(object sender, RoutedEventArgs e) =>
+    private void VolumeSlider_ValueChanged(
+        object sender,
+        Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingVolume)
+            return;
+
+        SetVolume(e.NewValue / 100d);
+    }
+
+    private void SetVolume(double value)
+    {
+        _volume = Math.Clamp(value, 0d, 1d);
+
+        if (_engine is { } engine)
+        {
+            try
+            {
+                engine.Volume = _volume;
+            }
+            catch
+            {
+                ShowStatus(T("Status_Error"));
+            }
+        }
+
+        UpdateVolumeUi(_volume);
+    }
+
+    private void UpdateVolumeUi(double value)
+    {
+        var percent = (int)Math.Round(
+            Math.Clamp(value, 0d, 1d) * 100d,
+            MidpointRounding.AwayFromZero);
+
+        _isUpdatingVolume = true;
+        try
+        {
+            VolumeSlider.Value = percent;
+            VolumeValueText.Text = $"{percent}%";
+            VolumeButtonValueText.Text = $"{percent}%";
+        }
+        finally
+        {
+            _isUpdatingVolume = false;
+        }
+    }
+
+    private void PlayerRoot_PointerWheelChanged(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (!_isVideoFullscreen ||
+            _engine is null ||
+            _currentSource is null)
+        {
+            return;
+        }
+
+        var delta = e.GetCurrentPoint(PlayerRoot).Properties.MouseWheelDelta;
+        if (delta == 0)
+            return;
+
+        SetVolume(_volume + (Math.Sign(delta) * 0.05d));
+        ShowFullscreenControls(restartAutoHide: true);
+        e.Handled = true;
+    }
+
+    private void PlayerView_Loaded(object sender, RoutedEventArgs e)
+    {
+        PlayerRoot.AddHandler(
+            UIElement.PointerWheelChangedEvent,
+            new PointerEventHandler(PlayerRoot_PointerWheelChanged),
+            true);
         UpdateSidebarVisibility();
+    }
 
     private void PlayerView_Unloaded(object sender, RoutedEventArgs e)
     {
         _fullscreenControlsTimer.Stop();
+
+        PlayerRoot.RemoveHandler(
+            UIElement.PointerWheelChangedEvent,
+            new PointerEventHandler(PlayerRoot_PointerWheelChanged));
 
         if (_isVideoFullscreen)
             SetVideoFullscreen(false);
@@ -926,21 +1018,17 @@ public sealed partial class PlayerView : UserControl
 
         _hasPointerPosition = true;
         _lastPointerPosition = position;
-        ShowFullscreenControls(restartAutoHide: !_pointerOverControls);
+        ShowFullscreenControls(restartAutoHide: true);
     }
 
     private void PlayerControlsPanel_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
-        _pointerOverControls = true;
-
         if (_isVideoFullscreen)
-            ShowFullscreenControls(restartAutoHide: false);
+            ShowFullscreenControls(restartAutoHide: true);
     }
 
     private void PlayerControlsPanel_PointerExited(object sender, PointerRoutedEventArgs e)
     {
-        _pointerOverControls = false;
-
         if (_isVideoFullscreen)
             RestartFullscreenAutoHide();
     }
@@ -959,8 +1047,7 @@ public sealed partial class PlayerView : UserControl
         _fullscreenControlsTimer.Stop();
 
         if (!_isVideoFullscreen ||
-            _pointerOverControls ||
-            !_playIntent)
+            _engine?.State != PlaybackState.Playing)
         {
             return;
         }
@@ -979,6 +1066,8 @@ public sealed partial class PlayerView : UserControl
 
         if (enabled)
         {
+            PlayerRoot.RequestedTheme = ElementTheme.Dark;
+
             PlayerHeader.Visibility = Visibility.Collapsed;
             HeaderRow.Height = new GridLength(0);
             ControlsRow.Height = new GridLength(0);
@@ -1020,6 +1109,8 @@ public sealed partial class PlayerView : UserControl
         _fullscreenControlsTimer.Stop();
         _sidebarVisibleInFullscreen = false;
         _hasPointerPosition = false;
+
+        PlayerRoot.RequestedTheme = ElementTheme.Default;
 
         PlayerHeader.Visibility = Visibility.Visible;
         HeaderRow.Height = new GridLength(64);
@@ -1102,8 +1193,7 @@ public sealed partial class PlayerView : UserControl
         _fullscreenControlsTimer.Stop();
 
         if (_isVideoFullscreen &&
-            _playIntent &&
-            !_pointerOverControls)
+            _engine?.State == PlaybackState.Playing)
         {
             _fullscreenControlsTimer.Start();
         }
