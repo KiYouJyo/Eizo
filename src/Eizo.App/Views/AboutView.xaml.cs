@@ -11,6 +11,7 @@ public sealed partial class AboutView : UserControl
 {
     private static readonly Uri ProductRepositoryUri = new("https://github.com/KiYouJyo/Eizo");
     private static readonly Uri ReleasesUri = new("https://github.com/KiYouJyo/Eizo/releases");
+    private static readonly Uri PrivacyUri = new("https://github.com/KiYouJyo/Eizo/blob/main/PRIVACY.md");
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
     private readonly AboutUpdateSessionState _updates = AboutUpdateSessionState.Default;
 
@@ -87,6 +88,15 @@ public sealed partial class AboutView : UserControl
             : ReleasesUri;
         await Launcher.LaunchUriAsync(uri);
     }
+
+    private async void OpenRepositoryButton_Click(object sender, RoutedEventArgs e) =>
+        await Launcher.LaunchUriAsync(ProductRepositoryUri);
+
+    private async void OpenReleasesButton_Click(object sender, RoutedEventArgs e) =>
+        await Launcher.LaunchUriAsync(ReleasesUri);
+
+    private async void OpenPrivacyButton_Click(object sender, RoutedEventArgs e) =>
+        await Launcher.LaunchUriAsync(PrivacyUri);
 
     private void RenderProductUpdate()
     {

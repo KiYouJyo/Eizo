@@ -322,7 +322,9 @@ public sealed partial class MainWindow : Window
     private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch
     {
         "home" => (T("Nav_Home"), "\uE80F"),
-        "categories" => (T("Nav_Categories"), "\uE8B2"),
+        "categories" => (
+            T("Nav_Categories"),
+            char.ConvertFromUtf32((int)Symbol.Library)),
         "anime" => (T("Nav_Anime"), "\uE8B2"),
         "movies" => (T("Nav_Movies"), "\uE714"),
         "series" => (T("Nav_Series"), "\uE8FD"),
