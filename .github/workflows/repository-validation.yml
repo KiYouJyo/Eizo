@@ -24,6 +24,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-Localization.ps1
 
+      - name: Validate navigation pane theme contract
+        shell: pwsh
+        run: ./scripts/Test-NavigationPaneThemeContract.ps1
+
   winui-build:
     name: Build WinUI 3 app
     runs-on: windows-latest

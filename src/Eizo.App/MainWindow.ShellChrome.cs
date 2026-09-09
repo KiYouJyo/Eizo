@@ -204,8 +204,12 @@ public sealed partial class MainWindow
         if (!_navigationPaneBackgroundHooked)
         {
             _navigationPaneBackgroundHooked = true;
+            // In CompactOverlay, NavigationView deliberately switches to
+            // PaneNotOverlaying after the pane closes and restores its native
+            // NavigationViewExpandedPaneBackground (transparent). Do not write
+            // PaneBackground from PaneClosed: the compact rail should fall back
+            // to the window Mica, exactly like UrbanPlanToolbox.
             ShellNavigation.PaneOpening += (_, _) => QueueNavigationPaneBackgroundUpdate();
-            ShellNavigation.PaneClosed += (_, _) => QueueNavigationPaneBackgroundUpdate();
             ShellNavigation.ActualThemeChanged += (_, _) => QueueNavigationPaneBackgroundUpdate();
             Activated += MainWindow_ActivatedForNavigationPane;
         }
@@ -227,6 +231,12 @@ public sealed partial class MainWindow
 
     private void ApplySharedNavigationPaneBackground()
     {
+        // Closed CompactOverlay is owned by NavigationView's PaneNotOverlaying
+        // state. Leaving that state untouched keeps the compact rail on the
+        // native transparent/Mica surface and prevents stale custom brushes
+        // from being reintroduced after an expand/collapse cycle.
+        if (!ShellNavigation.IsPaneOpen) return;
+
         _navigationSplitView ??= FindDescendant<SplitView>(ShellNavigation);
 
         var themeKey = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast
