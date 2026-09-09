@@ -201,7 +201,8 @@
                              Style="{StaticResource SettingsDescriptionStyle}" />
                   <Button x:Name="OpenRepositoryButton"
                           Grid.Row="3"
-                          HorizontalAlignment="Left" />
+                          HorizontalAlignment="Left"
+                          Click="OpenRepositoryButton_Click" />
                 </Grid>
               </Border>
 
@@ -217,7 +218,8 @@
                              Style="{StaticResource SettingsDescriptionStyle}" />
                   <Button x:Name="OpenReleasesButton"
                           Grid.Row="3"
-                          HorizontalAlignment="Left" />
+                          HorizontalAlignment="Left"
+                          Click="OpenReleasesButton_Click" />
                 </Grid>
               </Border>
 
@@ -233,7 +235,8 @@
                              Style="{StaticResource SettingsDescriptionStyle}" />
                   <Button x:Name="OpenPrivacyButton"
                           Grid.Row="3"
-                          HorizontalAlignment="Left" />
+                          HorizontalAlignment="Left"
+                          Click="OpenPrivacyButton_Click" />
                 </Grid>
               </Border>
             </Grid>
