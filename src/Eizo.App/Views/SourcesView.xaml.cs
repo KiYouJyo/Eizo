@@ -489,7 +489,7 @@ public sealed partial class SourcesView : UserControl
 
         browseButton.Click += async (_, _) =>
         {
-            panel.IsEnabled = false;
+            panel.IsHitTestVisible = false;
 
             try
             {
@@ -515,7 +515,7 @@ public sealed partial class SourcesView : UserControl
             }
             finally
             {
-                panel.IsEnabled = true;
+                panel.IsHitTestVisible = true;
             }
         };
 
