@@ -120,7 +120,15 @@ jobs:
             }
 
             $pluginEntries = @($entries | Where-Object {
-              $_ -match '(^|[\\/])plugins[\\/].+\.dll          }
+              $_ -match '(^|[\\/])plugins[\\/].+\.dll$'
+            })
+
+            if ($pluginEntries.Count -eq 0) {
+              throw 'MSIX does not contain LibVLC plugin DLLs.'
+            }
+
+            Write-Host "MSIX LibVLC payload PASS. Plugins=$($pluginEntries.Count)"
+          }
           finally {
             $archive.Dispose()
           }
@@ -137,25 +145,5 @@ jobs:
         with:
           name: Eizo-v0.2.0-stage7-corrected-acceptance
           path: ${{ env.ACCEPTANCE_ZIP }}
-          if-no-files-found: error
-          retention-days: 14
-
-            })
-
-            if ($pluginEntries.Count -eq 0) {
-              throw 'MSIX does not contain LibVLC plugin DLLs.'
-            }
-
-            Write-Host "MSIX LibVLC payload PASS. Plugins=$($pluginEntries.Count)"
-          }
-          finally {
-            $archive.Dispose()
-          }
-
-      - name: Upload unsigned integration MSIX
-        uses: actions/upload-artifact@v7
-        with:
-          name: Eizo-Stage7-playback-integration-${{ github.sha }}
-          path: ${{ env.PLAYBACK_MSIX }}
           if-no-files-found: error
           retention-days: 14
