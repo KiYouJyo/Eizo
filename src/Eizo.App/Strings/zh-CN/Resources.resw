@@ -368,7 +368,7 @@
     <value>从媒体库中随机推荐一部作品。</value>
   </data>
   <data name="Sources_Subtitle" xml:space="preserve">
-    <value>管理本地、WebDAV 与商业网盘来源。</value>
+    <value>管理已接入的真实媒体来源；WebDAV 网络连接将在下一阶段接入。</value>
   </data>
   <data name="Sources_TabSources" xml:space="preserve">
     <value>来源</value>
@@ -638,7 +638,7 @@
     <value>退出全屏</value>
   </data>
   <data name="Catalog_Subtitle" xml:space="preserve">
-    <value>浏览全部动漫、电视剧和电影；未解析媒体直接显示视频文件标题。</value>
+    <value>只显示实际检测到的视频；未解析媒体直接显示真实视频文件名。</value>
   </data>
   <data name="Catalog_SearchPlaceholder" xml:space="preserve">
     <value>搜索全部媒体</value>
@@ -651,5 +651,23 @@
   </data>
   <data name="Catalog_NoResults" xml:space="preserve">
     <value>没有找到匹配的媒体。</value>
+  </data>
+  <data name="Sources_OpenedLocalFiles" xml:space="preserve">
+    <value>已打开的本地视频</value>
+  </data>
+  <data name="Sources_VideoCountFormat" xml:space="preserve">
+    <value>{0} 个视频</value>
+  </data>
+  <data name="Sources_LastScanFormat" xml:space="preserve">
+    <value>上次扫描 {0}</value>
+  </data>
+  <data name="Sources_ScanFailed" xml:space="preserve">
+    <value>扫描媒体来源失败</value>
+  </data>
+  <data name="Sources_AddLocalFailed" xml:space="preserve">
+    <value>添加本地媒体来源失败</value>
+  </data>
+  <data name="Catalog_Empty" xml:space="preserve">
+    <value>媒体库尚无真实视频。请在播放器中打开本地视频，或在“媒体来源”中添加本地文件夹。</value>
   </data>
 </root>
