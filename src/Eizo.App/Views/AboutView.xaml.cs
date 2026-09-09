@@ -209,12 +209,6 @@ public sealed partial class AboutView : UserControl
         ReleaseNotesButton.Content = T("About_ReleaseNotes");
         CheckUpdateButton.Content = T("About_CheckUpdates");
 
-        IndependentComponentsTitle.Text = T("About_IndependentComponents");
-        PlayerCoreTitle.Text = T("About_PlayerCore");
-        IndependentUpdateLabel.Text = T("About_IndependentUpdate");
-        NotCheckedComponentText.Text = T("About_NotChecked");
-        CoreReleaseNotesButton.Content = T("About_ReleaseNotes");
-        CoreCheckUpdateButton.Content = T("About_CheckUpdates");
 
         ProjectTitle.Text = T("About_ProjectOpenSource");
         GitHubDescription.Text = T("About_GitHubDescription");
