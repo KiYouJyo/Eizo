@@ -730,4 +730,34 @@
   <data name="Playback_LoadingSpeedFormat" xml:space="preserve">
     <value>{0:0.0} MB/s</value>
   </data>
+  <data name="Sources_EditWebDavTitle" xml:space="preserve">
+    <value>WebDAV メディアソースを編集</value>
+  </data>
+  <data name="Sources_SaveChanges" xml:space="preserve">
+    <value>保存して再接続</value>
+  </data>
+  <data name="Sources_PasswordKeepHint" xml:space="preserve">
+    <value>空欄のままなら現在のパスワードを保持します</value>
+  </data>
+  <data name="Sources_BrowseFolders" xml:space="preserve">
+    <value>WebDAV フォルダーを選択</value>
+  </data>
+  <data name="Sources_ParentFolder" xml:space="preserve">
+    <value>上の階層</value>
+  </data>
+  <data name="Sources_SelectCurrentFolder" xml:space="preserve">
+    <value>現在のフォルダーを選択</value>
+  </data>
+  <data name="Sources_LoadingFolders" xml:space="preserve">
+    <value>フォルダーを読み込み中…</value>
+  </data>
+  <data name="Sources_NoSubfolders" xml:space="preserve">
+    <value>このフォルダーにサブフォルダーはありません。</value>
+  </data>
+  <data name="Sources_WebDavUpdatedFormat" xml:space="preserve">
+    <value>{0} を更新し、動画 {1} 件を再スキャンしました。</value>
+  </data>
+  <data name="Sources_SourceAlreadyExists" xml:space="preserve">
+    <value>同じサーバーアドレスとユーザー名の WebDAV ソースがすでに存在します。</value>
+  </data>
 </root>
