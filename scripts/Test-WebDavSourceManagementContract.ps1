@@ -10,7 +10,7 @@ foreach ($required in @(
     'EditWebDavMenuItem_Click',
     'ShowWebDavEditorAsync',
     'CommitWebDavEditorAsync',
-    'BrowseWebDavFoldersAsync',
+    'EditWebDavFoldersMenuItem_Click',
     'RollBackWebDavTarget',
     'InlineWebDavCredentialProvider',
     'Sources_EditWebDavTitle')) {
@@ -20,9 +20,33 @@ foreach ($required in @(
 }
 
 if ($sourcesView -notmatch 'WebDavFolderPickerWindow' -or
-    $sourcesView -notmatch 'WebDavMediaSourceProvider\(' -or
+    $sourcesView -notmatch 'EditWebDavFoldersMenuItem_Click' -or
+    $sourcesView -notmatch 'Sources_EditMediaSource' -or
+    $sourcesView -notmatch 'Sources_EditReadFolders' -or
     $folderPicker -notmatch '_provider\.ListAsync\(') {
-    throw 'v0.3.1 contract violation: remote folder browsing must use the real WebDAV provider/ListAsync path.'
+    throw 'v0.3.1 contract violation: source editing and folder editing must be separate WebDAV actions.'
+}
+
+$editorStart = $sourcesView.IndexOf('private async Task ShowWebDavEditorAsync')
+$editorEnd = $sourcesView.IndexOf('private async Task CommitWebDavEditorAsync', $editorStart)
+if ($editorStart -lt 0 -or $editorEnd -le $editorStart) {
+    throw 'v0.3.1 contract violation: WebDAV source editor block could not be resolved.'
+}
+
+$editorBlock = $sourcesView.Substring($editorStart, $editorEnd - $editorStart)
+foreach ($forbidden in @(
+    'WebDavFolderPickerWindow',
+    'SelectedPaths',
+    'Common_Browse',
+    'folderSelectionSummary',
+    'BrowseWebDavFoldersAsync')) {
+    if ($editorBlock -match [regex]::Escape($forbidden)) {
+        throw "v0.3.1 contract violation: media-source editor still owns folder-selection UI: $forbidden"
+    }
+}
+
+if ($sourcesView -match 'BrowseWebDavFoldersAsync') {
+    throw 'v0.3.1 contract violation: the legacy editor-to-folder-picker bridge must be removed.'
 }
 
 foreach ($pickerRequirement in @(
@@ -69,20 +93,21 @@ foreach ($language in @('zh-CN','ja-JP','en-US')) {
     $resources = Get-Content -LiteralPath "src/Eizo.App/Strings/$language/Resources.resw" -Raw
     foreach ($key in @(
         'Sources_EditWebDavTitle',
+        'Sources_EditMediaSource',
+        'Sources_EditReadFolders',
         'Sources_SaveChanges',
         'Sources_PasswordKeepHint',
-        'Sources_BrowseFolders',
-        'Sources_ParentFolder',
         'Sources_SelectCurrentFolder',
         'Sources_LoadingFolders',
         'Sources_NoSubfolders',
         'Sources_WebDavUpdatedFormat',
         'Sources_SourceAlreadyExists',
-        'Sources_FolderPickerTitle',
         'Sources_FolderPickerHint',
         'Sources_AllFolders',
         'Sources_SelectedFoldersFormat',
-        'Sources_OpenFolder')) {
+        'Sources_OpenFolder',
+        'Sources_FoldersUpdated',
+        'Sources_FoldersUpdatedFormat')) {
         if ($resources -notmatch ('name="' + [regex]::Escape($key) + '"')) {
             throw "v0.3.1 localization contract missing $key in $language"
         }

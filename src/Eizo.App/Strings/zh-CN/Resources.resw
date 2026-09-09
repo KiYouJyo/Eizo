@@ -775,4 +775,16 @@
   <data name="Sources_OpenFolder" xml:space="preserve">
     <value>打开文件夹</value>
   </data>
+  <data name="Sources_EditMediaSource" xml:space="preserve">
+    <value>编辑媒体来源</value>
+  </data>
+  <data name="Sources_EditReadFolders" xml:space="preserve">
+    <value>编辑读取文件夹</value>
+  </data>
+  <data name="Sources_FoldersUpdated" xml:space="preserve">
+    <value>文件夹范围已更新</value>
+  </data>
+  <data name="Sources_FoldersUpdatedFormat" xml:space="preserve">
+    <value>已按新的文件夹范围重新扫描，共发现 {0} 个视频。</value>
+  </data>
 </root>

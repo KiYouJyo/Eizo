@@ -775,4 +775,16 @@
   <data name="Sources_OpenFolder" xml:space="preserve">
     <value>フォルダーを開く</value>
   </data>
+  <data name="Sources_EditMediaSource" xml:space="preserve">
+    <value>メディアソースを編集</value>
+  </data>
+  <data name="Sources_EditReadFolders" xml:space="preserve">
+    <value>読み込みフォルダーを編集</value>
+  </data>
+  <data name="Sources_FoldersUpdated" xml:space="preserve">
+    <value>フォルダー範囲を更新しました</value>
+  </data>
+  <data name="Sources_FoldersUpdatedFormat" xml:space="preserve">
+    <value>新しいフォルダー範囲で再スキャンし、動画 {0} 件を検出しました。</value>
+  </data>
 </root>

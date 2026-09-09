@@ -174,14 +174,23 @@ public sealed partial class SourcesView : UserControl
 
         if (source.Kind == MediaSourceKind.WebDav)
         {
-            var edit = new MenuFlyoutItem
+            var editSource = new MenuFlyoutItem
             {
-                Text = T("Common_Edit"),
+                Text = T("Sources_EditMediaSource"),
                 Icon = new FontIcon { Glyph = "\uE70F" },
                 Tag = source.Id
             };
-            edit.Click += EditWebDavMenuItem_Click;
-            flyout.Items.Add(edit);
+            editSource.Click += EditWebDavMenuItem_Click;
+            flyout.Items.Add(editSource);
+
+            var editFolders = new MenuFlyoutItem
+            {
+                Text = T("Sources_EditReadFolders"),
+                Icon = new FontIcon { Glyph = "\uE8B7" },
+                Tag = source.Id
+            };
+            editFolders.Click += EditWebDavFoldersMenuItem_Click;
+            flyout.Items.Add(editFolders);
 
             var test = new MenuFlyoutItem
             {
@@ -266,6 +275,106 @@ public sealed partial class SourcesView : UserControl
             return;
 
         await ShowWebDavEditorAsync(source);
+    }
+
+    private async void EditWebDavFoldersMenuItem_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: string sourceId })
+            return;
+
+        var source = _sources.Find(sourceId);
+        if (source is not
+            {
+                Kind: MediaSourceKind.WebDav,
+                RootLocation: { Length: > 0 }
+            } ||
+            !Uri.TryCreate(
+                source.RootLocation,
+                UriKind.Absolute,
+                out var rootUri) ||
+            !MediaSourceProviderRegistry.TryGet(
+                MediaSourceKind.WebDav,
+                out var provider) ||
+            App.MainWindow is null)
+        {
+            return;
+        }
+
+        var connection =
+            await provider.TestConnectionAsync(
+                source);
+
+        if (!connection.IsAvailable)
+        {
+            await ShowMessageAsync(
+                T("Sources_ConnectionFailed"),
+                FormatSourceError(
+                    connection.ErrorCode,
+                    connection.Detail));
+            return;
+        }
+
+        var ownerHandle =
+            WinRT.Interop.WindowNative.GetWindowHandle(
+                App.MainWindow);
+
+        var picker =
+            new WebDavFolderPickerWindow(
+                provider,
+                source,
+                rootUri,
+                source.SelectedPaths,
+                FormatSourceError);
+
+        var selectedPaths =
+            await picker.ShowAsync(
+                ownerHandle);
+
+        if (selectedPaths is null)
+            return;
+
+        var previousPaths =
+            source.SelectedPaths?.ToList();
+
+        try
+        {
+            var updatedSource =
+                _sources.AddWebDav(
+                    source.DisplayName,
+                    rootUri,
+                    source.UserName,
+                    source.CredentialKey,
+                    selectedPaths);
+
+            var scanned =
+                await _catalog.ScanSourceAsync(
+                    updatedSource);
+
+            await ShowMessageAsync(
+                T("Sources_FoldersUpdated"),
+                string.Format(
+                    T("Sources_FoldersUpdatedFormat"),
+                    scanned));
+        }
+        catch (Exception exception)
+        {
+            _sources.AddWebDav(
+                source.DisplayName,
+                rootUri,
+                source.UserName,
+                source.CredentialKey,
+                previousPaths);
+
+            await ShowMessageAsync(
+                T("Sources_ScanFailed"),
+                exception is MediaSourceException sourceException
+                    ? FormatSourceError(
+                        sourceException.ErrorCode,
+                        sourceException.Message)
+                    : exception.Message);
+        }
     }
 
     private async void TestConnectionMenuItem_Click(
@@ -402,10 +511,6 @@ public sealed partial class SourcesView : UserControl
             ? null
             : _credentials.GetWebDav(existingSource);
 
-        var selectedPaths = new HashSet<string>(
-            existingSource?.SelectedPaths ?? [],
-            StringComparer.OrdinalIgnoreCase);
-
         var displayName = new TextBox
         {
             Header = T("Sources_DisplayName"),
@@ -419,40 +524,6 @@ public sealed partial class SourcesView : UserControl
             PlaceholderText = "https://example.com/dav/",
             Text = existingSource?.RootLocation ?? string.Empty
         };
-
-        var browseButton = new Button
-        {
-            Content = T("Common_Browse"),
-            MinWidth = 88,
-            VerticalAlignment = VerticalAlignment.Bottom
-        };
-
-        var folderSelectionSummary = new TextBlock
-        {
-            TextWrapping = TextWrapping.Wrap,
-            Style = (Style)Application.Current.Resources["MetadataText"]
-        };
-        UpdateWebDavFolderSelectionSummary(
-            folderSelectionSummary,
-            selectedPaths);
-
-        var addressRow = new Grid
-        {
-            ColumnSpacing = 8
-        };
-        addressRow.ColumnDefinitions.Add(
-            new ColumnDefinition
-            {
-                Width = new GridLength(1, GridUnitType.Star)
-            });
-        addressRow.ColumnDefinitions.Add(
-            new ColumnDefinition
-            {
-                Width = GridLength.Auto
-            });
-        addressRow.Children.Add(address);
-        Grid.SetColumn(browseButton, 1);
-        addressRow.Children.Add(browseButton);
 
         var userName = new TextBox
         {
@@ -468,56 +539,15 @@ public sealed partial class SourcesView : UserControl
                 : T("Sources_PasswordKeepHint")
         };
 
-        var editorStatus = new TextBlock
-        {
-            Visibility = Visibility.Collapsed,
-            TextWrapping = TextWrapping.Wrap,
-            Style = (Style)Application.Current.Resources["MetadataText"]
-        };
-
         var panel = new StackPanel
         {
             Spacing = 12,
             MinWidth = 460
         };
         panel.Children.Add(displayName);
-        panel.Children.Add(addressRow);
-        panel.Children.Add(folderSelectionSummary);
+        panel.Children.Add(address);
         panel.Children.Add(userName);
         panel.Children.Add(password);
-        panel.Children.Add(editorStatus);
-
-        browseButton.Click += async (_, _) =>
-        {
-            panel.IsHitTestVisible = false;
-
-            try
-            {
-                var picked = await BrowseWebDavFoldersAsync(
-                    address,
-                    userName,
-                    password,
-                    existingSource,
-                    selectedPaths,
-                    editorStatus);
-
-                if (picked is null)
-                    return;
-
-                selectedPaths.Clear();
-
-                foreach (var path in picked)
-                    selectedPaths.Add(path);
-
-                UpdateWebDavFolderSelectionSummary(
-                    folderSelectionSummary,
-                    selectedPaths);
-            }
-            finally
-            {
-                panel.IsHitTestVisible = true;
-            }
-        };
 
         if (XamlRoot is null)
             return;
@@ -544,8 +574,7 @@ public sealed partial class SourcesView : UserControl
             displayName.Text,
             address.Text,
             userName.Text,
-            password.Password,
-            selectedPaths);
+            password.Password);
     }
 
     private async Task CommitWebDavEditorAsync(
@@ -553,8 +582,7 @@ public sealed partial class SourcesView : UserControl
         string displayName,
         string address,
         string userName,
-        string password,
-        IReadOnlyCollection<string> selectedPaths)
+        string password)
     {
         if (!TryNormalizeWebDavUri(
                 address,
@@ -570,6 +598,10 @@ public sealed partial class SourcesView : UserControl
         var name = string.IsNullOrWhiteSpace(displayName)
             ? normalizedRoot.Host
             : displayName.Trim();
+
+        var preservedSelectedPaths =
+            existingSource?.SelectedPaths?.ToList() ??
+            [];
 
         var credential = ResolveEditorCredential(
             existingSource,
@@ -602,7 +634,7 @@ public sealed partial class SourcesView : UserControl
             CredentialKey: credential is null
                 ? null
                 : "inline",
-            SelectedPaths: selectedPaths.ToList());
+            SelectedPaths: preservedSelectedPaths);
 
         var temporaryProvider =
             new WebDavMediaSourceProvider(
@@ -646,7 +678,7 @@ public sealed partial class SourcesView : UserControl
                 normalizedRoot,
                 normalizedUser,
                 credentialKey,
-                selectedPaths);
+                preservedSelectedPaths);
 
             await _catalog.ScanSourceAsync(savedSource);
 
@@ -759,102 +791,6 @@ public sealed partial class SourcesView : UserControl
         return new MediaCredentialSnapshot(
             userName,
             string.Empty);
-    }
-
-    private async Task<IReadOnlyList<string>?> BrowseWebDavFoldersAsync(
-        TextBox address,
-        TextBox userName,
-        PasswordBox password,
-        MediaSourceDefinition? existingSource,
-        IReadOnlyCollection<string> selectedPaths,
-        TextBlock editorStatus)
-    {
-        editorStatus.Visibility =
-            Visibility.Collapsed;
-
-        if (!TryNormalizeWebDavUri(
-                address.Text,
-                out var rootUri))
-        {
-            editorStatus.Text =
-                T("Sources_InvalidAddress");
-            editorStatus.Visibility =
-                Visibility.Visible;
-            return null;
-        }
-
-        var normalizedUser =
-            userName.Text.Trim();
-        var credential =
-            ResolveEditorCredential(
-                existingSource,
-                normalizedUser,
-                password.Password);
-
-        var temporarySource =
-            new MediaSourceDefinition(
-                MediaSourceStore.BuildWebDavSourceId(
-                    rootUri,
-                    normalizedUser),
-                MediaSourceKind.WebDav,
-                rootUri.Host,
-                rootUri.AbsoluteUri,
-                UserName: normalizedUser,
-                CredentialKey: credential is null
-                    ? null
-                    : "inline",
-                SelectedPaths:
-                    selectedPaths.ToList());
-
-        var provider =
-            new WebDavMediaSourceProvider(
-                new InlineWebDavCredentialProvider(
-                    credential));
-
-        var connection =
-            await provider.TestConnectionAsync(
-                temporarySource);
-
-        if (!connection.IsAvailable)
-        {
-            editorStatus.Text =
-                FormatSourceError(
-                    connection.ErrorCode,
-                    connection.Detail);
-            editorStatus.Visibility =
-                Visibility.Visible;
-            return null;
-        }
-
-        if (App.MainWindow is null)
-            return null;
-
-        var ownerHandle =
-            WinRT.Interop.WindowNative.GetWindowHandle(
-                App.MainWindow);
-
-        var picker =
-            new WebDavFolderPickerWindow(
-                provider,
-                temporarySource,
-                rootUri,
-                selectedPaths,
-                FormatSourceError);
-
-        return await picker.ShowAsync(
-            ownerHandle);
-    }
-
-    private void UpdateWebDavFolderSelectionSummary(
-        TextBlock target,
-        IReadOnlyCollection<string> selectedPaths)
-    {
-        target.Text =
-            selectedPaths.Count == 0
-                ? T("Sources_AllFolders")
-                : string.Format(
-                    T("Sources_SelectedFoldersFormat"),
-                    selectedPaths.Count);
     }
 
     private static bool TryNormalizeWebDavUri(
