@@ -142,6 +142,48 @@
                 </Flyout>
               </Button.Flyout>
             </Button>
+            <Button x:Name="VolumeButton"
+                    Height="36"
+                    MinWidth="72">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <FontIcon Glyph="&#xE767;" FontSize="12" />
+                <TextBlock x:Name="VolumeButtonValueText"
+                           Text="100%"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+              <Button.Flyout>
+                <Flyout Placement="Top">
+                  <StackPanel Width="260" Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock x:Name="VolumeFlyoutTitle"
+                                 VerticalAlignment="Center"
+                                 FontWeight="SemiBold" />
+                      <TextBlock x:Name="VolumeValueText"
+                                 Grid.Column="1"
+                                 Text="100%"
+                                 VerticalAlignment="Center" />
+                    </Grid>
+                    <Slider x:Name="VolumeSlider"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="100"
+                            StepFrequency="1"
+                            SmallChange="1"
+                            LargeChange="10"
+                            ValueChanged="VolumeSlider_ValueChanged" />
+                    <Grid ColumnDefinitions="Auto,*,Auto,*,Auto">
+                      <TextBlock Text="0%" Style="{StaticResource MetadataText}" />
+                      <TextBlock Grid.Column="2"
+                                 Text="50%"
+                                 Style="{StaticResource MetadataText}" />
+                      <TextBlock Grid.Column="4"
+                                 Text="100%"
+                                 Style="{StaticResource MetadataText}" />
+                    </Grid>
+                  </StackPanel>
+                </Flyout>
+              </Button.Flyout>
+            </Button>
           </StackPanel>
 
           <StackPanel Orientation="Horizontal"
