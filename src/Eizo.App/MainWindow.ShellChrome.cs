@@ -204,8 +204,12 @@ public sealed partial class MainWindow
         if (!_navigationPaneBackgroundHooked)
         {
             _navigationPaneBackgroundHooked = true;
+            // In CompactOverlay, NavigationView deliberately switches to
+            // PaneNotOverlaying after the pane closes and restores its native
+            // NavigationViewExpandedPaneBackground (transparent). Do not write
+            // PaneBackground from PaneClosed: the compact rail should fall back
+            // to the window Mica, exactly like UrbanPlanToolbox.
             ShellNavigation.PaneOpening += (_, _) => QueueNavigationPaneBackgroundUpdate();
-            ShellNavigation.PaneClosed += (_, _) => QueueNavigationPaneBackgroundUpdate();
             ShellNavigation.ActualThemeChanged += (_, _) => QueueNavigationPaneBackgroundUpdate();
             Activated += MainWindow_ActivatedForNavigationPane;
         }
