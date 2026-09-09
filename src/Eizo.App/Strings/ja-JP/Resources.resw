@@ -670,4 +670,7 @@
   <data name="Catalog_Empty" xml:space="preserve">
     <value>実際に検出された動画はまだありません。プレイヤーでローカル動画を開くか、「メディアソース」からローカルフォルダーを追加してください。</value>
   </data>
+  <data name="Sources_AddLocalFolder" xml:space="preserve">
+    <value>ローカルフォルダーを追加</value>
+  </data>
 </root>
