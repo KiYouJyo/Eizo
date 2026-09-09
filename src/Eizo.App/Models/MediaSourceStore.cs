@@ -19,7 +19,8 @@ public sealed record MediaSourceDefinition(
     string? CredentialKey = null,
     string? AccessToken = null,
     bool Enabled = true,
-    DateTimeOffset? LastScanUtc = null)
+    DateTimeOffset? LastScanUtc = null,
+    List<string>? SelectedPaths = null)
 {
     public const string OpenedLocalFilesSourceId = "local-opened-files";
 
@@ -174,7 +175,8 @@ public sealed class MediaSourceStore
         string displayName,
         Uri rootUri,
         string? userName,
-        string? credentialKey)
+        string? credentialKey,
+        IEnumerable<string>? selectedPaths = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
         ArgumentNullException.ThrowIfNull(rootUri);
@@ -192,6 +194,13 @@ public sealed class MediaSourceStore
             var index = _sources.FindIndex(source =>
                 string.Equals(source.Id, id, StringComparison.Ordinal));
 
+            var normalizedSelectedPaths =
+                NormalizeWebDavSelectedPaths(
+                    selectedPaths ??
+                    (index >= 0
+                        ? _sources[index].SelectedPaths
+                        : null));
+
             result = new MediaSourceDefinition(
                 id,
                 MediaSourceKind.WebDav,
@@ -203,7 +212,8 @@ public sealed class MediaSourceStore
                 Enabled: true,
                 LastScanUtc: index >= 0
                     ? _sources[index].LastScanUtc
-                    : null);
+                    : null,
+                SelectedPaths: normalizedSelectedPaths);
 
             if (index >= 0)
                 _sources[index] = result;
@@ -310,6 +320,54 @@ public sealed class MediaSourceStore
             builder.Path += "/";
 
         return builder.Uri;
+    }
+
+    private static List<string>? NormalizeWebDavSelectedPaths(
+        IEnumerable<string>? selectedPaths)
+    {
+        if (selectedPaths is null)
+            return null;
+
+        var normalized = selectedPaths
+            .Where(static path => path is not null)
+            .Select(static path =>
+            {
+                var trimmed = path.Trim().Trim('/');
+                return string.IsNullOrEmpty(trimmed)
+                    ? string.Empty
+                    : trimmed + "/";
+            })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static path => path.Length)
+            .ThenBy(static path => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (normalized.Count == 0)
+            return [];
+
+        if (normalized.Contains(
+                string.Empty,
+                StringComparer.OrdinalIgnoreCase))
+        {
+            return [string.Empty];
+        }
+
+        var compact = new List<string>();
+
+        foreach (var candidate in normalized)
+        {
+            if (compact.Any(parent =>
+                    candidate.StartsWith(
+                        parent,
+                        StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            compact.Add(candidate);
+        }
+
+        return compact;
     }
 
     private static bool IsPathWithinRoot(string path, string root)
