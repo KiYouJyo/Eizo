@@ -622,4 +622,16 @@
   <data name="Playback_Forward10Seconds" xml:space="preserve">
     <value>Forward 10 seconds</value>
   </data>
+  <data name="Playback_Rate" xml:space="preserve">
+    <value>Playback speed</value>
+  </data>
+  <data name="Playback_CollapseSidebar" xml:space="preserve">
+    <value>Collapse sidebar</value>
+  </data>
+  <data name="Playback_ShowSidebar" xml:space="preserve">
+    <value>Show sidebar</value>
+  </data>
+  <data name="Playback_ExitFullScreen" xml:space="preserve">
+    <value>Exit fullscreen</value>
+  </data>
 </root>
