@@ -1,0 +1,42 @@
+$ErrorActionPreference = 'Stop'
+
+$catalogStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaCatalogStore.cs' -Raw
+$sourceStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaSourceStore.cs' -Raw
+$sourcesView = Get-Content -LiteralPath 'src/Eizo.App/Views/SourcesView.xaml.cs' -Raw
+$catalogView = Get-Content -LiteralPath 'src/Eizo.App/Views/CatalogView.xaml.cs' -Raw
+$mainWindow = Get-Content -LiteralPath 'src/Eizo.App/MainWindow.xaml.cs' -Raw
+
+foreach ($demoTitle in @(
+    '葬送的芙莉莲',
+    '胆大党',
+    '间谍过家家',
+    'Sample Movie',
+    'OneDrive · Personal',
+    'WebDAV · NAS')) {
+    if ($catalogStore.Contains($demoTitle) -or $sourcesView.Contains($demoTitle)) {
+        throw "Stage 1 contract violation: demo data remains in a real-data store/view: $demoTitle"
+    }
+}
+
+if ($catalogStore -notmatch '"catalog\.json"' -or
+    $sourceStore -notmatch '"sources\.json"') {
+    throw 'Stage 1 contract violation: media sources and catalog must be persisted under Eizo local app data.'
+}
+
+if ($catalogStore -notmatch 'RegisterLocalFile' -or
+    $catalogStore -notmatch 'ScanLocalSource' -or
+    $catalogStore -notmatch 'IsSupportedVideoPath') {
+    throw 'Stage 1 contract violation: real local video registration/scanning contract is incomplete.'
+}
+
+if ($catalogView -notmatch 'EventHandler<CatalogMediaItemModel>\? MediaRequested' -or
+    $mainWindow -notmatch 'OpenCatalogMedia\(CatalogMediaItemModel item\)') {
+    throw 'Stage 1 contract violation: total catalog must invoke real media items instead of demo titles.'
+}
+
+if ($sourcesView -notmatch 'MediaSourceStore\.Default' -or
+    $sourcesView -notmatch 'MediaCatalogStore\.Default') {
+    throw 'Stage 1 contract violation: SourcesView must be driven by real source/catalog stores.'
+}
+
+Write-Host 'WebDAV Stage 1 media-source contract PASS.'
