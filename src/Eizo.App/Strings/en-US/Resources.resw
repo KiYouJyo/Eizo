@@ -545,13 +545,13 @@
     <value>Check for updates</value>
   </data>
   <data name="About_IndependentComponents" xml:space="preserve">
-    <value>Component versions</value>
+    <value>Independently updatable components</value>
   </data>
   <data name="About_PlayerCore" xml:space="preserve">
     <value>Player core</value>
   </data>
   <data name="About_IndependentUpdate" xml:space="preserve">
-    <value>Tracks GitHub Releases independently</value>
+    <value>Independent update</value>
   </data>
   <data name="About_ProjectOpenSource" xml:space="preserve">
     <value>Project &amp; open source</value>
