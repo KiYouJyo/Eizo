@@ -368,7 +368,7 @@
     <value>ライブラリから作品をランダムにおすすめします。</value>
   </data>
   <data name="Sources_Subtitle" xml:space="preserve">
-    <value>実際に登録されたメディアソースを管理します。WebDAV 接続は次のステージで有効になります。</value>
+    <value>ローカルと WebDAV のメディアソースを管理します。WebDAV は接続確認、スキャン、直接再生に対応します。</value>
   </data>
   <data name="Sources_TabSources" xml:space="preserve">
     <value>ソース</value>
@@ -672,5 +672,53 @@
   </data>
   <data name="Sources_AddLocalFolder" xml:space="preserve">
     <value>ローカルフォルダーを追加</value>
+  </data>
+  <data name="Sources_AddWebDav" xml:space="preserve">
+    <value>WebDAV を追加</value>
+  </data>
+  <data name="Sources_TestConnection" xml:space="preserve">
+    <value>接続をテスト</value>
+  </data>
+  <data name="Sources_ConnectionSucceeded" xml:space="preserve">
+    <value>接続成功</value>
+  </data>
+  <data name="Sources_ConnectionFailed" xml:space="preserve">
+    <value>接続失敗</value>
+  </data>
+  <data name="Sources_WebDavDialogTitle" xml:space="preserve">
+    <value>WebDAV メディアソースを追加</value>
+  </data>
+  <data name="Sources_ConnectAndAdd" xml:space="preserve">
+    <value>接続して追加</value>
+  </data>
+  <data name="Sources_InvalidAddress" xml:space="preserve">
+    <value>ユーザー名やパスワードを含まない有効な HTTP/HTTPS WebDAV アドレスを入力してください。</value>
+  </data>
+  <data name="Sources_WebDavAddedFormat" xml:space="preserve">
+    <value>{0} を追加し、動画 {1} 件を検出しました。</value>
+  </data>
+  <data name="Sources_ErrorAuthentication" xml:space="preserve">
+    <value>認証に失敗しました。ユーザー名とパスワードを確認してください。</value>
+  </data>
+  <data name="Sources_ErrorForbidden" xml:space="preserve">
+    <value>サーバーがこのパスへのアクセスを拒否しました。</value>
+  </data>
+  <data name="Sources_ErrorNotFound" xml:space="preserve">
+    <value>サーバー上にパスまたはメディアが見つかりません。</value>
+  </data>
+  <data name="Sources_ErrorTimeout" xml:space="preserve">
+    <value>接続がタイムアウトしました。</value>
+  </data>
+  <data name="Sources_ErrorNetwork" xml:space="preserve">
+    <value>ネットワーク接続に失敗しました。</value>
+  </data>
+  <data name="Sources_ErrorInvalidResponse" xml:space="preserve">
+    <value>WebDAV 応答を解析できませんでした。</value>
+  </data>
+  <data name="Sources_ErrorGeneric" xml:space="preserve">
+    <value>メディアソースの操作に失敗しました。</value>
+  </data>
+  <data name="Playback_RemoteOpenFailed" xml:space="preserve">
+    <value>リモートメディアを開けません</value>
   </data>
 </root>
