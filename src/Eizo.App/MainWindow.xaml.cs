@@ -315,11 +315,8 @@ public sealed partial class MainWindow : Window
         view.PlayRequested += (_, title) => OpenDetail(title, startPlaying: true);
     }
 
-    private void WireWorkspaceMediaView(CatalogView view)
-    {
+    private void WireWorkspaceMediaView(CatalogView view) =>
         view.DetailRequested += (_, title) => OpenDetail(title, startPlaying: false);
-        view.PlayRequested += (_, title) => OpenDetail(title, startPlaying: true);
-    }
 
     private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch
     {
