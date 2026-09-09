@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.2.1",
-    "packageVersion": "0.2.1.0",
+    "version": "0.2.2",
+    "packageVersion": "0.2.2.0",
     "title": {
-      "zh-CN": "播放器体验、Eizo.Playback 集成与稳定性修复",
-      "ja-JP": "プレイヤー体験・Eizo.Playback 統合・安定性修正",
-      "en-US": "Player Experience, Eizo.Playback Integration & Stability Fixes"
+      "zh-CN": "更新器修复与中尺寸导航体验修正",
+      "ja-JP": "アップデーター修正と中幅ナビゲーション改善",
+      "en-US": "Updater Fixes & Medium-Width Navigation Improvements"
     }
   },
   "channels": {
