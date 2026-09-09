@@ -851,6 +851,23 @@ public sealed partial class PlayerView : UserControl
         UpdateSidebarVisibility();
     }
 
+    private void SidebarDismissLayer_PointerPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (!PlayerSplitView.IsPaneOpen)
+            return;
+
+        e.Handled = true;
+
+        if (_isVideoFullscreen)
+            _sidebarVisibleInFullscreen = false;
+        else
+            _sidebarCollapsedByUser = true;
+
+        UpdateSidebarVisibility();
+    }
+
     private void PlaybackRateSlider_ValueChanged(
         object sender,
         Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
@@ -983,7 +1000,8 @@ public sealed partial class PlayerView : UserControl
             _hasPointerPosition = false;
 
             PlayerSplitView.DisplayMode = SplitViewDisplayMode.Overlay;
-            PlayerSidebar.Margin = new Thickness(0, 0, 0, 112);
+            PlayerSidebar.Margin = new Thickness(0);
+            PlayerSidebar.Background = new SolidColorBrush(Colors.Black);
             UpdateSidebarVisibility();
 
             FullscreenIcon.Glyph = "\uE73F";
@@ -1024,6 +1042,8 @@ public sealed partial class PlayerView : UserControl
 
         PlayerSplitView.DisplayMode = SplitViewDisplayMode.Inline;
         PlayerSidebar.Margin = new Thickness(0);
+        PlayerSidebar.Background =
+            (Brush)Application.Current.Resources["AppTransientSurfaceBrush"];
         UpdateSidebarVisibility();
 
         FullscreenIcon.Glyph = "\uE740";
@@ -1046,6 +1066,10 @@ public sealed partial class PlayerView : UserControl
             : SplitViewDisplayMode.Inline;
 
         PlayerSplitView.IsPaneOpen = shouldShow;
+        SidebarDismissLayer.Visibility =
+            shouldShow
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
         SidebarToggleIcon.Symbol = shouldShow
             ? Symbol.ClosePane
