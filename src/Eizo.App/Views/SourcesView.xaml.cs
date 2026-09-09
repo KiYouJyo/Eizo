@@ -159,6 +159,15 @@ public sealed partial class SourcesView : UserControl
 
         if (source.Kind == MediaSourceKind.WebDav)
         {
+            var edit = new MenuFlyoutItem
+            {
+                Text = T("Common_Edit"),
+                Icon = new FontIcon { Glyph = "\uE70F" },
+                Tag = source.Id
+            };
+            edit.Click += EditWebDavMenuItem_Click;
+            flyout.Items.Add(edit);
+
             var test = new MenuFlyoutItem
             {
                 Text = T("Sources_TestConnection"),
@@ -228,6 +237,20 @@ public sealed partial class SourcesView : UserControl
                 T("Sources_ScanFailed"),
                 exception.Message);
         }
+    }
+
+    private async void EditWebDavMenuItem_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: string sourceId })
+            return;
+
+        var source = _sources.Find(sourceId);
+        if (source is not { Kind: MediaSourceKind.WebDav })
+            return;
+
+        await ShowWebDavEditorAsync(source);
     }
 
     private async void TestConnectionMenuItem_Click(
@@ -354,36 +377,95 @@ public sealed partial class SourcesView : UserControl
         }
     }
 
-    private async Task AddWebDavSourceAsync()
+    private async Task AddWebDavSourceAsync() =>
+        await ShowWebDavEditorAsync(existingSource: null);
+
+    private async Task ShowWebDavEditorAsync(
+        MediaSourceDefinition? existingSource)
     {
+        var existingCredential = existingSource is null
+            ? null
+            : _credentials.GetWebDav(existingSource);
+
         var displayName = new TextBox
         {
             Header = T("Sources_DisplayName"),
-            PlaceholderText = "NAS"
+            PlaceholderText = "NAS",
+            Text = existingSource?.DisplayName ?? string.Empty
         };
+
         var address = new TextBox
         {
             Header = T("Sources_Address"),
-            PlaceholderText = "https://example.com/dav/"
+            PlaceholderText = "https://example.com/dav/",
+            Text = existingSource?.RootLocation ?? string.Empty
         };
+
+        var browseButton = new Button
+        {
+            Content = T("Common_Browse"),
+            MinWidth = 88,
+            VerticalAlignment = VerticalAlignment.Bottom
+        };
+
+        var addressRow = new Grid
+        {
+            ColumnSpacing = 8
+        };
+        addressRow.ColumnDefinitions.Add(
+            new ColumnDefinition
+            {
+                Width = new GridLength(1, GridUnitType.Star)
+            });
+        addressRow.ColumnDefinitions.Add(
+            new ColumnDefinition
+            {
+                Width = GridLength.Auto
+            });
+        addressRow.Children.Add(address);
+        Grid.SetColumn(browseButton, 1);
+        addressRow.Children.Add(browseButton);
+
         var userName = new TextBox
         {
-            Header = T("Sources_Username")
+            Header = T("Sources_Username"),
+            Text = existingSource?.UserName ?? string.Empty
         };
+
         var password = new PasswordBox
         {
-            Header = T("Sources_Password")
+            Header = T("Sources_Password"),
+            PlaceholderText = existingCredential is null
+                ? string.Empty
+                : T("Sources_PasswordKeepHint")
+        };
+
+        var editorStatus = new TextBlock
+        {
+            Visibility = Visibility.Collapsed,
+            TextWrapping = TextWrapping.Wrap,
+            Style = (Style)Application.Current.Resources["MetadataText"]
         };
 
         var panel = new StackPanel
         {
             Spacing = 12,
-            MinWidth = 420
+            MinWidth = 460
         };
         panel.Children.Add(displayName);
-        panel.Children.Add(address);
+        panel.Children.Add(addressRow);
         panel.Children.Add(userName);
         panel.Children.Add(password);
+        panel.Children.Add(editorStatus);
+
+        browseButton.Click += async (_, _) =>
+            await BrowseWebDavFoldersAsync(
+                address,
+                userName,
+                password,
+                existingSource,
+                editorStatus,
+                browseButton);
 
         if (XamlRoot is null)
             return;
@@ -391,9 +473,13 @@ public sealed partial class SourcesView : UserControl
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = T("Sources_WebDavDialogTitle"),
+            Title = existingSource is null
+                ? T("Sources_WebDavDialogTitle")
+                : T("Sources_EditWebDavTitle"),
             Content = panel,
-            PrimaryButtonText = T("Sources_ConnectAndAdd"),
+            PrimaryButtonText = existingSource is null
+                ? T("Sources_ConnectAndAdd")
+                : T("Sources_SaveChanges"),
             CloseButtonText = T("Common_Cancel"),
             DefaultButton = ContentDialogButton.Primary
         };
@@ -401,13 +487,24 @@ public sealed partial class SourcesView : UserControl
         if (await dialog.ShowAsync() != ContentDialogResult.Primary)
             return;
 
-        if (!Uri.TryCreate(
-                address.Text.Trim(),
-                UriKind.Absolute,
-                out var rootUri) ||
-            (rootUri.Scheme != Uri.UriSchemeHttp &&
-             rootUri.Scheme != Uri.UriSchemeHttps) ||
-            !string.IsNullOrEmpty(rootUri.UserInfo))
+        await CommitWebDavEditorAsync(
+            existingSource,
+            displayName.Text,
+            address.Text,
+            userName.Text,
+            password.Password);
+    }
+
+    private async Task CommitWebDavEditorAsync(
+        MediaSourceDefinition? existingSource,
+        string displayName,
+        string address,
+        string userName,
+        string password)
+    {
+        if (!TryNormalizeWebDavUri(
+                address,
+                out var normalizedRoot))
         {
             await ShowMessageAsync(
                 T("Sources_ConnectionFailed"),
@@ -415,83 +512,119 @@ public sealed partial class SourcesView : UserControl
             return;
         }
 
-        var normalizedRoot = NormalizeWebDavUri(rootUri);
-        var name = string.IsNullOrWhiteSpace(displayName.Text)
+        var normalizedUser = userName.Trim();
+        var name = string.IsNullOrWhiteSpace(displayName)
             ? normalizedRoot.Host
-            : displayName.Text.Trim();
-        var normalizedUser = userName.Text.Trim();
+            : displayName.Trim();
+
+        var credential = ResolveEditorCredential(
+            existingSource,
+            normalizedUser,
+            password);
+
         var sourceId = MediaSourceStore.BuildWebDavSourceId(
             normalizedRoot,
             normalizedUser);
 
-        var existing = _sources.Find(sourceId);
-        var previousCredential = existing is null
-            ? null
-            : _credentials.GetWebDav(existing);
+        var collision = _sources.Find(sourceId);
+        if (collision is not null &&
+            !string.Equals(
+                collision.Id,
+                existingSource?.Id,
+                StringComparison.Ordinal))
+        {
+            await ShowMessageAsync(
+                T("Sources_ConnectionFailed"),
+                T("Sources_SourceAlreadyExists"));
+            return;
+        }
 
-        string? credentialKey = null;
+        var temporarySource = new MediaSourceDefinition(
+            sourceId,
+            MediaSourceKind.WebDav,
+            name,
+            normalizedRoot.AbsoluteUri,
+            UserName: normalizedUser,
+            CredentialKey: credential is null
+                ? null
+                : "inline");
+
+        var temporaryProvider =
+            new WebDavMediaSourceProvider(
+                new InlineWebDavCredentialProvider(
+                    credential));
+
+        var test = await temporaryProvider.TestConnectionAsync(
+            temporarySource);
+
+        if (!test.IsAvailable)
+        {
+            await ShowMessageAsync(
+                T("Sources_ConnectionFailed"),
+                FormatSourceError(
+                    test.ErrorCode,
+                    test.Detail));
+            return;
+        }
+
+        var previousTargetSource = _sources.Find(sourceId);
+        var previousTargetCredential =
+            previousTargetSource is null
+                ? null
+                : _credentials.GetWebDav(
+                    previousTargetSource);
 
         try
         {
-            credentialKey = _credentials.SaveWebDav(
-                sourceId,
-                normalizedUser,
-                password.Password);
-
-            var temporarySource = new MediaSourceDefinition(
-                sourceId,
-                MediaSourceKind.WebDav,
-                name,
-                normalizedRoot.AbsoluteUri,
-                UserName: normalizedUser,
-                CredentialKey: credentialKey);
-
-            if (!MediaSourceProviderRegistry.TryGet(
-                    MediaSourceKind.WebDav,
-                    out var provider))
-            {
-                throw new MediaSourceException(
-                    "ProviderUnavailable",
-                    "WebDAV provider is unavailable.");
-            }
-
-            var test = await provider.TestConnectionAsync(
-                temporarySource);
-
-            if (!test.IsAvailable)
-            {
-                RestoreCredential(
+            var credentialKey = credential is null
+                ? _credentials.SaveWebDav(
                     sourceId,
-                    previousCredential);
+                    null,
+                    null)
+                : _credentials.SaveWebDav(
+                    sourceId,
+                    credential.UserName,
+                    credential.Password);
 
-                await ShowMessageAsync(
-                    T("Sources_ConnectionFailed"),
-                    FormatSourceError(
-                        test.ErrorCode,
-                        test.Detail));
-                return;
-            }
-
-            var source = _sources.AddWebDav(
+            var savedSource = _sources.AddWebDav(
                 name,
                 normalizedRoot,
                 normalizedUser,
                 credentialKey);
 
-            await _catalog.ScanSourceAsync(source);
+            await _catalog.ScanSourceAsync(savedSource);
+
+            if (existingSource is not null &&
+                !string.Equals(
+                    existingSource.Id,
+                    savedSource.Id,
+                    StringComparison.Ordinal))
+            {
+                _catalog.RemoveSourceItems(
+                    existingSource.Id);
+                _sources.Remove(
+                    existingSource.Id);
+                _credentials.RemoveWebDav(
+                    existingSource.Id);
+            }
 
             await ShowMessageAsync(
                 T("Sources_ConnectionSucceeded"),
                 string.Format(
-                    T("Sources_WebDavAddedFormat"),
-                    source.DisplayName,
-                    _catalog.SnapshotForSource(source.Id).Count));
+                    existingSource is null
+                        ? T("Sources_WebDavAddedFormat")
+                        : T("Sources_WebDavUpdatedFormat"),
+                    savedSource.DisplayName,
+                    _catalog
+                        .SnapshotForSource(savedSource.Id)
+                        .Count));
         }
         catch (Exception exception)
         {
-            RestoreCredential(
+            RollBackWebDavTarget(
                 sourceId,
-                previousCredential);
+                previousTargetSource,
+                previousTargetCredential);
 
             await ShowMessageAsync(
                 T("Sources_ConnectionFailed"),
@@ -501,6 +634,405 @@ public sealed partial class SourcesView : UserControl
                         sourceException.Message)
                     : exception.Message);
         }
+    }
+
+    private void RollBackWebDavTarget(
+        string sourceId,
+        MediaSourceDefinition? previousSource,
+        MediaCredentialSnapshot? previousCredential)
+    {
+        if (previousSource is null)
+        {
+            _catalog.RemoveSourceItems(sourceId);
+            _sources.Remove(sourceId);
+            _credentials.RemoveWebDav(sourceId);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                previousSource.RootLocation) &&
+            Uri.TryCreate(
+                previousSource.RootLocation,
+                UriKind.Absolute,
+                out var previousRoot))
+        {
+            _sources.AddWebDav(
+                previousSource.DisplayName,
+                previousRoot,
+                previousSource.UserName,
+                previousSource.CredentialKey);
+        }
+
+        RestoreCredential(
+            sourceId,
+            previousCredential);
+    }
+
+    private MediaCredentialSnapshot? ResolveEditorCredential(
+        MediaSourceDefinition? existingSource,
+        string userName,
+        string password)
+    {
+        if (!string.IsNullOrEmpty(password))
+        {
+            return new MediaCredentialSnapshot(
+                userName,
+                password);
+        }
+
+        if (string.IsNullOrEmpty(userName))
+            return null;
+
+        if (existingSource is not null)
+        {
+            var previous =
+                _credentials.GetWebDav(
+                    existingSource);
+
+            if (previous is not null &&
+                string.Equals(
+                    previous.UserName,
+                    userName,
+                    StringComparison.Ordinal))
+            {
+                return previous;
+            }
+        }
+
+        return new MediaCredentialSnapshot(
+            userName,
+            string.Empty);
+    }
+
+    private async Task BrowseWebDavFoldersAsync(
+        TextBox address,
+        TextBox userName,
+        PasswordBox password,
+        MediaSourceDefinition? existingSource,
+        TextBlock editorStatus,
+        FrameworkElement anchor)
+    {
+        editorStatus.Visibility = Visibility.Collapsed;
+
+        if (!TryNormalizeWebDavUri(
+                address.Text,
+                out var rootUri))
+        {
+            editorStatus.Text =
+                T("Sources_InvalidAddress");
+            editorStatus.Visibility =
+                Visibility.Visible;
+            return;
+        }
+
+        var normalizedUser =
+            userName.Text.Trim();
+        var credential =
+            ResolveEditorCredential(
+                existingSource,
+                normalizedUser,
+                password.Password);
+
+        var temporarySource =
+            new MediaSourceDefinition(
+                MediaSourceStore.BuildWebDavSourceId(
+                    rootUri,
+                    normalizedUser),
+                MediaSourceKind.WebDav,
+                rootUri.Host,
+                rootUri.AbsoluteUri,
+                UserName: normalizedUser,
+                CredentialKey: credential is null
+                    ? null
+                    : "inline");
+
+        var provider =
+            new WebDavMediaSourceProvider(
+                new InlineWebDavCredentialProvider(
+                    credential));
+
+        var folderList = new ListView
+        {
+            IsItemClickEnabled = true,
+            SelectionMode = ListViewSelectionMode.None,
+            MinHeight = 180,
+            MaxHeight = 360
+        };
+
+        var currentPathText = new TextBlock
+        {
+            Text = "/",
+            TextWrapping = TextWrapping.Wrap,
+            Style = (Style)Application.Current.Resources["MetadataText"]
+        };
+
+        var statusText = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            Style = (Style)Application.Current.Resources["MetadataText"]
+        };
+
+        var progress = new ProgressRing
+        {
+            Width = 22,
+            Height = 22,
+            IsActive = false,
+            Visibility = Visibility.Collapsed
+        };
+
+        var upButton = new Button
+        {
+            Content = T("Sources_ParentFolder"),
+            MinWidth = 96
+        };
+
+        var selectButton = new Button
+        {
+            Content = T("Sources_SelectCurrentFolder"),
+            MinWidth = 132
+        };
+
+        var header = new Grid
+        {
+            ColumnSpacing = 8
+        };
+        header.ColumnDefinitions.Add(
+            new ColumnDefinition
+            {
+                Width = GridLength.Auto
+            });
+        header.ColumnDefinitions.Add(
+            new ColumnDefinition
+            {
+                Width = new GridLength(
+                    1,
+                    GridUnitType.Star)
+            });
+        header.ColumnDefinitions.Add(
+            new ColumnDefinition
+            {
+                Width = GridLength.Auto
+            });
+        header.Children.Add(upButton);
+        Grid.SetColumn(currentPathText, 1);
+        header.Children.Add(currentPathText);
+        Grid.SetColumn(progress, 2);
+        header.Children.Add(progress);
+
+        var footer = new Grid
+        {
+            ColumnSpacing = 8
+        };
+        footer.ColumnDefinitions.Add(
+            new ColumnDefinition
+            {
+                Width = new GridLength(
+                    1,
+                    GridUnitType.Star)
+            });
+        footer.ColumnDefinitions.Add(
+            new ColumnDefinition
+            {
+                Width = GridLength.Auto
+            });
+        footer.Children.Add(statusText);
+        Grid.SetColumn(selectButton, 1);
+        footer.Children.Add(selectButton);
+
+        var browserContent = new StackPanel
+        {
+            Width = 520,
+            Spacing = 10
+        };
+        browserContent.Children.Add(
+            new TextBlock
+            {
+                Text = T("Sources_BrowseFolders"),
+                FontSize = 16,
+                FontWeight =
+                    Windows.UI.Text.FontWeights.SemiBold
+            });
+        browserContent.Children.Add(header);
+        browserContent.Children.Add(folderList);
+        browserContent.Children.Add(footer);
+
+        var flyout = new Flyout
+        {
+            Content = browserContent
+        };
+
+        var currentPath = string.Empty;
+
+        async Task LoadFoldersAsync()
+        {
+            progress.IsActive = true;
+            progress.Visibility =
+                Visibility.Visible;
+            statusText.Text =
+                T("Sources_LoadingFolders");
+            folderList.ItemsSource = null;
+
+            try
+            {
+                var folders =
+                    new List<WebDavFolderOption>();
+
+                await foreach (var entry in provider.ListAsync(
+                                   temporarySource,
+                                   currentPath))
+                {
+                    if (!entry.IsDirectory)
+                        continue;
+
+                    folders.Add(
+                        new WebDavFolderOption(
+                            entry.Name,
+                            entry.RelativePath));
+                }
+
+                folders.Sort(
+                    static (left, right) =>
+                        StringComparer.CurrentCultureIgnoreCase
+                            .Compare(
+                                left.Name,
+                                right.Name));
+
+                folderList.ItemsSource = folders;
+                statusText.Text = folders.Count == 0
+                    ? T("Sources_NoSubfolders")
+                    : string.Empty;
+                currentPathText.Text =
+                    string.IsNullOrEmpty(currentPath)
+                        ? "/"
+                        : "/" +
+                          Uri.UnescapeDataString(
+                              currentPath.Trim('/'));
+                upButton.IsEnabled =
+                    !string.IsNullOrEmpty(
+                        currentPath);
+            }
+            catch (MediaSourceException exception)
+            {
+                statusText.Text =
+                    FormatSourceError(
+                        exception.ErrorCode,
+                        exception.Message);
+            }
+            catch (Exception exception)
+            {
+                statusText.Text =
+                    exception.Message;
+            }
+            finally
+            {
+                progress.IsActive = false;
+                progress.Visibility =
+                    Visibility.Collapsed;
+            }
+        }
+
+        folderList.ItemClick +=
+            async (_, args) =>
+            {
+                if (args.ClickedItem is not
+                    WebDavFolderOption folder)
+                {
+                    return;
+                }
+
+                currentPath =
+                    folder.RelativePath;
+                await LoadFoldersAsync();
+            };
+
+        upButton.Click +=
+            async (_, _) =>
+            {
+                currentPath =
+                    GetParentWebDavPath(
+                        currentPath);
+                await LoadFoldersAsync();
+            };
+
+        selectButton.Click +=
+            (_, _) =>
+            {
+                address.Text =
+                    BuildWebDavFolderUri(
+                        rootUri,
+                        currentPath)
+                    .AbsoluteUri;
+                flyout.Hide();
+            };
+
+        flyout.ShowAt(anchor);
+        await LoadFoldersAsync();
+    }
+
+    private static string GetParentWebDavPath(
+        string relativePath)
+    {
+        var trimmed =
+            relativePath.Trim('/');
+
+        if (string.IsNullOrEmpty(trimmed))
+            return string.Empty;
+
+        var separator =
+            trimmed.LastIndexOf('/');
+
+        return separator < 0
+            ? string.Empty
+            : trimmed[..(separator + 1)];
+    }
+
+    private static Uri BuildWebDavFolderUri(
+        Uri rootUri,
+        string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(
+                relativePath))
+        {
+            return NormalizeWebDavUri(
+                rootUri);
+        }
+
+        var escaped =
+            string.Join(
+                "/",
+                relativePath
+                    .Trim('/')
+                    .Split(
+                        '/',
+                        StringSplitOptions.RemoveEmptyEntries)
+                    .Select(
+                        Uri.EscapeDataString));
+
+        return new Uri(
+            NormalizeWebDavUri(rootUri),
+            escaped + "/");
+    }
+
+    private static bool TryNormalizeWebDavUri(
+        string value,
+        out Uri normalized)
+    {
+        normalized = null!;
+
+        if (!Uri.TryCreate(
+                value.Trim(),
+                UriKind.Absolute,
+                out var rootUri) ||
+            (rootUri.Scheme != Uri.UriSchemeHttp &&
+             rootUri.Scheme != Uri.UriSchemeHttps) ||
+            !string.IsNullOrEmpty(rootUri.UserInfo))
+        {
+            return false;
+        }
+
+        normalized =
+            NormalizeWebDavUri(rootUri);
+        return true;
     }
 
     private void RestoreCredential(
@@ -581,5 +1113,21 @@ public sealed partial class SourcesView : UserControl
         return unit == 0
             ? $"{value:0} {units[unit]}"
             : $"{value:0.#} {units[unit]}";
+    }
+
+    private sealed record WebDavFolderOption(
+        string Name,
+        string RelativePath)
+    {
+        public override string ToString() => Name;
+    }
+
+    private sealed class InlineWebDavCredentialProvider(
+        MediaCredentialSnapshot? credential)
+        : IMediaCredentialProvider
+    {
+        public MediaCredentialSnapshot? GetWebDav(
+            MediaSourceDefinition source) =>
+            credential;
     }
 }
