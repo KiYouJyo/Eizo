@@ -775,4 +775,16 @@
   <data name="Sources_OpenFolder" xml:space="preserve">
     <value>Open folder</value>
   </data>
+  <data name="Sources_EditMediaSource" xml:space="preserve">
+    <value>Edit media source</value>
+  </data>
+  <data name="Sources_EditReadFolders" xml:space="preserve">
+    <value>Edit scanned folders</value>
+  </data>
+  <data name="Sources_FoldersUpdated" xml:space="preserve">
+    <value>Folder scope updated</value>
+  </data>
+  <data name="Sources_FoldersUpdatedFormat" xml:space="preserve">
+    <value>Rescanned the new folder scope and found {0} videos.</value>
+  </data>
 </root>
