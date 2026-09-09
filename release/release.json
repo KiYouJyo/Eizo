@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.2.0",
-    "packageVersion": "0.2.0.0",
+    "version": "0.2.1",
+    "packageVersion": "0.2.1.0",
     "title": {
-      "zh-CN": "稳定性、三语、应用内更新与单实例",
-      "ja-JP": "安定性・3言語・アプリ内更新・単一インスタンス",
-      "en-US": "Stability, Localization, In-App Update & Single Instance"
+      "zh-CN": "播放器体验、Eizo.Playback 集成与稳定性修复",
+      "ja-JP": "プレイヤー体験・Eizo.Playback 統合・安定性修正",
+      "en-US": "Player Experience, Eizo.Playback Integration & Stability Fixes"
     }
   },
   "channels": {
