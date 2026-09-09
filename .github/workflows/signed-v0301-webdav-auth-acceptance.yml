@@ -3,14 +3,14 @@ name: Signed v0.3.0.1 WebDAV auth acceptance package
 on:
   push:
     branches:
-      - "build/v0.3.0.1-webdav-acceptance"
+      - "build/v0.3.0.1-webdav-auth-acceptance"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: eizo-v0.3.0.1-webdav-acceptance
+  group: eizo-v0.3.0.1-webdav-auth-acceptance
   cancel-in-progress: true
 
 jobs:
@@ -54,7 +54,7 @@ jobs:
       - name: Upload signed v0.3.0.1 acceptance assets
         uses: actions/upload-artifact@v7
         with:
-          name: Eizo-v0.3.0.1-WebDAV-acceptance
+          name: Eizo-v0.3.0.1-WebDAV-auth-acceptance
           path: |
             ${{ env.FINAL_ACCEPTANCE_BUNDLE }}
             ${{ env.FINAL_ACCEPTANCE_CERTIFICATE }}
