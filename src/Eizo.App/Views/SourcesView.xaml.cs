@@ -114,11 +114,18 @@ public sealed partial class SourcesView : UserControl
             ? T("Sources_OpenedLocalFiles")
             : source.DisplayName;
 
+        var kindLabel = source.Kind switch
+        {
+            MediaSourceKind.WebDav => T("Source_WebDAV"),
+            MediaSourceKind.Local => T("Source_Local"),
+            _ => source.Kind.ToString()
+        };
+
         return new SourceItemModel(
             source.Id,
             name,
             string.Join(" · ", summaryParts),
-            source.Kind.ToString().ToLowerInvariant(),
+            kindLabel,
             Removable: !source.IsBuiltIn);
     }
 

@@ -9,7 +9,6 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
-using Windows.Storage.Pickers;
 using Windows.System;
 
 namespace Eizo.Views;
@@ -19,6 +18,7 @@ public sealed partial class PlayerView : UserControl
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
     private readonly SemaphoreSlim _sourceGate = new(1, 1);
     private readonly DispatcherTimer _fullscreenControlsTimer;
+    private readonly DispatcherTimer _loadingMetricsTimer;
 
     private IPlaybackEngine? _engine;
     private PlaybackSource? _currentSource;
@@ -39,6 +39,10 @@ public sealed partial class PlayerView : UserControl
     private bool _fullscreenWindowExitQueued;
     private PointerEventHandler? _pointerWheelHandler;
     private CancellationTokenSource? _seekDebounce;
+    private bool _loadingMetricsRefreshInFlight;
+    private bool _isLoadingStatusVisible;
+    private long? _lastLoadingReadBytes;
+    private DateTimeOffset? _lastLoadingSampleAt;
 
     public PlayerView(
         string title,
@@ -71,6 +75,12 @@ public sealed partial class PlayerView : UserControl
         };
         _fullscreenControlsTimer.Tick += FullscreenControlsTimer_Tick;
 
+        _loadingMetricsTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(500)
+        };
+        _loadingMetricsTimer.Tick += LoadingMetricsTimer_Tick;
+
         Loaded += PlayerView_Loaded;
         Unloaded += PlayerView_Unloaded;
 
@@ -81,11 +91,11 @@ public sealed partial class PlayerView : UserControl
         {
             _currentSource = initialSource;
             _playIntent = true;
-            ShowStatus(T("Status_Loading"));
+            ShowLoadingStatus();
         }
         else
         {
-            ShowStatus(T("Playback_SelectLocalMedia"));
+            ShowStatus(T("Playback_NoMediaSource"));
         }
 
         UpdateControlAvailability();
@@ -95,11 +105,10 @@ public sealed partial class PlayerView : UserControl
 
     private void ApplyText()
     {
-        SubtitleQuickButton.Content = T("Playback_SubtitleTrack");
-        AudioQuickButton.Content = T("Playback_AudioTrack");
         QueueTitle.Text = T("Playback_Queue");
-        QueueSubtitle.Text = T("Section_Anime");
-        PlaybackInfoTitle.Text = T("Playback_Info");
+        QueueSubtitle.Text = NowPlayingEpisode.Text;
+        SubtitleTrackLabel.Text = T("Playback_SubtitleTrack");
+        AudioTrackLabel.Text = T("Playback_AudioTrack");
         PlaybackRateFlyoutTitle.Text = T("Playback_Rate");
         VolumeFlyoutTitle.Text = T("Playback_Volume");
 
@@ -109,7 +118,8 @@ public sealed partial class PlayerView : UserControl
             T("Playback_Tracks")
         };
 
-        ToolTipService.SetToolTip(OpenMediaButton, T("Playback_OpenLocalMedia"));
+        UpdateSidebarSectionUi();
+
         ToolTipService.SetToolTip(PreviousChapterButton, T("Playback_PreviousChapter"));
         ToolTipService.SetToolTip(PreviousJumpButton, T("Playback_Back10Seconds"));
         ToolTipService.SetToolTip(PlayPauseButton, T("Common_Play"));
@@ -119,7 +129,6 @@ public sealed partial class PlayerView : UserControl
         ToolTipService.SetToolTip(SidebarToggleButton, T("Playback_CollapseSidebar"));
         ToolTipService.SetToolTip(FullscreenButton, T("Playback_FullScreen"));
 
-        AutomationProperties.SetName(OpenMediaButton, T("Playback_OpenLocalMedia"));
         AutomationProperties.SetName(PreviousChapterButton, T("Playback_PreviousChapter"));
         AutomationProperties.SetName(PreviousJumpButton, T("Playback_Back10Seconds"));
         AutomationProperties.SetName(PlayPauseButton, T("Common_Play"));
@@ -150,7 +159,7 @@ public sealed partial class PlayerView : UserControl
 
         if (_currentSource is null)
         {
-            ShowStatus(T("Playback_SelectLocalMedia"));
+            ShowStatus(T("Playback_NoMediaSource"));
             return;
         }
 
@@ -189,7 +198,7 @@ public sealed partial class PlayerView : UserControl
             UpdateTrackUi();
             UpdateNavigationAvailability();
             UpdateDiagnosticsUi(engine.Diagnostics.Current);
-            PlaybackRateSlider.Value = Math.Clamp(engine.PlaybackRate, 0.5d, 2.0d);
+            PlaybackRateSlider.Value = RateToSliderValue(engine.PlaybackRate);
             UpdateVolumeUi(_volume);
         });
     }
@@ -284,62 +293,11 @@ public sealed partial class PlayerView : UserControl
         PlaybackDiagnosticsChangedEventArgs e) =>
         Dispatch(() => UpdateDiagnosticsUi(e.Snapshot));
 
-    private async void OpenMediaButton_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var picker = new FileOpenPicker
-            {
-                SuggestedStartLocation = PickerLocationId.VideosLibrary,
-                ViewMode = PickerViewMode.Thumbnail
-            };
-
-            foreach (var extension in new[]
-            {
-                ".mkv", ".mp4", ".m4v", ".mov", ".avi", ".webm",
-                ".ts", ".m2ts", ".wmv", ".mpg", ".mpeg",
-                ".mp3", ".flac", ".wav", ".m4a", ".ogg", ".opus"
-            })
-            {
-                picker.FileTypeFilter.Add(extension);
-            }
-
-            if (App.MainWindow is null)
-                return;
-
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-
-            var file = await picker.PickSingleFileAsync();
-
-            if (file is null)
-                return;
-
-            MediaCatalogStore.Default.RegisterLocalFile(file.Path);
-
-            _currentSource = PlaybackSource.FromFile(file.Path, file.DisplayName);
-            _lastKnownPosition = TimeSpan.Zero;
-            _duration = TimeSpan.Zero;
-            _playIntent = true;
-
-            ResetTimeline();
-            ShowStatus(T("Status_Loading"));
-
-            if (_engine is { } engine)
-                await OpenSourceOnEngineAsync(engine, restorePosition: false);
-        }
-        catch
-        {
-            _playIntent = false;
-            ShowStatus(T("Status_Error"));
-        }
-    }
-
     private async Task RestoreSourceOnEngineAsync(IPlaybackEngine engine)
     {
         try
         {
-            ShowStatus(T("Status_Loading"));
+            ShowLoadingStatus();
             await OpenSourceOnEngineAsync(engine, restorePosition: true);
         }
         catch
@@ -416,10 +374,7 @@ public sealed partial class PlayerView : UserControl
     private async void PlayPauseButton_Click(object sender, RoutedEventArgs e)
     {
         if (_currentSource is null)
-        {
-            OpenMediaButton_Click(OpenMediaButton, e);
             return;
-        }
 
         if (_engine is not { } engine)
             return;
@@ -648,18 +603,6 @@ public sealed partial class PlayerView : UserControl
                     ? AudioTrackCombo.Items[0]
                     : null);
 
-            SubtitleQuickButton.Content =
-                tracks.SubtitleTracks.FirstOrDefault(track => track.IsSelected) is { } subtitle
-                    ? FormatSubtitleTrack(subtitle)
-                    : T("Playback_SubtitleTrack");
-
-            AudioQuickButton.Content =
-                tracks.AudioTracks.FirstOrDefault(track => track.IsSelected) is { } audio
-                    ? FormatAudioTrack(audio)
-                    : T("Playback_AudioTrack");
-
-            SubtitleQuickButton.Flyout = BuildSubtitleFlyout(tracks);
-            AudioQuickButton.Flyout = BuildAudioFlyout(tracks);
         }
         finally
         {
@@ -775,30 +718,8 @@ public sealed partial class PlayerView : UserControl
 
     private void UpdateDiagnosticsUi(PlaybackDiagnosticsSnapshot snapshot)
     {
-        var video = snapshot.SelectedVideoTrack;
-
-        VideoInfoText.Text = video is null
-            ? "—"
-            : string.Join(
-                " · ",
-                new[]
-                {
-                    video.Codec,
-                    video.Width is int width && video.Height is int height
-                        ? $"{width}×{height}"
-                        : null,
-                    video.FrameRate is double fps
-                        ? $"{fps:0.###} FPS"
-                        : null
-                }.Where(static value => !string.IsNullOrWhiteSpace(value)));
-
-        SourceInfoText.Text = snapshot.InputKind switch
-        {
-            PlaybackInputKind.LocalFile => T("Source_Local"),
-            PlaybackInputKind.Network => snapshot.InputScheme?.ToUpperInvariant() ?? T("Common_Unknown"),
-            PlaybackInputKind.OtherUri => snapshot.InputScheme?.ToUpperInvariant() ?? T("Common_Unknown"),
-            _ => "—"
-        };
+        if (_isLoadingStatusVisible)
+            UpdateLoadingMetrics(snapshot);
     }
 
     private void UpdateStateUi(PlaybackState state)
@@ -819,7 +740,7 @@ public sealed partial class PlayerView : UserControl
             case PlaybackState.Opening:
             case PlaybackState.Buffering:
             case PlaybackState.Seeking:
-                ShowStatus(T("Status_Loading"));
+                ShowLoadingStatus();
                 break;
 
             case PlaybackState.Playing:
@@ -838,7 +759,7 @@ public sealed partial class PlayerView : UserControl
             case PlaybackState.Idle:
             case PlaybackState.Stopped:
                 if (_currentSource is null)
-                    ShowStatus(T("Playback_SelectLocalMedia"));
+                    ShowStatus(T("Playback_NoMediaSource"));
                 else
                     HideStatus();
                 break;
@@ -866,8 +787,6 @@ public sealed partial class PlayerView : UserControl
         PlaybackRateButton.IsEnabled = hasEngineAndSource;
         VolumeButton.IsEnabled = hasEngineAndSource;
 
-        SubtitleQuickButton.IsEnabled = hasEngineAndSource;
-        AudioQuickButton.IsEnabled = hasEngineAndSource;
         SubtitleTrackCombo.IsEnabled = hasEngineAndSource;
         AudioTrackCombo.IsEnabled = hasEngineAndSource;
 
@@ -903,10 +822,7 @@ public sealed partial class PlayerView : UserControl
         object sender,
         Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
-        var rate = Math.Clamp(
-            Math.Round(e.NewValue * 20d) / 20d,
-            0.5d,
-            2.0d);
+        var rate = SliderValueToRate(e.NewValue);
 
         if (PlaybackRateValueText is not null)
             PlaybackRateValueText.Text = $"{rate:0.00}×";
@@ -925,6 +841,27 @@ public sealed partial class PlayerView : UserControl
         {
             ShowStatus(T("Status_Error"));
         }
+    }
+
+    private static double SliderValueToRate(double sliderValue)
+    {
+        var normalized = Math.Clamp(sliderValue, 0d, 1d);
+        var rate = normalized <= 0.5d
+            ? 0.5d + normalized
+            : normalized * 2d;
+
+        return Math.Clamp(
+            Math.Round(rate * 20d) / 20d,
+            0.5d,
+            2.0d);
+    }
+
+    private static double RateToSliderValue(double rate)
+    {
+        var normalizedRate = Math.Clamp(rate, 0.5d, 2.0d);
+        return normalizedRate <= 1d
+            ? normalizedRate - 0.5d
+            : normalizedRate / 2d;
     }
 
     private void VolumeSlider_ValueChanged(
@@ -1013,6 +950,7 @@ public sealed partial class PlayerView : UserControl
     private void PlayerView_Unloaded(object sender, RoutedEventArgs e)
     {
         _fullscreenControlsTimer.Stop();
+        _loadingMetricsTimer.Stop();
         RemovePointerWheelHandler();
 
         if (_isVideoFullscreen)
@@ -1201,8 +1139,6 @@ public sealed partial class PlayerView : UserControl
             Grid.SetColumnSpan(CenterPlaybackControls, 1);
             CenterPlaybackControls.Margin = new Thickness(0);
 
-            SubtitleQuickButton.MaxWidth = 180d;
-            AudioQuickButton.MaxWidth = 220d;
             return;
         }
 
@@ -1220,10 +1156,6 @@ public sealed partial class PlayerView : UserControl
             Grid.SetColumnSpan(CenterPlaybackControls, 3);
             CenterPlaybackControls.Margin = new Thickness(0, 6, 0, 0);
 
-            SubtitleQuickButton.MaxWidth =
-                availableWidth < 620d ? 80d : 96d;
-            AudioQuickButton.MaxWidth =
-                availableWidth < 620d ? 112d : 140d;
             return;
         }
 
@@ -1234,8 +1166,6 @@ public sealed partial class PlayerView : UserControl
         Grid.SetColumnSpan(CenterPlaybackControls, 1);
         CenterPlaybackControls.Margin = new Thickness(0);
 
-        SubtitleQuickButton.MaxWidth = 180d;
-        AudioQuickButton.MaxWidth = 220d;
     }
 
     private void UpdateSidebarVisibility()
@@ -1331,6 +1261,7 @@ public sealed partial class PlayerView : UserControl
 
         _isPreparingForDetach = true;
         _fullscreenControlsTimer.Stop();
+        _loadingMetricsTimer.Stop();
         RemovePointerWheelHandler();
 
         _seekDebounce?.Cancel();
@@ -1382,12 +1313,165 @@ public sealed partial class PlayerView : UserControl
 
     private void ShowStatus(string text)
     {
+        _isLoadingStatusVisible = false;
+        _loadingMetricsTimer.Stop();
+        PlaybackLoadingRing.Visibility = Visibility.Collapsed;
+        PlaybackLoadingMetricsText.Visibility = Visibility.Collapsed;
         PlaybackStatusText.Text = text;
         PlaybackStatusPanel.Visibility = Visibility.Visible;
     }
 
-    private void HideStatus() =>
+    private void ShowLoadingStatus()
+    {
+        PlaybackStatusText.Text = T("Status_Loading");
+        PlaybackStatusPanel.Visibility = Visibility.Visible;
+        PlaybackLoadingRing.Visibility = Visibility.Visible;
+        PlaybackLoadingMetricsText.Visibility = Visibility.Visible;
+
+        if (!_isLoadingStatusVisible)
+        {
+            _isLoadingStatusVisible = true;
+            _lastLoadingReadBytes = null;
+            _lastLoadingSampleAt = null;
+            PlaybackLoadingRing.IsIndeterminate = true;
+            PlaybackLoadingRing.Value = 0d;
+            PlaybackLoadingMetricsText.Text =
+                string.Format(T("Playback_LoadingProgressFormat"), 0d);
+        }
+
+        if (!_loadingMetricsTimer.IsEnabled)
+            _loadingMetricsTimer.Start();
+    }
+
+    private void HideStatus()
+    {
+        _isLoadingStatusVisible = false;
+        _loadingMetricsTimer.Stop();
         PlaybackStatusPanel.Visibility = Visibility.Collapsed;
+    }
+
+    private async void LoadingMetricsTimer_Tick(object? sender, object e)
+    {
+        if (_loadingMetricsRefreshInFlight ||
+            !_isLoadingStatusVisible ||
+            _engine is not { } engine)
+        {
+            return;
+        }
+
+        _loadingMetricsRefreshInFlight = true;
+
+        try
+        {
+            var snapshot =
+                await engine.Diagnostics.RefreshAsync();
+            UpdateLoadingMetrics(snapshot);
+        }
+        catch
+        {
+            // Loading metrics are observational and must never interrupt playback.
+        }
+        finally
+        {
+            _loadingMetricsRefreshInFlight = false;
+        }
+    }
+
+    private void UpdateLoadingMetrics(PlaybackDiagnosticsSnapshot snapshot)
+    {
+        var percent = Math.Clamp(
+            snapshot.Capabilities.BufferingPercent,
+            0d,
+            100d);
+
+        if (percent > 0d)
+        {
+            PlaybackLoadingRing.IsIndeterminate = false;
+            PlaybackLoadingRing.Value = percent;
+        }
+        else
+        {
+            PlaybackLoadingRing.IsIndeterminate = true;
+        }
+
+        var now = snapshot.CapturedAt;
+        var readBytes = snapshot.Statistics?.ReadBytes;
+        double? megabytesPerSecond = null;
+
+        if (readBytes is long currentBytes &&
+            _lastLoadingReadBytes is long previousBytes &&
+            _lastLoadingSampleAt is DateTimeOffset previousAt)
+        {
+            var elapsed = (now - previousAt).TotalSeconds;
+            var delta = currentBytes - previousBytes;
+
+            if (elapsed > 0.05d && delta >= 0)
+            {
+                megabytesPerSecond =
+                    delta / elapsed / (1024d * 1024d);
+            }
+        }
+
+        if (readBytes is long bytes)
+        {
+            _lastLoadingReadBytes = bytes;
+            _lastLoadingSampleAt = now;
+        }
+
+        var progressText =
+            string.Format(
+                T("Playback_LoadingProgressFormat"),
+                percent);
+
+        if (_currentSource is { Uri.IsFile: false } &&
+            megabytesPerSecond is double speed &&
+            double.IsFinite(speed))
+        {
+            PlaybackLoadingMetricsText.Text =
+                progressText +
+                " · " +
+                string.Format(
+                    T("Playback_LoadingSpeedFormat"),
+                    speed);
+        }
+        else
+        {
+            PlaybackLoadingMetricsText.Text =
+                progressText;
+        }
+    }
+
+    private void PlayerSectionList_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e) =>
+        UpdateSidebarSectionUi();
+
+    private void UpdateSidebarSectionUi()
+    {
+        if (QueueList is null ||
+            TracksPanel is null ||
+            PlayerSectionList is null)
+        {
+            return;
+        }
+
+        var showTracks =
+            PlayerSectionList.SelectedIndex == 1;
+
+        QueueList.Visibility = showTracks
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        TracksPanel.Visibility = showTracks
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        QueueTitle.Text = showTracks
+            ? T("Playback_Tracks")
+            : T("Playback_Queue");
+        QueueSubtitle.Visibility = showTracks
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
 
     private void Dispatch(Action action)
     {
