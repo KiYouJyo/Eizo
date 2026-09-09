@@ -38,6 +38,10 @@ jobs:
           New-Item -ItemType Directory -Force .packages/Eizo.Playback | Out-Null
           dotnet run --project tools/Eizo.WebDavV030Probe/Eizo.WebDavV030Probe.csproj --configuration Release
 
+      - name: Validate player/source UI cleanup contract
+        shell: pwsh
+        run: ./scripts/Test-PlayerUiCleanupContract.ps1
+
   winui-build:
     name: Build WinUI 3 app
     runs-on: windows-latest
