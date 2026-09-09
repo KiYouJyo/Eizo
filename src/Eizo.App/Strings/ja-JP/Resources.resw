@@ -721,4 +721,13 @@
   <data name="Playback_RemoteOpenFailed" xml:space="preserve">
     <value>リモートメディアを開けません</value>
   </data>
+  <data name="Playback_NoMediaSource" xml:space="preserve">
+    <value>メディアが読み込まれていません</value>
+  </data>
+  <data name="Playback_LoadingProgressFormat" xml:space="preserve">
+    <value>読み込み {0:0}%</value>
+  </data>
+  <data name="Playback_LoadingSpeedFormat" xml:space="preserve">
+    <value>{0:0.0} MB/s</value>
+  </data>
 </root>
