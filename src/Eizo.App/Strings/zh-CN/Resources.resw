@@ -730,4 +730,34 @@
   <data name="Playback_LoadingSpeedFormat" xml:space="preserve">
     <value>{0:0.0} MB/s</value>
   </data>
+  <data name="Sources_EditWebDavTitle" xml:space="preserve">
+    <value>编辑 WebDAV 媒体来源</value>
+  </data>
+  <data name="Sources_SaveChanges" xml:space="preserve">
+    <value>保存并重新连接</value>
+  </data>
+  <data name="Sources_PasswordKeepHint" xml:space="preserve">
+    <value>留空以保留当前密码</value>
+  </data>
+  <data name="Sources_BrowseFolders" xml:space="preserve">
+    <value>选择 WebDAV 目录</value>
+  </data>
+  <data name="Sources_ParentFolder" xml:space="preserve">
+    <value>上一级</value>
+  </data>
+  <data name="Sources_SelectCurrentFolder" xml:space="preserve">
+    <value>选择当前目录</value>
+  </data>
+  <data name="Sources_LoadingFolders" xml:space="preserve">
+    <value>正在读取目录…</value>
+  </data>
+  <data name="Sources_NoSubfolders" xml:space="preserve">
+    <value>当前目录下没有子文件夹。</value>
+  </data>
+  <data name="Sources_WebDavUpdatedFormat" xml:space="preserve">
+    <value>已更新 {0}，重新扫描到 {1} 个视频。</value>
+  </data>
+  <data name="Sources_SourceAlreadyExists" xml:space="preserve">
+    <value>相同服务器地址和用户名的 WebDAV 来源已经存在。</value>
+  </data>
 </root>
