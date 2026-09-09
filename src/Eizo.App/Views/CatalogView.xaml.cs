@@ -31,7 +31,7 @@ public sealed partial class CatalogView : UserControl
         PageTitle.Text = T("Nav_Categories");
         PageSubtitle.Text = T("Catalog_Subtitle");
         SearchBox.PlaceholderText = T("Catalog_SearchPlaceholder");
-        ClearSearchButton.Content = T("Common_Clear");
+        ClearSearchButton.Content = T("Catalog_Clear");
     }
 
     private void CatalogView_Loaded(object sender, RoutedEventArgs e)
