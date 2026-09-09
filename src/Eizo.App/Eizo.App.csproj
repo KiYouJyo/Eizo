@@ -25,4 +25,5 @@
          This is a runtime/package dependency only; Eizo UI code does not reference LibVLCSharp APIs. -->
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
   </ItemGroup>
+  <!-- Corrected Stage 7 acceptance trigger -->
 </Project>
