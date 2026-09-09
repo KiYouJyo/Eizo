@@ -15,7 +15,9 @@
       <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Light">
           <SolidColorBrush x:Key="ShellNavigationPaneBackgroundBrush"
-                           Color="Transparent" />
+                           Color="#E5F9F9" />
+          <SolidColorBrush x:Key="ShellNavigationPaneInactiveBackgroundBrush"
+                           Color="#F3F3F3" />
           <SolidColorBrush x:Key="AppTransientSurfaceBrush"
                            Color="#E5F9F9" />
           <StaticResource x:Key="AppTransientSurfaceBorderBrush"
@@ -24,7 +26,9 @@
 
         <ResourceDictionary x:Key="Dark">
           <SolidColorBrush x:Key="ShellNavigationPaneBackgroundBrush"
-                           Color="Transparent" />
+                           Color="#1A2323" />
+          <SolidColorBrush x:Key="ShellNavigationPaneInactiveBackgroundBrush"
+                           Color="#202020" />
           <SolidColorBrush x:Key="AppTransientSurfaceBrush"
                            Color="#1A2323" />
           <StaticResource x:Key="AppTransientSurfaceBorderBrush"
@@ -33,6 +37,8 @@
 
         <ResourceDictionary x:Key="HighContrast">
           <SolidColorBrush x:Key="ShellNavigationPaneBackgroundBrush"
+                           Color="{ThemeResource SystemColorWindowColor}" />
+          <SolidColorBrush x:Key="ShellNavigationPaneInactiveBackgroundBrush"
                            Color="{ThemeResource SystemColorWindowColor}" />
           <StaticResource x:Key="AppTransientSurfaceBrush"
                           ResourceKey="SystemColorWindowBrush" />
