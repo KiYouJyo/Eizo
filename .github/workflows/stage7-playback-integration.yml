@@ -120,24 +120,19 @@ jobs:
             }
 
             $pluginEntries = @($entries | Where-Object {
-              $_ -match '(^|[\\/])plugins[\\/].+\.dll
-              throw 'MSIX does not contain LibVLC plugin DLLs.'
-            }
-
-            Write-Host "MSIX LibVLC payload PASS. Plugins=$($pluginEntries.Count)"
-          }
+              $_ -match '(^|[\\/])plugins[\\/].+\.dll          }
           finally {
             $archive.Dispose()
           }
 
-      - name: Build signed Stage 7 acceptance ZIP
+      - name: Build signed corrected Stage 7 acceptance ZIP
         shell: pwsh
         env:
           RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
           RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
         run: ./scripts/Build-Stage7Acceptance.ps1
 
-      - name: Upload signed Stage 7 acceptance package
+      - name: Upload corrected signed Stage 7 acceptance package
         uses: actions/upload-artifact@v7
         with:
           name: Eizo-v0.2.0-stage7-corrected-acceptance
@@ -157,17 +152,10 @@ jobs:
             $archive.Dispose()
           }
 
-      - name: Build signed Stage 7 acceptance ZIP
-        shell: pwsh
-        env:
-          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
-          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
-        run: ./scripts/Build-Stage7Acceptance.ps1
-
-      - name: Upload signed Stage 7 acceptance package
+      - name: Upload unsigned integration MSIX
         uses: actions/upload-artifact@v7
         with:
-          name: Eizo-v0.2.0-stage7-signed-acceptance
-          path: ${{ env.ACCEPTANCE_ZIP }}
+          name: Eizo-Stage7-playback-integration-${{ github.sha }}
+          path: ${{ env.PLAYBACK_MSIX }}
           if-no-files-found: error
           retention-days: 14
