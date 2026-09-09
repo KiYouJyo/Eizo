@@ -6,10 +6,8 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using System.Numerics;
 using Windows.Foundation;
 using Windows.Storage.Pickers;
 using Windows.System;
@@ -35,8 +33,6 @@ public sealed partial class PlayerView : UserControl
     private bool _pointerOverControls;
     private bool _hasPointerPosition;
     private Point _lastPointerPosition;
-    private DateTime _lastPointerActivityUtc = DateTime.UtcNow;
-    private int _sidebarAnimationVersion;
     private CancellationTokenSource? _seekDebounce;
 
     public PlayerView(string title, string episode)
@@ -59,7 +55,7 @@ public sealed partial class PlayerView : UserControl
 
         _fullscreenControlsTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(250)
+            Interval = TimeSpan.FromSeconds(2.5)
         };
         _fullscreenControlsTimer.Tick += FullscreenControlsTimer_Tick;
 
@@ -816,9 +812,9 @@ public sealed partial class PlayerView : UserControl
         if (_isVideoFullscreen)
         {
             if (state == PlaybackState.Playing)
-                ShowFullscreenControls();
+                ShowFullscreenControls(restartAutoHide: true);
             else
-                ShowFullscreenControls();
+                ShowFullscreenControls(restartAutoHide: false);
         }
 
         UpdateControlAvailability();
@@ -905,31 +901,31 @@ public sealed partial class PlayerView : UserControl
         var position = e.GetCurrentPoint(PlayerRoot).Position;
         var moved =
             !_hasPointerPosition ||
-            Math.Abs(position.X - _lastPointerPosition.X) >= 0.75d ||
-            Math.Abs(position.Y - _lastPointerPosition.Y) >= 0.75d;
+            Math.Abs(position.X - _lastPointerPosition.X) >= 3d ||
+            Math.Abs(position.Y - _lastPointerPosition.Y) >= 3d;
 
         if (!moved)
             return;
 
         _hasPointerPosition = true;
         _lastPointerPosition = position;
-        _lastPointerActivityUtc = DateTime.UtcNow;
-        ShowFullscreenControls();
+        ShowFullscreenControls(restartAutoHide: !_pointerOverControls);
     }
 
     private void PlayerControlsPanel_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
         _pointerOverControls = true;
-        _lastPointerActivityUtc = DateTime.UtcNow;
 
         if (_isVideoFullscreen)
-            ShowFullscreenControls();
+            ShowFullscreenControls(restartAutoHide: false);
     }
 
     private void PlayerControlsPanel_PointerExited(object sender, PointerRoutedEventArgs e)
     {
         _pointerOverControls = false;
-        _lastPointerActivityUtc = DateTime.UtcNow;
+
+        if (_isVideoFullscreen)
+            RestartFullscreenAutoHide();
     }
 
     private void PlayerView_KeyDown(object sender, KeyRoutedEventArgs e)
@@ -943,23 +939,14 @@ public sealed partial class PlayerView : UserControl
 
     private void FullscreenControlsTimer_Tick(object? sender, object e)
     {
-        if (!_isVideoFullscreen)
+        _fullscreenControlsTimer.Stop();
+
+        if (!_isVideoFullscreen ||
+            _pointerOverControls ||
+            !_playIntent)
         {
-            _fullscreenControlsTimer.Stop();
             return;
         }
-
-        if (_engine?.State != PlaybackState.Playing)
-        {
-            ShowFullscreenControls();
-            return;
-        }
-
-        if (_pointerOverControls)
-            return;
-
-        if (DateTime.UtcNow - _lastPointerActivityUtc < TimeSpan.FromSeconds(2.5))
-            return;
 
         PlayerControlsPanel.Opacity = 0d;
         PlayerControlsPanel.IsHitTestVisible = false;
@@ -993,8 +980,10 @@ public sealed partial class PlayerView : UserControl
                 new SolidColorBrush(Windows.UI.Color.FromArgb(0xB8, 0, 0, 0));
 
             _sidebarVisibleInFullscreen = false;
-            SidebarColumn.Width = new GridLength(0);
-            SidebarToggleButton.Visibility = Visibility.Visible;
+            _hasPointerPosition = false;
+
+            PlayerSplitView.DisplayMode = SplitViewDisplayMode.Overlay;
+            PlayerSidebar.Margin = new Thickness(0, 0, 0, 112);
             UpdateSidebarVisibility();
 
             FullscreenIcon.Glyph = "\uE73F";
@@ -1005,15 +994,14 @@ public sealed partial class PlayerView : UserControl
                 FullscreenButton,
                 T("Playback_ExitFullScreen"));
 
-            _lastPointerActivityUtc = DateTime.UtcNow;
-            _fullscreenControlsTimer.Start();
-            ShowFullscreenControls();
+            ShowFullscreenControls(restartAutoHide: true);
             Focus(FocusState.Programmatic);
             return;
         }
 
         _fullscreenControlsTimer.Stop();
         _sidebarVisibleInFullscreen = false;
+        _hasPointerPosition = false;
 
         PlayerHeader.Visibility = Visibility.Visible;
         HeaderRow.Height = new GridLength(64);
@@ -1034,7 +1022,9 @@ public sealed partial class PlayerView : UserControl
         PlayerControlsPanel.Opacity = 1d;
         PlayerControlsPanel.IsHitTestVisible = true;
 
-        SidebarToggleButton.Visibility = Visibility.Visible;
+        PlayerSplitView.DisplayMode = SplitViewDisplayMode.Inline;
+        PlayerSidebar.Margin = new Thickness(0);
+        UpdateSidebarVisibility();
 
         FullscreenIcon.Glyph = "\uE740";
         ToolTipService.SetToolTip(
@@ -1043,8 +1033,6 @@ public sealed partial class PlayerView : UserControl
         AutomationProperties.SetName(
             FullscreenButton,
             T("Playback_FullScreen"));
-
-        UpdateSidebarVisibility();
     }
 
     private void UpdateSidebarVisibility()
@@ -1053,26 +1041,11 @@ public sealed partial class PlayerView : UserControl
             ? _sidebarVisibleInFullscreen
             : !_sidebarCollapsedByUser && PlayerRoot.ActualWidth >= 900d;
 
-        if (_isVideoFullscreen)
-        {
-            Grid.SetColumn(PlayerSidebar, 0);
-            PlayerSidebar.HorizontalAlignment = HorizontalAlignment.Right;
-            SidebarColumn.Width = new GridLength(0);
-            Canvas.SetZIndex(PlayerSidebar, 20);
-        }
-        else
-        {
-            Grid.SetColumn(PlayerSidebar, 1);
-            PlayerSidebar.HorizontalAlignment = HorizontalAlignment.Stretch;
-            Canvas.SetZIndex(PlayerSidebar, 0);
+        PlayerSplitView.DisplayMode = _isVideoFullscreen
+            ? SplitViewDisplayMode.Overlay
+            : SplitViewDisplayMode.Inline;
 
-            if (shouldShow || PlayerSidebar.Visibility == Visibility.Visible)
-                SidebarColumn.Width = GridLength.Auto;
-            else
-                SidebarColumn.Width = new GridLength(0);
-        }
-
-        _ = AnimateSidebarAsync(shouldShow);
+        PlayerSplitView.IsPaneOpen = shouldShow;
 
         SidebarToggleIcon.Symbol = shouldShow
             ? Symbol.ClosePane
@@ -1086,68 +1059,30 @@ public sealed partial class PlayerView : UserControl
         AutomationProperties.SetName(SidebarToggleButton, label);
     }
 
-    private async Task AnimateSidebarAsync(bool show)
-    {
-        var version = ++_sidebarAnimationVersion;
-        var visual = ElementCompositionPreview.GetElementVisual(PlayerSidebar);
-        var compositor = visual.Compositor;
-        var easing = compositor.CreateCubicBezierEasingFunction(
-            new Vector2(0.16f, 1f),
-            new Vector2(0.3f, 1f));
-
-        if (show)
-        {
-            PlayerSidebar.Visibility = Visibility.Visible;
-            visual.Offset = new Vector3(36f, 0f, 0f);
-            visual.Opacity = 0f;
-
-            var slideIn = compositor.CreateVector3KeyFrameAnimation();
-            slideIn.Duration = TimeSpan.FromMilliseconds(190);
-            slideIn.InsertKeyFrame(1f, Vector3.Zero, easing);
-
-            var fadeIn = compositor.CreateScalarKeyFrameAnimation();
-            fadeIn.Duration = TimeSpan.FromMilliseconds(150);
-            fadeIn.InsertKeyFrame(1f, 1f, easing);
-
-            visual.StartAnimation("Offset", slideIn);
-            visual.StartAnimation("Opacity", fadeIn);
-            return;
-        }
-
-        if (PlayerSidebar.Visibility != Visibility.Visible)
-            return;
-
-        var slideOut = compositor.CreateVector3KeyFrameAnimation();
-        slideOut.Duration = TimeSpan.FromMilliseconds(160);
-        slideOut.InsertKeyFrame(1f, new Vector3(36f, 0f, 0f), easing);
-
-        var fadeOut = compositor.CreateScalarKeyFrameAnimation();
-        fadeOut.Duration = TimeSpan.FromMilliseconds(130);
-        fadeOut.InsertKeyFrame(1f, 0f, easing);
-
-        visual.StartAnimation("Offset", slideOut);
-        visual.StartAnimation("Opacity", fadeOut);
-
-        await Task.Delay(170);
-
-        if (version != _sidebarAnimationVersion)
-            return;
-
-        PlayerSidebar.Visibility = Visibility.Collapsed;
-        visual.Offset = Vector3.Zero;
-        visual.Opacity = 0f;
-
-        if (!_isVideoFullscreen)
-            SidebarColumn.Width = new GridLength(0);
-    }
-
-    private void ShowFullscreenControls()
+    private void ShowFullscreenControls(bool restartAutoHide)
     {
         PlayerControlsPanel.Opacity = 1d;
         PlayerControlsPanel.IsHitTestVisible = true;
 
-        if (_isVideoFullscreen && !_fullscreenControlsTimer.IsEnabled)
+        if (!_isVideoFullscreen)
+            return;
+
+        if (restartAutoHide)
+            RestartFullscreenAutoHide();
+        else
+            _fullscreenControlsTimer.Stop();
+    }
+
+    private void RestartFullscreenAutoHide()
+    {
+        _fullscreenControlsTimer.Stop();
+
+        if (_isVideoFullscreen &&
+            _playIntent &&
+            !_pointerOverControls)
+        {
             _fullscreenControlsTimer.Start();
+        }
     }
 
     private void ResetTimeline()
