@@ -848,9 +848,7 @@ public sealed partial class SourcesView : UserControl
             new TextBlock
             {
                 Text = T("Sources_BrowseFolders"),
-                FontSize = 16,
-                FontWeight =
-                    Windows.UI.Text.FontWeights.SemiBold
+                FontSize = 16
             });
         browserContent.Children.Add(header);
         browserContent.Children.Add(folderList);
