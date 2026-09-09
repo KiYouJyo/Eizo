@@ -13,8 +13,7 @@ foreach ($required in @(
     'BrowseWebDavFoldersAsync',
     'RollBackWebDavTarget',
     'InlineWebDavCredentialProvider',
-    'Sources_EditWebDavTitle',
-    'Sources_SelectCurrentFolder')) {
+    'Sources_EditWebDavTitle')) {
     if ($sourcesView -notmatch [regex]::Escape($required)) {
         throw "v0.3.1 WebDAV source-management contract missing: $required"
     }
@@ -34,6 +33,7 @@ foreach ($pickerRequirement in @(
     'ScrollViewer.SetHorizontalScrollBarVisibility',
     'ScrollBarVisibility.Disabled',
     'Sources_SelectedFoldersFormat',
+    'Sources_SelectCurrentFolder',
     'DoubleTapped')) {
     if ($folderPicker -notmatch [regex]::Escape($pickerRequirement)) {
         throw "v0.3.1 picker contract missing: $pickerRequirement"
