@@ -317,7 +317,7 @@ public sealed partial class MainWindow : Window
     }
 
     private void WireWorkspaceMediaView(CatalogView view) =>
-        view.DetailRequested += (_, title) => OpenDetail(title, startPlaying: false);
+        view.MediaRequested += (_, item) => OpenCatalogMedia(item);
 
     private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch
     {
@@ -334,6 +334,55 @@ public sealed partial class MainWindow : Window
         "settings" => (T("Nav_Settings"), "\uE713"),
         _ => (T("Nav_Home"), "\uE80F")
     };
+
+    private void OpenCatalogMedia(CatalogMediaItemModel item)
+    {
+        if (item.LocalPath is not { Length: > 0 } localPath ||
+            !File.Exists(localPath))
+        {
+            if (item.IsParsed)
+                OpenDetail(item.DisplayTitle, startPlaying: false);
+
+            return;
+        }
+
+        var sourceId =
+            item.Location?.SourceId ??
+            MediaSourceDefinition.OpenedLocalFilesSourceId;
+
+        var key = "media:" + sourceId + ":" + localPath;
+
+        if (_tabs.TryGetValue(key, out var existing))
+        {
+            SelectTab(existing.Key);
+            return;
+        }
+
+        var sourceLabel =
+            MediaSourceStore.Default.Find(sourceId) is { } source
+                ? source.IsBuiltIn
+                    ? T("Source_Local")
+                    : source.DisplayName
+                : T("Source_Local");
+
+        var state = new ShellTabState(
+            key,
+            ShellTabKind.Detail,
+            pageKey: null,
+            item.DisplayTitle,
+            "\uE768",
+            new PlayerView(
+                item.DisplayTitle,
+                sourceLabel,
+                localPath),
+            navItem: null,
+            PreferredTabWidth)
+        {
+            MediaTitle = item.DisplayTitle
+        };
+
+        AddTab(state, select: true);
+    }
 
     private void OpenDetail(string title, bool startPlaying)
     {

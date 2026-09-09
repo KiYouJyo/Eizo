@@ -20,7 +20,7 @@ public sealed partial class CatalogView : UserControl
         RebuildResults();
     }
 
-    public event EventHandler<string>? DetailRequested;
+    public event EventHandler<CatalogMediaItemModel>? MediaRequested;
 
     private string T(string key) => _localization.GetString(key);
 
@@ -80,10 +80,13 @@ public sealed partial class CatalogView : UserControl
             ResultsPanel.Children.Add(
                 new TextBlock
                 {
-                    Text = T("Catalog_NoResults"),
+                    Text = string.IsNullOrWhiteSpace(query)
+                        ? T("Catalog_Empty")
+                        : T("Catalog_NoResults"),
                     Margin = new Thickness(0, 10, 0, 0),
                     FontSize = 14,
-                    Opacity = 0.68
+                    Opacity = 0.68,
+                    TextWrapping = TextWrapping.Wrap
                 });
             return;
         }
@@ -168,6 +171,31 @@ public sealed partial class CatalogView : UserControl
         if (!item.IsParsed)
             secondaryParts.Add(T("Catalog_Unparsed"));
 
+        if (item.Location is { } location)
+        {
+            if (location.Kind == MediaLocationKind.LocalFile)
+            {
+                var extension = Path.GetExtension(location.Locator)
+                    .TrimStart('.')
+                    .ToUpperInvariant();
+
+                if (!string.IsNullOrWhiteSpace(extension))
+                    secondaryParts.Add(extension);
+            }
+
+            if (location.SizeBytes is > 0)
+                secondaryParts.Add(FormatBytes(location.SizeBytes.Value));
+
+            var source = MediaSourceStore.Default.Find(location.SourceId);
+            if (source is not null)
+            {
+                secondaryParts.Add(
+                    source.IsBuiltIn
+                        ? T("Sources_OpenedLocalFiles")
+                        : source.DisplayName);
+            }
+        }
+
         var secondary = new TextBlock
         {
             Text = string.Join(" · ", secondaryParts),
@@ -195,7 +223,7 @@ public sealed partial class CatalogView : UserControl
 
         var button = new Button
         {
-            Tag = item.DisplayTitle,
+            Tag = item,
             Style = (Style)Resources["CatalogRowButtonStyle"],
             Content = row
         };
@@ -206,8 +234,8 @@ public sealed partial class CatalogView : UserControl
 
     private void CatalogRow_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string title })
-            DetailRequested?.Invoke(this, title);
+        if (sender is Button { Tag: CatalogMediaItemModel item })
+            MediaRequested?.Invoke(this, item);
     }
 
     private static bool Matches(CatalogMediaItemModel item, string query)
@@ -237,6 +265,23 @@ public sealed partial class CatalogView : UserControl
         MediaCategoryKind.Movies => 2,
         _ => 3
     };
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        var value = Math.Max(0d, bytes);
+        var unit = 0;
+
+        while (value >= 1024d && unit < units.Length - 1)
+        {
+            value /= 1024d;
+            unit++;
+        }
+
+        return unit == 0
+            ? $"{value:0} {units[unit]}"
+            : $"{value:0.#} {units[unit]}";
+    }
 
     private sealed class CatalogCategoryComparer : IEqualityComparer<MediaCategoryKind?>
     {

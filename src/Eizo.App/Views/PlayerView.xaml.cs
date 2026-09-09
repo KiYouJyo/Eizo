@@ -40,20 +40,27 @@ public sealed partial class PlayerView : UserControl
     private PointerEventHandler? _pointerWheelHandler;
     private CancellationTokenSource? _seekDebounce;
 
-    public PlayerView(string title, string episode)
+    public PlayerView(
+        string title,
+        string episode,
+        string? sourcePath = null)
     {
         InitializeComponent();
 
-        NowPlayingTitle.Text = title + " · " + episode;
-        NowPlayingEpisode.Text = "一级魔法使考试";
+        NowPlayingTitle.Text = sourcePath is null
+            ? title + " · " + episode
+            : title;
+        NowPlayingEpisode.Text = episode;
 
-        QueueList.ItemsSource = new[]
-        {
-            new EpisodeItemModel("18", "一级魔法使考试", "一級魔法使試験", "23:41", T("Playback_Playing")),
-            new EpisodeItemModel("19", "周密的计划", "入念な計画", "24:03", T("Category_Unwatched")),
-            new EpisodeItemModel("20", "必要的杀戮", "必要な殺し", "23:58", T("Category_Unwatched")),
-            new EpisodeItemModel("21", "魔法的世界", "魔法の世界", "24:11", T("Category_Unwatched"))
-        };
+        QueueList.ItemsSource = sourcePath is null
+            ? new[]
+            {
+                new EpisodeItemModel("18", "一级魔法使考试", "一級魔法使試験", "23:41", T("Playback_Playing")),
+                new EpisodeItemModel("19", "周密的计划", "入念な計画", "24:03", T("Category_Unwatched")),
+                new EpisodeItemModel("20", "必要的杀戮", "必要な殺し", "23:58", T("Category_Unwatched")),
+                new EpisodeItemModel("21", "魔法的世界", "魔法の世界", "24:11", T("Category_Unwatched"))
+            }
+            : Array.Empty<EpisodeItemModel>();
 
         PlaybackSurface.EngineChanged += PlaybackSurface_EngineChanged;
         PlaybackSurface.InitializationFailed += PlaybackSurface_InitializationFailed;
@@ -69,7 +76,21 @@ public sealed partial class PlayerView : UserControl
 
         ApplyText();
         ResetTimeline();
-        ShowStatus(T("Playback_SelectLocalMedia"));
+
+        if (!string.IsNullOrWhiteSpace(sourcePath) &&
+            File.Exists(sourcePath))
+        {
+            _currentSource = PlaybackSource.FromFile(
+                sourcePath,
+                Path.GetFileNameWithoutExtension(sourcePath));
+            _playIntent = true;
+            ShowStatus(T("Status_Loading"));
+        }
+        else
+        {
+            ShowStatus(T("Playback_SelectLocalMedia"));
+        }
+
         UpdateControlAvailability();
     }
 

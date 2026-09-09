@@ -368,7 +368,7 @@
     <value>A random recommendation from your library.</value>
   </data>
   <data name="Sources_Subtitle" xml:space="preserve">
-    <value>Manage local, WebDAV, and cloud media sources.</value>
+    <value>Manage real registered media sources. WebDAV connectivity will be enabled in the next stage.</value>
   </data>
   <data name="Sources_TabSources" xml:space="preserve">
     <value>Sources</value>
@@ -638,7 +638,7 @@
     <value>Exit fullscreen</value>
   </data>
   <data name="Catalog_Subtitle" xml:space="preserve">
-    <value>Browse all anime, series, and movies. Unparsed media uses the video file title.</value>
+    <value>Shows only videos actually detected by Eizo. Unparsed media uses the real video file name.</value>
   </data>
   <data name="Catalog_SearchPlaceholder" xml:space="preserve">
     <value>Search all media</value>
@@ -651,5 +651,26 @@
   </data>
   <data name="Catalog_NoResults" xml:space="preserve">
     <value>No matching media found.</value>
+  </data>
+  <data name="Sources_OpenedLocalFiles" xml:space="preserve">
+    <value>Opened local videos</value>
+  </data>
+  <data name="Sources_VideoCountFormat" xml:space="preserve">
+    <value>{0} videos</value>
+  </data>
+  <data name="Sources_LastScanFormat" xml:space="preserve">
+    <value>Last scan {0}</value>
+  </data>
+  <data name="Sources_ScanFailed" xml:space="preserve">
+    <value>Media source scan failed</value>
+  </data>
+  <data name="Sources_AddLocalFailed" xml:space="preserve">
+    <value>Failed to add the local media source</value>
+  </data>
+  <data name="Catalog_Empty" xml:space="preserve">
+    <value>No real videos have been detected yet. Open a local video in the player or add a local folder from Media Sources.</value>
+  </data>
+  <data name="Sources_AddLocalFolder" xml:space="preserve">
+    <value>Add local folder</value>
   </data>
 </root>
