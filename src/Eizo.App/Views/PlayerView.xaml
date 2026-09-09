@@ -3,34 +3,31 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:models="using:Eizo.Models"
              xmlns:controls="using:Eizo.Controls"
-             xmlns:playback="using:Eizo.Playback.WinUI">
+             xmlns:playback="using:Eizo.Playback.WinUI"
+             IsTabStop="True"
+             KeyDown="PlayerView_KeyDown">
   <Grid x:Name="PlayerRoot"
-        ColumnDefinitions="*,Auto"
-        Background="Transparent">
-    <VisualStateManager.VisualStateGroups>
-      <VisualStateGroup>
-        <VisualState x:Name="PlayerCompact">
-          <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="0" /></VisualState.StateTriggers>
-          <VisualState.Setters>
-            <Setter Target="PlayerSidebar.Visibility" Value="Collapsed" />
-            <Setter Target="QuickControls.Visibility" Value="Collapsed" />
-          </VisualState.Setters>
-        </VisualState>
-        <VisualState x:Name="PlayerWide">
-          <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="900" /></VisualState.StateTriggers>
-          <VisualState.Setters>
-            <Setter Target="PlayerSidebar.Visibility" Value="Visible" />
-            <Setter Target="QuickControls.Visibility" Value="Visible" />
-          </VisualState.Setters>
-        </VisualState>
-      </VisualStateGroup>
-    </VisualStateManager.VisualStateGroups>
+        Background="Transparent"
+        PointerMoved="PlayerRoot_PointerMoved"
+        SizeChanged="PlayerRoot_SizeChanged">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*" />
+      <ColumnDefinition x:Name="SidebarColumn" Width="Auto" />
+    </Grid.ColumnDefinitions>
 
-    <Grid Margin="16"
-          RowDefinitions="64,*,108"
+    <Grid x:Name="PlayerFrame"
+          Margin="16"
           Background="{ThemeResource EizoAppBrush}"
           CornerRadius="8">
-      <Grid Padding="20,0"
+      <Grid.RowDefinitions>
+        <RowDefinition x:Name="HeaderRow" Height="64" />
+        <RowDefinition Height="*" />
+        <RowDefinition x:Name="ControlsRow" Height="108" />
+      </Grid.RowDefinitions>
+
+      <Grid x:Name="PlayerHeader"
+            Grid.Row="0"
+            Padding="20,0"
             ColumnDefinitions="*,Auto">
         <StackPanel VerticalAlignment="Center" Spacing="2">
           <TextBlock x:Name="NowPlayingTitle" Style="{StaticResource CardTitleText}" />
@@ -67,7 +64,8 @@
         </Border>
       </Grid>
 
-      <Grid Grid.Row="2"
+      <Grid x:Name="PlayerControlsPanel"
+            Grid.Row="2"
             Padding="20,10"
             RowDefinitions="Auto,*">
         <Grid>
@@ -89,11 +87,71 @@
         </Grid>
 
         <Grid Grid.Row="1"
-              ColumnDefinitions="*,Auto,*"
               Margin="0,8,0,0">
-          <StackPanel Grid.Column="1"
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+
+          <StackPanel x:Name="LeftPlaybackControls"
+                      Grid.Column="0"
                       Orientation="Horizontal"
-                      Spacing="4">
+                      Spacing="4"
+                      HorizontalAlignment="Left">
+            <Button x:Name="SubtitleQuickButton"
+                    Height="36"
+                    MinWidth="64"
+                    MaxWidth="180" />
+            <Button x:Name="AudioQuickButton"
+                    Height="36"
+                    MinWidth="88"
+                    MaxWidth="220" />
+            <Button x:Name="PlaybackRateButton"
+                    Content="1.0×"
+                    Height="36"
+                    MinWidth="64">
+              <Button.Flyout>
+                <Flyout Placement="Top">
+                  <StackPanel Width="260" Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock x:Name="PlaybackRateFlyoutTitle"
+                                 VerticalAlignment="Center"
+                                 FontWeight="SemiBold" />
+                      <TextBlock x:Name="PlaybackRateValueText"
+                                 Grid.Column="1"
+                                 Text="1.00×"
+                                 VerticalAlignment="Center" />
+                    </Grid>
+                    <Slider x:Name="PlaybackRateSlider"
+                            Minimum="0.5"
+                            Maximum="2.0"
+                            Value="1.0"
+                            StepFrequency="0.05"
+                            SmallChange="0.05"
+                            LargeChange="0.25"
+                            ValueChanged="PlaybackRateSlider_ValueChanged" />
+                    <Grid ColumnDefinitions="Auto,*,Auto,*,Auto">
+                      <TextBlock Text="0.5×" Style="{StaticResource MetadataText}" />
+                      <TextBlock Grid.Column="2"
+                                 Text="1.0×"
+                                 Style="{StaticResource MetadataText}" />
+                      <TextBlock Grid.Column="4"
+                                 Text="2.0×"
+                                 Style="{StaticResource MetadataText}" />
+                    </Grid>
+                  </StackPanel>
+                </Flyout>
+              </Button.Flyout>
+            </Button>
+          </StackPanel>
+
+          <StackPanel Grid.Column="2"
+                      Orientation="Horizontal"
+                      Spacing="4"
+                      HorizontalAlignment="Center">
             <Button x:Name="PreviousChapterButton"
                     Width="48"
                     Height="36"
@@ -128,19 +186,18 @@
             </Button>
           </StackPanel>
 
-          <StackPanel x:Name="QuickControls"
-                      Grid.Column="2"
+          <StackPanel Grid.Column="4"
                       Orientation="Horizontal"
                       Spacing="4"
-                      HorizontalAlignment="Right"
-                      Visibility="Collapsed">
-            <Button x:Name="SubtitleQuickButton" Height="36" />
-            <Button x:Name="AudioQuickButton" Height="36" />
-            <Button x:Name="PlaybackRateButton"
-                    Content="1.0×"
+                      HorizontalAlignment="Right">
+            <Button x:Name="SidebarToggleButton"
+                    Width="44"
                     Height="36"
-                    Click="PlaybackRateButton_Click" />
+                    Click="SidebarToggleButton_Click">
+              <SymbolIcon x:Name="SidebarToggleIcon" Symbol="ClosePane" />
+            </Button>
             <Button x:Name="FullscreenButton"
+                    Width="44"
                     Height="36"
                     Click="FullscreenButton_Click">
               <FontIcon x:Name="FullscreenIcon"
@@ -161,10 +218,21 @@
             BorderThickness="1,0,0,0">
       <Grid Padding="16"
             RowDefinitions="Auto,Auto,*,Auto">
-        <StackPanel>
-          <TextBlock x:Name="QueueTitle" Style="{StaticResource SectionTitleText}" />
-          <TextBlock x:Name="QueueSubtitle" Style="{StaticResource MetadataText}" />
-        </StackPanel>
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock x:Name="QueueTitle" Style="{StaticResource SectionTitleText}" />
+            <TextBlock x:Name="QueueSubtitle" Style="{StaticResource MetadataText}" />
+          </StackPanel>
+
+          <Button x:Name="SidebarHeaderCollapseButton"
+                  Grid.Column="1"
+                  Width="36"
+                  Height="32"
+                  Padding="0"
+                  Click="SidebarToggleButton_Click">
+            <SymbolIcon Symbol="ClosePane" />
+          </Button>
+        </Grid>
 
         <ListView x:Name="PlayerSectionList"
                   Grid.Row="1"
