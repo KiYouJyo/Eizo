@@ -114,31 +114,49 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    public bool TogglePlayerFullscreen()
+    public void SetPlayerVideoFullscreen(bool enabled)
     {
-        if (_playerFullscreen)
+        if (_playerFullscreen == enabled)
+            return;
+
+        if (enabled)
         {
-            AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
-            _playerFullscreen = false;
+            _restoreMaximizedAfterPlayerFullscreen =
+                AppWindow.Presenter is OverlappedPresenter
+                {
+                    State: OverlappedPresenterState.Maximized
+                };
 
-            if (_restoreMaximizedAfterPlayerFullscreen &&
-                AppWindow.Presenter is OverlappedPresenter restoredPresenter)
-            {
-                restoredPresenter.Maximize();
-            }
+            _playerFullscreen = true;
 
-            return false;
+            AppTitleBar.Visibility = Visibility.Collapsed;
+            RootGrid.RowDefinitions[0].Height = new GridLength(0);
+            Grid.SetRow(ShellNavigation, 0);
+            Grid.SetRowSpan(ShellNavigation, 2);
+
+            ShellNavigation.IsPaneOpen = false;
+            ShellNavigation.IsPaneToggleButtonVisible = false;
+            ShellNavigation.CompactPaneLength = 0;
+            ShellNavigation.PaneDisplayMode = NavigationViewPaneDisplayMode.LeftMinimal;
+
+            AppWindow.SetPresenter(AppWindowPresenterKind.FullScreen);
+            return;
         }
 
-        _restoreMaximizedAfterPlayerFullscreen =
-            AppWindow.Presenter is OverlappedPresenter
-            {
-                State: OverlappedPresenterState.Maximized
-            };
+        AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
 
-        AppWindow.SetPresenter(AppWindowPresenterKind.FullScreen);
-        _playerFullscreen = true;
-        return true;
+        Grid.SetRow(ShellNavigation, 1);
+        Grid.SetRowSpan(ShellNavigation, 1);
+        RootGrid.RowDefinitions[0].Height = new GridLength(48);
+        AppTitleBar.Visibility = Visibility.Visible;
+
+        _playerFullscreen = false;
+
+        if (_restoreMaximizedAfterPlayerFullscreen &&
+            AppWindow.Presenter is OverlappedPresenter restoredPresenter)
+        {
+            restoredPresenter.Maximize();
+        }
     }
 
     public void RestoreAndActivate()
