@@ -22,8 +22,6 @@ public sealed partial class CatalogView : UserControl
 
     public event EventHandler<string>? DetailRequested;
 
-    public event EventHandler<string>? PlayRequested;
-
     private string T(string key) => _localization.GetString(key);
 
     private void ApplyText()
