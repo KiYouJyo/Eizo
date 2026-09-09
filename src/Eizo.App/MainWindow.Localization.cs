@@ -17,7 +17,6 @@ public sealed partial class MainWindow
     private void ReloadLocalizedShell()
     {
         var selectedKey = _selectedTabKey;
-        MainContent.Content = null;
 
         ApplyLocalizedShellText();
 
@@ -28,7 +27,7 @@ public sealed partial class MainWindow
                 var descriptor = DescribeWorkspacePage(pageKey);
                 state.Title = descriptor.Title;
                 state.Glyph = descriptor.Glyph;
-                state.View = CreateWorkspaceView(pageKey);
+                ReplaceTabView(state, CreateWorkspaceView(pageKey));
                 UpdateTabIdentity(state);
                 continue;
             }

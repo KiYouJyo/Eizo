@@ -67,7 +67,9 @@
       <Grid x:Name="PlayerControlsPanel"
             Grid.Row="2"
             Padding="20,10"
-            RowDefinitions="Auto,*">
+            RowDefinitions="Auto,*"
+            PointerEntered="PlayerControlsPanel_PointerEntered"
+            PointerExited="PlayerControlsPanel_PointerExited">
         <Grid>
           <Slider x:Name="PlaybackSlider"
                   Minimum="0"
@@ -88,16 +90,7 @@
 
         <Grid Grid.Row="1"
               Margin="0,8,0,0">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-          </Grid.ColumnDefinitions>
-
           <StackPanel x:Name="LeftPlaybackControls"
-                      Grid.Column="0"
                       Orientation="Horizontal"
                       Spacing="4"
                       HorizontalAlignment="Left">
@@ -148,8 +141,7 @@
             </Button>
           </StackPanel>
 
-          <StackPanel Grid.Column="2"
-                      Orientation="Horizontal"
+          <StackPanel Orientation="Horizontal"
                       Spacing="4"
                       HorizontalAlignment="Center">
             <Button x:Name="PreviousChapterButton"
@@ -186,8 +178,7 @@
             </Button>
           </StackPanel>
 
-          <StackPanel Grid.Column="4"
-                      Orientation="Horizontal"
+          <StackPanel Orientation="Horizontal"
                       Spacing="4"
                       HorizontalAlignment="Right">
             <Button x:Name="SidebarToggleButton"
@@ -218,21 +209,10 @@
             BorderThickness="1,0,0,0">
       <Grid Padding="16"
             RowDefinitions="Auto,Auto,*,Auto">
-        <Grid ColumnDefinitions="*,Auto">
-          <StackPanel>
-            <TextBlock x:Name="QueueTitle" Style="{StaticResource SectionTitleText}" />
-            <TextBlock x:Name="QueueSubtitle" Style="{StaticResource MetadataText}" />
-          </StackPanel>
-
-          <Button x:Name="SidebarHeaderCollapseButton"
-                  Grid.Column="1"
-                  Width="36"
-                  Height="32"
-                  Padding="0"
-                  Click="SidebarToggleButton_Click">
-            <SymbolIcon Symbol="ClosePane" />
-          </Button>
-        </Grid>
+        <StackPanel>
+          <TextBlock x:Name="QueueTitle" Style="{StaticResource SectionTitleText}" />
+          <TextBlock x:Name="QueueSubtitle" Style="{StaticResource MetadataText}" />
+        </StackPanel>
 
         <ListView x:Name="PlayerSectionList"
                   Grid.Row="1"

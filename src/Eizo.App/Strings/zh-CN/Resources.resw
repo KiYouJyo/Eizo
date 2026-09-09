@@ -634,4 +634,19 @@
   <data name="Playback_ExitFullScreen" xml:space="preserve">
     <value>退出全屏</value>
   </data>
+  <data name="Catalog_Subtitle" xml:space="preserve">
+    <value>浏览全部动漫、电视剧和电影；未解析媒体直接显示视频文件标题。</value>
+  </data>
+  <data name="Catalog_SearchPlaceholder" xml:space="preserve">
+    <value>搜索全部媒体</value>
+  </data>
+  <data name="Catalog_Clear" xml:space="preserve">
+    <value>清除</value>
+  </data>
+  <data name="Catalog_Unparsed" xml:space="preserve">
+    <value>未解析</value>
+  </data>
+  <data name="Catalog_NoResults" xml:space="preserve">
+    <value>没有找到匹配的媒体。</value>
+  </data>
 </root>

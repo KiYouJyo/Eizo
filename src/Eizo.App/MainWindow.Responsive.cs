@@ -26,9 +26,15 @@ public sealed partial class MainWindow
         _responsiveMode = mode;
         _responsiveLayoutApplied = true;
 
-        if (MainContent.Content is HomeView home)
+        if (_selectedTabKey is null ||
+            !_tabs.TryGetValue(_selectedTabKey, out var selected))
+        {
+            return;
+        }
+
+        if (selected.View is HomeView home)
             home.SetResponsiveMode(mode);
-        else if (MainContent.Content is CategoryView category)
+        else if (selected.View is CategoryView category)
             category.SetResponsiveMode(mode);
     }
 }

@@ -634,4 +634,19 @@
   <data name="Playback_ExitFullScreen" xml:space="preserve">
     <value>全画面表示を終了</value>
   </data>
+  <data name="Catalog_Subtitle" xml:space="preserve">
+    <value>アニメ・ドラマ・映画をまとめて表示します。未解析のメディアは動画ファイル名をそのまま表示します。</value>
+  </data>
+  <data name="Catalog_SearchPlaceholder" xml:space="preserve">
+    <value>すべてのメディアを検索</value>
+  </data>
+  <data name="Catalog_Clear" xml:space="preserve">
+    <value>クリア</value>
+  </data>
+  <data name="Catalog_Unparsed" xml:space="preserve">
+    <value>未解析</value>
+  </data>
+  <data name="Catalog_NoResults" xml:space="preserve">
+    <value>一致するメディアがありません。</value>
+  </data>
 </root>
