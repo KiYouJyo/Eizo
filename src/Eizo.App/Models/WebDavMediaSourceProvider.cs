@@ -14,13 +14,13 @@ public sealed record WebDavMediaProbeResult(
     string? Detail = null);
 
 public sealed class WebDavMediaSourceProvider(
-    MediaCredentialStore credentialStore)
+    IMediaCredentialProvider credentialStore)
     : IMediaSourceProvider
 {
     private static readonly HttpMethod PropFindMethod = new("PROPFIND");
     private static readonly XNamespace Dav = "DAV:";
 
-    private readonly MediaCredentialStore _credentialStore =
+    private readonly IMediaCredentialProvider _credentialStore =
         credentialStore ?? throw new ArgumentNullException(nameof(credentialStore));
 
     public MediaSourceKind Kind => MediaSourceKind.WebDav;
