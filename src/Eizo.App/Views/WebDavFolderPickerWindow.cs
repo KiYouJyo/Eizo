@@ -89,7 +89,7 @@ internal sealed class WebDavFolderPickerWindow
 
     private void ConfigureWindow()
     {
-        _window.Title = T("Sources_FolderPickerTitle");
+        _window.Title = T("Sources_EditReadFolders");
 
         try
         {
@@ -129,7 +129,7 @@ internal sealed class WebDavFolderPickerWindow
         heading.Children.Add(
             new TextBlock
             {
-                Text = T("Sources_FolderPickerTitle"),
+                Text = T("Sources_EditReadFolders"),
                 FontSize = 24
             });
         heading.Children.Add(
