@@ -131,7 +131,12 @@ public sealed class MediaCatalogStore
         var visited = new HashSet<string>(
             StringComparer.OrdinalIgnoreCase);
 
-        pending.Enqueue(string.Empty);
+        var scanRoots = source.SelectedPaths is { Count: > 0 }
+            ? source.SelectedPaths
+            : [string.Empty];
+
+        foreach (var scanRoot in scanRoots)
+            pending.Enqueue(scanRoot);
 
         while (pending.Count > 0)
         {

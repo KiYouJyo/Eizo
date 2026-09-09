@@ -135,6 +135,34 @@ namespace Eizo.WebDavV030Probe
                     int.MaxValue),
                 "Large-file metadata was not preserved.");
 
+            var selectedSource =
+                source with
+                {
+                    Id = "webdav-probe-selected",
+                    SelectedPaths =
+                        ["Season 1/"]
+                };
+
+            var selectedScanned =
+                await catalog.ScanSourceAsync(
+                    selectedSource);
+
+            Assert(
+                selectedScanned == 1,
+                $"Expected selected-folder scan to find 1 video, got {selectedScanned}.");
+
+            var selectedItems =
+                catalog.SnapshotForSource(
+                    selectedSource.Id);
+
+            Assert(
+                selectedItems.Count == 1 &&
+                selectedItems[0].Location?.Locator
+                    .EndsWith(
+                        "episode-02.mkv",
+                        StringComparison.OrdinalIgnoreCase) == true,
+                "Selected-folder scan escaped its configured WebDAV root.");
+
             var episodeUri =
                 new Uri(
                     server.RootUri,

@@ -760,4 +760,19 @@
   <data name="Sources_SourceAlreadyExists" xml:space="preserve">
     <value>同じサーバーアドレスとユーザー名の WebDAV ソースがすでに存在します。</value>
   </data>
+  <data name="Sources_FolderPickerTitle" xml:space="preserve">
+    <value>WebDAV フォルダーを選択</value>
+  </data>
+  <data name="Sources_FolderPickerHint" xml:space="preserve">
+    <value>スキャン対象にするフォルダーを1つ以上選択します。フォルダーをダブルクリックするか、右側の矢印で開きます。</value>
+  </data>
+  <data name="Sources_AllFolders" xml:space="preserve">
+    <value>すべてのフォルダー</value>
+  </data>
+  <data name="Sources_SelectedFoldersFormat" xml:space="preserve">
+    <value>{0} 個のフォルダーを選択</value>
+  </data>
+  <data name="Sources_OpenFolder" xml:space="preserve">
+    <value>フォルダーを開く</value>
+  </data>
 </root>

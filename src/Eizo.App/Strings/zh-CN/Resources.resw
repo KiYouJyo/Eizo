@@ -760,4 +760,19 @@
   <data name="Sources_SourceAlreadyExists" xml:space="preserve">
     <value>相同服务器地址和用户名的 WebDAV 来源已经存在。</value>
   </data>
+  <data name="Sources_FolderPickerTitle" xml:space="preserve">
+    <value>选择 WebDAV 文件夹</value>
+  </data>
+  <data name="Sources_FolderPickerHint" xml:space="preserve">
+    <value>勾选一个或多个文件夹作为扫描范围。双击文件夹或使用右侧箭头进入目录。</value>
+  </data>
+  <data name="Sources_AllFolders" xml:space="preserve">
+    <value>全部文件夹</value>
+  </data>
+  <data name="Sources_SelectedFoldersFormat" xml:space="preserve">
+    <value>已选择 {0} 个文件夹</value>
+  </data>
+  <data name="Sources_OpenFolder" xml:space="preserve">
+    <value>打开文件夹</value>
+  </data>
 </root>
