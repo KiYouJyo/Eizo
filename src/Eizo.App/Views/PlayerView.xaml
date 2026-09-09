@@ -213,7 +213,7 @@
       <SplitView.Pane>
         <Border x:Name="PlayerSidebar"
                 Width="300"
-                Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+                Background="{ThemeResource AppTransientSurfaceBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1,0,0,0">
       <Grid Padding="16"
