@@ -2,6 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $catalogStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaCatalogStore.cs' -Raw
 $sourceStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaSourceStore.cs' -Raw
+$providerContract = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaSourceProvider.cs' -Raw
 $sourcesView = Get-Content -LiteralPath 'src/Eizo.App/Views/SourcesView.xaml.cs' -Raw
 $catalogView = Get-Content -LiteralPath 'src/Eizo.App/Views/CatalogView.xaml.cs' -Raw
 $mainWindow = Get-Content -LiteralPath 'src/Eizo.App/MainWindow.xaml.cs' -Raw
@@ -37,6 +38,12 @@ if ($catalogView -notmatch 'EventHandler<CatalogMediaItemModel>\? MediaRequested
 if ($sourcesView -notmatch 'MediaSourceStore\.Default' -or
     $sourcesView -notmatch 'MediaCatalogStore\.Default') {
     throw 'Stage 1 contract violation: SourcesView must be driven by real source/catalog stores.'
+}
+
+if ($providerContract -notmatch 'interface IMediaSourceProvider' -or
+    $providerContract -notmatch 'class LocalMediaSourceProvider' -or
+    $providerContract -notmatch 'MediaSourceKind\.WebDav') {
+    throw 'Stage 1 contract violation: provider abstraction must exist before WebDAV protocol code is introduced.'
 }
 
 Write-Host 'WebDAV Stage 1 media-source contract PASS.'
