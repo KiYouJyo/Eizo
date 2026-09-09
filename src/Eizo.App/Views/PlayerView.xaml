@@ -10,12 +10,14 @@
         Background="Transparent"
         PointerMoved="PlayerRoot_PointerMoved"
         SizeChanged="PlayerRoot_SizeChanged">
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*" />
-      <ColumnDefinition x:Name="SidebarColumn" Width="Auto" />
-    </Grid.ColumnDefinitions>
-
-    <Grid x:Name="PlayerFrame"
+    <SplitView x:Name="PlayerSplitView"
+               PanePlacement="Right"
+               OpenPaneLength="300"
+               CompactPaneLength="0"
+               DisplayMode="Inline"
+               IsPaneOpen="False">
+      <SplitView.Content>
+        <Grid x:Name="PlayerFrame"
           Margin="16"
           Background="{ThemeResource EizoAppBrush}"
           CornerRadius="8">
@@ -198,15 +200,15 @@
           </StackPanel>
         </Grid>
       </Grid>
-    </Grid>
+        </Grid>
+      </SplitView.Content>
 
-    <Border x:Name="PlayerSidebar"
-            Grid.Column="1"
-            Width="300"
-            Visibility="Collapsed"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-            BorderThickness="1,0,0,0">
+      <SplitView.Pane>
+        <Border x:Name="PlayerSidebar"
+                Width="300"
+                Background="{ThemeResource AppTransientSurfaceBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1,0,0,0">
       <Grid Padding="16"
             RowDefinitions="Auto,Auto,*,Auto">
         <StackPanel>
@@ -276,6 +278,8 @@
                      TextWrapping="Wrap" />
         </StackPanel>
       </Grid>
-    </Border>
+        </Border>
+      </SplitView.Pane>
+    </SplitView>
   </Grid>
 </UserControl>
