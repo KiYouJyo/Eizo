@@ -104,6 +104,92 @@ public sealed class MediaCatalogStore
         return true;
     }
 
+    public async Task<int> ScanSourceAsync(
+        MediaSourceDefinition source,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        if (source.Kind == MediaSourceKind.Local)
+        {
+            return await Task.Run(
+                () => ScanLocalSource(source),
+                cancellationToken);
+        }
+
+        if (!MediaSourceProviderRegistry.TryGet(
+                source.Kind,
+                out var provider))
+        {
+            throw new MediaSourceException(
+                "ProviderUnavailable",
+                $"No provider is registered for {source.Kind}.");
+        }
+
+        var discovered = new List<CatalogMediaItemModel>();
+        var pending = new Queue<string>();
+        var visited = new HashSet<string>(
+            StringComparer.OrdinalIgnoreCase);
+
+        pending.Enqueue(string.Empty);
+
+        while (pending.Count > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var relativePath = pending.Dequeue();
+            if (!visited.Add(relativePath))
+                continue;
+
+            await foreach (var entry in provider.ListAsync(
+                               source,
+                               relativePath,
+                               cancellationToken))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (entry.IsDirectory)
+                {
+                    if (visited.Count + pending.Count < 100_000)
+                        pending.Enqueue(entry.RelativePath);
+
+                    continue;
+                }
+
+                var locator = entry.Locator;
+                if (string.IsNullOrWhiteSpace(locator) ||
+                    !IsSupportedVideoPath(locator))
+                {
+                    continue;
+                }
+
+                discovered.Add(
+                    CreateRemoteItem(
+                        source.Id,
+                        entry));
+            }
+        }
+
+        lock (_sync)
+        {
+            _items.RemoveAll(item =>
+                string.Equals(
+                    item.Location?.SourceId,
+                    source.Id,
+                    StringComparison.Ordinal));
+
+            _items.AddRange(discovered);
+            SaveCore(_items);
+        }
+
+        MediaSourceStore.Default.MarkScanned(
+            source.Id,
+            DateTimeOffset.UtcNow);
+
+        Changed?.Invoke(this, EventArgs.Empty);
+        return discovered.Count;
+    }
+
     public int ScanLocalSource(MediaSourceDefinition source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -174,8 +260,40 @@ public sealed class MediaCatalogStore
         if (string.IsNullOrWhiteSpace(path))
             return false;
 
+        var candidate = path;
+
+        if (Uri.TryCreate(path, UriKind.Absolute, out var uri) &&
+            !uri.IsFile)
+        {
+            candidate = Uri.UnescapeDataString(uri.AbsolutePath);
+        }
+
         return SupportedVideoExtensions.Contains(
-            Path.GetExtension(path));
+            Path.GetExtension(candidate));
+    }
+
+    private static CatalogMediaItemModel CreateRemoteItem(
+        string sourceId,
+        MediaSourceEntry entry)
+    {
+        var title = Path.GetFileNameWithoutExtension(
+            entry.Name);
+
+        if (string.IsNullOrWhiteSpace(title))
+            title = entry.Name;
+
+        return new CatalogMediaItemModel(
+            title,
+            ParsedTitle: null,
+            NativeTitle: null,
+            Category: null,
+            Meta: string.Empty,
+            Location: new MediaLocationModel(
+                sourceId,
+                MediaLocationKind.RemoteUri,
+                entry.Locator!,
+                entry.SizeBytes,
+                entry.ModifiedUtc));
     }
 
     private static CatalogMediaItemModel CreateLocalItem(
