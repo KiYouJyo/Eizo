@@ -17,7 +17,8 @@
                DisplayMode="Inline"
                IsPaneOpen="False">
       <SplitView.Content>
-        <Grid x:Name="PlayerFrame"
+        <Grid x:Name="PlayerContentRoot">
+          <Grid x:Name="PlayerFrame"
           Margin="16"
           Background="{ThemeResource EizoAppBrush}"
           CornerRadius="8">
@@ -200,6 +201,12 @@
           </StackPanel>
         </Grid>
       </Grid>
+          </Grid>
+
+          <Border x:Name="SidebarDismissLayer"
+                  Background="Transparent"
+                  Visibility="Collapsed"
+                  PointerPressed="SidebarDismissLayer_PointerPressed" />
         </Grid>
       </SplitView.Content>
 
