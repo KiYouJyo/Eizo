@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "product": {
     "version": "0.3.0",
-    "packageVersion": "0.3.0.0",
+    "packageVersion": "0.3.0.1",
     "title": {
       "zh-CN": "WebDAV 媒体来源与远程播放",
       "ja-JP": "WebDAV メディアソースとリモート再生",

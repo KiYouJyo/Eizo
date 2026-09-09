@@ -63,7 +63,7 @@
                   <TextBlock x:Name="InternalVersionLabel"
                              Style="{StaticResource SettingsDescriptionStyle}" />
                   <TextBlock x:Name="PackageVersionText"
-                             Text="0.3.0.0"
+                             Text="0.3.0.1"
                              FontWeight="SemiBold" />
                 </StackPanel>
 
