@@ -19,6 +19,8 @@ public sealed partial class MainWindow : Window
     private readonly WindowPlacementService _windowPlacement = new();
     private SizeInt32 _lastNormalWindowSize;
     private bool _wasWindowMaximized;
+    private bool _playerFullscreen;
+    private bool _restoreMaximizedAfterPlayerFullscreen;
     private string? _selectedTabKey;
     private bool _navigationChromeHiddenForImmersive;
 
@@ -110,6 +112,33 @@ public sealed partial class MainWindow : Window
         {
             // Window placement persistence must never turn a normal close into a crash.
         }
+    }
+
+    public bool TogglePlayerFullscreen()
+    {
+        if (_playerFullscreen)
+        {
+            AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
+            _playerFullscreen = false;
+
+            if (_restoreMaximizedAfterPlayerFullscreen &&
+                AppWindow.Presenter is OverlappedPresenter restoredPresenter)
+            {
+                restoredPresenter.Maximize();
+            }
+
+            return false;
+        }
+
+        _restoreMaximizedAfterPlayerFullscreen =
+            AppWindow.Presenter is OverlappedPresenter
+            {
+                State: OverlappedPresenterState.Maximized
+            };
+
+        AppWindow.SetPresenter(AppWindowPresenterKind.FullScreen);
+        _playerFullscreen = true;
+        return true;
     }
 
     public void RestoreAndActivate()
