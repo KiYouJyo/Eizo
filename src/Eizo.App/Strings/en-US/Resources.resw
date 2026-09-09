@@ -368,7 +368,7 @@
     <value>A random recommendation from your library.</value>
   </data>
   <data name="Sources_Subtitle" xml:space="preserve">
-    <value>Manage real registered media sources. WebDAV connectivity will be enabled in the next stage.</value>
+    <value>Manage local and WebDAV media sources. WebDAV supports connection testing, scanning, and direct playback.</value>
   </data>
   <data name="Sources_TabSources" xml:space="preserve">
     <value>Sources</value>
@@ -672,5 +672,53 @@
   </data>
   <data name="Sources_AddLocalFolder" xml:space="preserve">
     <value>Add local folder</value>
+  </data>
+  <data name="Sources_AddWebDav" xml:space="preserve">
+    <value>Add WebDAV</value>
+  </data>
+  <data name="Sources_TestConnection" xml:space="preserve">
+    <value>Test connection</value>
+  </data>
+  <data name="Sources_ConnectionSucceeded" xml:space="preserve">
+    <value>Connection succeeded</value>
+  </data>
+  <data name="Sources_ConnectionFailed" xml:space="preserve">
+    <value>Connection failed</value>
+  </data>
+  <data name="Sources_WebDavDialogTitle" xml:space="preserve">
+    <value>Add WebDAV media source</value>
+  </data>
+  <data name="Sources_ConnectAndAdd" xml:space="preserve">
+    <value>Connect and add</value>
+  </data>
+  <data name="Sources_InvalidAddress" xml:space="preserve">
+    <value>Enter a valid HTTP/HTTPS WebDAV address without embedded credentials.</value>
+  </data>
+  <data name="Sources_WebDavAddedFormat" xml:space="preserve">
+    <value>Added {0}; detected {1} videos.</value>
+  </data>
+  <data name="Sources_ErrorAuthentication" xml:space="preserve">
+    <value>Authentication failed. Check the username and password.</value>
+  </data>
+  <data name="Sources_ErrorForbidden" xml:space="preserve">
+    <value>The server denied access to this path.</value>
+  </data>
+  <data name="Sources_ErrorNotFound" xml:space="preserve">
+    <value>The path or media file was not found on the server.</value>
+  </data>
+  <data name="Sources_ErrorTimeout" xml:space="preserve">
+    <value>The connection timed out.</value>
+  </data>
+  <data name="Sources_ErrorNetwork" xml:space="preserve">
+    <value>The network connection failed.</value>
+  </data>
+  <data name="Sources_ErrorInvalidResponse" xml:space="preserve">
+    <value>The WebDAV response could not be parsed.</value>
+  </data>
+  <data name="Sources_ErrorGeneric" xml:space="preserve">
+    <value>The media-source operation failed.</value>
+  </data>
+  <data name="Playback_RemoteOpenFailed" xml:space="preserve">
+    <value>Unable to open remote media</value>
   </data>
 </root>
