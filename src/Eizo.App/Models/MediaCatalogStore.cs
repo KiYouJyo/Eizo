@@ -36,7 +36,9 @@ public sealed class MediaCatalogStore
     public IReadOnlyList<CatalogMediaItemModel> Snapshot()
     {
         lock (_sync)
-            return _items.ToArray();
+            return _items
+                .Where(IsAvailable)
+                .ToArray();
     }
 
     public IReadOnlyList<CatalogMediaItemModel> SnapshotForSource(string sourceId)
@@ -44,6 +46,7 @@ public sealed class MediaCatalogStore
         lock (_sync)
         {
             return _items
+                .Where(IsAvailable)
                 .Where(item =>
                     string.Equals(
                         item.Location?.SourceId,
@@ -259,6 +262,19 @@ public sealed class MediaCatalogStore
             }
         }
     }
+
+    private static bool IsAvailable(CatalogMediaItemModel item) =>
+        item.Location switch
+        {
+            { Kind: MediaLocationKind.LocalFile } location =>
+                File.Exists(location.Locator),
+            { Kind: MediaLocationKind.RemoteUri } =>
+                true,
+            null =>
+                false,
+            _ =>
+                false
+        };
 
     private bool PruneMissingLocalFilesCore()
     {
