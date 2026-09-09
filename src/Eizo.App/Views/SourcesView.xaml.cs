@@ -387,6 +387,10 @@ public sealed partial class SourcesView : UserControl
             ? null
             : _credentials.GetWebDav(existingSource);
 
+        var selectedPaths = new HashSet<string>(
+            existingSource?.SelectedPaths ?? [],
+            StringComparer.OrdinalIgnoreCase);
+
         var displayName = new TextBox
         {
             Header = T("Sources_DisplayName"),
@@ -407,6 +411,15 @@ public sealed partial class SourcesView : UserControl
             MinWidth = 88,
             VerticalAlignment = VerticalAlignment.Bottom
         };
+
+        var folderSelectionSummary = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            Style = (Style)Application.Current.Resources["MetadataText"]
+        };
+        UpdateWebDavFolderSelectionSummary(
+            folderSelectionSummary,
+            selectedPaths);
 
         var addressRow = new Grid
         {
@@ -454,18 +467,42 @@ public sealed partial class SourcesView : UserControl
         };
         panel.Children.Add(displayName);
         panel.Children.Add(addressRow);
+        panel.Children.Add(folderSelectionSummary);
         panel.Children.Add(userName);
         panel.Children.Add(password);
         panel.Children.Add(editorStatus);
 
         browseButton.Click += async (_, _) =>
-            await BrowseWebDavFoldersAsync(
-                address,
-                userName,
-                password,
-                existingSource,
-                editorStatus,
-                browseButton);
+        {
+            panel.IsEnabled = false;
+
+            try
+            {
+                var picked = await BrowseWebDavFoldersAsync(
+                    address,
+                    userName,
+                    password,
+                    existingSource,
+                    selectedPaths,
+                    editorStatus);
+
+                if (picked is null)
+                    return;
+
+                selectedPaths.Clear();
+
+                foreach (var path in picked)
+                    selectedPaths.Add(path);
+
+                UpdateWebDavFolderSelectionSummary(
+                    folderSelectionSummary,
+                    selectedPaths);
+            }
+            finally
+            {
+                panel.IsEnabled = true;
+            }
+        };
 
         if (XamlRoot is null)
             return;
@@ -492,7 +529,8 @@ public sealed partial class SourcesView : UserControl
             displayName.Text,
             address.Text,
             userName.Text,
-            password.Password);
+            password.Password,
+            selectedPaths);
     }
 
     private async Task CommitWebDavEditorAsync(
@@ -500,7 +538,8 @@ public sealed partial class SourcesView : UserControl
         string displayName,
         string address,
         string userName,
-        string password)
+        string password,
+        IReadOnlyCollection<string> selectedPaths)
     {
         if (!TryNormalizeWebDavUri(
                 address,
@@ -547,7 +586,8 @@ public sealed partial class SourcesView : UserControl
             UserName: normalizedUser,
             CredentialKey: credential is null
                 ? null
-                : "inline");
+                : "inline",
+            SelectedPaths: selectedPaths.ToList());
 
         var temporaryProvider =
             new WebDavMediaSourceProvider(
@@ -590,7 +630,8 @@ public sealed partial class SourcesView : UserControl
                 name,
                 normalizedRoot,
                 normalizedUser,
-                credentialKey);
+                credentialKey,
+                selectedPaths);
 
             await _catalog.ScanSourceAsync(savedSource);
 
@@ -660,7 +701,8 @@ public sealed partial class SourcesView : UserControl
                 previousSource.DisplayName,
                 previousRoot,
                 previousSource.UserName,
-                previousSource.CredentialKey);
+                previousSource.CredentialKey,
+                previousSource.SelectedPaths);
         }
 
         RestoreCredential(
