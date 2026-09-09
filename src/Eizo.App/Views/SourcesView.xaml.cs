@@ -92,7 +92,22 @@ public sealed partial class SourcesView : UserControl
         var summaryParts = new List<string>();
 
         if (source.Kind == MediaSourceKind.WebDav)
+        {
             summaryParts.Add(T("Source_WebDAV"));
+
+            if (source.SelectedPaths is { Count: > 0 })
+            {
+                summaryParts.Add(
+                    string.Format(
+                        T("Sources_SelectedFoldersFormat"),
+                        source.SelectedPaths.Count));
+            }
+            else
+            {
+                summaryParts.Add(
+                    T("Sources_AllFolders"));
+            }
+        }
 
         summaryParts.Add(
             string.Format(
