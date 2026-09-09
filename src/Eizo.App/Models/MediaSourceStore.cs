@@ -15,6 +15,8 @@ public sealed record MediaSourceDefinition(
     MediaSourceKind Kind,
     string DisplayName,
     string? RootLocation = null,
+    string? UserName = null,
+    string? CredentialKey = null,
     string? AccessToken = null,
     bool Enabled = true,
     DateTimeOffset? LastScanUtc = null)
@@ -114,6 +116,12 @@ public sealed class MediaSourceStore
                 MediaSourceKind.Local,
                 name,
                 fullPath,
+                UserName: index >= 0
+                    ? _sources[index].UserName
+                    : null,
+                CredentialKey: index >= 0
+                    ? _sources[index].CredentialKey
+                    : null,
                 AccessToken: !string.IsNullOrWhiteSpace(accessToken)
                     ? accessToken
                     : index >= 0
@@ -230,10 +238,16 @@ public sealed class MediaSourceStore
             if (!File.Exists(StorePath))
                 return [];
 
-            return JsonSerializer.Deserialize<List<MediaSourceDefinition>>(
-                       File.ReadAllText(StorePath),
-                       SerializerOptions)
-                   ?? [];
+            var json = File.ReadAllText(StorePath);
+            var document =
+                JsonSerializer.Deserialize<MediaSourceStoreDocument>(
+                    json,
+                    SerializerOptions);
+
+            if (document is { SchemaVersion: 1 })
+                return document.Sources ?? [];
+
+            return [];
         }
         catch (IOException)
         {
@@ -257,9 +271,13 @@ public sealed class MediaSourceStore
             var temporaryPath =
                 $"{StorePath}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
 
+            var document = new MediaSourceStoreDocument(
+                SchemaVersion: 1,
+                Sources: sources.ToList());
+
             File.WriteAllText(
                 temporaryPath,
-                JsonSerializer.Serialize(sources, SerializerOptions));
+                JsonSerializer.Serialize(document, SerializerOptions));
 
             File.Move(temporaryPath, StorePath, overwrite: true);
         }
@@ -270,4 +288,8 @@ public sealed class MediaSourceStore
         {
         }
     }
+
+    private sealed record MediaSourceStoreDocument(
+        int SchemaVersion,
+        List<MediaSourceDefinition> Sources);
 }
