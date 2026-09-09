@@ -130,12 +130,7 @@ internal sealed class WebDavFolderPickerWindow
             new TextBlock
             {
                 Text = T("Sources_FolderPickerTitle"),
-                FontSize = 24,
-                FontWeight =
-                    new Windows.UI.Text.FontWeight
-                    {
-                        Weight = 600
-                    }
+                FontSize = 24
             });
         heading.Children.Add(
             new TextBlock
@@ -150,7 +145,6 @@ internal sealed class WebDavFolderPickerWindow
 
         var pathPanel = new StackPanel
         {
-            GridRow = 1,
             Spacing = 8
         };
 
@@ -217,7 +211,6 @@ internal sealed class WebDavFolderPickerWindow
 
         var currentFolderLabel = new StackPanel
         {
-            GridColumn = 1,
             Orientation = Orientation.Horizontal,
             Spacing = 8,
             VerticalAlignment =
@@ -238,6 +231,9 @@ internal sealed class WebDavFolderPickerWindow
                 VerticalAlignment =
                     VerticalAlignment.Center
             });
+        Grid.SetColumn(
+            currentFolderLabel,
+            1);
         currentFolderRow.Children.Add(
             currentFolderLabel);
 
@@ -327,7 +323,6 @@ internal sealed class WebDavFolderPickerWindow
 
         var actions = new StackPanel
         {
-            GridColumn = 1,
             Orientation = Orientation.Horizontal,
             Spacing = 8
         };
@@ -366,6 +361,7 @@ internal sealed class WebDavFolderPickerWindow
         actions.Children.Add(
             _confirmButton);
 
+        Grid.SetColumn(actions, 1);
         footer.Children.Add(actions);
         Grid.SetRow(footer, 3);
         root.Children.Add(footer);
@@ -518,7 +514,6 @@ internal sealed class WebDavFolderPickerWindow
 
         var label = new Grid
         {
-            GridColumn = 1,
             ColumnSpacing = 8
         };
         label.ColumnDefinitions.Add(
@@ -546,26 +541,23 @@ internal sealed class WebDavFolderPickerWindow
         var name = new TextBlock
         {
             Text = folder.Name,
-            GridColumn = 1,
             TextTrimming =
                 TextTrimming.CharacterEllipsis,
             VerticalAlignment =
                 VerticalAlignment.Center
         };
+        Grid.SetColumn(name, 1);
         label.Children.Add(name);
+        Grid.SetColumn(label, 1);
         row.Children.Add(label);
 
         var enterButton = new Button
         {
-            GridColumn = 2,
             Width = 36,
             Height = 32,
             MinWidth = 36,
             Padding = new Thickness(0),
-            Tag = folder.RelativePath,
-            ToolTipService =
-                {
-                }
+            Tag = folder.RelativePath
         };
         enterButton.Content =
             new FontIcon
@@ -589,6 +581,7 @@ internal sealed class WebDavFolderPickerWindow
                 _currentPath = path;
                 await LoadFoldersAsync();
             };
+        Grid.SetColumn(enterButton, 2);
         row.Children.Add(enterButton);
 
         row.DoubleTapped +=
