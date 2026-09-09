@@ -84,7 +84,8 @@ public sealed partial class CatalogView : UserControl
                 {
                     Text = T("Catalog_NoResults"),
                     Margin = new Thickness(0, 10, 0, 0),
-                    Style = (Style)Resources["BodyText"]
+                    FontSize = 14,
+                    Opacity = 0.68
                 });
             return;
         }
@@ -95,7 +96,8 @@ public sealed partial class CatalogView : UserControl
             {
                 Text = CategoryLabel(group.Key),
                 Margin = new Thickness(0, ResultsPanel.Children.Count == 0 ? 0 : 12, 0, 2),
-                Style = (Style)Resources["SectionTitleText"]
+                FontSize = 18,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             };
             ResultsPanel.Children.Add(heading);
 
@@ -139,7 +141,6 @@ public sealed partial class CatalogView : UserControl
 
         var text = new StackPanel
         {
-            Grid.ColumnProperty = 1,
             Spacing = 2,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -172,7 +173,7 @@ public sealed partial class CatalogView : UserControl
         var secondary = new TextBlock
         {
             Text = string.Join(" · ", secondaryParts),
-            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+            Opacity = 0.68,
             FontSize = 12,
             TextTrimming = TextTrimming.CharacterEllipsis
         };
@@ -183,9 +184,8 @@ public sealed partial class CatalogView : UserControl
         var type = new TextBlock
         {
             Text = CategoryLabel(item.Category),
-            Grid.ColumnProperty = 2,
             VerticalAlignment = VerticalAlignment.Center,
-            Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+            Opacity = 0.68,
             FontSize = 12
         };
 
