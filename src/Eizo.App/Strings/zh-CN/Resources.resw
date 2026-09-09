@@ -670,4 +670,7 @@
   <data name="Catalog_Empty" xml:space="preserve">
     <value>媒体库尚无真实视频。请在播放器中打开本地视频，或在“媒体来源”中添加本地文件夹。</value>
   </data>
+  <data name="Sources_AddLocalFolder" xml:space="preserve">
+    <value>添加本地文件夹</value>
+  </data>
 </root>
