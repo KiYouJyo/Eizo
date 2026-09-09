@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.3.0",
-    "packageVersion": "0.3.0.1",
+    "version": "0.3.1",
+    "packageVersion": "0.3.1.0",
     "title": {
-      "zh-CN": "WebDAV 媒体来源与远程播放",
-      "ja-JP": "WebDAV メディアソースとリモート再生",
-      "en-US": "WebDAV Media Sources & Remote Playback"
+      "zh-CN": "WebDAV 来源编辑与远程目录选择",
+      "ja-JP": "WebDAV ソース編集とリモートフォルダー選択",
+      "en-US": "WebDAV Source Editing & Remote Folder Picker"
     }
   },
   "channels": {
     "github": {
-      "publish": true
+      "publish": false
     }
   }
 }
