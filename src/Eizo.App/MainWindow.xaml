@@ -73,8 +73,6 @@
                           ResourceKey="ShellNavigationPaneBackgroundBrush" />
           <StaticResource x:Key="NavigationViewExpandedPaneBackground"
                           ResourceKey="ShellNavigationPaneBackgroundBrush" />
-          <StaticResource x:Key="FlyoutPresenterBackground"
-                          ResourceKey="AppTransientSurfaceBrush" />
         </NavigationView.Resources>
 
         <NavigationView.MenuItems>
@@ -85,12 +83,6 @@
           <NavigationViewItem x:Name="CategoryNav"
                               Tag="categories"
                               SelectsOnInvoked="True">
-            <NavigationViewItem.Resources>
-              <StaticResource x:Key="FlyoutPresenterBackground"
-                              ResourceKey="AppTransientSurfaceBrush" />
-              <StaticResource x:Key="FlyoutBorderThemeBrush"
-                              ResourceKey="AppTransientSurfaceBorderBrush" />
-            </NavigationViewItem.Resources>
             <NavigationViewItem.Icon><SymbolIcon Symbol="Library" /></NavigationViewItem.Icon>
             <NavigationViewItem.MenuItems>
               <NavigationViewItem x:Name="AnimeNav" Tag="anime">
