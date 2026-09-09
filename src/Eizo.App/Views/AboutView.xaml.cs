@@ -173,8 +173,10 @@ public sealed partial class AboutView : UserControl
             L("发行版缺少唯一的 MSIXBundle 或校验清单", "リリースに MSIXBundle またはチェックサム一覧がありません", "The release is missing the MSIXBundle or checksum manifest"),
         "ChecksumMissing" or "ChecksumMismatch" =>
             L("安装包 SHA-256 校验失败", "パッケージの SHA-256 検証に失敗しました", "Package SHA-256 verification failed"),
-        "SignatureMissing" or "SignatureInvalid" or "SignerSubjectMismatch" or "SignerThumbprintMismatch" =>
+        "SignatureMissing" or "SignatureInvalid" or "SignatureReadFailed" or "SignerSubjectMismatch" or "SignerThumbprintMismatch" =>
             L("安装包签名验证失败", "パッケージ署名の検証に失敗しました", "Package signature verification failed"),
+        "PendingStateWriteFailed" or "UpdateStorageFailed" =>
+            L("无法保存已下载的更新文件", "ダウンロード済み更新ファイルを保存できません", "Unable to store the downloaded update"),
         "PackageDeploymentFailed" =>
             L("Windows 安装更新失败", "Windows で更新をインストールできませんでした", "Windows failed to install the update"),
         "NoPendingUpdate" =>
