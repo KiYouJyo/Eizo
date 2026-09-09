@@ -293,10 +293,14 @@ public sealed class MediaCatalogStore
             if (!File.Exists(StorePath))
                 return [];
 
-            return JsonSerializer.Deserialize<List<CatalogMediaItemModel>>(
-                       File.ReadAllText(StorePath),
-                       SerializerOptions)
-                   ?? [];
+            var document =
+                JsonSerializer.Deserialize<MediaCatalogStoreDocument>(
+                    File.ReadAllText(StorePath),
+                    SerializerOptions);
+
+            return document is { SchemaVersion: 1 }
+                ? document.Items ?? []
+                : [];
         }
         catch (IOException)
         {
@@ -320,9 +324,13 @@ public sealed class MediaCatalogStore
             var temporaryPath =
                 $"{StorePath}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
 
+            var document = new MediaCatalogStoreDocument(
+                SchemaVersion: 1,
+                Items: items.ToList());
+
             File.WriteAllText(
                 temporaryPath,
-                JsonSerializer.Serialize(items, SerializerOptions));
+                JsonSerializer.Serialize(document, SerializerOptions));
 
             File.Move(temporaryPath, StorePath, overwrite: true);
         }
@@ -333,4 +341,8 @@ public sealed class MediaCatalogStore
         {
         }
     }
+
+    private sealed record MediaCatalogStoreDocument(
+        int SchemaVersion,
+        List<CatalogMediaItemModel> Items);
 }
