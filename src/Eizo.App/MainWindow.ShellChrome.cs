@@ -19,6 +19,7 @@ public sealed partial class MainWindow
     private bool _adaptiveTabSizingInitialized;
     private SplitView? _navigationSplitView;
     private bool _navigationPaneBackgroundHooked;
+    private bool _isWindowActive = true;
     private bool _shellReady;
 
     private void ShellNavigation_Loaded(object sender, RoutedEventArgs e)
@@ -204,8 +205,18 @@ public sealed partial class MainWindow
         {
             _navigationPaneBackgroundHooked = true;
             ShellNavigation.PaneOpening += (_, _) => QueueNavigationPaneBackgroundUpdate();
+            Activated += MainWindow_ActivatedForNavigationPane;
         }
 
+        QueueNavigationPaneBackgroundUpdate();
+    }
+
+    private void MainWindow_ActivatedForNavigationPane(
+        object sender,
+        WindowActivatedEventArgs args)
+    {
+        _isWindowActive =
+            args.WindowActivationState != WindowActivationState.Deactivated;
         QueueNavigationPaneBackgroundUpdate();
     }
 
@@ -220,9 +231,16 @@ public sealed partial class MainWindow
             ? "HighContrast"
             : WindowRoot.ActualTheme == ElementTheme.Dark ? "Dark" : "Light";
 
-        var themeResources = Application.Current.Resources.ThemeDictionaries[themeKey] as ResourceDictionary;
+        var brushKey = _isWindowActive
+            ? "ShellNavigationPaneBackgroundBrush"
+            : "ShellNavigationPaneInactiveBackgroundBrush";
+
+        var themeResources =
+            Application.Current.Resources.ThemeDictionaries[themeKey]
+            as ResourceDictionary;
+
         if (_navigationSplitView is not null &&
-            themeResources?["ShellNavigationPaneBackgroundBrush"] is Brush brush)
+            themeResources?[brushKey] is Brush brush)
         {
             _navigationSplitView.PaneBackground = brush;
         }
