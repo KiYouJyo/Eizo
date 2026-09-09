@@ -539,13 +539,6 @@ public sealed partial class SourcesView : UserControl
                 : T("Sources_PasswordKeepHint")
         };
 
-        var editorStatus = new TextBlock
-        {
-            Visibility = Visibility.Collapsed,
-            TextWrapping = TextWrapping.Wrap,
-            Style = (Style)Application.Current.Resources["MetadataText"]
-        };
-
         var panel = new StackPanel
         {
             Spacing = 12,
@@ -555,7 +548,6 @@ public sealed partial class SourcesView : UserControl
         panel.Children.Add(address);
         panel.Children.Add(userName);
         panel.Children.Add(password);
-        panel.Children.Add(editorStatus);
 
         if (XamlRoot is null)
             return;
