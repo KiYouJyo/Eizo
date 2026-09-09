@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.2.2",
-    "packageVersion": "0.2.2.0",
+    "version": "0.2.3",
+    "packageVersion": "0.2.3.0",
     "title": {
-      "zh-CN": "更新器与响应式导航修复",
-      "ja-JP": "アップデーターとレスポンシブナビゲーション修正",
-      "en-US": "Updater & Responsive Navigation Fixes"
+      "zh-CN": "中尺寸浅色导航收起背景修复",
+      "ja-JP": "中幅ライトテーマのナビゲーション背景修正",
+      "en-US": "Medium-Width Light Navigation Background Fix"
     }
   },
   "channels": {
