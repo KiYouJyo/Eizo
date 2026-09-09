@@ -197,7 +197,7 @@ public sealed partial class MainWindow : Window
         if (args.InvokedItemContainer is not NavigationViewItem item) return;
         var pageKey = item.Tag?.ToString();
 
-        if (pageKey is null or "categories") return;
+        if (pageKey is null) return;
         NavigateSelectedWorkspace(pageKey, item);
     }
 
@@ -243,14 +243,14 @@ public sealed partial class MainWindow : Window
         state.Title = descriptor.Title;
         state.Glyph = descriptor.Glyph;
         state.NavItem = navItem;
-        state.View = CreateWorkspaceView(pageKey);
+        ReplaceTabView(state, CreateWorkspaceView(pageKey));
 
         UpdateTabIdentity(state);
 
         if (string.Equals(_selectedTabKey, state.Key, StringComparison.Ordinal))
         {
             ShowNavigationChrome();
-            MainContent.Content = state.View;
+            ShowTabView(state);
             ApplyResponsiveLayout(force: true);
             SelectShellItem(navItem);
         }
@@ -263,6 +263,12 @@ public sealed partial class MainWindow : Window
             case "home":
             {
                 var view = new HomeView();
+                WireWorkspaceMediaView(view);
+                return view;
+            }
+            case "categories":
+            {
+                var view = new CatalogView();
                 WireWorkspaceMediaView(view);
                 return view;
             }
@@ -309,9 +315,16 @@ public sealed partial class MainWindow : Window
         view.PlayRequested += (_, title) => OpenDetail(title, startPlaying: true);
     }
 
+    private void WireWorkspaceMediaView(CatalogView view)
+    {
+        view.DetailRequested += (_, title) => OpenDetail(title, startPlaying: false);
+        view.PlayRequested += (_, title) => OpenDetail(title, startPlaying: true);
+    }
+
     private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch
     {
         "home" => (T("Nav_Home"), "\uE80F"),
+        "categories" => (T("Nav_Categories"), "\uE8B2"),
         "anime" => (T("Nav_Anime"), "\uE8B2"),
         "movies" => (T("Nav_Movies"), "\uE714"),
         "series" => (T("Nav_Series"), "\uE8FD"),
@@ -362,15 +375,11 @@ public sealed partial class MainWindow : Window
     {
         var view = new DetailView(title);
         view.PlayRequested += (_, episode) =>
-        {
             ShowPlayerInDetailTab(state, title, episode);
-            if (string.Equals(_selectedTabKey, state.Key, StringComparison.Ordinal))
-                MainContent.Content = state.View;
-        };
 
         state.MediaTitle = title;
         state.Episode = null;
-        state.View = view;
+        ReplaceTabView(state, view);
         state.Title = title;
         state.Glyph = "\uE8B2";
         UpdateTabIdentity(state);
@@ -380,20 +389,56 @@ public sealed partial class MainWindow : Window
     {
         state.MediaTitle = title;
         state.Episode = episode;
-        state.View = new PlayerView(title, episode);
+        ReplaceTabView(state, new PlayerView(title, episode));
         state.Title = title + "—" + episode;
         state.Glyph = "\uE768";
         UpdateTabIdentity(state);
-
-        if (string.Equals(_selectedTabKey, state.Key, StringComparison.Ordinal))
-            MainContent.Content = state.View;
     }
 
     private void AddTab(ShellTabState state, bool select)
     {
         state.Visual = CreateTabVisual(state);
         _tabs.Add(state.Key, state);
-        if (select) SelectTab(state.Key);
+        AttachTabView(state);
+
+        if (select)
+            SelectTab(state.Key);
+    }
+
+    private void AttachTabView(ShellTabState state)
+    {
+        if (state.View.Parent is null)
+        {
+            state.View.Visibility = Visibility.Collapsed;
+            MainContentHost.Children.Add(state.View);
+            return;
+        }
+
+        if (!ReferenceEquals(state.View.Parent, MainContentHost))
+            throw new InvalidOperationException("A tab view is already attached to another visual parent.");
+    }
+
+    private void ReplaceTabView(ShellTabState state, FrameworkElement nextView)
+    {
+        if (ReferenceEquals(state.View, nextView))
+            return;
+
+        if (state.View.Parent is Panel currentParent)
+            currentParent.Children.Remove(state.View);
+
+        state.View = nextView;
+        AttachTabView(state);
+
+        if (string.Equals(_selectedTabKey, state.Key, StringComparison.Ordinal))
+            ShowTabView(state);
+    }
+
+    private void ShowTabView(ShellTabState selected)
+    {
+        foreach (var child in MainContentHost.Children)
+            child.Visibility = ReferenceEquals(child, selected.View)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
     }
 
     private ShellTabVisual CreateTabVisual(ShellTabState state)
@@ -502,6 +547,9 @@ public sealed partial class MainWindow : Window
         if (state.Visual is not null)
             ShellTabItems.Children.Remove(state.Visual.Container);
 
+        if (state.View.Parent is Panel parent)
+            parent.Children.Remove(state.View);
+
         if (_selectedTabKey == key)
         {
             var next = _tabs.Values.LastOrDefault();
@@ -530,7 +578,7 @@ public sealed partial class MainWindow : Window
             SelectShellItem(state.NavItem);
         }
 
-        MainContent.Content = state.View;
+        ShowTabView(state);
         ApplyResponsiveLayout(force: true);
 
         var dark = RootGrid.ActualTheme == ElementTheme.Dark;
