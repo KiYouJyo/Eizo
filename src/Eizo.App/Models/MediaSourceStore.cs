@@ -144,6 +144,79 @@ public sealed class MediaSourceStore
         return result;
     }
 
+    public static string BuildWebDavSourceId(
+        Uri rootUri,
+        string? userName)
+    {
+        ArgumentNullException.ThrowIfNull(rootUri);
+
+        if (!rootUri.IsAbsoluteUri ||
+            (rootUri.Scheme != Uri.UriSchemeHttp &&
+             rootUri.Scheme != Uri.UriSchemeHttps) ||
+            !string.IsNullOrEmpty(rootUri.UserInfo))
+        {
+            throw new ArgumentException(
+                "WebDAV root URI must be an absolute HTTP(S) URI without embedded credentials.",
+                nameof(rootUri));
+        }
+
+        var normalizedUri = NormalizeWebDavRootUri(rootUri).AbsoluteUri;
+        var normalizedUser = userName?.Trim() ?? string.Empty;
+        var digest = SHA256.HashData(
+            Encoding.UTF8.GetBytes(
+                normalizedUri + "\n" + normalizedUser.ToUpperInvariant()));
+
+        return "webdav-" +
+               Convert.ToHexString(digest.AsSpan(0, 8)).ToLowerInvariant();
+    }
+
+    public MediaSourceDefinition AddWebDav(
+        string displayName,
+        Uri rootUri,
+        string? userName,
+        string? credentialKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        ArgumentNullException.ThrowIfNull(rootUri);
+
+        var normalizedRoot = NormalizeWebDavRootUri(rootUri);
+        var normalizedUserName = userName?.Trim();
+        var id = BuildWebDavSourceId(
+            normalizedRoot,
+            normalizedUserName);
+
+        MediaSourceDefinition result;
+
+        lock (_sync)
+        {
+            var index = _sources.FindIndex(source =>
+                string.Equals(source.Id, id, StringComparison.Ordinal));
+
+            result = new MediaSourceDefinition(
+                id,
+                MediaSourceKind.WebDav,
+                displayName.Trim(),
+                normalizedRoot.AbsoluteUri,
+                UserName: normalizedUserName,
+                CredentialKey: credentialKey,
+                AccessToken: null,
+                Enabled: true,
+                LastScanUtc: index >= 0
+                    ? _sources[index].LastScanUtc
+                    : null);
+
+            if (index >= 0)
+                _sources[index] = result;
+            else
+                _sources.Add(result);
+
+            SaveCore(_sources);
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+        return result;
+    }
+
     public void MarkScanned(string id, DateTimeOffset timestamp)
     {
         lock (_sync)
@@ -208,6 +281,35 @@ public sealed class MediaSourceStore
             return matchingSource?.Id ??
                    MediaSourceDefinition.OpenedLocalFilesSourceId;
         }
+    }
+
+    private static Uri NormalizeWebDavRootUri(Uri rootUri)
+    {
+        if (!rootUri.IsAbsoluteUri ||
+            (rootUri.Scheme != Uri.UriSchemeHttp &&
+             rootUri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new ArgumentException(
+                "WebDAV root URI must use HTTP or HTTPS.",
+                nameof(rootUri));
+        }
+
+        if (!string.IsNullOrEmpty(rootUri.UserInfo))
+        {
+            throw new ArgumentException(
+                "WebDAV credentials must not be embedded in the URI.",
+                nameof(rootUri));
+        }
+
+        var builder = new UriBuilder(rootUri)
+        {
+            Fragment = string.Empty
+        };
+
+        if (!builder.Path.EndsWith("/", StringComparison.Ordinal))
+            builder.Path += "/";
+
+        return builder.Uri;
     }
 
     private static bool IsPathWithinRoot(string path, string root)
