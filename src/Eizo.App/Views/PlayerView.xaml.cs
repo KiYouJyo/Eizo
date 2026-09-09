@@ -4,24 +4,20 @@ using Eizo.Playback;
 using Eizo.Playback.WinUI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Windows.Storage.Pickers;
+using Windows.System;
 
 namespace Eizo.Views;
 
 public sealed partial class PlayerView : UserControl
 {
-    private static readonly double[] PlaybackRates =
-    [
-        0.75,
-        1.0,
-        1.25,
-        1.5,
-        2.0
-    ];
-
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
     private readonly SemaphoreSlim _sourceGate = new(1, 1);
+    private readonly DispatcherTimer _fullscreenControlsTimer;
 
     private IPlaybackEngine? _engine;
     private PlaybackSource? _currentSource;
@@ -30,6 +26,8 @@ public sealed partial class PlayerView : UserControl
     private bool _playIntent;
     private bool _isUpdatingTimeline;
     private bool _isUpdatingTrackSelections;
+    private bool _isVideoFullscreen;
+    private bool _sidebarCollapsedByUser;
     private CancellationTokenSource? _seekDebounce;
 
     public PlayerView(string title, string episode)
@@ -50,6 +48,15 @@ public sealed partial class PlayerView : UserControl
         PlaybackSurface.EngineChanged += PlaybackSurface_EngineChanged;
         PlaybackSurface.InitializationFailed += PlaybackSurface_InitializationFailed;
 
+        _fullscreenControlsTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(2.5)
+        };
+        _fullscreenControlsTimer.Tick += FullscreenControlsTimer_Tick;
+
+        Loaded += PlayerView_Loaded;
+        Unloaded += PlayerView_Unloaded;
+
         ApplyText();
         ResetTimeline();
         ShowStatus(T("Playback_SelectLocalMedia"));
@@ -65,6 +72,7 @@ public sealed partial class PlayerView : UserControl
         QueueTitle.Text = T("Playback_Queue");
         QueueSubtitle.Text = T("Section_Anime");
         PlaybackInfoTitle.Text = T("Playback_Info");
+        PlaybackRateFlyoutTitle.Text = T("Playback_Rate");
 
         PlayerSectionList.ItemsSource = new[]
         {
@@ -78,6 +86,8 @@ public sealed partial class PlayerView : UserControl
         ToolTipService.SetToolTip(PlayPauseButton, T("Common_Play"));
         ToolTipService.SetToolTip(NextJumpButton, T("Playback_Forward10Seconds"));
         ToolTipService.SetToolTip(NextChapterButton, T("Playback_NextChapter"));
+        ToolTipService.SetToolTip(SidebarToggleButton, T("Playback_CollapseSidebar"));
+        ToolTipService.SetToolTip(SidebarHeaderCollapseButton, T("Playback_CollapseSidebar"));
         ToolTipService.SetToolTip(FullscreenButton, T("Playback_FullScreen"));
 
         AutomationProperties.SetName(OpenMediaButton, T("Playback_OpenLocalMedia"));
@@ -86,6 +96,8 @@ public sealed partial class PlayerView : UserControl
         AutomationProperties.SetName(PlayPauseButton, T("Common_Play"));
         AutomationProperties.SetName(NextJumpButton, T("Playback_Forward10Seconds"));
         AutomationProperties.SetName(NextChapterButton, T("Playback_NextChapter"));
+        AutomationProperties.SetName(SidebarToggleButton, T("Playback_CollapseSidebar"));
+        AutomationProperties.SetName(SidebarHeaderCollapseButton, T("Playback_CollapseSidebar"));
         AutomationProperties.SetName(FullscreenButton, T("Playback_FullScreen"));
     }
 
@@ -140,6 +152,7 @@ public sealed partial class PlayerView : UserControl
             UpdateTrackUi();
             UpdateNavigationAvailability();
             UpdateDiagnosticsUi(engine.Diagnostics.Current);
+            PlaybackRateSlider.Value = Math.Clamp(engine.PlaybackRate, 0.5d, 2.0d);
         });
     }
 
@@ -791,6 +804,14 @@ public sealed partial class PlayerView : UserControl
                 break;
         }
 
+        if (_isVideoFullscreen)
+        {
+            if (state == PlaybackState.Playing)
+                ShowFullscreenControls(autoHide: true);
+            else
+                ShowFullscreenControls(autoHide: false);
+        }
+
         UpdateControlAvailability();
     }
 
@@ -812,42 +833,206 @@ public sealed partial class PlayerView : UserControl
         UpdateNavigationAvailability();
     }
 
-    private void FullscreenButton_Click(object sender, RoutedEventArgs e)
+    private void FullscreenButton_Click(object sender, RoutedEventArgs e) =>
+        SetVideoFullscreen(!_isVideoFullscreen);
+
+    private void SidebarToggleButton_Click(object sender, RoutedEventArgs e)
     {
-        if (App.MainWindow is null)
-            return;
-
-        var isFullscreen = App.MainWindow.TogglePlayerFullscreen();
-
-        FullscreenIcon.Glyph = isFullscreen
-            ? "\uE73F"
-            : "\uE740";
+        _sidebarCollapsedByUser = !_sidebarCollapsedByUser;
+        UpdateSidebarVisibility();
     }
 
-    private void PlaybackRateButton_Click(object sender, RoutedEventArgs e)
+    private void PlaybackRateSlider_ValueChanged(
+        object sender,
+        Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
+        var rate = Math.Clamp(
+            Math.Round(e.NewValue * 20d) / 20d,
+            0.5d,
+            2.0d);
+
+        if (PlaybackRateValueText is not null)
+            PlaybackRateValueText.Text = $"{rate:0.00}×";
+
+        if (PlaybackRateButton is not null)
+            PlaybackRateButton.Content = $"{rate:0.##}×";
+
         if (_engine is not { } engine)
             return;
 
-        var current = engine.PlaybackRate;
-        var currentIndex = Array.FindIndex(
-            PlaybackRates,
-            rate => Math.Abs(rate - current) < 0.001);
-
-        var nextIndex = currentIndex < 0
-            ? 1
-            : (currentIndex + 1) % PlaybackRates.Length;
-
-        var next = PlaybackRates[nextIndex];
-
         try
         {
-            engine.PlaybackRate = next;
-            PlaybackRateButton.Content = $"{next:0.##}×";
+            engine.PlaybackRate = rate;
         }
         catch
         {
             ShowStatus(T("Status_Error"));
+        }
+    }
+
+    private void PlayerView_Loaded(object sender, RoutedEventArgs e) =>
+        UpdateSidebarVisibility();
+
+    private void PlayerView_Unloaded(object sender, RoutedEventArgs e)
+    {
+        _fullscreenControlsTimer.Stop();
+
+        if (_isVideoFullscreen)
+            SetVideoFullscreen(false);
+    }
+
+    private void PlayerRoot_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        UpdateSidebarVisibility();
+
+    private void PlayerRoot_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (_isVideoFullscreen)
+            ShowFullscreenControls(autoHide: true);
+    }
+
+    private void PlayerView_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (!_isVideoFullscreen || e.Key != VirtualKey.Escape)
+            return;
+
+        SetVideoFullscreen(false);
+        e.Handled = true;
+    }
+
+    private void FullscreenControlsTimer_Tick(object? sender, object e)
+    {
+        _fullscreenControlsTimer.Stop();
+
+        if (!_isVideoFullscreen ||
+            _engine?.State != PlaybackState.Playing)
+        {
+            return;
+        }
+
+        PlayerControlsPanel.Opacity = 0d;
+        PlayerControlsPanel.IsHitTestVisible = false;
+    }
+
+    private void SetVideoFullscreen(bool enabled)
+    {
+        if (_isVideoFullscreen == enabled)
+            return;
+
+        _isVideoFullscreen = enabled;
+        App.MainWindow?.SetPlayerVideoFullscreen(enabled);
+
+        if (enabled)
+        {
+            PlayerHeader.Visibility = Visibility.Collapsed;
+            HeaderRow.Height = new GridLength(0);
+            ControlsRow.Height = new GridLength(0);
+
+            PlayerFrame.Margin = new Thickness(0);
+            PlayerFrame.CornerRadius = new CornerRadius(0);
+
+            Grid.SetRow(PlaybackSurfaceHost, 0);
+            Grid.SetRowSpan(PlaybackSurfaceHost, 3);
+
+            Grid.SetRow(PlayerControlsPanel, 0);
+            Grid.SetRowSpan(PlayerControlsPanel, 3);
+            PlayerControlsPanel.VerticalAlignment = VerticalAlignment.Bottom;
+            PlayerControlsPanel.Padding = new Thickness(24, 12, 24, 16);
+            PlayerControlsPanel.Background =
+                new SolidColorBrush(Windows.UI.Color.FromArgb(0xB8, 0, 0, 0));
+
+            PlayerSidebar.Visibility = Visibility.Collapsed;
+            SidebarColumn.Width = new GridLength(0);
+            SidebarToggleButton.Visibility = Visibility.Collapsed;
+
+            FullscreenIcon.Glyph = "\uE73F";
+            ToolTipService.SetToolTip(
+                FullscreenButton,
+                T("Playback_ExitFullScreen"));
+            AutomationProperties.SetName(
+                FullscreenButton,
+                T("Playback_ExitFullScreen"));
+
+            ShowFullscreenControls(autoHide: true);
+            Focus(FocusState.Programmatic);
+            return;
+        }
+
+        _fullscreenControlsTimer.Stop();
+
+        PlayerHeader.Visibility = Visibility.Visible;
+        HeaderRow.Height = new GridLength(64);
+        ControlsRow.Height = new GridLength(108);
+
+        PlayerFrame.Margin = new Thickness(16);
+        PlayerFrame.CornerRadius = new CornerRadius(8);
+
+        Grid.SetRow(PlaybackSurfaceHost, 1);
+        Grid.SetRowSpan(PlaybackSurfaceHost, 1);
+
+        Grid.SetRow(PlayerControlsPanel, 2);
+        Grid.SetRowSpan(PlayerControlsPanel, 1);
+        PlayerControlsPanel.VerticalAlignment = VerticalAlignment.Stretch;
+        PlayerControlsPanel.Padding = new Thickness(20, 10, 20, 10);
+        PlayerControlsPanel.Background =
+            new SolidColorBrush(Colors.Transparent);
+        PlayerControlsPanel.Opacity = 1d;
+        PlayerControlsPanel.IsHitTestVisible = true;
+
+        SidebarToggleButton.Visibility = Visibility.Visible;
+
+        FullscreenIcon.Glyph = "\uE740";
+        ToolTipService.SetToolTip(
+            FullscreenButton,
+            T("Playback_FullScreen"));
+        AutomationProperties.SetName(
+            FullscreenButton,
+            T("Playback_FullScreen"));
+
+        UpdateSidebarVisibility();
+    }
+
+    private void UpdateSidebarVisibility()
+    {
+        var shouldShow =
+            !_isVideoFullscreen &&
+            !_sidebarCollapsedByUser &&
+            PlayerRoot.ActualWidth >= 900d;
+
+        PlayerSidebar.Visibility =
+            shouldShow
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        SidebarColumn.Width =
+            shouldShow
+                ? GridLength.Auto
+                : new GridLength(0);
+
+        SidebarToggleIcon.Symbol =
+            shouldShow
+                ? Symbol.ClosePane
+                : Symbol.OpenPane;
+
+        var label = shouldShow
+            ? T("Playback_CollapseSidebar")
+            : T("Playback_ShowSidebar");
+
+        ToolTipService.SetToolTip(SidebarToggleButton, label);
+        AutomationProperties.SetName(SidebarToggleButton, label);
+    }
+
+    private void ShowFullscreenControls(bool autoHide)
+    {
+        PlayerControlsPanel.Opacity = 1d;
+        PlayerControlsPanel.IsHitTestVisible = true;
+
+        _fullscreenControlsTimer.Stop();
+
+        if (autoHide &&
+            _isVideoFullscreen &&
+            _engine?.State == PlaybackState.Playing)
+        {
+            _fullscreenControlsTimer.Start();
         }
     }
 
