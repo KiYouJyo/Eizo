@@ -23,4 +23,8 @@ if ($shellChrome -notmatch 'ShellNavigation\.PaneOpening\s*\+=' -or
     throw 'Navigation pane theme contract violation: PaneOpening and ActualThemeChanged refresh hooks are required.'
 }
 
+if ($shellChrome -notmatch 'if \(!ShellNavigation\.IsPaneOpen\) return;') {
+    throw 'Navigation pane theme contract violation: closed CompactOverlay must remain owned by WinUI and must not be repainted by Eizo.'
+}
+
 Write-Host 'Navigation pane theme contract PASS.'
