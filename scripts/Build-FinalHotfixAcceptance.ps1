@@ -45,6 +45,10 @@ if ($certificate.Subject -cne 'CN=AppPublisher' -or $certificate.Thumbprint -cne
 $cer = Join-Path $artifactDir 'Eizo-v0.2.1-AppPublisher.cer'
 Export-Certificate -Cert $certificate -FilePath $cer | Out-Null
 
+# The production sideload path trusts the publisher certificate before the app
+# can be installed. WinVerifyTrust must run under the same trust conditions.
+Import-Certificate -FilePath $cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+
 $kitsRoot = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
 $signtool = Get-ChildItem (Join-Path $kitsRoot 'Windows Kits\10\bin') -Recurse -Filter signtool.exe | Where-Object FullName -match '\\x64\\signtool.exe$' | Sort-Object FullName -Descending | Select-Object -First 1
 if (-not $signtool) {
@@ -85,7 +89,6 @@ if (-not $runtimeSignature.SignerCertificate -or $runtimeSignature.Status -ne 'V
     throw 'Windows App Runtime installer signature validation failed.'
 }
 
-Import-Certificate -FilePath $cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
 Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
 
 & $runtimeInstaller --quiet
