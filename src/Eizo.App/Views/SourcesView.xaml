@@ -43,20 +43,39 @@
     <ListView x:Name="SourceList"
               Grid.Row="4"
               SelectionMode="None"
-              ItemContainerStyle="{StaticResource SourceListItemStyle}"
               ContainerContentChanging="SourceList_ContainerContentChanging">
+      <ListView.ItemContainerStyle>
+        <Style TargetType="ListViewItem"
+               BasedOn="{StaticResource SourceListItemStyle}">
+          <Setter Property="Padding" Value="0" />
+          <Setter Property="Margin" Value="0,0,0,10" />
+          <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+      </ListView.ItemContainerStyle>
       <ListView.ItemTemplate>
         <DataTemplate x:DataType="models:SourceItemModel">
-          <Grid Height="58"
-                ColumnDefinitions="*,Auto">
-            <TextBlock Text="{x:Bind Name}"
-                       VerticalAlignment="Center"
-                       Style="{StaticResource CardTitleText}" />
-            <TextBlock Grid.Column="1"
-                       Text="{x:Bind Summary}"
-                       VerticalAlignment="Center"
-                       Style="{StaticResource MetadataText}" />
-          </Grid>
+          <Border Style="{StaticResource SectionCardStyle}"
+                  Padding="18,14">
+            <Grid MinHeight="48"
+                  ColumnDefinitions="*,Auto">
+              <StackPanel VerticalAlignment="Center"
+                          Spacing="4">
+                <TextBlock Text="{x:Bind Name}"
+                           Style="{StaticResource CardTitleText}" />
+                <TextBlock Text="{x:Bind Kind}"
+                           Style="{StaticResource MetadataText}"
+                           Opacity="0.7" />
+              </StackPanel>
+              <TextBlock Grid.Column="1"
+                         Text="{x:Bind Summary}"
+                         Margin="24,0,0,0"
+                         VerticalAlignment="Center"
+                         TextAlignment="Right"
+                         TextWrapping="Wrap"
+                         MaxWidth="620"
+                         Style="{StaticResource MetadataText}" />
+            </Grid>
+          </Border>
         </DataTemplate>
       </ListView.ItemTemplate>
     </ListView>
