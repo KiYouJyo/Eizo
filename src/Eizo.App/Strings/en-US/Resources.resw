@@ -670,4 +670,7 @@
   <data name="Catalog_Empty" xml:space="preserve">
     <value>No real videos have been detected yet. Open a local video in the player or add a local folder from Media Sources.</value>
   </data>
+  <data name="Sources_AddLocalFolder" xml:space="preserve">
+    <value>Add local folder</value>
+  </data>
 </root>
