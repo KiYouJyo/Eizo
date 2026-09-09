@@ -1161,6 +1161,65 @@ public sealed partial class PlayerView : UserControl
             T("Playback_FullScreen"));
     }
 
+    private void UpdatePlaybackControlLayout()
+    {
+        var sidebarWidth =
+            !_isVideoFullscreen && PlayerSplitView.IsPaneOpen
+                ? PlayerSplitView.OpenPaneLength
+                : 0d;
+
+        var availableWidth = Math.Max(
+            0d,
+            PlayerRoot.ActualWidth - sidebarWidth - 32d);
+
+        if (_isVideoFullscreen)
+        {
+            LeftPlaybackColumn.Width = new GridLength(1d, GridUnitType.Star);
+            CenterPlaybackColumn.Width = GridLength.Auto;
+            RightPlaybackColumn.Width = new GridLength(1d, GridUnitType.Star);
+
+            Grid.SetRow(CenterPlaybackControls, 0);
+            Grid.SetColumn(CenterPlaybackControls, 1);
+            Grid.SetColumnSpan(CenterPlaybackControls, 1);
+            CenterPlaybackControls.Margin = new Thickness(0);
+
+            SubtitleQuickButton.MaxWidth = 180d;
+            AudioQuickButton.MaxWidth = 220d;
+            return;
+        }
+
+        LeftPlaybackColumn.Width = GridLength.Auto;
+        CenterPlaybackColumn.Width = new GridLength(1d, GridUnitType.Star);
+        RightPlaybackColumn.Width = GridLength.Auto;
+
+        var compact = availableWidth < 760d;
+        if (compact)
+        {
+            ControlsRow.Height = new GridLength(150d);
+
+            Grid.SetRow(CenterPlaybackControls, 1);
+            Grid.SetColumn(CenterPlaybackControls, 0);
+            Grid.SetColumnSpan(CenterPlaybackControls, 3);
+            CenterPlaybackControls.Margin = new Thickness(0, 6, 0, 0);
+
+            SubtitleQuickButton.MaxWidth =
+                availableWidth < 620d ? 80d : 96d;
+            AudioQuickButton.MaxWidth =
+                availableWidth < 620d ? 112d : 140d;
+            return;
+        }
+
+        ControlsRow.Height = new GridLength(108d);
+
+        Grid.SetRow(CenterPlaybackControls, 0);
+        Grid.SetColumn(CenterPlaybackControls, 1);
+        Grid.SetColumnSpan(CenterPlaybackControls, 1);
+        CenterPlaybackControls.Margin = new Thickness(0);
+
+        SubtitleQuickButton.MaxWidth = 180d;
+        AudioQuickButton.MaxWidth = 220d;
+    }
+
     private void UpdateSidebarVisibility()
     {
         var shouldShow = _isVideoFullscreen
@@ -1187,6 +1246,8 @@ public sealed partial class PlayerView : UserControl
 
         ToolTipService.SetToolTip(SidebarToggleButton, label);
         AutomationProperties.SetName(SidebarToggleButton, label);
+
+        UpdatePlaybackControlLayout();
     }
 
     private void ShowFullscreenControls(bool restartAutoHide)

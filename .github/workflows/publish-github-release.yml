@@ -167,6 +167,12 @@ jobs:
           "CERTIFICATE_PATH=$cer" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Signer verified: $($signature.SignerCertificate.Subject) / $($signature.SignerCertificate.Thumbprint); status=$($signature.Status)"
 
+      - name: Verify signed bundle through updater verifier
+        shell: pwsh
+        run: |
+          dotnet run --project tools/Eizo.UpdateVerifierProbe/Eizo.UpdateVerifierProbe.csproj --configuration Release -- $env:BUNDLE_PATH
+          if ($LASTEXITCODE -ne 0) { throw "Updater signature verifier probe failed: $LASTEXITCODE" }
+
       - name: Install and launch signed bundle
         shell: pwsh
         run: |

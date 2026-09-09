@@ -107,7 +107,27 @@ internal sealed class ProductAppUpdateService(IBundleSignatureVerifier? signatur
                 return new(AppUpdateState.Failed, "SignerThumbprintMismatch");
 
             _pendingBundlePath = bundlePath;
-            SavePendingState(release.TagName, bundlePath);
+            try
+            {
+                SavePendingState(release.TagName, bundlePath);
+            }
+            catch (IOException exception)
+            {
+                _pendingBundlePath = null;
+                return new(
+                    AppUpdateState.Failed,
+                    "PendingStateWriteFailed",
+                    exception.Message);
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                _pendingBundlePath = null;
+                return new(
+                    AppUpdateState.Failed,
+                    "PendingStateWriteFailed",
+                    exception.Message);
+            }
+
             progress?.Report(new(AppUpdateState.ReadyToInstall, 1d, "Verified; ready to install"));
             return new(AppUpdateState.ReadyToInstall, "ReadyToInstall", "Verified; ready to install");
         }
@@ -121,11 +141,11 @@ internal sealed class ProductAppUpdateService(IBundleSignatureVerifier? signatur
         }
         catch (IOException exception)
         {
-            return new(AppUpdateState.Failed, "BundleDownloadFailed", exception.Message);
+            return new(AppUpdateState.Failed, "UpdateStorageFailed", exception.Message);
         }
         catch (UnauthorizedAccessException exception)
         {
-            return new(AppUpdateState.Failed, "BundleDownloadFailed", exception.Message);
+            return new(AppUpdateState.Failed, "UpdateStorageFailed", exception.Message);
         }
         finally
         {

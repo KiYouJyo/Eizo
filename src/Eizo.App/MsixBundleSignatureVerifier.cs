@@ -33,56 +33,103 @@ internal sealed class MsixBundleSignatureVerifier : IBundleSignatureVerifier
     {
         if (!OperatingSystem.IsWindows()) return new(false, "SignatureInvalid");
 
+        var trustResult = VerifyWindowsTrustAndRelease(bundlePath);
+        if (trustResult != 0)
+        {
+            return new(
+                false,
+                trustResult == TrustENoSignature ? "SignatureMissing" : "SignatureInvalid",
+                HResult: trustResult);
+        }
+
+        // WinVerifyTrust with WTD_STATEACTION_VERIFY may keep the package file open
+        // until WTD_STATEACTION_CLOSE. Read the embedded PKCS#7 only after that state
+        // has been closed, otherwise ZipFile.OpenRead can fail with an IOException on
+        // an otherwise valid, fully downloaded MSIX bundle.
+        return ReadEmbeddedSigner(bundlePath, trustResult);
+    }
+
+    private static int VerifyWindowsTrustAndRelease(string bundlePath)
+    {
         var fileInfo = new WinTrustFileInfo(bundlePath);
         var fileInfoPointer = Marshal.AllocHGlobal(Marshal.SizeOf<WinTrustFileInfo>());
         Marshal.StructureToPtr(fileInfo, fileInfoPointer, false);
         var trustData = new WinTrustData(fileInfoPointer, WtdStateActionVerify);
+
         try
         {
-            var result = WinVerifyTrust(IntPtr.Zero, WintrustActionGenericVerifyV2, ref trustData);
-            if (result != 0)
-                return new(false, result == TrustENoSignature ? "SignatureMissing" : "SignatureInvalid", HResult: result);
-
-            try
-            {
-                using var archive = ZipFile.OpenRead(bundlePath);
-                var signatureEntry = archive.GetEntry("AppxSignature.p7x");
-                if (signatureEntry is null) return new(false, "SignatureMissing");
-                using var signatureStream = signatureEntry.Open();
-                using var signatureBytes = new MemoryStream();
-                signatureStream.CopyTo(signatureBytes);
-                var encodedSignature = signatureBytes.ToArray();
-                if (encodedSignature.Length <= 4 ||
-                    encodedSignature[0] != (byte)'P' ||
-                    encodedSignature[1] != (byte)'K' ||
-                    encodedSignature[2] != (byte)'C' ||
-                    encodedSignature[3] != (byte)'X')
-                    return new(false, "SignatureInvalid");
-
-                var signedCms = new SignedCms();
-                signedCms.Decode(encodedSignature.AsSpan(4).ToArray());
-                var signer = signedCms.SignerInfos.Count == 1 ? signedCms.SignerInfos[0] : null;
-                var certificate = signer?.Certificate;
-                return certificate is null
-                    ? new(false, "SignatureInvalid")
-                    : new(true, "BundleSignatureVerified", certificate.Subject, certificate.Thumbprint, result);
-            }
-            catch (CryptographicException)
-            {
-                return new(false, "SignatureInvalid");
-            }
-            catch (InvalidDataException)
-            {
-                return new(false, "SignatureInvalid");
-            }
+            return WinVerifyTrust(IntPtr.Zero, WintrustActionGenericVerifyV2, ref trustData);
         }
         finally
         {
             trustData.dwStateAction = WtdStateActionClose;
             var closeResult = WinVerifyTrust(IntPtr.Zero, WintrustActionGenericVerifyV2, ref trustData);
-            if (closeResult != 0) Debug.WriteLine($"WinVerifyTrust close returned 0x{closeResult:X8}.");
+            if (closeResult != 0)
+                Debug.WriteLine($"WinVerifyTrust close returned 0x{closeResult:X8}.");
+
             Marshal.DestroyStructure<WinTrustFileInfo>(fileInfoPointer);
             Marshal.FreeHGlobal(fileInfoPointer);
+        }
+    }
+
+    private static BundleSignatureVerificationResult ReadEmbeddedSigner(
+        string bundlePath,
+        int trustResult)
+    {
+        try
+        {
+            using var archive = ZipFile.OpenRead(bundlePath);
+            var signatureEntry = archive.GetEntry("AppxSignature.p7x");
+            if (signatureEntry is null) return new(false, "SignatureMissing");
+
+            using var signatureStream = signatureEntry.Open();
+            using var signatureBytes = new MemoryStream();
+            signatureStream.CopyTo(signatureBytes);
+
+            var encodedSignature = signatureBytes.ToArray();
+            if (encodedSignature.Length <= 4 ||
+                encodedSignature[0] != (byte)'P' ||
+                encodedSignature[1] != (byte)'K' ||
+                encodedSignature[2] != (byte)'C' ||
+                encodedSignature[3] != (byte)'X')
+            {
+                return new(false, "SignatureInvalid");
+            }
+
+            var signedCms = new SignedCms();
+            signedCms.Decode(encodedSignature.AsSpan(4).ToArray());
+
+            var signer = signedCms.SignerInfos.Count == 1
+                ? signedCms.SignerInfos[0]
+                : null;
+            var certificate = signer?.Certificate;
+
+            return certificate is null
+                ? new(false, "SignatureInvalid")
+                : new(
+                    true,
+                    "BundleSignatureVerified",
+                    certificate.Subject,
+                    certificate.Thumbprint,
+                    trustResult);
+        }
+        catch (CryptographicException)
+        {
+            return new(false, "SignatureInvalid");
+        }
+        catch (InvalidDataException)
+        {
+            return new(false, "SignatureInvalid");
+        }
+        catch (IOException exception)
+        {
+            Debug.WriteLine($"MSIX bundle signer read failed: {exception}");
+            return new(false, "SignatureReadFailed");
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            Debug.WriteLine($"MSIX bundle signer access failed: {exception}");
+            return new(false, "SignatureReadFailed");
         }
     }
 

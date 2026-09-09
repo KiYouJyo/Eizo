@@ -94,9 +94,21 @@
                      Margin="0,28,0,0" />
         </Grid>
 
-        <Grid Grid.Row="1"
+        <Grid x:Name="PlaybackButtonsGrid"
+              Grid.Row="1"
               Margin="0,8,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="LeftPlaybackColumn" Width="Auto" />
+            <ColumnDefinition x:Name="CenterPlaybackColumn" Width="*" />
+            <ColumnDefinition x:Name="RightPlaybackColumn" Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+
           <StackPanel x:Name="LeftPlaybackControls"
+                      Grid.Column="0"
                       Orientation="Horizontal"
                       Spacing="4"
                       HorizontalAlignment="Left">
@@ -189,7 +201,9 @@
             </Button>
           </StackPanel>
 
-          <StackPanel Orientation="Horizontal"
+          <StackPanel x:Name="CenterPlaybackControls"
+                      Grid.Column="1"
+                      Orientation="Horizontal"
                       Spacing="4"
                       HorizontalAlignment="Center">
             <Button x:Name="PreviousChapterButton"
@@ -226,7 +240,9 @@
             </Button>
           </StackPanel>
 
-          <StackPanel Orientation="Horizontal"
+          <StackPanel x:Name="RightPlaybackControls"
+                      Grid.Column="2"
+                      Orientation="Horizontal"
                       Spacing="4"
                       HorizontalAlignment="Right">
             <Button x:Name="SidebarToggleButton"
