@@ -205,6 +205,8 @@ public sealed partial class MainWindow
         {
             _navigationPaneBackgroundHooked = true;
             ShellNavigation.PaneOpening += (_, _) => QueueNavigationPaneBackgroundUpdate();
+            ShellNavigation.PaneClosed += (_, _) => QueueNavigationPaneBackgroundUpdate();
+            ShellNavigation.ActualThemeChanged += (_, _) => QueueNavigationPaneBackgroundUpdate();
             Activated += MainWindow_ActivatedForNavigationPane;
         }
 
@@ -229,7 +231,7 @@ public sealed partial class MainWindow
 
         var themeKey = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast
             ? "HighContrast"
-            : WindowRoot.ActualTheme == ElementTheme.Dark ? "Dark" : "Light";
+            : ShellNavigation.ActualTheme == ElementTheme.Dark ? "Dark" : "Light";
 
         var brushKey = _isWindowActive
             ? "ShellNavigationPaneBackgroundBrush"
