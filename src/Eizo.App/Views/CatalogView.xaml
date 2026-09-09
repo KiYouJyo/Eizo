@@ -22,7 +22,7 @@
                 HorizontalScrollBarVisibility="Disabled"
                 HorizontalContentAlignment="Stretch">
     <Grid Padding="24,16,24,32"
-          RowDefinitions="Auto,6,Auto,14,Auto"
+          RowDefinitions="Auto,Auto,Auto,Auto"
           HorizontalAlignment="Stretch"
           UseLayoutRounding="True">
       <TextBlock x:Name="PageTitle"
@@ -30,13 +30,13 @@
 
       <TextBlock x:Name="PageSubtitle"
                  Grid.Row="1"
-                 Margin="0,32,0,0"
+                 Margin="0,6,0,0"
                  Style="{StaticResource BodyText}"
                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                  TextWrapping="Wrap" />
 
       <Grid Grid.Row="2"
-            Margin="0,12,0,0"
+            Margin="0,14,0,0"
             ColumnDefinitions="*,Auto"
             ColumnSpacing="8">
         <AutoSuggestBox x:Name="SearchBox"
@@ -52,7 +52,8 @@
       </Grid>
 
       <StackPanel x:Name="ResultsPanel"
-                  Grid.Row="4"
+                  Grid.Row="3"
+                  Margin="0,14,0,0"
                   Spacing="8"
                   HorizontalAlignment="Stretch" />
     </Grid>
