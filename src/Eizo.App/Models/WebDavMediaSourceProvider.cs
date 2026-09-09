@@ -347,9 +347,17 @@ public sealed class WebDavMediaSourceProvider(
     {
         try
         {
-            return Uri.TryCreate(href, UriKind.Absolute, out var absolute)
-                ? absolute
-                : new Uri(requestUri, href);
+            if (Uri.TryCreate(
+                    href,
+                    UriKind.Absolute,
+                    out var absolute) &&
+                (absolute.Scheme == Uri.UriSchemeHttp ||
+                 absolute.Scheme == Uri.UriSchemeHttps))
+            {
+                return absolute;
+            }
+
+            return new Uri(requestUri, href);
         }
         catch (UriFormatException)
         {
