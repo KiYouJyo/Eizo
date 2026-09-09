@@ -35,10 +35,10 @@ public sealed partial class SourcesView : UserControl
     {
         PageTitle.Text = T("Nav_Sources");
         PageSubtitle.Text = T("Sources_Subtitle");
-        AddSourceButton.Content = T("Source_Add");
+        AddSourceButton.Content = T("Sources_AddLocalFolder");
 
         SectionList.ItemsSource =
-            new[] { T("Sources_TabSources"), T("Sources_TabScan") };
+            new[] { T("Sources_TabSources") };
     }
 
     private void SourcesView_Loaded(object sender, RoutedEventArgs e)
