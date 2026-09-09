@@ -80,7 +80,7 @@
 
           <NavigationViewItem x:Name="CategoryNav"
                               Tag="categories"
-                              SelectsOnInvoked="False">
+                              SelectsOnInvoked="True">
             <NavigationViewItem.Icon><SymbolIcon Symbol="Library" /></NavigationViewItem.Icon>
             <NavigationViewItem.MenuItems>
               <NavigationViewItem x:Name="AnimeNav" Tag="anime">
@@ -112,10 +112,10 @@
           </NavigationViewItem>
         </NavigationView.FooterMenuItems>
 
-        <ContentControl x:Name="MainContent"
-                        Background="Transparent"
-                        HorizontalContentAlignment="Stretch"
-                        VerticalContentAlignment="Stretch" />
+        <Grid x:Name="MainContentHost"
+              Background="Transparent"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch" />
       </NavigationView>
     </Grid>
   </Grid>
