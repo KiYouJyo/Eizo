@@ -231,6 +231,12 @@ public sealed partial class MainWindow
 
     private void ApplySharedNavigationPaneBackground()
     {
+        // Closed CompactOverlay is owned by NavigationView's PaneNotOverlaying
+        // state. Leaving that state untouched keeps the compact rail on the
+        // native transparent/Mica surface and prevents stale custom brushes
+        // from being reintroduced after an expand/collapse cycle.
+        if (!ShellNavigation.IsPaneOpen) return;
+
         _navigationSplitView ??= FindDescendant<SplitView>(ShellNavigation);
 
         var themeKey = new Windows.UI.ViewManagement.AccessibilitySettings().HighContrast
