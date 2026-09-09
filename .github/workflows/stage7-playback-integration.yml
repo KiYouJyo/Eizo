@@ -129,6 +129,24 @@ jobs:
             $archive.Dispose()
           }
 
+      - name: Build and verify signed final hotfix acceptance
+        shell: pwsh
+        env:
+          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
+          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
+        run: ./scripts/Build-FinalHotfixAcceptance.ps1
+
+      - name: Upload signed final hotfix acceptance
+        uses: actions/upload-artifact@v7
+        with:
+          name: Eizo-v0.2.1-final-hotfix-acceptance
+          path: |
+            ${{ env.FINAL_ACCEPTANCE_BUNDLE }}
+            ${{ env.FINAL_ACCEPTANCE_CERTIFICATE }}
+            ${{ env.FINAL_ACCEPTANCE_SHA256 }}
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload unsigned integration MSIX
         uses: actions/upload-artifact@v7
         with:
