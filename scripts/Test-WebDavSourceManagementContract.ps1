@@ -3,6 +3,8 @@ $ErrorActionPreference = 'Stop'
 $sourcesView = Get-Content -LiteralPath 'src/Eizo.App/Views/SourcesView.xaml.cs' -Raw
 $sourceStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaSourceStore.cs' -Raw
 $credentialStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaCredentialStore.cs' -Raw
+$catalogStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaCatalogStore.cs' -Raw
+$folderPicker = Get-Content -LiteralPath 'src/Eizo.App/Views/WebDavFolderPickerWindow.cs' -Raw
 
 foreach ($required in @(
     'EditWebDavMenuItem_Click',
@@ -18,9 +20,29 @@ foreach ($required in @(
     }
 }
 
-if ($sourcesView -notmatch 'provider\.ListAsync\(' -or
-    $sourcesView -notmatch 'WebDavMediaSourceProvider\(') {
+if ($sourcesView -notmatch 'WebDavFolderPickerWindow' -or
+    $sourcesView -notmatch 'WebDavMediaSourceProvider\(' -or
+    $folderPicker -notmatch '_provider\.ListAsync\(') {
     throw 'v0.3.1 contract violation: remote folder browsing must use the real WebDAV provider/ListAsync path.'
+}
+
+foreach ($pickerRequirement in @(
+    'BreadcrumbBar',
+    'CheckBox',
+    'ScrollViewer.SetHorizontalScrollMode',
+    'ScrollMode.Disabled',
+    'ScrollViewer.SetHorizontalScrollBarVisibility',
+    'ScrollBarVisibility.Disabled',
+    'Sources_SelectedFoldersFormat',
+    'DoubleTapped')) {
+    if ($folderPicker -notmatch [regex]::Escape($pickerRequirement)) {
+        throw "v0.3.1 picker contract missing: $pickerRequirement"
+    }
+}
+
+if ($sourceStore -notmatch 'SelectedPaths' -or
+    $catalogStore -notmatch 'source\.SelectedPaths') {
+    throw 'v0.3.1 contract violation: one WebDAV source must persist and scan multiple selected folder roots.'
 }
 
 if ($sourcesView -notmatch 'ResolveEditorCredential' -or
@@ -55,7 +77,12 @@ foreach ($language in @('zh-CN','ja-JP','en-US')) {
         'Sources_LoadingFolders',
         'Sources_NoSubfolders',
         'Sources_WebDavUpdatedFormat',
-        'Sources_SourceAlreadyExists')) {
+        'Sources_SourceAlreadyExists',
+        'Sources_FolderPickerTitle',
+        'Sources_FolderPickerHint',
+        'Sources_AllFolders',
+        'Sources_SelectedFoldersFormat',
+        'Sources_OpenFolder')) {
         if ($resources -notmatch ('name="' + [regex]::Escape($key) + '"')) {
             throw "v0.3.1 localization contract missing $key in $language"
         }
