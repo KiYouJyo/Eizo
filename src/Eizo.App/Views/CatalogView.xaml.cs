@@ -173,15 +173,24 @@ public sealed partial class CatalogView : UserControl
 
         if (item.Location is { } location)
         {
-            if (location.Kind == MediaLocationKind.LocalFile)
+            var extensionSource = location.Locator;
+            if (location.Kind == MediaLocationKind.RemoteUri &&
+                Uri.TryCreate(
+                    location.Locator,
+                    UriKind.Absolute,
+                    out var remoteUri))
             {
-                var extension = Path.GetExtension(location.Locator)
-                    .TrimStart('.')
-                    .ToUpperInvariant();
-
-                if (!string.IsNullOrWhiteSpace(extension))
-                    secondaryParts.Add(extension);
+                extensionSource =
+                    Uri.UnescapeDataString(
+                        remoteUri.AbsolutePath);
             }
+
+            var extension = Path.GetExtension(extensionSource)
+                .TrimStart('.')
+                .ToUpperInvariant();
+
+            if (!string.IsNullOrWhiteSpace(extension))
+                secondaryParts.Add(extension);
 
             if (location.SizeBytes is > 0)
                 secondaryParts.Add(FormatBytes(location.SizeBytes.Value));
