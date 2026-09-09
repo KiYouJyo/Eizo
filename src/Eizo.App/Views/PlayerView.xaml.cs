@@ -30,7 +30,6 @@ public sealed partial class PlayerView : UserControl
     private bool _isVideoFullscreen;
     private bool _sidebarCollapsedByUser;
     private bool _sidebarVisibleInFullscreen;
-    private bool _pointerOverControls;
     private bool _hasPointerPosition;
     private Point _lastPointerPosition;
     private CancellationTokenSource? _seekDebounce;
@@ -909,21 +908,17 @@ public sealed partial class PlayerView : UserControl
 
         _hasPointerPosition = true;
         _lastPointerPosition = position;
-        ShowFullscreenControls(restartAutoHide: !_pointerOverControls);
+        ShowFullscreenControls(restartAutoHide: true);
     }
 
     private void PlayerControlsPanel_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
-        _pointerOverControls = true;
-
         if (_isVideoFullscreen)
-            ShowFullscreenControls(restartAutoHide: false);
+            ShowFullscreenControls(restartAutoHide: true);
     }
 
     private void PlayerControlsPanel_PointerExited(object sender, PointerRoutedEventArgs e)
     {
-        _pointerOverControls = false;
-
         if (_isVideoFullscreen)
             RestartFullscreenAutoHide();
     }
@@ -942,8 +937,7 @@ public sealed partial class PlayerView : UserControl
         _fullscreenControlsTimer.Stop();
 
         if (!_isVideoFullscreen ||
-            _pointerOverControls ||
-            !_playIntent)
+            _engine?.State != PlaybackState.Playing)
         {
             return;
         }
@@ -982,8 +976,8 @@ public sealed partial class PlayerView : UserControl
             _sidebarVisibleInFullscreen = false;
             _hasPointerPosition = false;
 
-            PlayerSplitView.DisplayMode = SplitViewDisplayMode.Overlay;
-            PlayerSidebar.Margin = new Thickness(0, 0, 0, 112);
+            PlayerSplitView.DisplayMode = SplitViewDisplayMode.Inline;
+            PlayerSidebar.Margin = new Thickness(0);
             UpdateSidebarVisibility();
 
             FullscreenIcon.Glyph = "\uE73F";
@@ -1041,9 +1035,7 @@ public sealed partial class PlayerView : UserControl
             ? _sidebarVisibleInFullscreen
             : !_sidebarCollapsedByUser && PlayerRoot.ActualWidth >= 900d;
 
-        PlayerSplitView.DisplayMode = _isVideoFullscreen
-            ? SplitViewDisplayMode.Overlay
-            : SplitViewDisplayMode.Inline;
+        PlayerSplitView.DisplayMode = SplitViewDisplayMode.Inline;
 
         PlayerSplitView.IsPaneOpen = shouldShow;
 
@@ -1078,8 +1070,7 @@ public sealed partial class PlayerView : UserControl
         _fullscreenControlsTimer.Stop();
 
         if (_isVideoFullscreen &&
-            _playIntent &&
-            !_pointerOverControls)
+            _engine?.State == PlaybackState.Playing)
         {
             _fullscreenControlsTimer.Start();
         }
