@@ -284,6 +284,8 @@ public sealed partial class PlayerView : UserControl
             if (file is null)
                 return;
 
+            MediaCatalogStore.Default.RegisterLocalFile(file.Path);
+
             _currentSource = PlaybackSource.FromFile(file.Path, file.DisplayName);
             _lastKnownPosition = TimeSpan.Zero;
             _duration = TimeSpan.Zero;
@@ -1063,9 +1065,11 @@ public sealed partial class PlayerView : UserControl
             Grid.SetColumn(PlayerSidebar, 1);
             PlayerSidebar.HorizontalAlignment = HorizontalAlignment.Stretch;
             Canvas.SetZIndex(PlayerSidebar, 0);
-            SidebarColumn.Width = shouldShow
-                ? GridLength.Auto
-                : new GridLength(0);
+
+            if (shouldShow || PlayerSidebar.Visibility == Visibility.Visible)
+                SidebarColumn.Width = GridLength.Auto;
+            else
+                SidebarColumn.Width = new GridLength(0);
         }
 
         _ = AnimateSidebarAsync(shouldShow);
