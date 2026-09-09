@@ -118,13 +118,21 @@ public sealed class MediaCatalogStore
             .Select(info => CreateLocalItem(source.Id, info))
             .ToArray();
 
+        var discoveredPaths = discovered
+            .Select(item => item.LocalPath)
+            .Where(static path => !string.IsNullOrWhiteSpace(path))
+            .Select(Path.GetFullPath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         lock (_sync)
         {
             _items.RemoveAll(item =>
                 string.Equals(
                     item.Location?.SourceId,
                     source.Id,
-                    StringComparison.Ordinal));
+                    StringComparison.Ordinal) ||
+                (item.LocalPath is { Length: > 0 } localPath &&
+                 discoveredPaths.Contains(Path.GetFullPath(localPath))));
 
             _items.AddRange(discovered);
             SaveCore(_items);
@@ -229,7 +237,26 @@ public sealed class MediaCatalogStore
             }
 
             foreach (var directory in directories)
+            {
+                try
+                {
+                    if ((File.GetAttributes(directory) &
+                         FileAttributes.ReparsePoint) != 0)
+                    {
+                        continue;
+                    }
+                }
+                catch (IOException)
+                {
+                    continue;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    continue;
+                }
+
                 pending.Push(directory);
+            }
         }
     }
 
