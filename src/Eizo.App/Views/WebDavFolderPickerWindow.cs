@@ -584,7 +584,7 @@ internal sealed class WebDavFolderPickerWindow
         Grid.SetColumn(enterButton, 2);
         row.Children.Add(enterButton);
 
-        row.DoubleTapped +=
+        label.DoubleTapped +=
             async (_, args) =>
             {
                 if (_isLoading)
