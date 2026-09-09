@@ -34,7 +34,9 @@ jobs:
 
       - name: Run WebDAV v0.3.0 runtime probe
         shell: pwsh
-        run: dotnet run --project tools/Eizo.WebDavV030Probe/Eizo.WebDavV030Probe.csproj --configuration Release
+        run: |
+          New-Item -ItemType Directory -Force .packages/Eizo.Playback | Out-Null
+          dotnet run --project tools/Eizo.WebDavV030Probe/Eizo.WebDavV030Probe.csproj --configuration Release
 
   winui-build:
     name: Build WinUI 3 app
