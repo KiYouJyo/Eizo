@@ -61,6 +61,7 @@
                           Height="28"
                           Minimum="0"
                           Maximum="100"
+                          IsActive="True"
                           IsIndeterminate="True"
                           HorizontalAlignment="Center" />
             <TextBlock x:Name="PlaybackStatusText"
