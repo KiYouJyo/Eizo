@@ -15,6 +15,7 @@ public sealed record MediaSourceDefinition(
     MediaSourceKind Kind,
     string DisplayName,
     string? RootLocation = null,
+    string? AccessToken = null,
     bool Enabled = true,
     DateTimeOffset? LastScanUtc = null)
 {
@@ -82,7 +83,8 @@ public sealed class MediaSourceStore
 
     public MediaSourceDefinition AddLocalFolder(
         string folderPath,
-        string? displayName = null)
+        string? displayName = null,
+        string? accessToken = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(folderPath);
 
@@ -112,6 +114,11 @@ public sealed class MediaSourceStore
                 MediaSourceKind.Local,
                 name,
                 fullPath,
+                AccessToken: !string.IsNullOrWhiteSpace(accessToken)
+                    ? accessToken
+                    : index >= 0
+                        ? _sources[index].AccessToken
+                        : null,
                 Enabled: true,
                 LastScanUtc: index >= 0
                     ? _sources[index].LastScanUtc
