@@ -625,6 +625,9 @@
   <data name="Playback_Rate" xml:space="preserve">
     <value>Playback speed</value>
   </data>
+  <data name="Playback_Volume" xml:space="preserve">
+    <value>Volume</value>
+  </data>
   <data name="Playback_CollapseSidebar" xml:space="preserve">
     <value>Collapse sidebar</value>
   </data>
