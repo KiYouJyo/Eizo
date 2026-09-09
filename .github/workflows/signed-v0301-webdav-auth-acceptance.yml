@@ -1,0 +1,63 @@
+name: Signed v0.3.0.1 WebDAV auth acceptance package
+
+on:
+  push:
+    branches:
+      - "build/v0.3.0.1-webdav-acceptance"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eizo-v0.3.0.1-webdav-acceptance
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Build, sign and validate x64 acceptance package
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 50
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Validate signing configuration
+        shell: pwsh
+        env:
+          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
+          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:RELEASE_CERTIFICATE_BASE64) -or
+              [string]::IsNullOrWhiteSpace($env:RELEASE_CERTIFICATE_PASSWORD)) {
+            throw 'GitHub release signing secrets are not configured.'
+          }
+
+      - name: Build, sign and acceptance-test v0.3.0.1
+        shell: pwsh
+        env:
+          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
+          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
+        run: ./scripts/Build-V0301WebDavAuthAcceptance.ps1
+
+      - name: Upload signed v0.3.0.1 acceptance assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: Eizo-v0.3.0.1-WebDAV-acceptance
+          path: |
+            ${{ env.FINAL_ACCEPTANCE_BUNDLE }}
+            ${{ env.FINAL_ACCEPTANCE_CERTIFICATE }}
+            ${{ env.FINAL_ACCEPTANCE_SHA256 }}
+          if-no-files-found: error
+          retention-days: 14
