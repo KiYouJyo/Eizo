@@ -78,6 +78,7 @@ public sealed partial class PlayerView : UserControl
         ToolTipService.SetToolTip(PlayPauseButton, T("Common_Play"));
         ToolTipService.SetToolTip(NextJumpButton, T("Playback_Forward10Seconds"));
         ToolTipService.SetToolTip(NextChapterButton, T("Playback_NextChapter"));
+        ToolTipService.SetToolTip(FullscreenButton, T("Playback_FullScreen"));
 
         AutomationProperties.SetName(OpenMediaButton, T("Playback_OpenLocalMedia"));
         AutomationProperties.SetName(PreviousChapterButton, T("Playback_PreviousChapter"));
@@ -85,6 +86,7 @@ public sealed partial class PlayerView : UserControl
         AutomationProperties.SetName(PlayPauseButton, T("Common_Play"));
         AutomationProperties.SetName(NextJumpButton, T("Playback_Forward10Seconds"));
         AutomationProperties.SetName(NextChapterButton, T("Playback_NextChapter"));
+        AutomationProperties.SetName(FullscreenButton, T("Playback_FullScreen"));
     }
 
     private async void PlaybackSurface_EngineChanged(
@@ -808,6 +810,18 @@ public sealed partial class PlayerView : UserControl
         AudioTrackCombo.IsEnabled = hasEngineAndSource;
 
         UpdateNavigationAvailability();
+    }
+
+    private void FullscreenButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (App.MainWindow is null)
+            return;
+
+        var isFullscreen = App.MainWindow.TogglePlayerFullscreen();
+
+        FullscreenIcon.Glyph = isFullscreen
+            ? "\uE73F"
+            : "\uE740";
     }
 
     private void PlaybackRateButton_Click(object sender, RoutedEventArgs e)
