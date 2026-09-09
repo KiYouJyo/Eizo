@@ -16,6 +16,7 @@ public sealed partial class MainWindow : Window
 {
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
     private readonly Dictionary<string, ShellTabState> _tabs = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _closingTabKeys = new(StringComparer.Ordinal);
     private readonly WindowPlacementService _windowPlacement = new();
     private SizeInt32 _lastNormalWindowSize;
     private bool _wasWindowMaximized;
@@ -143,14 +144,14 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
+        _playerFullscreen = false;
 
         Grid.SetRow(ShellNavigation, 1);
         Grid.SetRowSpan(ShellNavigation, 1);
         RootGrid.RowDefinitions[0].Height = new GridLength(48);
         AppTitleBar.Visibility = Visibility.Visible;
 
-        _playerFullscreen = false;
+        AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
 
         if (_restoreMaximizedAfterPlayerFullscreen &&
             AppWindow.Presenter is OverlappedPresenter restoredPresenter)
@@ -420,6 +421,9 @@ public sealed partial class MainWindow : Window
         if (ReferenceEquals(state.View, nextView))
             return;
 
+        if (state.View is PlayerView player)
+            _ = player.PrepareForDetachAsync().AsTask();
+
         if (state.View.Parent is Panel currentParent)
             currentParent.Children.Remove(state.View);
 
@@ -532,29 +536,47 @@ public sealed partial class MainWindow : Window
         if (sender is Button { Tag: string key }) SelectTab(key);
     }
 
-    private void ShellTabClose_Click(object sender, RoutedEventArgs e)
+    private async void ShellTabClose_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string key }) CloseTab(key);
+        if (sender is Button { Tag: string key })
+            await CloseTabAsync(key);
     }
 
-    private void CloseTab(string key)
+    private async Task CloseTabAsync(string key)
     {
-        if (!_tabs.Remove(key, out var state)) return;
+        if (!_closingTabKeys.Add(key))
+            return;
 
-        if (state.Visual is not null)
-            ShellTabItems.Children.Remove(state.Visual.Container);
-
-        if (state.View.Parent is Panel parent)
-            parent.Children.Remove(state.View);
-
-        if (_selectedTabKey == key)
+        try
         {
-            var next = _tabs.Values.LastOrDefault();
-            if (next is null) CreateWorkspaceTab(select: true);
-            else SelectTab(next.Key);
-        }
+            if (!_tabs.TryGetValue(key, out var state))
+                return;
 
-        RefreshTabVisuals();
+            if (state.View is PlayerView player)
+                await player.PrepareForDetachAsync();
+
+            if (!_tabs.Remove(key, out state))
+                return;
+
+            if (state.Visual is not null)
+                ShellTabItems.Children.Remove(state.Visual.Container);
+
+            if (state.View.Parent is Panel parent)
+                parent.Children.Remove(state.View);
+
+            if (_selectedTabKey == key)
+            {
+                var next = _tabs.Values.LastOrDefault();
+                if (next is null) CreateWorkspaceTab(select: true);
+                else SelectTab(next.Key);
+            }
+
+            RefreshTabVisuals();
+        }
+        finally
+        {
+            _closingTabKeys.Remove(key);
+        }
     }
 
     private void SelectTab(string key)

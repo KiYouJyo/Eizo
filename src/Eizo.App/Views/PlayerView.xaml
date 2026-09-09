@@ -60,8 +60,11 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 CornerRadius="8"
-                Background="#B3000000">
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
           <TextBlock x:Name="PlaybackStatusText"
+                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                      TextAlignment="Center"
                      TextWrapping="Wrap" />
         </Border>
