@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.2.3",
-    "packageVersion": "0.2.3.0",
+    "version": "0.3.0",
+    "packageVersion": "0.3.0.0",
     "title": {
-      "zh-CN": "中尺寸浅色导航收起背景修复",
-      "ja-JP": "中幅ライトテーマのナビゲーション背景修正",
-      "en-US": "Medium-Width Light Navigation Background Fix"
+      "zh-CN": "WebDAV 媒体来源与远程播放",
+      "ja-JP": "WebDAV メディアソースとリモート再生",
+      "en-US": "WebDAV Media Sources & Remote Playback"
     }
   },
   "channels": {
     "github": {
-      "publish": true
+      "publish": false
     }
   }
 }
