@@ -42,8 +42,8 @@ if ($sourcesView -notmatch 'MediaSourceStore\.Default' -or
 
 if ($providerContract -notmatch 'interface IMediaSourceProvider' -or
     $providerContract -notmatch 'class LocalMediaSourceProvider' -or
-    $providerContract -notmatch 'MediaSourceKind\.WebDav') {
-    throw 'Stage 1 contract violation: provider abstraction must exist before WebDAV protocol code is introduced.'
+    $sourceStore -notmatch 'WebDav') {
+    throw 'Stage 1 contract violation: provider abstraction and WebDAV source kind must exist before protocol code is introduced.'
 }
 
 Write-Host 'WebDAV Stage 1 media-source contract PASS.'
