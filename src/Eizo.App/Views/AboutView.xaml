@@ -55,7 +55,7 @@
                   <TextBlock x:Name="DisplayVersionLabel"
                              Style="{StaticResource SettingsDescriptionStyle}" />
                   <TextBlock x:Name="DisplayVersionText"
-                             Text="v0.2.3"
+                             Text="v0.3.0"
                              FontWeight="SemiBold" />
                 </StackPanel>
 
@@ -63,7 +63,7 @@
                   <TextBlock x:Name="InternalVersionLabel"
                              Style="{StaticResource SettingsDescriptionStyle}" />
                   <TextBlock x:Name="PackageVersionText"
-                             Text="0.2.3.0"
+                             Text="0.3.0.0"
                              FontWeight="SemiBold" />
                 </StackPanel>
 
@@ -132,7 +132,7 @@
                     <TextBlock x:Name="CurrentVersionLabel"
                                Style="{StaticResource MetadataText}" />
                     <TextBlock x:Name="CurrentAppVersionText"
-                               Text="v0.2.3" />
+                               Text="v0.3.0" />
                   </StackPanel>
 
                   <TextBlock Grid.Column="2"
