@@ -32,6 +32,12 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-MediaSourceStage1Contract.ps1
 
+      - name: Run WebDAV v0.3.0 runtime probe
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .packages/Eizo.Playback | Out-Null
+          dotnet run --project tools/Eizo.WebDavV030Probe/Eizo.WebDavV030Probe.csproj --configuration Release
+
   winui-build:
     name: Build WinUI 3 app
     runs-on: windows-latest

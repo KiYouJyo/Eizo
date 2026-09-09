@@ -10,7 +10,18 @@ public sealed record MediaSourceEntry(
     string RelativePath,
     bool IsDirectory,
     long? SizeBytes = null,
-    DateTimeOffset? ModifiedUtc = null);
+    DateTimeOffset? ModifiedUtc = null,
+    string? Locator = null,
+    string? ETag = null);
+
+public sealed class MediaSourceException(
+    string errorCode,
+    string message,
+    Exception? innerException = null)
+    : Exception(message, innerException)
+{
+    public string ErrorCode { get; } = errorCode;
+}
 
 public interface IMediaSourceProvider
 {
@@ -164,20 +175,4 @@ public sealed class LocalMediaSourceProvider : IMediaSourceProvider
                    normalizedRoot,
                    StringComparison.OrdinalIgnoreCase);
     }
-}
-
-public static class MediaSourceProviderRegistry
-{
-    private static readonly IReadOnlyDictionary<MediaSourceKind, IMediaSourceProvider>
-        Providers =
-            new Dictionary<MediaSourceKind, IMediaSourceProvider>
-            {
-                [MediaSourceKind.Local] =
-                    new LocalMediaSourceProvider()
-            };
-
-    public static bool TryGet(
-        MediaSourceKind kind,
-        out IMediaSourceProvider provider) =>
-        Providers.TryGetValue(kind, out provider!);
 }

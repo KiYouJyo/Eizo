@@ -43,16 +43,16 @@ public sealed partial class PlayerView : UserControl
     public PlayerView(
         string title,
         string episode,
-        string? sourcePath = null)
+        PlaybackSource? initialSource = null)
     {
         InitializeComponent();
 
-        NowPlayingTitle.Text = sourcePath is null
+        NowPlayingTitle.Text = initialSource is null
             ? title + " · " + episode
             : title;
         NowPlayingEpisode.Text = episode;
 
-        QueueList.ItemsSource = sourcePath is null
+        QueueList.ItemsSource = initialSource is null
             ? new[]
             {
                 new EpisodeItemModel("18", "一级魔法使考试", "一級魔法使試験", "23:41", T("Playback_Playing")),
@@ -77,12 +77,9 @@ public sealed partial class PlayerView : UserControl
         ApplyText();
         ResetTimeline();
 
-        if (!string.IsNullOrWhiteSpace(sourcePath) &&
-            File.Exists(sourcePath))
+        if (initialSource is not null)
         {
-            _currentSource = PlaybackSource.FromFile(
-                sourcePath,
-                Path.GetFileNameWithoutExtension(sourcePath));
+            _currentSource = initialSource;
             _playIntent = true;
             ShowStatus(T("Status_Loading"));
         }

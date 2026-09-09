@@ -41,7 +41,7 @@ if ($catalogStore -notmatch 'RegisterLocalFile' -or
 }
 
 if ($catalogView -notmatch 'EventHandler<CatalogMediaItemModel>\? MediaRequested' -or
-    $mainWindow -notmatch 'OpenCatalogMedia\(CatalogMediaItemModel item\)') {
+    $mainWindow -notmatch 'OpenCatalogMediaAsync\s*\(\s*CatalogMediaItemModel item\s*\)') {
     throw 'Stage 1 contract violation: total catalog must invoke real media items instead of demo titles.'
 }
 

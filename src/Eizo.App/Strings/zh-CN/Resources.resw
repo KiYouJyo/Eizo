@@ -368,7 +368,7 @@
     <value>从媒体库中随机推荐一部作品。</value>
   </data>
   <data name="Sources_Subtitle" xml:space="preserve">
-    <value>管理已接入的真实媒体来源；WebDAV 网络连接将在下一阶段接入。</value>
+    <value>管理本地与 WebDAV 媒体来源；WebDAV 支持连接测试、扫描与直接播放。</value>
   </data>
   <data name="Sources_TabSources" xml:space="preserve">
     <value>来源</value>
@@ -672,5 +672,53 @@
   </data>
   <data name="Sources_AddLocalFolder" xml:space="preserve">
     <value>添加本地文件夹</value>
+  </data>
+  <data name="Sources_AddWebDav" xml:space="preserve">
+    <value>添加 WebDAV</value>
+  </data>
+  <data name="Sources_TestConnection" xml:space="preserve">
+    <value>测试连接</value>
+  </data>
+  <data name="Sources_ConnectionSucceeded" xml:space="preserve">
+    <value>连接成功</value>
+  </data>
+  <data name="Sources_ConnectionFailed" xml:space="preserve">
+    <value>连接失败</value>
+  </data>
+  <data name="Sources_WebDavDialogTitle" xml:space="preserve">
+    <value>添加 WebDAV 媒体来源</value>
+  </data>
+  <data name="Sources_ConnectAndAdd" xml:space="preserve">
+    <value>连接并添加</value>
+  </data>
+  <data name="Sources_InvalidAddress" xml:space="preserve">
+    <value>请输入不含用户名或密码的有效 HTTP/HTTPS WebDAV 地址。</value>
+  </data>
+  <data name="Sources_WebDavAddedFormat" xml:space="preserve">
+    <value>已添加 {0}，扫描到 {1} 个视频。</value>
+  </data>
+  <data name="Sources_ErrorAuthentication" xml:space="preserve">
+    <value>认证失败，请检查用户名和密码。</value>
+  </data>
+  <data name="Sources_ErrorForbidden" xml:space="preserve">
+    <value>服务器拒绝访问该路径。</value>
+  </data>
+  <data name="Sources_ErrorNotFound" xml:space="preserve">
+    <value>服务器上未找到该路径或媒体文件。</value>
+  </data>
+  <data name="Sources_ErrorTimeout" xml:space="preserve">
+    <value>连接超时。</value>
+  </data>
+  <data name="Sources_ErrorNetwork" xml:space="preserve">
+    <value>网络连接失败。</value>
+  </data>
+  <data name="Sources_ErrorInvalidResponse" xml:space="preserve">
+    <value>服务器返回了无法解析的 WebDAV 响应。</value>
+  </data>
+  <data name="Sources_ErrorGeneric" xml:space="preserve">
+    <value>媒体来源操作失败。</value>
+  </data>
+  <data name="Playback_RemoteOpenFailed" xml:space="preserve">
+    <value>无法打开远程媒体</value>
   </data>
 </root>

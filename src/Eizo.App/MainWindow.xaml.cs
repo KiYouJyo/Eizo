@@ -1,5 +1,6 @@
 using Eizo.Localization;
 using Eizo.Models;
+using Eizo.Playback;
 using Eizo.Views;
 using System.Runtime.InteropServices;
 using Microsoft.UI;
@@ -317,7 +318,8 @@ public sealed partial class MainWindow : Window
     }
 
     private void WireWorkspaceMediaView(CatalogView view) =>
-        view.MediaRequested += (_, item) => OpenCatalogMedia(item);
+        view.MediaRequested += async (_, item) =>
+            await OpenCatalogMediaAsync(item);
 
     private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch
     {
@@ -335,10 +337,70 @@ public sealed partial class MainWindow : Window
         _ => (T("Nav_Home"), "\uE80F")
     };
 
-    private void OpenCatalogMedia(CatalogMediaItemModel item)
+    private async Task OpenCatalogMediaAsync(
+        CatalogMediaItemModel item)
     {
-        if (item.LocalPath is not { Length: > 0 } localPath ||
-            !File.Exists(localPath))
+        if (item.Location is not { } location)
+            return;
+
+        var sourceDefinition =
+            MediaSourceStore.Default.Find(location.SourceId);
+
+        PlaybackSource playbackSource;
+
+        if (location.Kind == MediaLocationKind.LocalFile)
+        {
+            if (!File.Exists(location.Locator))
+                return;
+
+            playbackSource = PlaybackSource.FromFile(
+                location.Locator,
+                item.DisplayTitle);
+        }
+        else if (location.Kind == MediaLocationKind.RemoteUri &&
+                 sourceDefinition is
+                 {
+                     Kind: MediaSourceKind.WebDav
+                 } webDavSource &&
+                 Uri.TryCreate(
+                     location.Locator,
+                     UriKind.Absolute,
+                     out var remoteUri))
+        {
+            if (MediaSourceProviderRegistry.TryGet(
+                    MediaSourceKind.WebDav,
+                    out var provider) &&
+                provider is WebDavMediaSourceProvider webDavProvider)
+            {
+                var probe = await webDavProvider.ProbeMediaAsync(
+                    webDavSource,
+                    remoteUri);
+
+                if (!probe.IsAvailable)
+                {
+                    await ShowCatalogMediaErrorAsync(
+                        probe.ErrorCode,
+                        probe.Detail);
+                    return;
+                }
+            }
+
+            var credential =
+                MediaCredentialStore.Default.GetWebDav(
+                    webDavSource);
+
+            var access = credential is null
+                ? null
+                : new PlaybackNetworkAccess(
+                    credential.UserName,
+                    credential.Password);
+
+            playbackSource = PlaybackSource.FromUri(
+                remoteUri,
+                item.DisplayTitle,
+                access);
+        }
+        else
         {
             if (item.IsParsed)
                 OpenDetail(item.DisplayTitle, startPlaying: false);
@@ -346,11 +408,8 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var sourceId =
-            item.Location?.SourceId ??
-            MediaSourceDefinition.OpenedLocalFilesSourceId;
-
-        var key = "media:" + sourceId + ":" + localPath;
+        var sourceId = location.SourceId;
+        var key = "media:" + sourceId + ":" + location.Locator;
 
         if (_tabs.TryGetValue(key, out var existing))
         {
@@ -358,12 +417,11 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var sourceLabel =
-            MediaSourceStore.Default.Find(sourceId) is { } source
-                ? source.IsBuiltIn
-                    ? T("Source_Local")
-                    : source.DisplayName
-                : T("Source_Local");
+        var sourceLabel = sourceDefinition is null
+            ? T("Source_Local")
+            : sourceDefinition.IsBuiltIn
+                ? T("Source_Local")
+                : sourceDefinition.DisplayName;
 
         var state = new ShellTabState(
             key,
@@ -374,7 +432,7 @@ public sealed partial class MainWindow : Window
             new PlayerView(
                 item.DisplayTitle,
                 sourceLabel,
-                localPath),
+                playbackSource),
             navItem: null,
             PreferredTabWidth)
         {
@@ -382,6 +440,41 @@ public sealed partial class MainWindow : Window
         };
 
         AddTab(state, select: true);
+    }
+
+    private async Task ShowCatalogMediaErrorAsync(
+        string? errorCode,
+        string? detail)
+    {
+        if (RootGrid.XamlRoot is null)
+            return;
+
+        var message = errorCode switch
+        {
+            "AuthenticationFailed" =>
+                T("Sources_ErrorAuthentication"),
+            "Forbidden" =>
+                T("Sources_ErrorForbidden"),
+            "NotFound" =>
+                T("Sources_ErrorNotFound"),
+            "Timeout" =>
+                T("Sources_ErrorTimeout"),
+            "NetworkError" =>
+                T("Sources_ErrorNetwork"),
+            _ =>
+                T("Sources_ErrorGeneric")
+        };
+
+        if (!string.IsNullOrWhiteSpace(detail))
+            message += "\n" + detail;
+
+        await new ContentDialog
+        {
+            XamlRoot = RootGrid.XamlRoot,
+            Title = T("Playback_RemoteOpenFailed"),
+            Content = message,
+            CloseButtonText = T("Common_Close")
+        }.ShowAsync();
     }
 
     private void OpenDetail(string title, bool startPlaying)

@@ -18,6 +18,9 @@ public sealed partial class SourcesView : UserControl
     private readonly MediaCatalogStore _catalog =
         MediaCatalogStore.Default;
 
+    private readonly MediaCredentialStore _credentials =
+        MediaCredentialStore.Default;
+
     public SourcesView()
     {
         InitializeComponent();
@@ -35,7 +38,7 @@ public sealed partial class SourcesView : UserControl
     {
         PageTitle.Text = T("Nav_Sources");
         PageSubtitle.Text = T("Sources_Subtitle");
-        AddSourceButton.Content = T("Sources_AddLocalFolder");
+        AddSourceButton.Content = T("Source_Add");
 
         SectionList.ItemsSource =
             new[] { T("Sources_TabSources") };
@@ -86,12 +89,15 @@ public sealed partial class SourcesView : UserControl
             .Where(value => value > 0)
             .Sum();
 
-        var summaryParts = new List<string>
-        {
+        var summaryParts = new List<string>();
+
+        if (source.Kind == MediaSourceKind.WebDav)
+            summaryParts.Add(T("Source_WebDAV"));
+
+        summaryParts.Add(
             string.Format(
                 T("Sources_VideoCountFormat"),
-                items.Count)
-        };
+                items.Count));
 
         if (size > 0)
             summaryParts.Add(FormatBytes(size));
@@ -132,8 +138,7 @@ public sealed partial class SourcesView : UserControl
 
         var flyout = new MenuFlyout();
 
-        if (source.Kind == MediaSourceKind.Local &&
-            !string.IsNullOrWhiteSpace(source.RootLocation))
+        if (!source.IsBuiltIn)
         {
             var scan = new MenuFlyoutItem
             {
@@ -143,6 +148,18 @@ public sealed partial class SourcesView : UserControl
             };
             scan.Click += ScanSourceMenuItem_Click;
             flyout.Items.Add(scan);
+        }
+
+        if (source.Kind == MediaSourceKind.WebDav)
+        {
+            var test = new MenuFlyoutItem
+            {
+                Text = T("Sources_TestConnection"),
+                Icon = new FontIcon { Glyph = "\uE774" },
+                Tag = source.Id
+            };
+            test.Click += TestConnectionMenuItem_Click;
+            flyout.Items.Add(test);
         }
 
         if (item.Removable)
@@ -180,7 +197,8 @@ public sealed partial class SourcesView : UserControl
 
         try
         {
-            if (!string.IsNullOrWhiteSpace(source.AccessToken) &&
+            if (source.Kind == MediaSourceKind.Local &&
+                !string.IsNullOrWhiteSpace(source.AccessToken) &&
                 StorageApplicationPermissions.FutureAccessList.ContainsItem(
                     source.AccessToken))
             {
@@ -189,14 +207,49 @@ public sealed partial class SourcesView : UserControl
                     .GetFolderAsync(source.AccessToken);
             }
 
-            await Task.Run(() => _catalog.ScanLocalSource(source));
+            await _catalog.ScanSourceAsync(source);
         }
-        catch
+        catch (MediaSourceException exception)
         {
             await ShowMessageAsync(
                 T("Sources_ScanFailed"),
-                source.DisplayName);
+                FormatSourceError(exception.ErrorCode, exception.Message));
         }
+        catch (Exception exception)
+        {
+            await ShowMessageAsync(
+                T("Sources_ScanFailed"),
+                exception.Message);
+        }
+    }
+
+    private async void TestConnectionMenuItem_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: string sourceId })
+            return;
+
+        var source = _sources.Find(sourceId);
+        if (source is null ||
+            !MediaSourceProviderRegistry.TryGet(
+                source.Kind,
+                out var provider))
+        {
+            return;
+        }
+
+        var result = await provider.TestConnectionAsync(source);
+
+        await ShowMessageAsync(
+            result.IsAvailable
+                ? T("Sources_ConnectionSucceeded")
+                : T("Sources_ConnectionFailed"),
+            result.IsAvailable
+                ? source.DisplayName
+                : FormatSourceError(
+                    result.ErrorCode,
+                    result.Detail));
     }
 
     private void RemoveSourceMenuItem_Click(
@@ -213,6 +266,9 @@ public sealed partial class SourcesView : UserControl
         _catalog.RemoveSourceItems(sourceId);
         _sources.Remove(sourceId);
 
+        if (source.Kind == MediaSourceKind.WebDav)
+            _credentials.RemoveWebDav(sourceId);
+
         if (!string.IsNullOrWhiteSpace(source.AccessToken) &&
             StorageApplicationPermissions.FutureAccessList.ContainsItem(
                 source.AccessToken))
@@ -222,9 +278,32 @@ public sealed partial class SourcesView : UserControl
         }
     }
 
-    private async void AddSourceButton_Click(
+    private void AddSourceButton_Click(
         object sender,
         RoutedEventArgs e)
+    {
+        var flyout = new MenuFlyout();
+
+        var local = new MenuFlyoutItem
+        {
+            Text = T("Sources_AddLocalFolder"),
+            Icon = new FontIcon { Glyph = "\uE8B7" }
+        };
+        local.Click += async (_, _) => await AddLocalSourceAsync();
+        flyout.Items.Add(local);
+
+        var webDav = new MenuFlyoutItem
+        {
+            Text = T("Sources_AddWebDav"),
+            Icon = new FontIcon { Glyph = "\uE753" }
+        };
+        webDav.Click += async (_, _) => await AddWebDavSourceAsync();
+        flyout.Items.Add(webDav);
+
+        flyout.ShowAt(AddSourceButton);
+    }
+
+    private async Task AddLocalSourceAsync()
     {
         if (App.MainWindow is null)
             return;
@@ -258,14 +337,179 @@ public sealed partial class SourcesView : UserControl
                 folder.Name,
                 accessToken: source.Id);
 
-            await Task.Run(() => _catalog.ScanLocalSource(source));
+            await _catalog.ScanSourceAsync(source);
         }
-        catch
+        catch (Exception exception)
         {
             await ShowMessageAsync(
                 T("Sources_AddLocalFailed"),
-                folder.Name);
+                exception.Message);
         }
+    }
+
+    private async Task AddWebDavSourceAsync()
+    {
+        var displayName = new TextBox
+        {
+            Header = T("Sources_DisplayName"),
+            PlaceholderText = "NAS"
+        };
+        var address = new TextBox
+        {
+            Header = T("Sources_Address"),
+            PlaceholderText = "https://example.com/dav/"
+        };
+        var userName = new TextBox
+        {
+            Header = T("Sources_Username")
+        };
+        var password = new PasswordBox
+        {
+            Header = T("Sources_Password")
+        };
+
+        var panel = new StackPanel
+        {
+            Spacing = 12,
+            MinWidth = 420
+        };
+        panel.Children.Add(displayName);
+        panel.Children.Add(address);
+        panel.Children.Add(userName);
+        panel.Children.Add(password);
+
+        if (XamlRoot is null)
+            return;
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = T("Sources_WebDavDialogTitle"),
+            Content = panel,
+            PrimaryButtonText = T("Sources_ConnectAndAdd"),
+            CloseButtonText = T("Common_Cancel"),
+            DefaultButton = ContentDialogButton.Primary
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+            return;
+
+        if (!Uri.TryCreate(
+                address.Text.Trim(),
+                UriKind.Absolute,
+                out var rootUri) ||
+            (rootUri.Scheme != Uri.UriSchemeHttp &&
+             rootUri.Scheme != Uri.UriSchemeHttps) ||
+            !string.IsNullOrEmpty(rootUri.UserInfo))
+        {
+            await ShowMessageAsync(
+                T("Sources_ConnectionFailed"),
+                T("Sources_InvalidAddress"));
+            return;
+        }
+
+        var normalizedRoot = NormalizeWebDavUri(rootUri);
+        var name = string.IsNullOrWhiteSpace(displayName.Text)
+            ? normalizedRoot.Host
+            : displayName.Text.Trim();
+        var normalizedUser = userName.Text.Trim();
+        var sourceId = MediaSourceStore.BuildWebDavSourceId(
+            normalizedRoot,
+            normalizedUser);
+
+        var existing = _sources.Find(sourceId);
+        var previousCredential = existing is null
+            ? null
+            : _credentials.GetWebDav(existing);
+
+        string? credentialKey = null;
+
+        try
+        {
+            credentialKey = _credentials.SaveWebDav(
+                sourceId,
+                normalizedUser,
+                password.Password);
+
+            var temporarySource = new MediaSourceDefinition(
+                sourceId,
+                MediaSourceKind.WebDav,
+                name,
+                normalizedRoot.AbsoluteUri,
+                UserName: normalizedUser,
+                CredentialKey: credentialKey);
+
+            if (!MediaSourceProviderRegistry.TryGet(
+                    MediaSourceKind.WebDav,
+                    out var provider))
+            {
+                throw new MediaSourceException(
+                    "ProviderUnavailable",
+                    "WebDAV provider is unavailable.");
+            }
+
+            var test = await provider.TestConnectionAsync(
+                temporarySource);
+
+            if (!test.IsAvailable)
+            {
+                RestoreCredential(
+                    sourceId,
+                    previousCredential);
+
+                await ShowMessageAsync(
+                    T("Sources_ConnectionFailed"),
+                    FormatSourceError(
+                        test.ErrorCode,
+                        test.Detail));
+                return;
+            }
+
+            var source = _sources.AddWebDav(
+                name,
+                normalizedRoot,
+                normalizedUser,
+                credentialKey);
+
+            await _catalog.ScanSourceAsync(source);
+
+            await ShowMessageAsync(
+                T("Sources_ConnectionSucceeded"),
+                string.Format(
+                    T("Sources_WebDavAddedFormat"),
+                    source.DisplayName,
+                    _catalog.SnapshotForSource(source.Id).Count));
+        }
+        catch (Exception exception)
+        {
+            RestoreCredential(
+                sourceId,
+                previousCredential);
+
+            await ShowMessageAsync(
+                T("Sources_ConnectionFailed"),
+                exception is MediaSourceException sourceException
+                    ? FormatSourceError(
+                        sourceException.ErrorCode,
+                        sourceException.Message)
+                    : exception.Message);
+        }
+    }
+
+    private void RestoreCredential(
+        string sourceId,
+        MediaCredentialSnapshot? previous)
+    {
+        if (previous is null)
+        {
+            _credentials.RemoveWebDav(sourceId);
+            return;
+        }
+
+        _credentials.SaveWebDav(
+            sourceId,
+            previous.UserName,
+            previous.Password);
     }
 
     private async Task ShowMessageAsync(string title, string message)
@@ -280,6 +524,39 @@ public sealed partial class SourcesView : UserControl
             Content = message,
             CloseButtonText = T("Common_Close")
         }.ShowAsync();
+    }
+
+    private string FormatSourceError(
+        string? errorCode,
+        string? detail)
+    {
+        var code = errorCode switch
+        {
+            "AuthenticationFailed" => T("Sources_ErrorAuthentication"),
+            "Forbidden" => T("Sources_ErrorForbidden"),
+            "NotFound" => T("Sources_ErrorNotFound"),
+            "Timeout" => T("Sources_ErrorTimeout"),
+            "NetworkError" => T("Sources_ErrorNetwork"),
+            "InvalidWebDavResponse" => T("Sources_ErrorInvalidResponse"),
+            _ => T("Sources_ErrorGeneric")
+        };
+
+        return string.IsNullOrWhiteSpace(detail)
+            ? code
+            : $"{code}\n{detail}";
+    }
+
+    private static Uri NormalizeWebDavUri(Uri uri)
+    {
+        var builder = new UriBuilder(uri)
+        {
+            Fragment = string.Empty
+        };
+
+        if (!builder.Path.EndsWith("/", StringComparison.Ordinal))
+            builder.Path += "/";
+
+        return builder.Uri;
     }
 
     private static string FormatBytes(long bytes)

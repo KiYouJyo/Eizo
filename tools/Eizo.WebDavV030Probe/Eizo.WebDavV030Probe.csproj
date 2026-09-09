@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../src/Eizo.App/Models/UiModels.cs"
+             Link="Models/UiModels.cs" />
+    <Compile Include="../../src/Eizo.App/Models/CatalogMediaItemModel.cs"
+             Link="Models/CatalogMediaItemModel.cs" />
+    <Compile Include="../../src/Eizo.App/Models/MediaSourceStore.cs"
+             Link="Models/MediaSourceStore.cs" />
+    <Compile Include="../../src/Eizo.App/Models/MediaSourceProvider.cs"
+             Link="Models/MediaSourceProvider.cs" />
+    <Compile Include="../../src/Eizo.App/Models/MediaCredentialContracts.cs"
+             Link="Models/MediaCredentialContracts.cs" />
+    <Compile Include="../../src/Eizo.App/Models/WebDavMediaSourceProvider.cs"
+             Link="Models/WebDavMediaSourceProvider.cs" />
+    <Compile Include="../../src/Eizo.App/Models/MediaCatalogStore.cs"
+             Link="Models/MediaCatalogStore.cs" />
+  </ItemGroup>
+</Project>
