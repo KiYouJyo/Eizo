@@ -3,14 +3,14 @@ name: Signed v0.2 acceptance package
 on:
   push:
     branches:
-      - "codex/ui-stability-update-localization"
+      - "build/player-fixes-signed-package"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: eizo-v0.2-acceptance-${{ github.ref }}
+  group: eizo-player-fixes-acceptance-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -32,6 +32,10 @@ jobs:
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
+
+      - name: Restore pinned Eizo.Playback packages
+        shell: pwsh
+        run: ./scripts/Restore-EizoPlayback.ps1
 
       - name: Validate signing configuration
         shell: pwsh
@@ -466,7 +470,7 @@ jobs:
       - name: Upload signed release-contract assets
         uses: actions/upload-artifact@v7
         with:
-          name: Eizo-v0.2.0-acceptance-assets
+          name: Eizo-v0.2.0-player-fixes-acceptance-assets
           path: |
             ${{ env.ASSETS_DIR }}/Eizo_0.2.0.0_x64.msixbundle
             ${{ env.ASSETS_DIR }}/Eizo-v0.2.0-x64-one-click.zip
