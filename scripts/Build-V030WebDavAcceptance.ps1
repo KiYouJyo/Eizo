@@ -25,7 +25,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Eizo.Playback restore failed: $LASTEXITCODE"
 }
 
-$bundleOutput = Join-Path $env:RUNNER_TEMP 'Eizo-FinalHotfix-AppPackages'
+$bundleOutput = Join-Path $env:RUNNER_TEMP 'Eizo-v0.3.0-AppPackages'
 Remove-Item $bundleOutput -Recurse -Force -ErrorAction SilentlyContinue
 
 msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Always /p:AppxBundlePlatforms=x64 /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir="$bundleOutput\"
@@ -38,11 +38,11 @@ if (-not $unsignedBundle) {
     throw 'Acceptance MSIXBundle was not produced.'
 }
 
-$artifactDir = Join-Path $env:RUNNER_TEMP 'Eizo-v0.3.0-final-hotfix-acceptance'
+$artifactDir = Join-Path $env:RUNNER_TEMP 'Eizo-v0.3.0-WebDAV-acceptance'
 Remove-Item $artifactDir -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
 
-$signedBundle = Join-Path $artifactDir 'Eizo_0.3.0.0_x64_final-hotfix.msixbundle'
+$signedBundle = Join-Path $artifactDir 'Eizo_0.3.0.0_x64.msixbundle'
 Copy-Item -LiteralPath $unsignedBundle.FullName -Destination $signedBundle -Force
 
 $pfx = Join-Path $env:RUNNER_TEMP 'eizo-release-signing.pfx'
