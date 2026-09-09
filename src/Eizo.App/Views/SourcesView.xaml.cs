@@ -746,15 +746,16 @@ public sealed partial class SourcesView : UserControl
             string.Empty);
     }
 
-    private async Task BrowseWebDavFoldersAsync(
+    private async Task<IReadOnlyList<string>?> BrowseWebDavFoldersAsync(
         TextBox address,
         TextBox userName,
         PasswordBox password,
         MediaSourceDefinition? existingSource,
-        TextBlock editorStatus,
-        FrameworkElement anchor)
+        IReadOnlyCollection<string> selectedPaths,
+        TextBlock editorStatus)
     {
-        editorStatus.Visibility = Visibility.Collapsed;
+        editorStatus.Visibility =
+            Visibility.Collapsed;
 
         if (!TryNormalizeWebDavUri(
                 address.Text,
@@ -764,7 +765,7 @@ public sealed partial class SourcesView : UserControl
                 T("Sources_InvalidAddress");
             editorStatus.Visibility =
                 Visibility.Visible;
-            return;
+            return null;
         }
 
         var normalizedUser =
@@ -786,271 +787,59 @@ public sealed partial class SourcesView : UserControl
                 UserName: normalizedUser,
                 CredentialKey: credential is null
                     ? null
-                    : "inline");
+                    : "inline",
+                SelectedPaths:
+                    selectedPaths.ToList());
 
         var provider =
             new WebDavMediaSourceProvider(
                 new InlineWebDavCredentialProvider(
                     credential));
 
-        var folderList = new ListView
-        {
-            IsItemClickEnabled = true,
-            SelectionMode = ListViewSelectionMode.None,
-            MinHeight = 180,
-            MaxHeight = 360
-        };
+        var connection =
+            await provider.TestConnectionAsync(
+                temporarySource);
 
-        var currentPathText = new TextBlock
+        if (!connection.IsAvailable)
         {
-            Text = "/",
-            TextWrapping = TextWrapping.Wrap,
-            Style = (Style)Application.Current.Resources["MetadataText"]
-        };
-
-        var statusText = new TextBlock
-        {
-            TextWrapping = TextWrapping.Wrap,
-            Style = (Style)Application.Current.Resources["MetadataText"]
-        };
-
-        var progress = new ProgressRing
-        {
-            Width = 22,
-            Height = 22,
-            IsActive = false,
-            Visibility = Visibility.Collapsed
-        };
-
-        var upButton = new Button
-        {
-            Content = T("Sources_ParentFolder"),
-            MinWidth = 96
-        };
-
-        var selectButton = new Button
-        {
-            Content = T("Sources_SelectCurrentFolder"),
-            MinWidth = 132
-        };
-
-        var header = new Grid
-        {
-            ColumnSpacing = 8
-        };
-        header.ColumnDefinitions.Add(
-            new ColumnDefinition
-            {
-                Width = GridLength.Auto
-            });
-        header.ColumnDefinitions.Add(
-            new ColumnDefinition
-            {
-                Width = new GridLength(
-                    1,
-                    GridUnitType.Star)
-            });
-        header.ColumnDefinitions.Add(
-            new ColumnDefinition
-            {
-                Width = GridLength.Auto
-            });
-        header.Children.Add(upButton);
-        Grid.SetColumn(currentPathText, 1);
-        header.Children.Add(currentPathText);
-        Grid.SetColumn(progress, 2);
-        header.Children.Add(progress);
-
-        var footer = new Grid
-        {
-            ColumnSpacing = 8
-        };
-        footer.ColumnDefinitions.Add(
-            new ColumnDefinition
-            {
-                Width = new GridLength(
-                    1,
-                    GridUnitType.Star)
-            });
-        footer.ColumnDefinitions.Add(
-            new ColumnDefinition
-            {
-                Width = GridLength.Auto
-            });
-        footer.Children.Add(statusText);
-        Grid.SetColumn(selectButton, 1);
-        footer.Children.Add(selectButton);
-
-        var browserContent = new StackPanel
-        {
-            Width = 520,
-            Spacing = 10
-        };
-        browserContent.Children.Add(
-            new TextBlock
-            {
-                Text = T("Sources_BrowseFolders"),
-                FontSize = 16
-            });
-        browserContent.Children.Add(header);
-        browserContent.Children.Add(folderList);
-        browserContent.Children.Add(footer);
-
-        var flyout = new Flyout
-        {
-            Content = browserContent
-        };
-
-        var currentPath = string.Empty;
-
-        async Task LoadFoldersAsync()
-        {
-            progress.IsActive = true;
-            progress.Visibility =
+            editorStatus.Text =
+                FormatSourceError(
+                    connection.ErrorCode,
+                    connection.Detail);
+            editorStatus.Visibility =
                 Visibility.Visible;
-            statusText.Text =
-                T("Sources_LoadingFolders");
-            folderList.ItemsSource = null;
-
-            try
-            {
-                var folders =
-                    new List<WebDavFolderOption>();
-
-                await foreach (var entry in provider.ListAsync(
-                                   temporarySource,
-                                   currentPath))
-                {
-                    if (!entry.IsDirectory)
-                        continue;
-
-                    folders.Add(
-                        new WebDavFolderOption(
-                            entry.Name,
-                            entry.RelativePath));
-                }
-
-                folders.Sort(
-                    static (left, right) =>
-                        StringComparer.CurrentCultureIgnoreCase
-                            .Compare(
-                                left.Name,
-                                right.Name));
-
-                folderList.ItemsSource = folders;
-                statusText.Text = folders.Count == 0
-                    ? T("Sources_NoSubfolders")
-                    : string.Empty;
-                currentPathText.Text =
-                    string.IsNullOrEmpty(currentPath)
-                        ? "/"
-                        : "/" +
-                          Uri.UnescapeDataString(
-                              currentPath.Trim('/'));
-                upButton.IsEnabled =
-                    !string.IsNullOrEmpty(
-                        currentPath);
-            }
-            catch (MediaSourceException exception)
-            {
-                statusText.Text =
-                    FormatSourceError(
-                        exception.ErrorCode,
-                        exception.Message);
-            }
-            catch (Exception exception)
-            {
-                statusText.Text =
-                    exception.Message;
-            }
-            finally
-            {
-                progress.IsActive = false;
-                progress.Visibility =
-                    Visibility.Collapsed;
-            }
+            return null;
         }
 
-        folderList.ItemClick +=
-            async (_, args) =>
-            {
-                if (args.ClickedItem is not
-                    WebDavFolderOption folder)
-                {
-                    return;
-                }
+        if (App.MainWindow is null)
+            return null;
 
-                currentPath =
-                    folder.RelativePath;
-                await LoadFoldersAsync();
-            };
+        var ownerHandle =
+            WinRT.Interop.WindowNative.GetWindowHandle(
+                App.MainWindow);
 
-        upButton.Click +=
-            async (_, _) =>
-            {
-                currentPath =
-                    GetParentWebDavPath(
-                        currentPath);
-                await LoadFoldersAsync();
-            };
+        var picker =
+            new WebDavFolderPickerWindow(
+                provider,
+                temporarySource,
+                rootUri,
+                selectedPaths,
+                FormatSourceError);
 
-        selectButton.Click +=
-            (_, _) =>
-            {
-                address.Text =
-                    BuildWebDavFolderUri(
-                        rootUri,
-                        currentPath)
-                    .AbsoluteUri;
-                flyout.Hide();
-            };
-
-        flyout.ShowAt(anchor);
-        await LoadFoldersAsync();
+        return await picker.ShowAsync(
+            ownerHandle);
     }
 
-    private static string GetParentWebDavPath(
-        string relativePath)
+    private void UpdateWebDavFolderSelectionSummary(
+        TextBlock target,
+        IReadOnlyCollection<string> selectedPaths)
     {
-        var trimmed =
-            relativePath.Trim('/');
-
-        if (string.IsNullOrEmpty(trimmed))
-            return string.Empty;
-
-        var separator =
-            trimmed.LastIndexOf('/');
-
-        return separator < 0
-            ? string.Empty
-            : trimmed[..(separator + 1)];
-    }
-
-    private static Uri BuildWebDavFolderUri(
-        Uri rootUri,
-        string relativePath)
-    {
-        if (string.IsNullOrWhiteSpace(
-                relativePath))
-        {
-            return NormalizeWebDavUri(
-                rootUri);
-        }
-
-        var escaped =
-            string.Join(
-                "/",
-                relativePath
-                    .Trim('/')
-                    .Split(
-                        '/',
-                        StringSplitOptions.RemoveEmptyEntries)
-                    .Select(
-                        Uri.EscapeDataString));
-
-        return new Uri(
-            NormalizeWebDavUri(rootUri),
-            escaped + "/");
+        target.Text =
+            selectedPaths.Count == 0
+                ? T("Sources_AllFolders")
+                : string.Format(
+                    T("Sources_SelectedFoldersFormat"),
+                    selectedPaths.Count);
     }
 
     private static bool TryNormalizeWebDavUri(
@@ -1153,13 +942,6 @@ public sealed partial class SourcesView : UserControl
         return unit == 0
             ? $"{value:0} {units[unit]}"
             : $"{value:0.#} {units[unit]}";
-    }
-
-    private sealed record WebDavFolderOption(
-        string Name,
-        string RelativePath)
-    {
-        public override string ToString() => Name;
     }
 
     private sealed class InlineWebDavCredentialProvider(
