@@ -4,9 +4,9 @@
     "version": "0.2.2",
     "packageVersion": "0.2.2.0",
     "title": {
-      "zh-CN": "更新器修复与中尺寸导航体验修正",
-      "ja-JP": "アップデーター修正と中幅ナビゲーション改善",
-      "en-US": "Updater Fixes & Medium-Width Navigation Improvements"
+      "zh-CN": "更新器与响应式导航修复",
+      "ja-JP": "アップデーターとレスポンシブナビゲーション修正",
+      "en-US": "Updater & Responsive Navigation Fixes"
     }
   },
   "channels": {

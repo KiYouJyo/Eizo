@@ -170,6 +170,18 @@ jobs:
       - name: Verify signed bundle through updater verifier
         shell: pwsh
         run: |
+          # Installed Eizo builds already trust the AppPublisher certificate.
+          # Reproduce that environment before WinVerifyTrust is exercised by
+          # the updater verifier.
+          $cert = [Security.Cryptography.X509Certificates.X509Certificate2]::new($env:CERTIFICATE_PATH)
+          $trustedStore = 'Cert:\LocalMachine\TrustedPeople'
+          $trusted = Get-ChildItem $trustedStore -ErrorAction SilentlyContinue |
+            Where-Object Thumbprint -eq $cert.Thumbprint |
+            Select-Object -First 1
+          if (-not $trusted) {
+            Import-Certificate -FilePath $env:CERTIFICATE_PATH -CertStoreLocation $trustedStore | Out-Null
+          }
+
           dotnet run --project tools/Eizo.UpdateVerifierProbe/Eizo.UpdateVerifierProbe.csproj --configuration Release -- $env:BUNDLE_PATH
           if ($LASTEXITCODE -ne 0) { throw "Updater signature verifier probe failed: $LASTEXITCODE" }
 
