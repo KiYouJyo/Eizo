@@ -12,10 +12,10 @@
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <AppxBundleAutoResourcePackageQualifiers>Scale|DXFeatureLevel</AppxBundleAutoResourcePackageQualifiers>
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
-    <Version>0.3.5</Version>
-    <AssemblyVersion>0.3.5.0</AssemblyVersion>
-    <FileVersion>0.3.5.0</FileVersion>
-    <InformationalVersion>0.3.5</InformationalVersion>
+    <Version>0.3.6</Version>
+    <AssemblyVersion>0.3.6.0</AssemblyVersion>
+    <FileVersion>0.3.6.0</FileVersion>
+    <InformationalVersion>0.3.6</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260710003" />
@@ -24,7 +24,48 @@
     <ProjectReference Include="../../.deps/Eizo.Playback/src/Eizo.Playback.LibVLC.WinUI/Eizo.Playback.LibVLC.WinUI.csproj" Condition="'$(EizoPlaybackUseSource)' == 'true'" />
     <ProjectReference Include="../Eizo.RecognitionIntegration/Eizo.RecognitionIntegration.csproj" />
     <!-- The final Windows host owns the native LibVLC runtime deployment.
-         This is a runtime/package dependency only; Eizo UI code does not reference LibVLCSharp APIs. -->
+         Playback runtime updates replace only Eizo.Playback managed assemblies;
+         VideoLAN native compatibility remains governed by the host contract. -->
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
   </ItemGroup>
+
+  <!--
+    Playback and Recognition are independently updateable from Eizo 0.3.6 onward.
+    In Release builds their bundled implementations must not remain beside Eizo.exe:
+    the default .deps.json probing path would win before AssemblyLoadContext.Resolving
+    and silently bind the old bundled implementation after a component update.
+
+    Keep an explicit fallback copy under Components/Bundled. ComponentEarlyBootstrap
+    selects either the validated external version in %LOCALAPPDATA%\Eizo\Components
+    or this bundled fallback before WinUI generated XAML metadata resolves PlaybackView.
+  -->
+  <Target Name="RelocateBundledUpdateableComponents"
+          AfterTargets="CopyFilesToOutputDirectory"
+          Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <_PlaybackComponentAssembly Include="$(OutDir)Eizo.Playback.Abstractions.dll" />
+      <_PlaybackComponentAssembly Include="$(OutDir)Eizo.Playback.Core.dll" />
+      <_PlaybackComponentAssembly Include="$(OutDir)Eizo.Playback.LibVLC.dll" />
+      <_PlaybackComponentAssembly Include="$(OutDir)Eizo.Playback.LibVLC.WinUI.dll" />
+      <_RecognitionComponentAssembly Include="$(OutDir)Eizo.Metadata.Recognition.dll" />
+    </ItemGroup>
+
+    <Error Condition="!Exists('%(_PlaybackComponentAssembly.Identity)')"
+           Text="Playback runtime assembly is missing before relocation: %(_PlaybackComponentAssembly.Identity)" />
+    <Error Condition="!Exists('%(_RecognitionComponentAssembly.Identity)')"
+           Text="Recognition runtime assembly is missing before relocation: %(_RecognitionComponentAssembly.Identity)" />
+
+    <MakeDir Directories="$(OutDir)Components\Bundled\Playback" />
+    <MakeDir Directories="$(OutDir)Components\Bundled\Recognition" />
+    <Copy SourceFiles="@(_PlaybackComponentAssembly)"
+          DestinationFolder="$(OutDir)Components\Bundled\Playback"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_RecognitionComponentAssembly)"
+          DestinationFolder="$(OutDir)Components\Bundled\Recognition"
+          SkipUnchangedFiles="true" />
+    <Delete Files="@(_PlaybackComponentAssembly)" />
+    <Delete Files="@(_RecognitionComponentAssembly)" />
+    <Message Importance="high"
+             Text="Relocated bundled Playback and Recognition implementations for independent runtime resolution." />
+  </Target>
 </Project>
