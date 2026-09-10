@@ -35,6 +35,8 @@ internal sealed class WebDavFolderPickerWindow
 
     private string _currentPath = string.Empty;
     private bool _isLoading;
+    private readonly ElementTheme _windowTheme;
+    private readonly Windows.UI.Color _surfaceColor;
 
     public WebDavFolderPickerWindow(
         IMediaSourceProvider provider,
@@ -50,6 +52,11 @@ internal sealed class WebDavFolderPickerWindow
         _selectedPaths = new HashSet<string>(
             selectedPaths ?? [],
             StringComparer.OrdinalIgnoreCase);
+
+        _windowTheme = ResolveWindowTheme();
+        _surfaceColor = _windowTheme == ElementTheme.Dark
+            ? ColorHelper.FromArgb(255, 26, 35, 35)
+            : ColorHelper.FromArgb(255, 229, 249, 249);
 
         ConfigureWindow();
         _window.Content = BuildContent();
@@ -76,8 +83,44 @@ internal sealed class WebDavFolderPickerWindow
 
         try
         {
-            _window.AppWindow.Resize(
-                new SizeInt32(720, 560));
+            const int width = 1040;
+            const int height = 760;
+
+            if (ownerWindowHandle != IntPtr.Zero &&
+                GetWindowRect(
+                    ownerWindowHandle,
+                    out var ownerBounds))
+            {
+                var ownerWidth =
+                    ownerBounds.Right -
+                    ownerBounds.Left;
+                var ownerHeight =
+                    ownerBounds.Bottom -
+                    ownerBounds.Top;
+
+                var x = ownerBounds.Left +
+                    Math.Max(
+                        0,
+                        (ownerWidth - width) / 2);
+                var y = ownerBounds.Top +
+                    Math.Max(
+                        0,
+                        (ownerHeight - height) / 2);
+
+                _window.AppWindow.MoveAndResize(
+                    new RectInt32(
+                        x,
+                        y,
+                        width,
+                        height));
+            }
+            else
+            {
+                _window.AppWindow.Resize(
+                    new SizeInt32(
+                        width,
+                        height));
+            }
         }
         catch
         {
@@ -93,10 +136,109 @@ internal sealed class WebDavFolderPickerWindow
 
         try
         {
-            _window.SystemBackdrop = new MicaBackdrop();
+            _window.SystemBackdrop =
+                new MicaBackdrop();
+
+            var titleBar =
+                _window.AppWindow.TitleBar;
+            var foreground =
+                _windowTheme == ElementTheme.Dark
+                    ? Colors.White
+                    : Colors.Black;
+            var secondaryForeground =
+                _windowTheme == ElementTheme.Dark
+                    ? ColorHelper.FromArgb(
+                        255,
+                        210,
+                        218,
+                        218)
+                    : ColorHelper.FromArgb(
+                        255,
+                        32,
+                        32,
+                        32);
+            var hover =
+                _windowTheme == ElementTheme.Dark
+                    ? ColorHelper.FromArgb(
+                        255,
+                        38,
+                        50,
+                        50)
+                    : ColorHelper.FromArgb(
+                        255,
+                        214,
+                        235,
+                        235);
+            var pressed =
+                _windowTheme == ElementTheme.Dark
+                    ? ColorHelper.FromArgb(
+                        255,
+                        52,
+                        66,
+                        66)
+                    : ColorHelper.FromArgb(
+                        255,
+                        198,
+                        222,
+                        222);
+
+            titleBar.BackgroundColor =
+                _surfaceColor;
+            titleBar.InactiveBackgroundColor =
+                _surfaceColor;
+            titleBar.ForegroundColor =
+                foreground;
+            titleBar.InactiveForegroundColor =
+                secondaryForeground;
+            titleBar.ButtonBackgroundColor =
+                _surfaceColor;
+            titleBar.ButtonInactiveBackgroundColor =
+                _surfaceColor;
+            titleBar.ButtonForegroundColor =
+                foreground;
+            titleBar.ButtonInactiveForegroundColor =
+                secondaryForeground;
+            titleBar.ButtonHoverBackgroundColor =
+                hover;
+            titleBar.ButtonHoverForegroundColor =
+                foreground;
+            titleBar.ButtonPressedBackgroundColor =
+                pressed;
+            titleBar.ButtonPressedForegroundColor =
+                foreground;
         }
         catch
         {
+        }
+    }
+
+    private static ElementTheme ResolveWindowTheme()
+    {
+        var persisted =
+            ThemePreferenceStore.Load();
+
+        if (persisted != ElementTheme.Default)
+            return persisted;
+
+        try
+        {
+            var background =
+                new Windows.UI.ViewManagement.UISettings()
+                    .GetColorValue(
+                        Windows.UI.ViewManagement.UIColorType.Background);
+
+            var luminance =
+                0.2126 * background.R +
+                0.7152 * background.G +
+                0.0722 * background.B;
+
+            return luminance < 128
+                ? ElementTheme.Dark
+                : ElementTheme.Light;
+        }
+        catch
+        {
+            return ElementTheme.Light;
         }
     }
 
@@ -104,8 +246,12 @@ internal sealed class WebDavFolderPickerWindow
     {
         var root = new Grid
         {
-            Padding = new Thickness(20),
-            RowSpacing = 12
+            Padding = new Thickness(24),
+            RowSpacing = 14,
+            RequestedTheme = _windowTheme,
+            Background =
+                new SolidColorBrush(
+                    _surfaceColor)
         };
 
         root.RowDefinitions.Add(
@@ -643,6 +789,20 @@ internal sealed class WebDavFolderPickerWindow
                 : string.Format(
                     T("Sources_SelectedFoldersFormat"),
                     _selectedPaths.Count);
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(
+        IntPtr hWnd,
+        out NativeRect rect);
+
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
     }
 
     [DllImport(
