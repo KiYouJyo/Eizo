@@ -9,7 +9,8 @@ internal static class ComponentEarlyBootstrap
     {
         // WinUI generated metadata may resolve PlaybackView before App() executes.
         // Select staged external components (or their bundled fallback) before any
-        // static reference to Playback/Recognition implementation assemblies binds.
+        // static reference to Playback/Metadata implementation assemblies binds.
         ComponentRuntimeBootstrapper.Initialize();
+        ComponentActivationDiagnostics.WriteStartupSnapshot();
     }
 }
