@@ -16,36 +16,36 @@ function Index-OrThrow([string] $text, [string] $needle) {
     return $index
 }
 
-$home = Index-OrThrow $shell 'x:Name="HomeNav"'
-$bangumi = Index-OrThrow $shell 'x:Name="BangumiNav"'
-$calendar = Index-OrThrow $shell 'x:Name="CalendarNav"'
-$seasonal = Index-OrThrow $shell 'x:Name="SeasonalNav"'
-$discover = Index-OrThrow $shell 'x:Name="DiscoverNav"'
-$following = Index-OrThrow $shell 'x:Name="FollowingNav"'
-$library = Index-OrThrow $shell 'x:Name="CategoryNav"'
-$anime = Index-OrThrow $shell 'x:Name="AnimeNav"'
-$movies = Index-OrThrow $shell 'x:Name="MoviesNav"'
-$series = Index-OrThrow $shell 'x:Name="SeriesNav"'
-$sources = Index-OrThrow $shell 'x:Name="SourcesNav"'
-$footer = Index-OrThrow $shell '<NavigationView.FooterMenuItems>'
-$cache = Index-OrThrow $shell 'x:Name="CacheNav"'
-$about = Index-OrThrow $shell 'x:Name="AboutNav"'
-$settings = Index-OrThrow $shell 'x:Name="SettingsNav"'
+$homeIndex = Index-OrThrow $shell 'x:Name="HomeNav"'
+$bangumiIndex = Index-OrThrow $shell 'x:Name="BangumiNav"'
+$calendarIndex = Index-OrThrow $shell 'x:Name="CalendarNav"'
+$seasonalIndex = Index-OrThrow $shell 'x:Name="SeasonalNav"'
+$discoverIndex = Index-OrThrow $shell 'x:Name="DiscoverNav"'
+$followingIndex = Index-OrThrow $shell 'x:Name="FollowingNav"'
+$libraryIndex = Index-OrThrow $shell 'x:Name="CategoryNav"'
+$animeIndex = Index-OrThrow $shell 'x:Name="AnimeNav"'
+$moviesIndex = Index-OrThrow $shell 'x:Name="MoviesNav"'
+$seriesIndex = Index-OrThrow $shell 'x:Name="SeriesNav"'
+$sourcesIndex = Index-OrThrow $shell 'x:Name="SourcesNav"'
+$footerIndex = Index-OrThrow $shell '<NavigationView.FooterMenuItems>'
+$cacheIndex = Index-OrThrow $shell 'x:Name="CacheNav"'
+$aboutIndex = Index-OrThrow $shell 'x:Name="AboutNav"'
+$settingsIndex = Index-OrThrow $shell 'x:Name="SettingsNav"'
 
-if (-not ($home -lt $bangumi -and
-          $bangumi -lt $calendar -and
-          $calendar -lt $seasonal -and
-          $seasonal -lt $discover -and
-          $discover -lt $following -and
-          $following -lt $library -and
-          $library -lt $anime -and
-          $anime -lt $movies -and
-          $movies -lt $series -and
-          $series -lt $sources -and
-          $sources -lt $footer -and
-          $footer -lt $cache -and
-          $cache -lt $about -and
-          $about -lt $settings)) {
+if (-not ($homeIndex -lt $bangumiIndex -and
+          $bangumiIndex -lt $calendarIndex -and
+          $calendarIndex -lt $seasonalIndex -and
+          $seasonalIndex -lt $discoverIndex -and
+          $discoverIndex -lt $followingIndex -and
+          $followingIndex -lt $libraryIndex -and
+          $libraryIndex -lt $animeIndex -and
+          $animeIndex -lt $moviesIndex -and
+          $moviesIndex -lt $seriesIndex -and
+          $seriesIndex -lt $sourcesIndex -and
+          $sourcesIndex -lt $footerIndex -and
+          $footerIndex -lt $cacheIndex -and
+          $cacheIndex -lt $aboutIndex -and
+          $aboutIndex -lt $settingsIndex)) {
     throw 'Navigation IA contract violation: hamburger-menu ordering changed.'
 }
 
