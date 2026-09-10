@@ -73,6 +73,11 @@ if ($LASTEXITCODE -ne 0) {
 Remove-Item -LiteralPath $feedRoot -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $feedRoot | Out-Null
 
+# NuGet.config contains both local Eizo feeds. Keep the sibling source present
+# even when Recognition is restored before Playback.
+$playbackFeedRoot = Join-Path $repoRoot '.packages/Eizo.Playback'
+New-Item -ItemType Directory -Force -Path $playbackFeedRoot | Out-Null
+
 $project = Join-Path $dependencyRoot 'src/Eizo.Metadata.Recognition/Eizo.Metadata.Recognition.csproj'
 
 & dotnet restore $project
