@@ -86,32 +86,38 @@
 
       <ListView.ItemTemplate>
         <DataTemplate x:DataType="models:SourceItemModel">
-          <Grid MinHeight="52"
-                ColumnDefinitions="*,Auto,Auto"
+          <Grid Height="52"
+                ColumnDefinitions="*,340,128"
                 ColumnSpacing="16">
             <StackPanel VerticalAlignment="Center"
                         Spacing="4">
               <TextBlock Text="{x:Bind Name}"
-                         Style="{StaticResource CardTitleText}" />
+                         Style="{StaticResource CardTitleText}"
+                         TextTrimming="CharacterEllipsis" />
               <TextBlock Text="{x:Bind Kind}"
                          Style="{StaticResource MetadataText}"
-                         Opacity="0.7" />
+                         Opacity="0.7"
+                         TextTrimming="CharacterEllipsis" />
             </StackPanel>
 
             <TextBlock Grid.Column="1"
+                       Width="340"
                        Text="{x:Bind Summary}"
                        VerticalAlignment="Center"
+                       HorizontalAlignment="Right"
                        TextAlignment="Right"
-                       TextWrapping="Wrap"
-                       MaxWidth="560"
+                       TextWrapping="NoWrap"
+                       TextTrimming="CharacterEllipsis"
                        Style="{StaticResource MetadataText}" />
 
             <Button Grid.Column="2"
                     Tag="{x:Bind Id}"
                     IsEnabled="{x:Bind CanScan}"
                     VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
                     Height="32"
                     MinWidth="0"
+                    MaxWidth="124"
                     Padding="12,0"
                     CornerRadius="5"
                     HorizontalContentAlignment="Center"
