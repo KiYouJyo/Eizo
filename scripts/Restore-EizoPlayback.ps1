@@ -82,9 +82,9 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed to fetch Eizo.Playback commit $commit."
 }
 
-# Never erase an independently edited dependency checkout. A brand-new
-# --no-checkout clone has an intentionally empty worktree, so checkout the
-# pinned commit first instead of misclassifying every tracked file as deleted.
+# Preserve existing edited dependency checkouts, but treat a fresh --no-checkout
+# clone as a clean bootstrap state: its intentionally empty worktree is not a set
+# of user deletions and must be populated before dirty-worktree protection runs.
 if ($dependencyCheckoutCreated) {
     & git -C $dependencyRoot checkout --detach --force $commit
     if ($LASTEXITCODE -ne 0) {
