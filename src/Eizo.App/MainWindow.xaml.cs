@@ -7,9 +7,12 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Windows.Graphics;
+using Windows.System;
 
 namespace Eizo;
 
@@ -21,6 +24,7 @@ public sealed partial class MainWindow : Window
     private readonly WindowPlacementService _windowPlacement = new();
     private SizeInt32 _lastNormalWindowSize;
     private bool _wasWindowMaximized;
+    private PlayerView? _fullscreenOwner;
     private bool _playerFullscreen;
     private bool _restoreMaximizedAfterPlayerFullscreen;
     private string? _selectedTabKey;
@@ -116,8 +120,10 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    public void SetPlayerVideoFullscreen(bool enabled)
+    public void SetPlayerVideoFullscreen(bool enabled, PlayerView? owner = null)
     {
+        if (!enabled && owner is not null && !ReferenceEquals(_fullscreenOwner, owner)) return;
+        _fullscreenOwner = enabled ? owner : null;
         if (_playerFullscreen == enabled)
             return;
 
@@ -141,7 +147,12 @@ public sealed partial class MainWindow : Window
             ShellNavigation.CompactPaneLength = 0;
             ShellNavigation.PaneDisplayMode = NavigationViewPaneDisplayMode.LeftMinimal;
 
-            AppWindow.SetPresenter(AppWindowPresenterKind.FullScreen);
+            // SetPresenter is re-entrant; avoid asking for the presenter we already have.
+            if (AppWindow.Presenter is not { Kind: AppWindowPresenterKind.FullScreen })
+            {
+                AppWindow.SetPresenter(AppWindowPresenterKind.FullScreen);
+            }
+
             return;
         }
 
@@ -152,12 +163,23 @@ public sealed partial class MainWindow : Window
         RootGrid.RowDefinitions[0].Height = new GridLength(48);
         AppTitleBar.Visibility = Visibility.Visible;
 
-        AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
-
-        if (_restoreMaximizedAfterPlayerFullscreen &&
-            AppWindow.Presenter is OverlappedPresenter restoredPresenter)
+        if (AppWindow.Presenter is not { Kind: AppWindowPresenterKind.Overlapped })
         {
-            restoredPresenter.Maximize();
+            AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
+        }
+
+        if (_restoreMaximizedAfterPlayerFullscreen)
+        {
+            // Maximize on the next dispatcher pass; calling it from inside the
+            // presenter-transition callback can re-enter window layout and deadlock.
+            _restoreMaximizedAfterPlayerFullscreen = false;
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (AppWindow.Presenter is OverlappedPresenter restoredPresenter)
+                {
+                    restoredPresenter.Maximize();
+                }
+            });
         }
     }
 
@@ -173,6 +195,43 @@ public sealed partial class MainWindow : Window
 
         Activate();
         SetForegroundWindow(WinRT.Interop.WindowNative.GetWindowHandle(this));
+    }
+
+    private void WindowRoot_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (_selectedTabKey is null ||
+            !_tabs.TryGetValue(_selectedTabKey, out var state) ||
+            state.View is not PlayerView player)
+        {
+            return;
+        }
+
+        // ESC on a fullscreen player means "exit fullscreen" only, and it must win
+        // over every other control.
+        if (e.Key == VirtualKey.Escape)
+        {
+            if (player.IsVideoFullscreen)
+            {
+                player.ExitFullscreenFromKeyboard();
+                e.Handled = true;
+            }
+            return;
+        }
+
+        if (e.Key != VirtualKey.Space) return;
+
+        // PreviewKeyDown tunnels from the window root to the focused element, so we
+        // run BEFORE any button/navigation item. Space on a PlayerView tab means
+        // pause/play only; mark it handled so it can never activate tabs or buttons.
+        if (Content.XamlRoot is { } xamlRoot)
+        {
+            var focused = FocusManager.GetFocusedElement(xamlRoot);
+            if (focused is TextBox or PasswordBox or AutoSuggestBox or RichEditBox or ComboBox or Slider)
+                return;
+        }
+
+        _ = player.TogglePlayPauseAsync();
+        e.Handled = true;
     }
 
     [DllImport("user32.dll", SetLastError = true)]

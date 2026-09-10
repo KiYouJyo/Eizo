@@ -19,6 +19,10 @@ $pin = Get-Content -LiteralPath $pinPath -Raw | ConvertFrom-Json
 $commit = [string]$pin.commit
 $version = [string]$pin.version
 $repository = [string]$pin.repository
+$patchPath = Join-Path $repoRoot ([string]$pin.patch)
+if (-not (Test-Path -LiteralPath $patchPath -PathType Leaf)) { throw "Playback patch is missing: $patchPath" }
+$patchHash = (Get-FileHash -LiteralPath $patchPath -Algorithm SHA256).Hash
+$sourceStamp = "$commit/$version/$patchHash"
 
 if ([string]::IsNullOrWhiteSpace($commit) -or
     [string]::IsNullOrWhiteSpace($version) -or
@@ -36,7 +40,7 @@ $expectedPackages = @(
 $feedReady =
     -not $Force -and
     (Test-Path -LiteralPath $stampPath -PathType Leaf) -and
-    ((Get-Content -LiteralPath $stampPath -Raw).Trim() -eq $commit) -and
+    ((Get-Content -LiteralPath $stampPath -Raw).Trim() -eq $sourceStamp) -and
     ($expectedPackages | ForEach-Object {
         Test-Path -LiteralPath (Join-Path $feedRoot $_) -PathType Leaf
     } | Where-Object { -not $_ } | Measure-Object).Count -eq 0
@@ -54,9 +58,13 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
     throw '.NET SDK is required to restore Eizo.Playback.'
 }
 
+$dependencyCheckoutCreated = $false
 if (-not (Test-Path -LiteralPath (Join-Path $dependencyRoot '.git'))) {
     if (Test-Path -LiteralPath $dependencyRoot) {
-        Remove-Item -LiteralPath $dependencyRoot -Recurse -Force
+        $resolvedDependency = [IO.Path]::GetFullPath($dependencyRoot)
+        $expectedDependency = [IO.Path]::GetFullPath((Join-Path $repoRoot '.deps/Eizo.Playback'))
+        if ($resolvedDependency -ne $expectedDependency) { throw 'Unexpected dependency cleanup path.' }
+        Remove-Item -LiteralPath $resolvedDependency -Recurse -Force
     }
 
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dependencyRoot) | Out-Null
@@ -65,6 +73,8 @@ if (-not (Test-Path -LiteralPath (Join-Path $dependencyRoot '.git'))) {
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to clone Eizo.Playback from $repository."
     }
+
+    $dependencyCheckoutCreated = $true
 }
 
 & git -C $dependencyRoot fetch --force origin $commit
@@ -72,12 +82,36 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed to fetch Eizo.Playback commit $commit."
 }
 
-& git -C $dependencyRoot checkout --detach --force $commit
-if ($LASTEXITCODE -ne 0) {
-    throw "Failed to checkout Eizo.Playback commit $commit."
+# Preserve existing edited dependency checkouts, but treat a fresh --no-checkout
+# clone as a clean bootstrap state: its intentionally empty worktree is not a set
+# of user deletions and must be populated before dirty-worktree protection runs.
+if ($dependencyCheckoutCreated) {
+    & git -C $dependencyRoot checkout --detach --force $commit
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to checkout fresh Eizo.Playback commit $commit."
+    }
+}
+else {
+    $dependencyDiff = & git -C $dependencyRoot status --porcelain
+    if ($dependencyDiff) {
+        & git -C $dependencyRoot apply --reverse --check $patchPath
+        if ($LASTEXITCODE -ne 0) { throw 'Dependency has local changes beyond the saved patch. Preserve them before restoring.' }
+        & git -C $dependencyRoot apply --reverse $patchPath
+        if ($LASTEXITCODE -ne 0) { throw 'Could not reverse the saved dependency patch.' }
+        if (& git -C $dependencyRoot status --porcelain) { throw 'Dependency still has local changes; refusing checkout.' }
+    }
+
+    & git -C $dependencyRoot checkout --detach $commit
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to checkout Eizo.Playback commit $commit."
+    }
 }
 
-Remove-Item -LiteralPath $feedRoot -Recurse -Force -ErrorAction SilentlyContinue
+& git -C $dependencyRoot apply --check $patchPath
+if ($LASTEXITCODE -ne 0) { throw 'Playback patch does not apply to the pinned commit.' }
+& git -C $dependencyRoot apply $patchPath
+if ($LASTEXITCODE -ne 0) { throw 'Playback patch failed.' }
+# Keep unrelated downloaded packages in the local feed.
 New-Item -ItemType Directory -Force -Path $feedRoot | Out-Null
 
 $solution = Join-Path $dependencyRoot 'Eizo.Playback.slnx'
@@ -104,7 +138,7 @@ foreach ($package in $expectedPackages) {
     }
 }
 
-Set-Content -LiteralPath $stampPath -Value $commit -Encoding ascii -NoNewline
+Set-Content -LiteralPath $stampPath -Value $sourceStamp -Encoding ascii -NoNewline
 
 Write-Host "Restored Eizo.Playback $version from commit $commit."
 Write-Host "Local NuGet feed: $feedRoot"

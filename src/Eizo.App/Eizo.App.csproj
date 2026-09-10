@@ -12,15 +12,16 @@
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <AppxBundleAutoResourcePackageQualifiers>Scale|DXFeatureLevel</AppxBundleAutoResourcePackageQualifiers>
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
-    <Version>0.3.1</Version>
-    <AssemblyVersion>0.3.1.0</AssemblyVersion>
-    <FileVersion>0.3.1.0</FileVersion>
-    <InformationalVersion>0.3.1</InformationalVersion>
+    <Version>0.3.2</Version>
+    <AssemblyVersion>0.3.2.0</AssemblyVersion>
+    <FileVersion>0.3.2.0</FileVersion>
+    <InformationalVersion>0.3.2</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260710003" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.0" />
-    <PackageReference Include="Eizo.Playback.LibVLC.WinUI" Version="0.2.1" />
+    <PackageReference Include="Eizo.Playback.LibVLC.WinUI" Version="0.2.1-eizo.1" Condition="'$(EizoPlaybackUseSource)' != 'true'" />
+    <ProjectReference Include="../../.deps/Eizo.Playback/src/Eizo.Playback.LibVLC.WinUI/Eizo.Playback.LibVLC.WinUI.csproj" Condition="'$(EizoPlaybackUseSource)' == 'true'" />
     <!-- The final Windows host owns the native LibVLC runtime deployment.
          This is a runtime/package dependency only; Eizo UI code does not reference LibVLCSharp APIs. -->
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
