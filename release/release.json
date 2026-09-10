@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.3.1",
-    "packageVersion": "0.3.1.7",
+    "version": "0.3.2",
+    "packageVersion": "0.3.2.0",
     "title": {
-      "zh-CN": "WebDAV 媒体来源管理、UI 修复与 Bangumi 导航重构",
-      "ja-JP": "WebDAV メディアソース管理・UI 修正・Bangumi ナビゲーション再構成",
-      "en-US": "WebDAV Source Management, UI Fixes & Bangumi Navigation"
+      "zh-CN": "播放器并发稳定性、字幕切换与全屏控制修复",
+      "ja-JP": "プレイヤー並行処理の安定化・字幕切替・全画面操作の修正",
+      "en-US": "Playback Concurrency, Subtitle Switching & Fullscreen Fixes"
     }
   },
   "channels": {
