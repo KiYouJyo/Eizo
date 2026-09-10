@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "product": {
     "version": "0.3.1",
-    "packageVersion": "0.3.1.5",
+    "packageVersion": "0.3.1.6",
     "title": {
-      "zh-CN": "媒体来源圆角卡片与扫描按钮对齐",
-      "ja-JP": "メディアソースの角丸カードとスキャンボタン整列",
-      "en-US": "Rounded Source Cards & Centered Scan Button"
+      "zh-CN": "Bangumi 导航与页面预留",
+      "ja-JP": "Bangumi ナビゲーションとページ予約",
+      "en-US": "Bangumi Navigation & Page Scaffolding"
     }
   },
   "channels": {

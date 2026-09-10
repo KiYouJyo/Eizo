@@ -1,16 +1,16 @@
-name: Signed v0.2 acceptance package
+name: Signed acceptance package
 
 on:
   push:
     branches:
-      - "codex/ui-stability-update-localization"
+      - "acceptance/**"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: eizo-v0.2-acceptance-${{ github.ref }}
+  group: eizo-acceptance-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -32,6 +32,38 @@ jobs:
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
+
+      - name: Resolve acceptance metadata
+        id: version
+        shell: pwsh
+        run: |
+          $release = Get-Content -LiteralPath release/release.json -Raw | ConvertFrom-Json
+          if ([int]$release.schemaVersion -ne 1) { throw 'Unsupported release metadata schema.' }
+
+          $version = [string]$release.product.version
+          $packageVersion = [string]$release.product.packageVersion
+          if ($version -notmatch '^\d+\.\d+\.\d+$' -or
+              $packageVersion -notmatch '^\d+\.\d+\.\d+\.\d+$' -or
+              -not $packageVersion.StartsWith("$version.")) {
+            throw 'Invalid acceptance version metadata.'
+          }
+
+          [xml]$project = Get-Content -Raw src/Eizo.App/Eizo.App.csproj
+          $projectVersion = @($project.Project.PropertyGroup | ForEach-Object Version | Where-Object { $_ })[0]
+          [xml]$manifest = Get-Content -Raw src/Eizo.App/Package.appxmanifest
+          if ($projectVersion -ne $version -or
+              $manifest.Package.Identity.Version -ne $packageVersion) {
+            throw "Source version mismatch. Project=$projectVersion Manifest=$($manifest.Package.Identity.Version) Expected=$version/$packageVersion"
+          }
+
+          "version=$version" | Out-File $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "package_version=$packageVersion" | Out-File $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "DISPLAY_VERSION=$version" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "PACKAGE_VERSION=$packageVersion" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Restore pinned Eizo.Playback packages
+        shell: pwsh
+        run: ./scripts/Restore-EizoPlayback.ps1
 
       - name: Validate signing configuration
         shell: pwsh
@@ -71,9 +103,9 @@ jobs:
             throw "Windows App Runtime installer signature validation failed: $($runtimeSignature.Status) / $($runtimeSignature.SignerCertificate.Subject)"
           }
 
-          $assets = Join-Path $env:RUNNER_TEMP 'Eizo-v0.2.0-signed'
+          $assets = Join-Path $env:RUNNER_TEMP 'Eizo-acceptance-assets'
           New-Item -ItemType Directory -Force -Path $assets | Out-Null
-          $finalBundle = Join-Path $assets 'Eizo_0.2.0.0_x64.msixbundle'
+          $finalBundle = Join-Path $assets ("Eizo_{0}_x64.msixbundle" -f $env:PACKAGE_VERSION)
           Copy-Item -LiteralPath $bundle.FullName -Destination $finalBundle -Force
           "BUNDLE_PATH=$finalBundle" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
           "RUNTIME_INSTALLER_PATH=$runtimeInstaller" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
@@ -95,7 +127,7 @@ jobs:
             throw "Unexpected signing certificate: Subject=$($certificate.Subject); Thumbprint=$($certificate.Thumbprint); HasPrivateKey=$($certificate.HasPrivateKey)"
           }
 
-          $cer = Join-Path $env:ASSETS_DIR 'Eizo-v0.2.0-AppPublisher.cer'
+          $cer = Join-Path $env:ASSETS_DIR ("Eizo-v{0}-AppPublisher.cer" -f $env:DISPLAY_VERSION)
           Export-Certificate -Cert $certificate -FilePath $cer | Out-Null
 
           $kitsRoot = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
@@ -420,20 +452,20 @@ jobs:
             SignedBundlePath = $env:BUNDLE_PATH
             PublicCertificatePath = $env:CERTIFICATE_PATH
             OutputDirectory = $staging
-            DisplayVersion = '0.2.0'
-            PackageVersion = '0.2.0.0'
+            DisplayVersion = $env:DISPLAY_VERSION
+            PackageVersion = $env:PACKAGE_VERSION
           }
           & ./packaging/New-GitHubOneClickInstallerPackage.ps1 @buildArgs
 
-          $packageRoot = Join-Path $staging 'Eizo-v0.2.0-x64-one-click'
+          $packageRoot = Join-Path $staging ("Eizo-v{0}-x64-one-click" -f $env:DISPLAY_VERSION)
           & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $packageRoot
 
-          $zip = Join-Path $env:ASSETS_DIR 'Eizo-v0.2.0-x64-one-click.zip'
+          $zip = Join-Path $env:ASSETS_DIR ("Eizo-v{0}-x64-one-click.zip" -f $env:DISPLAY_VERSION)
           Compress-Archive -LiteralPath $packageRoot -DestinationPath $zip -CompressionLevel Optimal
 
           $extracted = Join-Path $env:RUNNER_TEMP 'Eizo-one-click-extracted'
           Expand-Archive -LiteralPath $zip -DestinationPath $extracted -Force
-          $extractedRoot = Join-Path $extracted 'Eizo-v0.2.0-x64-one-click'
+          $extractedRoot = Join-Path $extracted ("Eizo-v{0}-x64-one-click" -f $env:DISPLAY_VERSION)
           & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $extractedRoot -ZipPath $zip
 
           $installPayload = Join-Path $extractedRoot 'payload\Install.ps1'
@@ -441,8 +473,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "One-click local install validation failed: $LASTEXITCODE" }
 
           $installed = Get-AppxPackage -Name Eizo
-          if (-not $installed -or [string]$installed.Version -ne '0.2.0.0') {
-            throw 'One-click bootstrap did not install Eizo 0.2.0.0.'
+          if (-not $installed -or [string]$installed.Version -ne $env:PACKAGE_VERSION) {
+            throw "One-click bootstrap did not install Eizo $env:PACKAGE_VERSION."
           }
 
           $uninstallPayload = Join-Path $extractedRoot 'payload\Uninstall.ps1'
@@ -454,7 +486,7 @@ jobs:
         run: |
           $files = @(
             $env:BUNDLE_PATH,
-            (Join-Path $env:ASSETS_DIR 'Eizo-v0.2.0-x64-one-click.zip')
+            (Join-Path $env:ASSETS_DIR ("Eizo-v{0}-x64-one-click.zip" -f $env:DISPLAY_VERSION))
           )
           $lines = foreach ($file in $files) {
             $item = Get-Item -LiteralPath $file
@@ -466,10 +498,10 @@ jobs:
       - name: Upload signed release-contract assets
         uses: actions/upload-artifact@v7
         with:
-          name: Eizo-v0.2.0-acceptance-assets
+          name: Eizo-${{ steps.version.outputs.version }}-acceptance-assets
           path: |
-            ${{ env.ASSETS_DIR }}/Eizo_0.2.0.0_x64.msixbundle
-            ${{ env.ASSETS_DIR }}/Eizo-v0.2.0-x64-one-click.zip
+            ${{ env.ASSETS_DIR }}/Eizo_${{ steps.version.outputs.package_version }}_x64.msixbundle
+            ${{ env.ASSETS_DIR }}/Eizo-v${{ steps.version.outputs.version }}-x64-one-click.zip
             ${{ env.ASSETS_DIR }}/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
