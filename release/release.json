@@ -1,17 +1,17 @@
 {
-  "schemaVersion": 1,
-  "product": {
-    "version": "0.3.2",
-    "packageVersion": "0.3.2.0",
-    "title": {
-      "zh-CN": "播放器并发稳定性、字幕切换与全屏控制修复",
-      "ja-JP": "プレイヤー並行処理の安定化・字幕切替・全画面操作の修正",
-      "en-US": "Playback Concurrency, Subtitle Switching & Fullscreen Fixes"
+    "schemaVersion": 1,
+    "product": {
+        "version": "0.3.2",
+        "packageVersion": "0.3.2.0",
+        "title": {
+            "zh-CN": "播放器并发稳定性、字幕切换与全屏控制修复",
+            "ja-JP": "プレイヤー並行処理の安定化・字幕切替・全画面操作の修正",
+            "en-US": "Playback Concurrency, Subtitle Switching & Fullscreen Fixes"
+        }
+    },
+    "channels": {
+        "github": {
+            "publish": true
+        }
     }
-  },
-  "channels": {
-    "github": {
-      "publish": true
-    }
-  }
 }
