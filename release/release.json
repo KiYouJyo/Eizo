@@ -4,9 +4,9 @@
     "version": "0.3.1",
     "packageVersion": "0.3.1.7",
     "title": {
-      "zh-CN": "WebDAV 媒体来源管理与 Bangumi 导航重构",
-      "ja-JP": "WebDAV メディアソース管理と Bangumi ナビゲーション再構成",
-      "en-US": "WebDAV Source Management & Bangumi Navigation"
+      "zh-CN": "WebDAV 媒体来源管理、UI 修复与 Bangumi 导航重构",
+      "ja-JP": "WebDAV メディアソース管理・UI 修正・Bangumi ナビゲーション再構成",
+      "en-US": "WebDAV Source Management, UI Fixes & Bangumi Navigation"
     }
   },
   "channels": {

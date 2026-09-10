@@ -1,3 +1,5 @@
+简体中文 | [日本語](RELEASE-NOTES-v0.3.1.ja.md) | [English](RELEASE-NOTES-v0.3.1.en.md)
+
 # Eizo v0.3.1 WebDAV 媒体来源管理与 Bangumi 导航重构
 
 Eizo v0.3.1 继续完善本地 / WebDAV 媒体库，并为后续 Bangumi 追番与新番资讯接入完成导航和页面结构预留。

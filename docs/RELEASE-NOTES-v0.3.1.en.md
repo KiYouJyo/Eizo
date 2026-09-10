@@ -1,3 +1,5 @@
+English | [简体中文](RELEASE-NOTES-v0.3.1.md) | [日本語](RELEASE-NOTES-v0.3.1.ja.md)
+
 # Eizo v0.3.1 WebDAV Source Management & Bangumi Navigation
 
 Eizo v0.3.1 further develops the local / WebDAV media library and establishes the navigation and page structure for future Bangumi tracking and seasonal-anime integration.
