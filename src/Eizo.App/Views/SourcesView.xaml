@@ -37,10 +37,9 @@
           <Setter Property="HorizontalContentAlignment" Value="Stretch" />
           <Setter Property="Background"
                   Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
-          <Setter Property="BorderBrush"
-                  Value="{ThemeResource CardStrokeColorDefaultBrush}" />
-          <Setter Property="BorderThickness" Value="1" />
-          <Setter Property="CornerRadius" Value="8" />
+          <Setter Property="BorderThickness" Value="0" />
+          <Setter Property="CornerRadius" Value="10" />
+          <Setter Property="UseSystemFocusVisuals" Value="False" />
         </Style>
       </ListView.ItemContainerStyle>
 
@@ -70,13 +69,16 @@
                     Tag="{x:Bind Id}"
                     IsEnabled="{x:Bind CanScan}"
                     VerticalAlignment="Center"
-                    Style="{StaticResource CompactActionButton}"
+                    Height="32"
+                    MinWidth="0"
+                    Padding="12,0"
+                    CornerRadius="5"
                     Click="ScanSourceButton_Click">
               <StackPanel Orientation="Horizontal"
-                          Spacing="8"
+                          Spacing="{x:Bind ScanSpacing}"
                           VerticalAlignment="Center">
-                <ProgressRing Width="16"
-                              Height="16"
+                <ProgressRing Width="{x:Bind ScanProgressSize}"
+                              Height="{x:Bind ScanProgressSize}"
                               IsActive="{x:Bind IsScanning}" />
                 <TextBlock Text="{x:Bind ScanText}"
                            VerticalAlignment="Center" />
