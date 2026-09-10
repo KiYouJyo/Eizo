@@ -24,9 +24,10 @@ if ($catalogStore -notmatch '"catalog\.json"' -or
     throw 'Stage 1 contract violation: media sources and catalog must be persisted under Eizo local app data.'
 }
 
-if ($catalogStore -notmatch 'SchemaVersion:\s*1' -or
+if ($catalogStore -notmatch 'SchemaVersion:\s*2' -or
+    $catalogStore -notmatch 'SchemaVersion is 1 or 2' -or
     $sourceStore -notmatch 'SchemaVersion:\s*1') {
-    throw 'Stage 1 contract violation: source/catalog persistence must be schema-versioned before WebDAV fields are added.'
+    throw 'Stage 1 contract violation: catalog must support v1-to-v2 migration and sources must remain schema-versioned.'
 }
 
 if ($sourceStore -match 'Password' -or

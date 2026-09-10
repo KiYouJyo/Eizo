@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Eizo.Metadata.Recognition;
 
 namespace Eizo.Models;
 
@@ -18,6 +19,8 @@ public sealed class MediaCatalogStore
             ".mkv", ".mp4", ".m4v", ".mov", ".avi", ".webm",
             ".ts", ".m2ts", ".wmv", ".mpg", ".mpeg"
         };
+
+    private static readonly RecognitionEngine Recognizer = new();
 
     private readonly object _sync = new();
     private readonly List<CatalogMediaItemModel> _items;
@@ -65,7 +68,10 @@ public sealed class MediaCatalogStore
         var fileInfo = new FileInfo(fullPath);
         var sourceId = MediaSourceStore.Default.ResolveLocalSourceId(fullPath);
 
-        var item = CreateLocalItem(sourceId, fileInfo);
+        var item = CreateLocalItem(
+            sourceId,
+            fileInfo,
+            fileInfo.Name);
         var changed = false;
 
         lock (_sync)
@@ -126,7 +132,7 @@ public sealed class MediaCatalogStore
                 $"No provider is registered for {source.Kind}.");
         }
 
-        var discovered = new List<CatalogMediaItemModel>();
+        var discoveredEntries = new List<MediaSourceEntry>();
         var pending = new Queue<string>();
         var visited = new HashSet<string>(
             StringComparer.OrdinalIgnoreCase);
@@ -168,12 +174,16 @@ public sealed class MediaCatalogStore
                     continue;
                 }
 
-                discovered.Add(
-                    CreateRemoteItem(
-                        source.Id,
-                        entry));
+                discoveredEntries.Add(entry);
             }
         }
+
+        var discovered = await Task.Run(
+            () => CreateRemoteItems(
+                source.Id,
+                discoveredEntries,
+                cancellationToken),
+            cancellationToken);
 
         lock (_sync)
         {
@@ -206,10 +216,15 @@ public sealed class MediaCatalogStore
             return 0;
         }
 
-        var discovered = EnumerateVideoFilesSafe(source.RootLocation)
+        var root = Path.GetFullPath(source.RootLocation);
+
+        var discovered = EnumerateVideoFilesSafe(root)
             .Select(path => new FileInfo(path))
             .Where(info => info.Exists)
-            .Select(info => CreateLocalItem(source.Id, info))
+            .Select(info => CreateLocalItem(
+                source.Id,
+                info,
+                Path.GetRelativePath(root, info.FullName)))
             .ToArray();
 
         var discoveredPaths = discovered
@@ -277,6 +292,22 @@ public sealed class MediaCatalogStore
             Path.GetExtension(candidate));
     }
 
+    private static List<CatalogMediaItemModel> CreateRemoteItems(
+        string sourceId,
+        IReadOnlyList<MediaSourceEntry> entries,
+        CancellationToken cancellationToken)
+    {
+        var result = new List<CatalogMediaItemModel>(entries.Count);
+
+        foreach (var entry in entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            result.Add(CreateRemoteItem(sourceId, entry));
+        }
+
+        return result;
+    }
+
     private static CatalogMediaItemModel CreateRemoteItem(
         string sourceId,
         MediaSourceEntry entry)
@@ -287,9 +318,14 @@ public sealed class MediaCatalogStore
         if (string.IsNullOrWhiteSpace(title))
             title = entry.Name;
 
+        var logicalPath = string.IsNullOrWhiteSpace(entry.RelativePath)
+            ? entry.Name
+            : entry.RelativePath;
+        var recognition = TryRecognize(logicalPath);
+
         return new CatalogMediaItemModel(
             title,
-            ParsedTitle: null,
+            ParsedTitle: recognition?.Title,
             NativeTitle: null,
             Category: null,
             Meta: string.Empty,
@@ -298,16 +334,20 @@ public sealed class MediaCatalogStore
                 MediaLocationKind.RemoteUri,
                 entry.Locator!,
                 entry.SizeBytes,
-                entry.ModifiedUtc));
+                entry.ModifiedUtc),
+            Recognition: recognition);
     }
 
     private static CatalogMediaItemModel CreateLocalItem(
         string sourceId,
-        FileInfo fileInfo)
+        FileInfo fileInfo,
+        string logicalPath)
     {
+        var recognition = TryRecognize(logicalPath);
+
         return new CatalogMediaItemModel(
             Path.GetFileNameWithoutExtension(fileInfo.Name),
-            ParsedTitle: null,
+            ParsedTitle: recognition?.Title,
             NativeTitle: null,
             Category: null,
             Meta: string.Empty,
@@ -316,8 +356,119 @@ public sealed class MediaCatalogStore
                 MediaLocationKind.LocalFile,
                 fileInfo.FullName,
                 fileInfo.Length,
-                fileInfo.LastWriteTimeUtc));
+                fileInfo.LastWriteTimeUtc),
+            Recognition: recognition);
     }
+
+    private static CatalogRecognitionModel? TryRecognize(string logicalPath)
+    {
+        if (string.IsNullOrWhiteSpace(logicalPath))
+            return null;
+
+        try
+        {
+            var result = Recognizer.Recognize(
+                new RecognitionRequest(logicalPath));
+
+            if (result.Title is null &&
+                result.MediaKind ==
+                    Eizo.Metadata.Recognition.MediaKind.Unknown)
+            {
+                return null;
+            }
+
+            return new CatalogRecognitionModel(
+                MapMediaKind(result.MediaKind),
+                MapSpecialKind(result.SpecialKind),
+                MapEpisodePart(result.EpisodePart),
+                result.IsFinalEpisode,
+                result.Title,
+                result.TitleCandidates
+                    .Select(candidate =>
+                        new CatalogRecognitionTitleCandidateModel(
+                            candidate.Title,
+                            candidate.Confidence,
+                            candidate.Source,
+                            candidate.IsPrimary))
+                    .ToList(),
+                result.SeasonNumber,
+                result.CourNumber,
+                result.EpisodeNumber,
+                result.EpisodeEndNumber,
+                result.SpecialNumber,
+                result.Year,
+                result.Confidence,
+                MapConfidenceLevel(result.ConfidenceLevel),
+                result.IsAmbiguous);
+        }
+        catch (Exception exception) when (
+            exception is not OutOfMemoryException)
+        {
+            // Recognition must never make a discovered media item unusable.
+            // SourceTitle and Location remain sufficient for raw playback.
+            return null;
+        }
+    }
+
+    private static CatalogRecognitionMediaKind MapMediaKind(
+        Eizo.Metadata.Recognition.MediaKind kind) =>
+        kind switch
+        {
+            Eizo.Metadata.Recognition.MediaKind.SeriesEpisode =>
+                CatalogRecognitionMediaKind.SeriesEpisode,
+            Eizo.Metadata.Recognition.MediaKind.Movie =>
+                CatalogRecognitionMediaKind.Movie,
+            Eizo.Metadata.Recognition.MediaKind.Special =>
+                CatalogRecognitionMediaKind.Special,
+            _ =>
+                CatalogRecognitionMediaKind.Unknown
+        };
+
+    private static CatalogRecognitionSpecialKind MapSpecialKind(
+        Eizo.Metadata.Recognition.SpecialKind kind) =>
+        kind switch
+        {
+            Eizo.Metadata.Recognition.SpecialKind.Ova =>
+                CatalogRecognitionSpecialKind.Ova,
+            Eizo.Metadata.Recognition.SpecialKind.Oad =>
+                CatalogRecognitionSpecialKind.Oad,
+            Eizo.Metadata.Recognition.SpecialKind.Ona =>
+                CatalogRecognitionSpecialKind.Ona,
+            Eizo.Metadata.Recognition.SpecialKind.Special =>
+                CatalogRecognitionSpecialKind.Special,
+            Eizo.Metadata.Recognition.SpecialKind.NcOp =>
+                CatalogRecognitionSpecialKind.NcOp,
+            Eizo.Metadata.Recognition.SpecialKind.NcEd =>
+                CatalogRecognitionSpecialKind.NcEd,
+            _ =>
+                CatalogRecognitionSpecialKind.None
+        };
+
+    private static CatalogRecognitionEpisodePart MapEpisodePart(
+        Eizo.Metadata.Recognition.EpisodePart part) =>
+        part switch
+        {
+            Eizo.Metadata.Recognition.EpisodePart.First =>
+                CatalogRecognitionEpisodePart.First,
+            Eizo.Metadata.Recognition.EpisodePart.Second =>
+                CatalogRecognitionEpisodePart.Second,
+            _ =>
+                CatalogRecognitionEpisodePart.None
+        };
+
+    private static CatalogRecognitionConfidenceLevel MapConfidenceLevel(
+        RecognitionConfidenceLevel level) =>
+        level switch
+        {
+            RecognitionConfidenceLevel.Low =>
+                CatalogRecognitionConfidenceLevel.Low,
+            RecognitionConfidenceLevel.Medium =>
+                CatalogRecognitionConfidenceLevel.Medium,
+            RecognitionConfidenceLevel.High =>
+                CatalogRecognitionConfidenceLevel.High,
+            _ =>
+                CatalogRecognitionConfidenceLevel.None
+        };
 
     private static IEnumerable<string> EnumerateVideoFilesSafe(string root)
     {
@@ -421,7 +572,8 @@ public sealed class MediaCatalogStore
                     File.ReadAllText(StorePath),
                     SerializerOptions);
 
-            return document is { SchemaVersion: 1 }
+            return document is not null &&
+                   document.SchemaVersion is 1 or 2
                 ? document.Items ?? []
                 : [];
         }
@@ -448,7 +600,7 @@ public sealed class MediaCatalogStore
                 $"{StorePath}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
 
             var document = new MediaCatalogStoreDocument(
-                SchemaVersion: 1,
+                SchemaVersion: 2,
                 Items: items.ToList());
 
             File.WriteAllText(

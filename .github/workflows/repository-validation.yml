@@ -32,10 +32,15 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-MediaSourceStage1Contract.ps1
 
+      - name: Validate Recognition Stage 7 integration contract
+        shell: pwsh
+        run: ./scripts/Test-RecognitionIntegrationContract.ps1
+
       - name: Run WebDAV v0.3.0 runtime probe
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force .packages/Eizo.Playback | Out-Null
+          New-Item -ItemType Directory -Force .packages/Eizo.Metadata | Out-Null
           dotnet run --project tools/Eizo.WebDavV030Probe/Eizo.WebDavV030Probe.csproj --configuration Release
 
       - name: Validate WebDAV v0.3.1 source management
@@ -64,6 +69,10 @@ jobs:
       - name: Restore pinned Eizo.Playback packages
         shell: pwsh
         run: ./scripts/Restore-EizoPlayback.ps1
+
+      - name: Restore pinned Eizo.Metadata Recognition package
+        shell: pwsh
+        run: ./scripts/Restore-EizoMetadata.ps1
 
       - name: Restore and build
         shell: pwsh

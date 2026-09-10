@@ -1,0 +1,111 @@
+name: Stage 7 Recognition integration
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/recognition-stage7-integration"
+    paths:
+      - "eng/Eizo.Metadata.Recognition.json"
+      - "NuGet.config"
+      - "scripts/Restore-EizoMetadata.ps1"
+      - "scripts/Test-RecognitionIntegrationContract.ps1"
+      - "src/Eizo.App/**"
+      - ".github/workflows/stage7-recognition-integration.yml"
+  pull_request:
+    paths:
+      - "eng/Eizo.Metadata.Recognition.json"
+      - "NuGet.config"
+      - "scripts/Restore-EizoMetadata.ps1"
+      - "scripts/Test-RecognitionIntegrationContract.ps1"
+      - "src/Eizo.App/**"
+      - ".github/workflows/stage7-recognition-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout Eizo
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore pinned Eizo.Playback packages
+        shell: pwsh
+        run: ./scripts/Restore-EizoPlayback.ps1
+
+      - name: Restore pinned Eizo.Metadata Recognition package
+        shell: pwsh
+        run: ./scripts/Restore-EizoMetadata.ps1
+
+      - name: Validate Recognition integration contract
+        shell: pwsh
+        run: ./scripts/Test-RecognitionIntegrationContract.ps1
+
+      - name: Restore and compile Eizo
+        shell: pwsh
+        run: |
+          msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:AppxPackageSigningEnabled=false /p:GenerateAppxPackageOnBuild=false
+          if ($LASTEXITCODE -ne 0) { throw "Eizo Recognition integration build failed: $LASTEXITCODE" }
+
+      - name: Verify Recognition assembly output
+        shell: pwsh
+        run: |
+          $assembly = Get-ChildItem src\Eizo.App\bin\x64\Release -Recurse -Filter 'Eizo.Metadata.Recognition.dll' -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $assembly) {
+            throw 'Recognition integration output is missing Eizo.Metadata.Recognition.dll.'
+          }
+          Write-Host "Recognition assembly PASS: $($assembly.FullName)"
+
+      - name: Build unsigned Recognition integration MSIX
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:RUNNER_TEMP 'Eizo-Recognition-AppPackages'
+          msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir="$output\"
+          if ($LASTEXITCODE -ne 0) { throw "Recognition integration MSIX build failed: $LASTEXITCODE" }
+
+          $msix = @(Get-ChildItem $output -Recurse -Filter '*.msix' -File) | Select-Object -First 1
+          if (-not $msix) {
+            throw 'Recognition integration MSIX was not produced.'
+          }
+
+          "RECOGNITION_MSIX=$($msix.FullName)" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Verify Recognition payload inside MSIX
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($env:RECOGNITION_MSIX)
+          try {
+            $match = @($archive.Entries | Where-Object {
+              $_.FullName -match '(^|[\\/])Eizo\.Metadata\.Recognition\.dll$'
+            })
+            if ($match.Count -eq 0) {
+              throw 'MSIX does not contain Eizo.Metadata.Recognition.dll.'
+            }
+            Write-Host "Recognition MSIX payload PASS: $($match[0].FullName)"
+          }
+          finally {
+            $archive.Dispose()
+          }
+
+      - name: Upload unsigned integration MSIX
+        uses: actions/upload-artifact@v7
+        with:
+          name: Eizo-Stage7-recognition-integration-${{ github.sha }}
+          path: ${{ env.RECOGNITION_MSIX }}
+          if-no-files-found: error
+          retention-days: 14

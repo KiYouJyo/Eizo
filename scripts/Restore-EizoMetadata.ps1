@@ -6,13 +6,13 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$pinPath = Join-Path $repoRoot 'eng/Eizo.Playback.json'
-$dependencyRoot = Join-Path $repoRoot '.deps/Eizo.Playback'
-$feedRoot = Join-Path $repoRoot '.packages/Eizo.Playback'
+$pinPath = Join-Path $repoRoot 'eng/Eizo.Metadata.Recognition.json'
+$dependencyRoot = Join-Path $repoRoot '.deps/Eizo.Metadata'
+$feedRoot = Join-Path $repoRoot '.packages/Eizo.Metadata'
 $stampPath = Join-Path $feedRoot '.source-commit'
 
 if (-not (Test-Path -LiteralPath $pinPath -PathType Leaf)) {
-    throw "Playback pin file was not found: $pinPath"
+    throw "Recognition pin file was not found: $pinPath"
 }
 
 $pin = Get-Content -LiteralPath $pinPath -Raw | ConvertFrom-Json
@@ -23,35 +23,28 @@ $repository = [string]$pin.repository
 if ([string]::IsNullOrWhiteSpace($commit) -or
     [string]::IsNullOrWhiteSpace($version) -or
     [string]::IsNullOrWhiteSpace($repository)) {
-    throw 'Eizo.Playback pin file is incomplete.'
+    throw 'Eizo.Metadata.Recognition pin file is incomplete.'
 }
 
-$expectedPackages = @(
-    "Eizo.Playback.Abstractions.$version.nupkg",
-    "Eizo.Playback.Core.$version.nupkg",
-    "Eizo.Playback.LibVLC.$version.nupkg",
-    "Eizo.Playback.LibVLC.WinUI.$version.nupkg"
-)
+$expectedPackage = "Eizo.Metadata.Recognition.$version.nupkg"
 
 $feedReady =
     -not $Force -and
     (Test-Path -LiteralPath $stampPath -PathType Leaf) -and
     ((Get-Content -LiteralPath $stampPath -Raw).Trim() -eq $commit) -and
-    ($expectedPackages | ForEach-Object {
-        Test-Path -LiteralPath (Join-Path $feedRoot $_) -PathType Leaf
-    } | Where-Object { -not $_ } | Measure-Object).Count -eq 0
+    (Test-Path -LiteralPath (Join-Path $feedRoot $expectedPackage) -PathType Leaf)
 
 if ($feedReady) {
-    Write-Host "Eizo.Playback $version is already restored from $commit."
+    Write-Host "Eizo.Metadata.Recognition $version is already restored from $commit."
     exit 0
 }
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    throw 'git is required to restore Eizo.Playback.'
+    throw 'git is required to restore Eizo.Metadata.Recognition.'
 }
 
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-    throw '.NET SDK is required to restore Eizo.Playback.'
+    throw '.NET SDK is required to restore Eizo.Metadata.Recognition.'
 }
 
 if (-not (Test-Path -LiteralPath (Join-Path $dependencyRoot '.git'))) {
@@ -63,53 +56,51 @@ if (-not (Test-Path -LiteralPath (Join-Path $dependencyRoot '.git'))) {
 
     & git clone --filter=blob:none --no-checkout $repository $dependencyRoot
     if ($LASTEXITCODE -ne 0) {
-        throw "Failed to clone Eizo.Playback from $repository."
+        throw "Failed to clone Eizo.Metadata from $repository."
     }
 }
 
 & git -C $dependencyRoot fetch --force origin $commit
 if ($LASTEXITCODE -ne 0) {
-    throw "Failed to fetch Eizo.Playback commit $commit."
+    throw "Failed to fetch Eizo.Metadata commit $commit."
 }
 
 & git -C $dependencyRoot checkout --detach --force $commit
 if ($LASTEXITCODE -ne 0) {
-    throw "Failed to checkout Eizo.Playback commit $commit."
+    throw "Failed to checkout Eizo.Metadata commit $commit."
 }
 
 Remove-Item -LiteralPath $feedRoot -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $feedRoot | Out-Null
 
 # NuGet.config contains both local Eizo feeds. Keep the sibling source present
-# even while this dependency is restored independently.
-$metadataFeedRoot = Join-Path $repoRoot '.packages/Eizo.Metadata'
-New-Item -ItemType Directory -Force -Path $metadataFeedRoot | Out-Null
+# even when Recognition is restored before Playback.
+$playbackFeedRoot = Join-Path $repoRoot '.packages/Eizo.Playback'
+New-Item -ItemType Directory -Force -Path $playbackFeedRoot | Out-Null
 
-$solution = Join-Path $dependencyRoot 'Eizo.Playback.slnx'
+$project = Join-Path $dependencyRoot 'src/Eizo.Metadata.Recognition/Eizo.Metadata.Recognition.csproj'
 
-& dotnet restore $solution
+& dotnet restore $project
 if ($LASTEXITCODE -ne 0) {
-    throw 'Eizo.Playback restore failed.'
+    throw 'Eizo.Metadata.Recognition restore failed.'
 }
 
-& dotnet build $solution --configuration Release --no-restore
+& dotnet build $project --configuration Release --no-restore
 if ($LASTEXITCODE -ne 0) {
-    throw 'Eizo.Playback Release build failed.'
+    throw 'Eizo.Metadata.Recognition Release build failed.'
 }
 
-& dotnet pack $solution --configuration Release --no-build --output $feedRoot
+& dotnet pack $project --configuration Release --no-build --output $feedRoot
 if ($LASTEXITCODE -ne 0) {
-    throw 'Eizo.Playback pack failed.'
+    throw 'Eizo.Metadata.Recognition pack failed.'
 }
 
-foreach ($package in $expectedPackages) {
-    $path = Join-Path $feedRoot $package
-    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-        throw "Expected Eizo.Playback package was not produced: $package"
-    }
+$packagePath = Join-Path $feedRoot $expectedPackage
+if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
+    throw "Expected Eizo.Metadata.Recognition package was not produced: $expectedPackage"
 }
 
 Set-Content -LiteralPath $stampPath -Value $commit -Encoding ascii -NoNewline
 
-Write-Host "Restored Eizo.Playback $version from commit $commit."
+Write-Host "Restored Eizo.Metadata.Recognition $version from commit $commit."
 Write-Host "Local NuGet feed: $feedRoot"
