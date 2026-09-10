@@ -1,3 +1,5 @@
+English | [简体中文](RELEASE-NOTES-v0.3.2.md) | [日本語](RELEASE-NOTES-v0.3.2.ja.md)
+
 # Eizo v0.3.2 Playback Stability & Controls
 
 Eizo v0.3.2 focuses on playback concurrency, lifecycle safety, and stability under rapid user interaction, while also improving fullscreen and keyboard controls. The WebDAV loading-card display issue is not pursued further in this release and is documented as a known issue for a later pass.
