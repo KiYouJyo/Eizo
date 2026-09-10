@@ -21,7 +21,6 @@ $bangumiIndex = Index-OrThrow $shell 'x:Name="BangumiNav"'
 $calendarIndex = Index-OrThrow $shell 'x:Name="CalendarNav"'
 $seasonalIndex = Index-OrThrow $shell 'x:Name="SeasonalNav"'
 $discoverIndex = Index-OrThrow $shell 'x:Name="DiscoverNav"'
-$followingIndex = Index-OrThrow $shell 'x:Name="FollowingNav"'
 $libraryIndex = Index-OrThrow $shell 'x:Name="CategoryNav"'
 $animeIndex = Index-OrThrow $shell 'x:Name="AnimeNav"'
 $moviesIndex = Index-OrThrow $shell 'x:Name="MoviesNav"'
@@ -36,8 +35,7 @@ if (-not ($homeIndex -lt $bangumiIndex -and
           $bangumiIndex -lt $calendarIndex -and
           $calendarIndex -lt $seasonalIndex -and
           $seasonalIndex -lt $discoverIndex -and
-          $discoverIndex -lt $followingIndex -and
-          $followingIndex -lt $libraryIndex -and
+          $discoverIndex -lt $libraryIndex -and
           $libraryIndex -lt $animeIndex -and
           $animeIndex -lt $moviesIndex -and
           $moviesIndex -lt $seriesIndex -and
@@ -49,14 +47,19 @@ if (-not ($homeIndex -lt $bangumiIndex -and
     throw 'Navigation IA contract violation: hamburger-menu ordering changed.'
 }
 
-$bangumiEndIndex = $shell.IndexOf('</NavigationViewItem>', $followingIndex, [StringComparison]::Ordinal)
+$bangumiEndIndex = $shell.IndexOf('</NavigationViewItem>', $discoverIndex, [StringComparison]::Ordinal)
 if ($bangumiEndIndex -lt 0) {
     throw 'Navigation IA contract violation: Bangumi group closing element is missing.'
 }
 $bangumiBlock = $shell.Substring($bangumiIndex, $bangumiEndIndex - $bangumiIndex)
-if (-not $bangumiBlock.Contains('SelectsOnInvoked="False"', [StringComparison]::Ordinal) -or
+if (-not $bangumiBlock.Contains('Tag="bangumi-following"', [StringComparison]::Ordinal) -or
+    -not $bangumiBlock.Contains('SelectsOnInvoked="True"', [StringComparison]::Ordinal) -or
     -not $bangumiBlock.Contains('IsExpanded="True"', [StringComparison]::Ordinal)) {
-    throw 'Navigation IA contract violation: Bangumi must remain an expandable non-workspace group.'
+    throw 'Navigation IA contract violation: Bangumi parent must open My Following while remaining expandable.'
+}
+
+if ($shell.Contains('x:Name="FollowingNav"', [StringComparison]::Ordinal)) {
+    throw 'Navigation IA contract violation: My Following must not have a separate child navigation entry.'
 }
 
 $libraryEndIndex = $shell.IndexOf('</NavigationViewItem>', $sourcesIndex, [StringComparison]::Ordinal)
