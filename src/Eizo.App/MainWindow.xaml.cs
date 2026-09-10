@@ -184,7 +184,11 @@ public sealed partial class MainWindow : Window
     private void ApplyLocalizedShellText()
     {
         HomeNav.Content = T("Nav_Home");
-        CategoryNav.Content = T("Nav_Categories");
+        BangumiNav.Content = T("Nav_Bangumi");
+        CalendarNav.Content = T("Nav_BroadcastCalendar");
+        SeasonalNav.Content = T("Nav_SeasonalAnime");
+        DiscoverNav.Content = T("Nav_RankDiscover");
+        CategoryNav.Content = T("Nav_Library");
         AnimeNav.Content = T("Nav_Anime");
         MoviesNav.Content = T("Nav_Movies");
         SeriesNav.Content = T("Nav_Series");
@@ -268,6 +272,14 @@ public sealed partial class MainWindow : Window
                 WireWorkspaceMediaView(view);
                 return view;
             }
+            case "bangumi-calendar":
+                return new BangumiPlaceholderView(BangumiPlaceholderKind.Calendar);
+            case "bangumi-seasonal":
+                return new BangumiPlaceholderView(BangumiPlaceholderKind.Seasonal);
+            case "bangumi-discover":
+                return new BangumiPlaceholderView(BangumiPlaceholderKind.Discover);
+            case "bangumi-following":
+                return new BangumiPlaceholderView(BangumiPlaceholderKind.Following);
             case "categories":
             {
                 var view = new CatalogView();
@@ -324,8 +336,12 @@ public sealed partial class MainWindow : Window
     private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch
     {
         "home" => (T("Nav_Home"), "\uE80F"),
+        "bangumi-calendar" => (T("Nav_BroadcastCalendar"), "\uE787"),
+        "bangumi-seasonal" => (T("Nav_SeasonalAnime"), "\uE8B2"),
+        "bangumi-discover" => (T("Nav_RankDiscover"), "\uE721"),
+        "bangumi-following" => (T("Nav_MyFollowing"), "\uE77B"),
         "categories" => (
-            T("Nav_Categories"),
+            T("Nav_Library"),
             char.ConvertFromUtf32((int)Symbol.Library)),
         "anime" => (T("Nav_Anime"), "\uE8B2"),
         "movies" => (T("Nav_Movies"), "\uE714"),

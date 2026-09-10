@@ -76,9 +76,28 @@
             <NavigationViewItem.Icon><SymbolIcon Symbol="Home" /></NavigationViewItem.Icon>
           </NavigationViewItem>
 
+          <NavigationViewItem x:Name="BangumiNav"
+                              Tag="bangumi-following"
+                              SelectsOnInvoked="True"
+                              IsExpanded="True">
+            <NavigationViewItem.Icon><FontIcon Glyph="&#xE774;" /></NavigationViewItem.Icon>
+            <NavigationViewItem.MenuItems>
+              <NavigationViewItem x:Name="CalendarNav" Tag="bangumi-calendar">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE787;" /></NavigationViewItem.Icon>
+              </NavigationViewItem>
+              <NavigationViewItem x:Name="SeasonalNav" Tag="bangumi-seasonal">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B2;" /></NavigationViewItem.Icon>
+              </NavigationViewItem>
+              <NavigationViewItem x:Name="DiscoverNav" Tag="bangumi-discover">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE721;" /></NavigationViewItem.Icon>
+              </NavigationViewItem>
+            </NavigationViewItem.MenuItems>
+          </NavigationViewItem>
+
           <NavigationViewItem x:Name="CategoryNav"
                               Tag="categories"
-                              SelectsOnInvoked="True">
+                              SelectsOnInvoked="True"
+                              IsExpanded="True">
             <NavigationViewItem.Icon><SymbolIcon Symbol="Library" /></NavigationViewItem.Icon>
             <NavigationViewItem.MenuItems>
               <NavigationViewItem x:Name="AnimeNav" Tag="anime">
@@ -90,11 +109,10 @@
               <NavigationViewItem x:Name="SeriesNav" Tag="series">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE8FD;" /></NavigationViewItem.Icon>
               </NavigationViewItem>
+              <NavigationViewItem x:Name="SourcesNav" Tag="sources">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE753;" /></NavigationViewItem.Icon>
+              </NavigationViewItem>
             </NavigationViewItem.MenuItems>
-          </NavigationViewItem>
-
-          <NavigationViewItem x:Name="SourcesNav" Tag="sources">
-            <NavigationViewItem.Icon><FontIcon Glyph="&#xE753;" /></NavigationViewItem.Icon>
           </NavigationViewItem>
         </NavigationView.MenuItems>
 

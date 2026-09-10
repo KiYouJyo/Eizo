@@ -28,6 +28,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-NavigationPaneThemeContract.ps1
 
+      - name: Validate navigation information architecture
+        shell: pwsh
+        run: ./scripts/Test-NavigationInformationArchitecture.ps1
+
       - name: Validate WebDAV Stage 1 media-source contract
         shell: pwsh
         run: ./scripts/Test-MediaSourceStage1Contract.ps1

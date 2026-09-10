@@ -799,4 +799,37 @@
   <data name="Sources_FoldersUpdatedNoScan" xml:space="preserve">
     <value>已保存读取文件夹。点击“立即扫描”应用新的扫描范围。</value>
   </data>
+  <data name="Nav_Bangumi" xml:space="preserve">
+    <value>Bangumi</value>
+  </data>
+  <data name="Nav_BroadcastCalendar" xml:space="preserve">
+    <value>放送日历</value>
+  </data>
+  <data name="Nav_SeasonalAnime" xml:space="preserve">
+    <value>新番</value>
+  </data>
+  <data name="Nav_RankDiscover" xml:space="preserve">
+    <value>排行与发现</value>
+  </data>
+  <data name="Nav_MyFollowing" xml:space="preserve">
+    <value>我的追番</value>
+  </data>
+  <data name="Bangumi_PlaceholderSubtitle" xml:space="preserve">
+    <value>Bangumi 资讯</value>
+  </data>
+  <data name="Bangumi_PlaceholderStatus" xml:space="preserve">
+    <value>页面已预留</value>
+  </data>
+  <data name="Bangumi_CalendarPlaceholderDescription" xml:space="preserve">
+    <value>用于展示按日期整理的动画放送与追番更新。Bangumi 数据接入将在后续阶段完成。</value>
+  </data>
+  <data name="Bangumi_SeasonalPlaceholderDescription" xml:space="preserve">
+    <value>用于浏览季度新番、类型筛选与排序。当前先完成页面入口与标签页接入。</value>
+  </data>
+  <data name="Bangumi_DiscoverPlaceholderDescription" xml:space="preserve">
+    <value>用于承载热门、评分、排行与主题发现。当前先完成页面入口与标签页接入。</value>
+  </data>
+  <data name="Bangumi_FollowingPlaceholderDescription" xml:space="preserve">
+    <value>用于同步 Bangumi 收藏与单集观看状态。账户登录与数据同步将在后续阶段接入。</value>
+  </data>
 </root>
