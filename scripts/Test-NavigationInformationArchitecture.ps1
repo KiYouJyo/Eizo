@@ -49,11 +49,23 @@ if (-not ($homeIndex -lt $bangumiIndex -and
     throw 'Navigation IA contract violation: hamburger-menu ordering changed.'
 }
 
-if ($shell -notmatch 'x:Name="BangumiNav"[sS]*?SelectsOnInvoked="False"[sS]*?IsExpanded="True"') {
+$bangumiEndIndex = $shell.IndexOf('</NavigationViewItem>', $followingIndex, [StringComparison]::Ordinal)
+if ($bangumiEndIndex -lt 0) {
+    throw 'Navigation IA contract violation: Bangumi group closing element is missing.'
+}
+$bangumiBlock = $shell.Substring($bangumiIndex, $bangumiEndIndex - $bangumiIndex)
+if (-not $bangumiBlock.Contains('SelectsOnInvoked="False"', [StringComparison]::Ordinal) -or
+    -not $bangumiBlock.Contains('IsExpanded="True"', [StringComparison]::Ordinal)) {
     throw 'Navigation IA contract violation: Bangumi must remain an expandable non-workspace group.'
 }
 
-if ($shell -notmatch 'x:Name="CategoryNav"[sS]*?Tag="categories"[sS]*?IsExpanded="True"') {
+$libraryEndIndex = $shell.IndexOf('</NavigationViewItem>', $sourcesIndex, [StringComparison]::Ordinal)
+if ($libraryEndIndex -lt 0) {
+    throw 'Navigation IA contract violation: media-library group closing element is missing.'
+}
+$libraryBlock = $shell.Substring($libraryIndex, $libraryEndIndex - $libraryIndex)
+if (-not $libraryBlock.Contains('Tag="categories"', [StringComparison]::Ordinal) -or
+    -not $libraryBlock.Contains('IsExpanded="True"', [StringComparison]::Ordinal)) {
     throw 'Navigation IA contract violation: media-library parent must retain the existing aggregate catalog workspace.'
 }
 
