@@ -28,12 +28,15 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Apply loading-status dispatcher hotfix
+      - name: Apply PR51 regression hotfixes
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+
+          # 1) Restore the original Dispatch semantic on the UI thread while retaining
+          # PR51's session guard for callbacks that really need to cross threads.
           $path = 'src/Eizo.App/Views/PlayerView.xaml.cs'
-          $text = Get-Content -LiteralPath $path -Raw
+          $text = (Get-Content -LiteralPath $path -Raw).Replace("`r`n", "`n")
 
           $old = @'
               private void Dispatch(Action action)
@@ -73,17 +76,88 @@ jobs:
               }
           '@.Replace("`r", '').Trim()
 
-          $normalized = $text.Replace("`r`n", "`n")
-          if (-not $normalized.Contains($old)) {
-            throw 'Expected Dispatch implementation was not found; refusing an unsafe patch.'
+          if (-not $text.Contains($old)) {
+            throw 'Expected PlayerView.Dispatch implementation was not found; refusing an unsafe patch.'
           }
-
-          $normalized = $normalized.Replace($old, $new)
-          [IO.File]::WriteAllText($path, $normalized.Replace("`n", "`r`n"), [Text.UTF8Encoding]::new($false))
+          $text = $text.Replace($old, $new)
+          [IO.File]::WriteAllText($path, $text.Replace("`n", "`r`n"), [Text.UTF8Encoding]::new($false))
 
           if (-not (Select-String -LiteralPath $path -SimpleMatch 'if (DispatcherQueue.HasThreadAccess)' -Quiet)) {
             throw 'Dispatcher inline-path verification failed.'
           }
+
+          # 2) PR51 made dependency restore protect local edits, but a fresh --no-checkout
+          # clone looks like every tracked file was deleted. Distinguish a new clone from
+          # an existing edited checkout before running the dirty-worktree protection.
+          $restorePath = 'scripts/Restore-EizoPlayback.ps1'
+          $restore = (Get-Content -LiteralPath $restorePath -Raw).Replace("`r`n", "`n")
+
+          $marker = "if (-not (Test-Path -LiteralPath (Join-Path `$dependencyRoot '.git'))) {"
+          if (-not $restore.Contains($marker)) { throw 'Restore script clone marker was not found.' }
+          $restore = $restore.Replace($marker, "`$dependencyCheckoutCreated = `$false`n`n$marker")
+
+          $cloneSuccess = @'
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Failed to clone Eizo.Playback from $repository."
+              }
+          '@.Replace("`r", '').Trim()
+          $cloneReplacement = @'
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Failed to clone Eizo.Playback from $repository."
+              }
+              $dependencyCheckoutCreated = $true
+          '@.Replace("`r", '').Trim()
+          if (-not $restore.Contains($cloneSuccess)) { throw 'Restore script clone-success block was not found.' }
+          $restore = $restore.Replace($cloneSuccess, $cloneReplacement)
+
+          $oldRestoreBlock = @'
+              # Never erase an independently edited dependency checkout. A clean checkout or
+              # the exact checked-in patch is reproducible and may be reset for bootstrap.
+              $dependencyDiff = & git -C $dependencyRoot status --porcelain
+              if ($dependencyDiff) {
+                  & git -C $dependencyRoot apply --reverse --check $patchPath
+                  if ($LASTEXITCODE -ne 0) { throw 'Dependency has local changes beyond the saved patch. Preserve them before restoring.' }
+                  & git -C $dependencyRoot apply --reverse $patchPath
+                  if ($LASTEXITCODE -ne 0) { throw 'Could not reverse the saved dependency patch.' }
+                  if (& git -C $dependencyRoot status --porcelain) { throw 'Dependency still has local changes; refusing checkout.' }
+              }
+              & git -C $dependencyRoot checkout --detach $commit
+              if ($LASTEXITCODE -ne 0) {
+                  throw "Failed to checkout Eizo.Playback commit $commit."
+              }
+          '@.Replace("`r", '').Trim()
+
+          $newRestoreBlock = @'
+              # Never erase an independently edited dependency checkout. A brand-new
+              # --no-checkout clone has an intentionally empty worktree, so checkout the
+              # pinned commit first instead of misclassifying every tracked file as deleted.
+              if ($dependencyCheckoutCreated) {
+                  & git -C $dependencyRoot checkout --detach --force $commit
+                  if ($LASTEXITCODE -ne 0) {
+                      throw "Failed to checkout fresh Eizo.Playback commit $commit."
+                  }
+              }
+              else {
+                  $dependencyDiff = & git -C $dependencyRoot status --porcelain
+                  if ($dependencyDiff) {
+                      & git -C $dependencyRoot apply --reverse --check $patchPath
+                      if ($LASTEXITCODE -ne 0) { throw 'Dependency has local changes beyond the saved patch. Preserve them before restoring.' }
+                      & git -C $dependencyRoot apply --reverse $patchPath
+                      if ($LASTEXITCODE -ne 0) { throw 'Could not reverse the saved dependency patch.' }
+                      if (& git -C $dependencyRoot status --porcelain) { throw 'Dependency still has local changes; refusing checkout.' }
+                  }
+                  & git -C $dependencyRoot checkout --detach $commit
+                  if ($LASTEXITCODE -ne 0) {
+                      throw "Failed to checkout Eizo.Playback commit $commit."
+                  }
+              }
+          '@.Replace("`r", '').Trim()
+
+          if (-not $restore.Contains($oldRestoreBlock)) {
+            throw 'Expected dependency dirty-check block was not found; refusing an unsafe patch.'
+          }
+          $restore = $restore.Replace($oldRestoreBlock, $newRestoreBlock)
+          [IO.File]::WriteAllText($restorePath, $restore.Replace("`n", "`r`n"), [Text.UTF8Encoding]::new($false))
 
       - name: Restore pinned Eizo.Playback packages
         shell: pwsh
@@ -117,15 +191,51 @@ jobs:
 
           $assets = Join-Path $env:RUNNER_TEMP 'Eizo-PR51-loading-fix-acceptance'
           New-Item -ItemType Directory -Force -Path $assets | Out-Null
-          Copy-Item -LiteralPath $bundle.FullName -Destination (Join-Path $assets 'Eizo_PR51_loading_fix_x64.msixbundle') -Force
+          $finalBundle = Join-Path $assets 'Eizo_PR51_loading_fix_x64.msixbundle'
+          Copy-Item -LiteralPath $bundle.FullName -Destination $finalBundle -Force
+          "BUNDLE_PATH=$finalBundle" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "ASSETS_DIR=$assets" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Sign acceptance bundle
+        shell: pwsh
+        env:
+          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
+          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:RELEASE_CERTIFICATE_BASE64) -or [string]::IsNullOrWhiteSpace($env:RELEASE_CERTIFICATE_PASSWORD)) {
+            throw 'GitHub release signing secrets are not configured.'
+          }
+
+          $pfx = Join-Path $env:RUNNER_TEMP 'eizo-release-signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:RELEASE_CERTIFICATE_BASE64))
+          $password = ConvertTo-SecureString $env:RELEASE_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $certificate = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          if (-not $certificate -or -not $certificate.HasPrivateKey) { throw 'Signing certificate import failed.' }
+
+          $cer = Join-Path $env:ASSETS_DIR 'Eizo-PR51-AppPublisher.cer'
+          Export-Certificate -Cert $certificate -FilePath $cer | Out-Null
+
+          $kitsRoot = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
+          $signtool = Get-ChildItem (Join-Path $kitsRoot 'Windows Kits\10\bin') -Recurse -Filter signtool.exe |
+            Where-Object FullName -match '\\x64\\signtool.exe$' |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signtool) { throw 'x64 signtool.exe was not found.' }
+
+          & $signtool.FullName sign /fd SHA256 /sha1 $certificate.Thumbprint /tr http://timestamp.digicert.com /td SHA256 $env:BUNDLE_PATH
+          if ($LASTEXITCODE -ne 0) { throw "signtool sign failed: $LASTEXITCODE" }
+
+          $signature = Get-AuthenticodeSignature -FilePath $env:BUNDLE_PATH
+          if (-not $signature.SignerCertificate) { throw 'Signed bundle has no signer certificate.' }
+          Remove-Item -LiteralPath $pfx -Force
 
           @'
           Eizo PR #51 loading-window regression acceptance build
 
-          Fix:
-          - Restore UI-thread inline execution in PlayerView.Dispatch.
-          - Preserve PR #51 session/lifetime guards for queued callbacks.
-          - Prevent the queued Idle/Stopped snapshot from hiding ShowLoadingStatus immediately after engine attachment.
+          Fixed:
+          - PlayerView.Dispatch executes inline when already on the UI thread, while retaining session guards for queued callbacks.
+          - Fresh Eizo.Playback --no-checkout clones are no longer mistaken for dirty dependency worktrees.
 
           Acceptance focus:
           1. Open a WebDAV video and verify the loading card appears immediately.
@@ -133,9 +243,7 @@ jobs:
           3. Switch subtitle tracks repeatedly.
           4. Enter/exit fullscreen repeatedly.
           5. Verify no hang regression.
-          '@ | Set-Content -LiteralPath (Join-Path $assets 'ACCEPTANCE.txt') -Encoding utf8
-
-          "ASSETS_DIR=$assets" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          '@ | Set-Content -LiteralPath (Join-Path $env:ASSETS_DIR 'ACCEPTANCE.txt') -Encoding utf8
 
       - name: Upload acceptance artifact
         uses: actions/upload-artifact@v4
@@ -144,13 +252,13 @@ jobs:
           path: ${{ env.ASSETS_DIR }}
           if-no-files-found: error
 
-      - name: Commit source fix and remove temporary workflow
+      - name: Commit source fixes and remove temporary workflow
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm --ignore-unmatch .github/workflows/pr51-loading-regression-hotfix.yml
-          git add src/Eizo.App/Views/PlayerView.xaml.cs
-          git commit -m 'fix: restore loading status dispatch ordering [pr51-loading-fixed]'
+          git add src/Eizo.App/Views/PlayerView.xaml.cs scripts/Restore-EizoPlayback.ps1
+          git commit -m 'fix: restore loading dispatch and clean dependency bootstrap [pr51-loading-fixed]'
           git push origin HEAD:fix/playback-hang-and-controls
