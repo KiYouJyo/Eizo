@@ -787,4 +787,16 @@
   <data name="Sources_FoldersUpdatedFormat" xml:space="preserve">
     <value>已按新的文件夹范围重新扫描，共发现 {0} 个视频。</value>
   </data>
+  <data name="Sources_Scanning" xml:space="preserve">
+    <value>扫描中…</value>
+  </data>
+  <data name="Sources_WebDavAddedNoScanFormat" xml:space="preserve">
+    <value>已添加 {0}。点击“立即扫描”读取媒体。</value>
+  </data>
+  <data name="Sources_WebDavUpdatedNoScanFormat" xml:space="preserve">
+    <value>已更新 {0}。如需刷新媒体，请点击“立即扫描”。</value>
+  </data>
+  <data name="Sources_FoldersUpdatedNoScan" xml:space="preserve">
+    <value>已保存读取文件夹。点击“立即扫描”应用新的扫描范围。</value>
+  </data>
 </root>
