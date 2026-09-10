@@ -21,6 +21,9 @@ public sealed partial class SourcesView : UserControl
     private readonly MediaCredentialStore _credentials =
         MediaCredentialStore.Default;
 
+    private readonly HashSet<string> _scanningSourceIds =
+        new(StringComparer.Ordinal);
+
     public SourcesView()
     {
         InitializeComponent();
@@ -39,9 +42,6 @@ public sealed partial class SourcesView : UserControl
         PageTitle.Text = T("Nav_Sources");
         PageSubtitle.Text = T("Sources_Subtitle");
         AddSourceButton.Content = T("Source_Add");
-
-        SectionList.ItemsSource =
-            new[] { T("Sources_TabSources") };
     }
 
     private void SourcesView_Loaded(object sender, RoutedEventArgs e)
@@ -136,12 +136,21 @@ public sealed partial class SourcesView : UserControl
             _ => source.Kind.ToString()
         };
 
+        var isScanning =
+            _scanningSourceIds.Contains(
+                source.Id);
+
         return new SourceItemModel(
             source.Id,
             name,
             string.Join(" · ", summaryParts),
             kindLabel,
-            Removable: !source.IsBuiltIn);
+            Removable: !source.IsBuiltIn,
+            IsScanning: isScanning,
+            CanScan: !isScanning && !source.IsBuiltIn,
+            ScanText: isScanning
+                ? T("Sources_Scanning")
+                : T("Source_ScanNow"));
     }
 
     private void SourceList_ContainerContentChanging(
@@ -160,29 +169,8 @@ public sealed partial class SourcesView : UserControl
 
         var flyout = new MenuFlyout();
 
-        if (!source.IsBuiltIn)
-        {
-            var scan = new MenuFlyoutItem
-            {
-                Text = T("Source_ScanNow"),
-                Icon = new FontIcon { Glyph = "\uE72C" },
-                Tag = source.Id
-            };
-            scan.Click += ScanSourceMenuItem_Click;
-            flyout.Items.Add(scan);
-        }
-
         if (source.Kind == MediaSourceKind.WebDav)
         {
-            var editSource = new MenuFlyoutItem
-            {
-                Text = T("Sources_EditMediaSource"),
-                Icon = new FontIcon { Glyph = "\uE70F" },
-                Tag = source.Id
-            };
-            editSource.Click += EditWebDavMenuItem_Click;
-            flyout.Items.Add(editSource);
-
             var editFolders = new MenuFlyoutItem
             {
                 Text = T("Sources_EditReadFolders"),
@@ -224,19 +212,45 @@ public sealed partial class SourcesView : UserControl
         container.Tag = item;
     }
 
-    private async void ScanSourceMenuItem_Click(
+    private async void SourceList_ItemClick(
+        object sender,
+        ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is not SourceItemModel item)
+            return;
+
+        var source = _sources.Find(item.Id);
+        if (source is not { Kind: MediaSourceKind.WebDav })
+            return;
+
+        await ShowWebDavEditorAsync(source);
+    }
+
+    private async void ScanSourceButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (sender is not MenuFlyoutItem { Tag: string sourceId })
+        if (sender is not Button { Tag: string sourceId })
             return;
 
-        var source = _sources.Find(sourceId);
-        if (source is null)
+        e.Handled = true;
+        await ScanSourceAsync(sourceId);
+    }
+
+    private async Task ScanSourceAsync(
+        string sourceId)
+    {
+        if (!_scanningSourceIds.Add(sourceId))
             return;
+
+        RefreshSources();
 
         try
         {
+            var source = _sources.Find(sourceId);
+            if (source is null || source.IsBuiltIn)
+                return;
+
             if (source.Kind == MediaSourceKind.Local &&
                 !string.IsNullOrWhiteSpace(source.AccessToken) &&
                 StorageApplicationPermissions.FutureAccessList.ContainsItem(
@@ -247,19 +261,29 @@ public sealed partial class SourcesView : UserControl
                     .GetFolderAsync(source.AccessToken);
             }
 
-            await _catalog.ScanSourceAsync(source);
+            await Task.Run(
+                async () =>
+                    await _catalog.ScanSourceAsync(
+                        source));
         }
         catch (MediaSourceException exception)
         {
             await ShowMessageAsync(
                 T("Sources_ScanFailed"),
-                FormatSourceError(exception.ErrorCode, exception.Message));
+                FormatSourceError(
+                    exception.ErrorCode,
+                    exception.Message));
         }
         catch (Exception exception)
         {
             await ShowMessageAsync(
                 T("Sources_ScanFailed"),
                 exception.Message);
+        }
+        finally
+        {
+            _scanningSourceIds.Remove(sourceId);
+            RefreshSources();
         }
     }
 
@@ -335,46 +359,16 @@ public sealed partial class SourcesView : UserControl
         if (selectedPaths is null)
             return;
 
-        var previousPaths =
-            source.SelectedPaths?.ToList();
+        _sources.AddWebDav(
+            source.DisplayName,
+            rootUri,
+            source.UserName,
+            source.CredentialKey,
+            selectedPaths);
 
-        try
-        {
-            var updatedSource =
-                _sources.AddWebDav(
-                    source.DisplayName,
-                    rootUri,
-                    source.UserName,
-                    source.CredentialKey,
-                    selectedPaths);
-
-            var scanned =
-                await _catalog.ScanSourceAsync(
-                    updatedSource);
-
-            await ShowMessageAsync(
-                T("Sources_FoldersUpdated"),
-                string.Format(
-                    T("Sources_FoldersUpdatedFormat"),
-                    scanned));
-        }
-        catch (Exception exception)
-        {
-            _sources.AddWebDav(
-                source.DisplayName,
-                rootUri,
-                source.UserName,
-                source.CredentialKey,
-                previousPaths);
-
-            await ShowMessageAsync(
-                T("Sources_ScanFailed"),
-                exception is MediaSourceException sourceException
-                    ? FormatSourceError(
-                        sourceException.ErrorCode,
-                        sourceException.Message)
-                    : exception.Message);
-        }
+        await ShowMessageAsync(
+            T("Sources_FoldersUpdated"),
+            T("Sources_FoldersUpdatedNoScan"));
     }
 
     private async void TestConnectionMenuItem_Click(
@@ -490,8 +484,6 @@ public sealed partial class SourcesView : UserControl
                 folder.Path,
                 folder.Name,
                 accessToken: source.Id);
-
-            await _catalog.ScanSourceAsync(source);
         }
         catch (Exception exception)
         {
@@ -680,8 +672,6 @@ public sealed partial class SourcesView : UserControl
                 credentialKey,
                 preservedSelectedPaths);
 
-            await _catalog.ScanSourceAsync(savedSource);
-
             if (existingSource is not null &&
                 !string.Equals(
                     existingSource.Id,
@@ -700,12 +690,9 @@ public sealed partial class SourcesView : UserControl
                 T("Sources_ConnectionSucceeded"),
                 string.Format(
                     existingSource is null
-                        ? T("Sources_WebDavAddedFormat")
-                        : T("Sources_WebDavUpdatedFormat"),
-                    savedSource.DisplayName,
-                    _catalog
-                        .SnapshotForSource(savedSource.Id)
-                        .Count));
+                        ? T("Sources_WebDavAddedNoScanFormat")
+                        : T("Sources_WebDavUpdatedNoScanFormat"),
+                    savedSource.DisplayName));
         }
         catch (Exception exception)
         {
