@@ -5,7 +5,7 @@
     <MicaBackdrop />
   </Window.SystemBackdrop>
 
-  <Grid x:Name="WindowRoot" Background="Transparent">
+  <Grid x:Name="WindowRoot" Background="Transparent" PreviewKeyDown="WindowRoot_PreviewKeyDown">
     <Grid x:Name="RootGrid"
           Background="Transparent"
           RowDefinitions="48,*"

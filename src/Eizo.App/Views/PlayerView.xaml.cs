@@ -1,3 +1,4 @@
+using Eizo.Playback.Core;
 using Eizo.Localization;
 using Eizo.Models;
 using Eizo.Playback;
@@ -16,7 +17,9 @@ namespace Eizo.Views;
 public sealed partial class PlayerView : UserControl
 {
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
-    private readonly SemaphoreSlim _sourceGate = new(1, 1);
+    private readonly SemaphoreSlim _surfaceLifecycleGate = new(1, 1);
+    private PlaybackOperationSession _session = new();
+    private Task? _detachTask;
     private readonly DispatcherTimer _fullscreenControlsTimer;
     private readonly DispatcherTimer _loadingMetricsTimer;
 
@@ -27,6 +30,10 @@ public sealed partial class PlayerView : UserControl
     private bool _playIntent;
     private bool _isUpdatingTimeline;
     private bool _isUpdatingTrackSelections;
+    private bool _trackUiUpdateQueued;
+    private string _subtitleTrackListKey = string.Empty;
+    private string _audioTrackListKey = string.Empty;
+    private ComboBoxItem? _subtitleOffItem;
     private bool _isVideoFullscreen;
     private bool _sidebarCollapsedByUser;
     private bool _sidebarVisibleInFullscreen;
@@ -36,7 +43,8 @@ public sealed partial class PlayerView : UserControl
     private bool _isUpdatingVolume;
     private bool _pointerWheelHooked;
     private bool _isPreparingForDetach;
-    private bool _fullscreenWindowExitQueued;
+    private int _fullscreenGeneration;
+    private bool _positionUiUpdatePending;
     private PointerEventHandler? _pointerWheelHandler;
     private CancellationTokenSource? _seekDebounce;
     private bool _loadingMetricsRefreshInFlight;
@@ -80,6 +88,23 @@ public sealed partial class PlayerView : UserControl
             Interval = TimeSpan.FromMilliseconds(500)
         };
         _loadingMetricsTimer.Tick += LoadingMetricsTimer_Tick;
+
+        SubtitleTrackCombo.DropDownClosed += (_, _) =>
+        {
+            if (_trackUiUpdateQueued)
+            {
+                _trackUiUpdateQueued = false;
+                QueueTrackUiUpdate();
+            }
+        };
+        AudioTrackCombo.DropDownClosed += (_, _) =>
+        {
+            if (_trackUiUpdateQueued)
+            {
+                _trackUiUpdateQueued = false;
+                QueueTrackUiUpdate();
+            }
+        };
 
         Loaded += PlayerView_Loaded;
         Unloaded += PlayerView_Unloaded;
@@ -143,19 +168,38 @@ public sealed partial class PlayerView : UserControl
         object? sender,
         PlaybackViewEngineChangedEventArgs e)
     {
-        if (e.PreviousEngine is not null)
-            DetachEngine(e.PreviousEngine);
+        // EngineChanged and PrepareForDetach both mutate _engine/_session. Serialize
+        // only the mutation section; opening a source must not block surface teardown.
+        await _surfaceLifecycleGate.WaitAsync();
+        try
+        {
+            _session.Cancel();
+            _seekDebounce?.Cancel();
+            if (e.PreviousEngine is not null)
+                DetachEngine(e.PreviousEngine);
+            if (_isPreparingForDetach) return;
+            _session = new PlaybackOperationSession();
 
-        _engine = e.CurrentEngine;
+            _engine = e.CurrentEngine;
+
+            if (e.CurrentEngine is null)
+            {
+                UpdateControlAvailability();
+                return;
+            }
+
+            AttachEngine(e.CurrentEngine);
+            UpdateControlAvailability();
+        }
+        finally
+        {
+            _surfaceLifecycleGate.Release();
+        }
 
         if (e.CurrentEngine is null)
         {
-            UpdateControlAvailability();
             return;
         }
-
-        AttachEngine(e.CurrentEngine);
-        UpdateControlAvailability();
 
         if (_currentSource is null)
         {
@@ -188,14 +232,13 @@ public sealed partial class PlayerView : UserControl
         {
             engine.Volume = _volume;
         }
-        catch
-        {
-        }
+        catch (Exception exception)
+        { PlaybackTrace.Write("view", "control", "error", exception.GetType().Name); }
 
         Dispatch(() =>
         {
             UpdateStateUi(engine.State);
-            UpdateTrackUi();
+            QueueTrackUiUpdate();
             UpdateNavigationAvailability();
             UpdateDiagnosticsUi(engine.Diagnostics.Current);
             PlaybackRateSlider.Value = RateToSliderValue(engine.PlaybackRate);
@@ -221,77 +264,91 @@ public sealed partial class PlayerView : UserControl
         }
     }
 
-    private void Engine_StateChanged(object? sender, PlaybackStateChangedEventArgs e)
-    {
-        if (e.CurrentState == PlaybackState.Ended)
-            _playIntent = false;
-
-        Dispatch(() => UpdateStateUi(e.CurrentState));
-    }
+    private void Engine_StateChanged(object? sender, PlaybackStateChangedEventArgs e) =>
+        DispatchEngine(sender, () =>
+        {
+            if (e.CurrentState == PlaybackState.Ended) _playIntent = false;
+            UpdateStateUi(e.CurrentState);
+        });
 
     private void Engine_PositionChanged(object? sender, PlaybackPositionChangedEventArgs e)
     {
-        _lastKnownPosition = e.Position;
+        // LibVLC raises TimeChanged far more often than the UI can paint. Coalesce to
+        // one queued update so rapid position events never pile up on the dispatcher.
+        if (_positionUiUpdatePending || _isPreparingForDetach || _engine is not { } engine)
+            return;
+        if (!ReferenceEquals(sender, engine)) return;
 
-        Dispatch(() =>
+        _positionUiUpdatePending = true;
+        DispatcherQueue.TryEnqueue(() =>
         {
+            _positionUiUpdatePending = false;
+            if (_isPreparingForDetach || !ReferenceEquals(_engine, engine)) return;
+            if (_seekDebounce is not null) return;
+            _lastKnownPosition = e.Position;
             CurrentTimeText.Text = FormatTime(e.Position);
-
-            if (_duration <= TimeSpan.Zero)
-                return;
-
+            if (_duration <= TimeSpan.Zero) return;
             _isUpdatingTimeline = true;
-            try
-            {
-                PlaybackSlider.Value = Math.Clamp(
-                    e.Position.TotalSeconds,
-                    PlaybackSlider.Minimum,
-                    PlaybackSlider.Maximum);
-            }
-            finally
-            {
-                _isUpdatingTimeline = false;
-            }
+            try { PlaybackSlider.Value = Math.Clamp(e.Position.TotalSeconds, PlaybackSlider.Minimum, PlaybackSlider.Maximum); }
+            finally { _isUpdatingTimeline = false; }
         });
     }
 
-    private void Engine_DurationChanged(object? sender, PlaybackDurationChangedEventArgs e)
-    {
-        _duration = e.Duration;
-
-        Dispatch(() =>
+    private void Engine_DurationChanged(object? sender, PlaybackDurationChangedEventArgs e) =>
+        DispatchEngine(sender, () =>
         {
+            _duration = e.Duration;
             _isUpdatingTimeline = true;
             try
             {
                 PlaybackSlider.Maximum = Math.Max(1d, e.Duration.TotalSeconds);
                 DurationText.Text = FormatTime(e.Duration);
             }
-            finally
-            {
-                _isUpdatingTimeline = false;
-            }
+            finally { _isUpdatingTimeline = false; }
+        });
+
+    private void Engine_Failed(object? sender, PlaybackFailedEventArgs e) =>
+        DispatchEngine(sender, () => { _playIntent = false; ShowStatus(T("Status_Error")); });
+
+    private void Tracks_TracksChanged(object? sender, PlaybackTracksChangedEventArgs e) =>
+        DispatchEngine(sender, QueueTrackUiUpdate);
+
+    private void Navigation_NavigationChanged(object? sender, PlaybackNavigationChangedEventArgs e) =>
+        DispatchEngine(sender, UpdateNavigationAvailability);
+
+    private void Diagnostics_DiagnosticsChanged(object? sender, PlaybackDiagnosticsChangedEventArgs e) =>
+        DispatchEngine(sender, () => UpdateDiagnosticsUi(e.Snapshot));
+
+    private void DispatchEngine(object? sender, Action action)
+    {
+        // Check identity on the UI thread, after dequeue; old callbacks cannot mutate a new session.
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_isPreparingForDetach || _engine is not { } engine) return;
+            if (ReferenceEquals(sender, engine) || ReferenceEquals(sender, engine.Tracks) ||
+                ReferenceEquals(sender, engine.Navigation) || ReferenceEquals(sender, engine.Diagnostics)) action();
         });
     }
 
-    private void Engine_Failed(object? sender, PlaybackFailedEventArgs e)
+    private async Task RunOperationAsync(IPlaybackEngine engine, string name,
+        Func<CancellationToken, Task> action, bool latest = false, CancellationToken token = default)
     {
-        _playIntent = false;
-        Dispatch(() => ShowStatus(T("Status_Error")));
+        var session = _session;
+        if (_isPreparingForDetach || !ReferenceEquals(_engine, engine)) return;
+        PlaybackTrace.Write("view", name, "requested");
+        try
+        {
+            await session.RunAsync(name, action, latest, token);
+            PlaybackTrace.Write("view", name, "complete");
+        }
+        catch (OperationCanceledException) when (session.Token.IsCancellationRequested || latest || token.IsCancellationRequested)
+        { PlaybackTrace.Write("view", name, "cancel"); }
+        catch (Exception exception)
+        {
+            PlaybackTrace.Write("view", name, "error", exception.GetType().Name);
+            if (ReferenceEquals(_session, session) && !_isPreparingForDetach) ShowStatus(T("Status_Error"));
+        }
     }
-
-    private void Tracks_TracksChanged(object? sender, PlaybackTracksChangedEventArgs e) =>
-        Dispatch(UpdateTrackUi);
-
-    private void Navigation_NavigationChanged(
-        object? sender,
-        PlaybackNavigationChangedEventArgs e) =>
-        Dispatch(UpdateNavigationAvailability);
-
-    private void Diagnostics_DiagnosticsChanged(
-        object? sender,
-        PlaybackDiagnosticsChangedEventArgs e) =>
-        Dispatch(() => UpdateDiagnosticsUi(e.Snapshot));
 
     private async Task RestoreSourceOnEngineAsync(IPlaybackEngine engine)
     {
@@ -307,71 +364,55 @@ public sealed partial class PlayerView : UserControl
         }
     }
 
-    private async Task OpenSourceOnEngineAsync(
-        IPlaybackEngine engine,
-        bool restorePosition)
+    private Task OpenSourceOnEngineAsync(IPlaybackEngine engine, bool restorePosition)
     {
-        if (_currentSource is null)
-            return;
-
-        await _sourceGate.WaitAsync();
-
-        try
+        var source = _currentSource;
+        var resumePosition = restorePosition ? _lastKnownPosition : TimeSpan.Zero;
+        if (source is null) return Task.CompletedTask;
+        return RunOperationAsync(engine, "open", async token =>
         {
-            if (!ReferenceEquals(_engine, engine))
-                return;
-
-            var source = _currentSource;
-            var resumePosition = restorePosition
-                ? _lastKnownPosition
-                : TimeSpan.Zero;
-            var shouldPlay = _playIntent;
-
-            await engine.OpenAsync(source);
-            await engine.PlayAsync();
-
+            await engine.OpenAsync(source, token);
+            token.ThrowIfCancellationRequested();
+            await engine.PlayAsync(token);
             if (resumePosition > TimeSpan.FromMilliseconds(250))
-                await TryRestorePositionAsync(engine, resumePosition);
-
-            if (!shouldPlay)
-                await engine.PauseAsync();
-
-            await engine.Tracks.RefreshAsync();
-            await engine.Navigation.RefreshAsync();
-            var diagnostics = await engine.Diagnostics.RefreshAsync();
-
-            Dispatch(() =>
-            {
-                UpdateTrackUi();
-                UpdateNavigationAvailability();
-                UpdateDiagnosticsUi(diagnostics);
-            });
-        }
-        finally
-        {
-            _sourceGate.Release();
-        }
+                await TryRestorePositionAsync(engine, resumePosition, token);
+            token.ThrowIfCancellationRequested();
+            if (!_playIntent) await engine.PauseAsync(token);
+            await engine.Tracks.RefreshAsync(token);
+            await engine.Navigation.RefreshAsync(token);
+            await engine.Diagnostics.RefreshAsync(token);
+        });
     }
 
-    private static async Task TryRestorePositionAsync(
-        IPlaybackEngine engine,
-        TimeSpan position)
+    private static async Task TryRestorePositionAsync(IPlaybackEngine engine, TimeSpan position, CancellationToken token)
     {
-        for (var attempt = 0; attempt < 30; attempt++)
+        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var diagnostics = engine.Diagnostics;
+        void OnDiagnostics(object? sender, PlaybackDiagnosticsChangedEventArgs e)
         {
-            var diagnostics = await engine.Diagnostics.RefreshAsync();
-
-            if (diagnostics.Capabilities.CanSeek)
+            if (e.Snapshot.Capabilities.CanSeek) ready.TrySetResult();
+        }
+        diagnostics.DiagnosticsChanged += OnDiagnostics;
+        try
+        {
+            if ((await diagnostics.RefreshAsync(token)).Capabilities.CanSeek) ready.TrySetResult();
+            try { await ready.Task.WaitAsync(TimeSpan.FromSeconds(2), token); }
+            catch (TimeoutException)
             {
-                await engine.SeekAsync(position);
+                PlaybackTrace.Write("view", "restore-position", "not-seekable");
                 return;
             }
-
-            await Task.Delay(50);
+            await engine.SeekAsync(position, token);
         }
+        finally { diagnostics.DiagnosticsChanged -= OnDiagnostics; }
     }
 
     private async void PlayPauseButton_Click(object sender, RoutedEventArgs e)
+    {
+        await TogglePlayPauseAsync();
+    }
+
+    internal async Task TogglePlayPauseAsync()
     {
         if (_currentSource is null)
             return;
@@ -379,23 +420,25 @@ public sealed partial class PlayerView : UserControl
         if (_engine is not { } engine)
             return;
 
-        try
+        _playIntent = !_playIntent;
+        var shouldPlay = _playIntent;
+        await RunOperationAsync(engine, "play-intent", async token =>
         {
-            if (engine.State == PlaybackState.Playing)
-            {
-                _playIntent = false;
-                await engine.PauseAsync();
-            }
-            else
-            {
-                _playIntent = true;
-                await engine.PlayAsync();
-            }
-        }
-        catch
-        {
-            ShowStatus(T("Status_Error"));
-        }
+            if (shouldPlay) await engine.PlayAsync(token);
+            else await engine.PauseAsync(token);
+        }, latest: true);
+    }
+
+    internal Button PlayPauseButtonElement => PlayPauseButton;
+
+    internal bool IsVideoFullscreen => _isVideoFullscreen;
+
+    internal void ExitFullscreenFromKeyboard()
+    {
+        if (!_isVideoFullscreen || _isPreparingForDetach)
+            return;
+
+        SetVideoFullscreen(false);
     }
 
     private async void PreviousJumpButton_Click(object sender, RoutedEventArgs e) =>
@@ -419,11 +462,10 @@ public sealed partial class PlayerView : UserControl
             if (engine.Duration > TimeSpan.Zero && target > engine.Duration)
                 target = engine.Duration;
 
-            await engine.SeekAsync(target);
+            await RunOperationAsync(engine, "seek", async token => await engine.SeekAsync(target, token), latest: true);
         }
-        catch
-        {
-        }
+        catch (Exception exception)
+        { PlaybackTrace.Write("view", "control", "error", exception.GetType().Name); }
     }
 
     private async void PreviousChapterButton_Click(object sender, RoutedEventArgs e)
@@ -433,11 +475,10 @@ public sealed partial class PlayerView : UserControl
 
         try
         {
-            await engine.Navigation.PreviousChapterAsync();
+            await RunOperationAsync(engine, "chapter", async token => { await engine.Navigation.PreviousChapterAsync(token); });
         }
-        catch
-        {
-        }
+        catch (Exception exception)
+        { PlaybackTrace.Write("view", "control", "error", exception.GetType().Name); }
     }
 
     private async void NextChapterButton_Click(object sender, RoutedEventArgs e)
@@ -447,11 +488,10 @@ public sealed partial class PlayerView : UserControl
 
         try
         {
-            await engine.Navigation.NextChapterAsync();
+            await RunOperationAsync(engine, "chapter", async token => { await engine.Navigation.NextChapterAsync(token); });
         }
-        catch
-        {
-        }
+        catch (Exception exception)
+        { PlaybackTrace.Write("view", "control", "error", exception.GetType().Name); }
     }
 
     private async void PlaybackSlider_ValueChanged(
@@ -466,9 +506,9 @@ public sealed partial class PlayerView : UserControl
         }
 
         _seekDebounce?.Cancel();
-        _seekDebounce?.Dispose();
-        _seekDebounce = new CancellationTokenSource();
-        var token = _seekDebounce.Token;
+        var request = new CancellationTokenSource();
+        _seekDebounce = request;
+        var token = request.Token;
         var target = TimeSpan.FromSeconds(e.NewValue);
 
         _lastKnownPosition = target;
@@ -477,13 +517,17 @@ public sealed partial class PlayerView : UserControl
         try
         {
             await Task.Delay(80, token);
-            await engine.SeekAsync(target, token);
+            await RunOperationAsync(engine, "seek", async ct => await engine.SeekAsync(target, ct), latest: true, token: token);
         }
         catch (OperationCanceledException)
         {
         }
-        catch
+        catch (Exception exception)
+        { PlaybackTrace.Write("view", "seek", "error", exception.GetType().Name); }
+        finally
         {
+            if (ReferenceEquals(_seekDebounce, request)) _seekDebounce = null;
+            request.Dispose();
         }
     }
 
@@ -500,8 +544,9 @@ public sealed partial class PlayerView : UserControl
 
         try
         {
-            await engine.Tracks.SelectSubtitleTrackAsync(
-                item.Tag is int id ? id : null);
+            var selected = item.Tag is int id ? id : (int?)null;
+            await RunOperationAsync(engine, "subtitle", async token =>
+                await engine.Tracks.SelectSubtitleTrackAsync(selected, token), latest: true);
         }
         catch
         {
@@ -522,12 +567,37 @@ public sealed partial class PlayerView : UserControl
 
         try
         {
-            await engine.Tracks.SelectAudioTrackAsync(id);
+            await RunOperationAsync(engine, "audio", async token => await engine.Tracks.SelectAudioTrackAsync(id, token), latest: true);
         }
         catch
         {
             ShowStatus(T("Status_Error"));
         }
+    }
+
+    private void QueueTrackUiUpdate()
+    {
+        if (_trackUiUpdateQueued || _isPreparingForDetach)
+            return;
+
+        _trackUiUpdateQueued = true;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            _trackUiUpdateQueued = false;
+            if (_isPreparingForDetach)
+                return;
+
+            // Rebuilding an open ComboBox while WinUI is closing its popup is the
+            // 0xc000027b crash source after subtitle/audio switching. Defer until the
+            // drop-down has fully closed, then apply the freshest track snapshot.
+            if (SubtitleTrackCombo.IsDropDownOpen || AudioTrackCombo.IsDropDownOpen)
+            {
+                _trackUiUpdateQueued = true;
+                return;
+            }
+
+            UpdateTrackUi();
+        });
     }
 
     private void UpdateTrackUi()
@@ -536,78 +606,140 @@ public sealed partial class PlayerView : UserControl
             return;
 
         var tracks = engine.Tracks;
+        var subtitleKey = BuildTrackListKey(tracks.SubtitleTracks.Select(static track => track.Id));
+        var audioKey = BuildTrackListKey(tracks.AudioTracks.Select(static track => track.Id));
 
         _isUpdatingTrackSelections = true;
         try
         {
-            SubtitleTrackCombo.Items.Clear();
-
-            var offItem = new ComboBoxItem
+            // A selection change does not alter the track list. Rebuilding the whole
+            // ComboBox here is what crashes WinUI 3 (0xc000027b) when the drop-down
+            // popup is still closing; for selection-only changes we just sync the
+            // SelectedItem and never touch Items.
+            if (!string.Equals(subtitleKey, _subtitleTrackListKey, StringComparison.Ordinal))
             {
-                Content = T("Playback_NoSubtitle"),
-                Tag = null
-            };
-
-            SubtitleTrackCombo.Items.Add(offItem);
-
-            ComboBoxItem? selectedSubtitleItem = tracks.SelectedSubtitleTrackId is null
-                ? offItem
-                : null;
-
-            foreach (var track in tracks.SubtitleTracks)
+                RebuildSubtitleCombo(tracks);
+                _subtitleTrackListKey = subtitleKey;
+            }
+            else
             {
-                var item = new ComboBoxItem
-                {
-                    Content = FormatSubtitleTrack(track),
-                    Tag = track.Id
-                };
-
-                SubtitleTrackCombo.Items.Add(item);
-
-                if (tracks.SelectedSubtitleTrackId == track.Id)
-                    selectedSubtitleItem = item;
+                SyncSubtitleSelection(tracks);
             }
 
-            SubtitleTrackCombo.SelectedItem = selectedSubtitleItem ?? offItem;
-
-            AudioTrackCombo.Items.Clear();
-            ComboBoxItem? selectedAudioItem = null;
-
-            foreach (var track in tracks.AudioTracks)
+            if (!string.Equals(audioKey, _audioTrackListKey, StringComparison.Ordinal))
             {
-                var item = new ComboBoxItem
-                {
-                    Content = FormatAudioTrack(track),
-                    Tag = track.Id
-                };
-
-                AudioTrackCombo.Items.Add(item);
-
-                if (tracks.SelectedAudioTrackId == track.Id)
-                    selectedAudioItem = item;
+                RebuildAudioCombo(tracks);
+                _audioTrackListKey = audioKey;
             }
-
-            if (AudioTrackCombo.Items.Count == 0)
+            else
             {
-                AudioTrackCombo.Items.Add(
-                    new ComboBoxItem
-                    {
-                        Content = "—",
-                        IsEnabled = false
-                    });
+                SyncAudioSelection(tracks);
             }
-
-            AudioTrackCombo.SelectedItem =
-                selectedAudioItem ??
-                (AudioTrackCombo.Items.Count > 0
-                    ? AudioTrackCombo.Items[0]
-                    : null);
-
         }
         finally
         {
             _isUpdatingTrackSelections = false;
         }
+    }
+
+    private static string BuildTrackListKey(IEnumerable<int> ids) =>
+        string.Join(",", ids);
+
+    private void RebuildSubtitleCombo(IPlaybackTrackController tracks)
+    {
+        SubtitleTrackCombo.Items.Clear();
+
+        _subtitleOffItem = new ComboBoxItem
+        {
+            Content = T("Playback_NoSubtitle"),
+            Tag = null
+        };
+
+        SubtitleTrackCombo.Items.Add(_subtitleOffItem);
+
+        ComboBoxItem? selected = _subtitleOffItem;
+        foreach (var track in tracks.SubtitleTracks)
+        {
+            var item = new ComboBoxItem
+            {
+                Content = FormatSubtitleTrack(track),
+                Tag = track.Id
+            };
+
+            SubtitleTrackCombo.Items.Add(item);
+            if (tracks.SelectedSubtitleTrackId == track.Id)
+                selected = item;
+        }
+
+        SubtitleTrackCombo.SelectedItem = selected;
+    }
+
+    private void RebuildAudioCombo(IPlaybackTrackController tracks)
+    {
+        AudioTrackCombo.Items.Clear();
+        ComboBoxItem? selected = null;
+
+        foreach (var track in tracks.AudioTracks)
+        {
+            var item = new ComboBoxItem
+            {
+                Content = FormatAudioTrack(track),
+                Tag = track.Id
+            };
+
+            AudioTrackCombo.Items.Add(item);
+            if (tracks.SelectedAudioTrackId == track.Id)
+                selected = item;
+        }
+
+        if (AudioTrackCombo.Items.Count == 0)
+        {
+            AudioTrackCombo.Items.Add(
+                new ComboBoxItem
+                {
+                    Content = "—",
+                    IsEnabled = false
+                });
+        }
+
+        AudioTrackCombo.SelectedItem =
+            selected ??
+            (AudioTrackCombo.Items.Count > 0
+                ? AudioTrackCombo.Items[0]
+                : null);
+    }
+
+    private void SyncSubtitleSelection(IPlaybackTrackController tracks)
+    {
+        if (SubtitleTrackCombo.IsDropDownOpen)
+            return;
+
+        var target = tracks.SelectedSubtitleTrackId is int id
+            ? SubtitleTrackCombo.Items
+                .OfType<ComboBoxItem>()
+                .FirstOrDefault(item => item.Tag is int tag && tag == id)
+            : _subtitleOffItem;
+
+        if (target is not null && !ReferenceEquals(SubtitleTrackCombo.SelectedItem, target))
+            SubtitleTrackCombo.SelectedItem = target;
+    }
+
+    private void SyncAudioSelection(IPlaybackTrackController tracks)
+    {
+        if (AudioTrackCombo.IsDropDownOpen)
+            return;
+
+        var target = tracks.SelectedAudioTrackId is int selectedId
+            ? AudioTrackCombo.Items
+                .OfType<ComboBoxItem>()
+                .FirstOrDefault(item => item.Tag is int tag && tag == selectedId)
+            : null;
+
+        if (target is null && AudioTrackCombo.Items.Count > 0)
+            target = AudioTrackCombo.Items[0] as ComboBoxItem;
+
+        if (target is not null && !ReferenceEquals(AudioTrackCombo.SelectedItem, target))
+            AudioTrackCombo.SelectedItem = target;
     }
 
     private MenuFlyout BuildSubtitleFlyout(IPlaybackTrackController tracks)
@@ -672,7 +804,7 @@ public sealed partial class PlayerView : UserControl
 
                 try
                 {
-                    await engine.Tracks.SelectAudioTrackAsync(trackId);
+                    await RunOperationAsync(engine, "audio", async token => await engine.Tracks.SelectAudioTrackAsync(trackId, token), latest: true);
                 }
                 catch
                 {
@@ -692,7 +824,7 @@ public sealed partial class PlayerView : UserControl
     {
         try
         {
-            await engine.Tracks.SelectSubtitleTrackAsync(trackId);
+            await RunOperationAsync(engine, "subtitle", async token => await engine.Tracks.SelectSubtitleTrackAsync(trackId, token), latest: true);
         }
         catch
         {
@@ -958,7 +1090,7 @@ public sealed partial class PlayerView : UserControl
             _isVideoFullscreen = false;
             _sidebarVisibleInFullscreen = false;
             _hasPointerPosition = false;
-            QueueWindowFullscreenExit();
+            QueueWindowFullscreenExit(++_fullscreenGeneration);
         }
     }
 
@@ -1021,20 +1153,11 @@ public sealed partial class PlayerView : UserControl
 
     private void SetVideoFullscreen(bool enabled)
     {
-        if (_isPreparingForDetach || _isVideoFullscreen == enabled)
-            return;
-
+        if (_isPreparingForDetach || _isVideoFullscreen == enabled) return;
         _isVideoFullscreen = enabled;
-
-        if (enabled)
-        {
-            ApplyFullscreenVisualState();
-            App.MainWindow?.SetPlayerVideoFullscreen(true);
-            return;
-        }
-
-        ApplyWindowedVisualState();
-        QueueWindowFullscreenExit();
+        var generation = ++_fullscreenGeneration;
+        PlaybackTrace.Write("view", "fullscreen", "requested", enabled.ToString());
+        QueueWindowFullscreenExit(generation);
     }
 
     private void ApplyFullscreenVisualState()
@@ -1234,64 +1357,99 @@ public sealed partial class PlayerView : UserControl
         _pointerWheelHooked = false;
     }
 
-    private void QueueWindowFullscreenExit()
+    private void QueueWindowFullscreenExit(int generation)
     {
-        if (_fullscreenWindowExitQueued)
-            return;
-
-        _fullscreenWindowExitQueued = true;
-
         if (!DispatcherQueue.TryEnqueue(() =>
         {
-            _fullscreenWindowExitQueued = false;
+            // Only the most recent fullscreen intent may mutate the window presenter.
+            // Stale queued callbacks (tab closed, unloaded, rapid toggling) become no-ops.
+            if (generation != Volatile.Read(ref _fullscreenGeneration) || _isPreparingForDetach)
+            {
+                PlaybackTrace.Write("view", "fullscreen", "stale");
+                return;
+            }
 
-            if (!_isVideoFullscreen)
-                App.MainWindow?.SetPlayerVideoFullscreen(false);
+            var enabled = _isVideoFullscreen;
+            try
+            {
+                if (enabled) ApplyFullscreenVisualState();
+                else ApplyWindowedVisualState();
+                App.MainWindow?.SetPlayerVideoFullscreen(enabled, this);
+                PlaybackTrace.Write("view", "fullscreen", "complete", enabled.ToString());
+            }
+            catch (Exception exception)
+            {
+                PlaybackTrace.Write("view", "fullscreen", "error", exception.GetType().Name + ":" + exception.Message);
+                // Never leave the window presenter out of sync with the player state;
+                // a half-applied transition is what makes fullscreen unrecoverable.
+                _isVideoFullscreen = false;
+                _fullscreenGeneration++;
+                try
+                {
+                    App.MainWindow?.SetPlayerVideoFullscreen(false, this);
+                }
+                catch (Exception restoreException)
+                {
+                    PlaybackTrace.Write("view", "fullscreen", "restore-error", restoreException.GetType().Name);
+                }
+                ShowStatus(T("Status_Error"));
+            }
         }))
         {
-            _fullscreenWindowExitQueued = false;
-            App.MainWindow?.SetPlayerVideoFullscreen(false);
+            PlaybackTrace.Write("view", "fullscreen", "dispatcher-closed");
         }
     }
 
-    internal async ValueTask PrepareForDetachAsync()
+    internal ValueTask PrepareForDetachAsync() => new(_detachTask ??= PrepareForDetachCoreAsync());
+
+    private async Task PrepareForDetachCoreAsync()
     {
         if (_isPreparingForDetach)
             return;
 
-        _isPreparingForDetach = true;
-        _fullscreenControlsTimer.Stop();
-        _loadingMetricsTimer.Stop();
-        RemovePointerWheelHandler();
-
-        _seekDebounce?.Cancel();
-        _seekDebounce?.Dispose();
-        _seekDebounce = null;
-
-        _isVideoFullscreen = false;
-        _sidebarVisibleInFullscreen = false;
-        _hasPointerPosition = false;
-
-        if (_engine is { } engine)
+        await _surfaceLifecycleGate.WaitAsync();
+        try
         {
-            DetachEngine(engine);
-            _engine = null;
-        }
+            if (_isPreparingForDetach)
+                return;
 
-        PlaybackSurface.EngineChanged -= PlaybackSurface_EngineChanged;
-        PlaybackSurface.InitializationFailed -= PlaybackSurface_InitializationFailed;
+            _isPreparingForDetach = true;
+            _session.Cancel();
+            PlaybackTrace.Write("view", "detach", "start");
+            _fullscreenControlsTimer.Stop();
+            _loadingMetricsTimer.Stop();
+            RemovePointerWheelHandler();
+
+            _seekDebounce?.Cancel();
+            _seekDebounce = null;
+
+            _isVideoFullscreen = false;
+            _sidebarVisibleInFullscreen = false;
+            _hasPointerPosition = false;
+            _fullscreenGeneration++;
+
+            App.MainWindow?.SetPlayerVideoFullscreen(false, this);
+            if (_engine is { } engine)
+            {
+                DetachEngine(engine);
+                _engine = null;
+            }
+
+            PlaybackSurface.EngineChanged -= PlaybackSurface_EngineChanged;
+            PlaybackSurface.InitializationFailed -= PlaybackSurface_InitializationFailed;
+        }
+        finally
+        {
+            _surfaceLifecycleGate.Release();
+        }
 
         try
         {
             await PlaybackSurface.DisposeAsync();
         }
-        catch
-        {
-            // Closing a tab must remain responsive even if a backend is already
-            // tearing down because of a concurrent end/stop notification.
-        }
-
-        App.MainWindow?.SetPlayerVideoFullscreen(false);
+        catch (Exception exception)
+        { PlaybackTrace.Write("view", "detach", "error", exception.GetType().Name); }
+        PlaybackTrace.Write("view", "detach", "complete");
     }
 
     private void ResetTimeline()
@@ -1364,8 +1522,8 @@ public sealed partial class PlayerView : UserControl
         try
         {
             var snapshot =
-                await engine.Diagnostics.RefreshAsync();
-            UpdateLoadingMetrics(snapshot);
+                await engine.Diagnostics.RefreshAsync(_session.Token);
+            if (ReferenceEquals(_engine, engine) && !_isPreparingForDetach) UpdateLoadingMetrics(snapshot);
         }
         catch
         {
@@ -1475,13 +1633,11 @@ public sealed partial class PlayerView : UserControl
 
     private void Dispatch(Action action)
     {
-        if (DispatcherQueue.HasThreadAccess)
+        var session = _session;
+        DispatcherQueue.TryEnqueue(() =>
         {
-            action();
-            return;
-        }
-
-        DispatcherQueue.TryEnqueue(() => action());
+            if (!_isPreparingForDetach && ReferenceEquals(session, _session) && !session.Token.IsCancellationRequested) action();
+        });
     }
 
     private static string FormatSubtitleTrack(SubtitleTrackInfo track)
