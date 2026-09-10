@@ -44,8 +44,11 @@ if ($playerCode -match 'FileOpenPicker' -or
     throw 'Player UI contract violation: player-local file picker entry was reintroduced.'
 }
 
-if ($sourcesXaml -notmatch 'SectionCardStyle') {
-    throw 'Media-source UI contract violation: source entries must render as cards.'
+if (($sourcesXaml -notmatch 'SectionCardStyle') -and
+    ($sourcesXaml -notmatch 'CardBackgroundFillColorDefaultBrush' -or
+     $sourcesXaml -notmatch 'CardStrokeColorDefaultBrush' -or
+     $sourcesXaml -notmatch 'CornerRadius')) {
+    throw 'Media-source UI contract violation: source entries must render as native card surfaces.'
 }
 
 Write-Host 'Player/source UI cleanup contract PASS.'
