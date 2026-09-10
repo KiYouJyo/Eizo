@@ -74,7 +74,7 @@ jobs:
             if (-not (Test-Path (Join-Path $out "Components\Bundled\Playback\$name"))) { throw "Bundled Playback fallback missing: $name" }
           }
           if (-not (Test-Path (Join-Path $out 'Components\Bundled\Recognition\Eizo.Metadata.Recognition.dll'))) {
-            throw 'Bundled Recognition fallback missing.'
+            throw 'Bundled Metadata fallback missing.'
           }
           Write-Host 'Relocatable component output contract PASS.'
 
@@ -117,7 +117,9 @@ jobs:
           if (-not $inner) { throw 'Bundle contains no inner MSIX.' }
           $archive = [System.IO.Compression.ZipFile]::OpenRead($inner.FullName)
           try {
-            $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\\','/') })
+            # ZIP/MSIX entry separators are not guaranteed to match the PowerShell host.
+            # Normalize every archive path before checking the component probing contract.
+            $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
 
             foreach ($name in @('libvlc.dll', 'libvlccore.dll')) {
               if (-not ($entries | Where-Object { $_ -match "(^|/)$([regex]::Escape($name))$" })) {
@@ -141,7 +143,7 @@ jobs:
               if ($entries -notcontains "Components/Bundled/Playback/$name") { throw "MSIX bundled Playback fallback missing: $name" }
             }
             if ($entries -notcontains 'Components/Bundled/Recognition/Eizo.Metadata.Recognition.dll') {
-              throw 'MSIX bundled Recognition fallback missing.'
+              throw 'MSIX bundled Metadata fallback missing.'
             }
             Write-Host "Component bundle contract PASS. LibVLC plugins=$($plugins.Count)"
           }
@@ -156,6 +158,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $pfx = Join-Path $env:RUNNER_TEMP 'eizo-release-signing.pfx'
           [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:RELEASE_CERTIFICATE_BASE64))
+          $password = ConvertTo-SecureString $env:GH_RELEASE_CERTIFICATE_PASSWORD -AsPlainText -Force
           $password = ConvertTo-SecureString $env:RELEASE_CERTIFICATE_PASSWORD -AsPlainText -Force
           $certificate = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
           if ($certificate.Subject -cne 'CN=AppPublisher' -or $certificate.Thumbprint -cne 'BD85AD77A651C86CA01A480C8E9BC64952993F98' -or -not $certificate.HasPrivateKey) {
@@ -205,6 +208,60 @@ jobs:
           $running | Stop-Process -Force -ErrorAction SilentlyContinue
           Get-AppxPackage -Name Eizo | Remove-AppxPackage -ErrorAction SilentlyContinue
           Write-Host 'Install and bundled-fallback launch smoke PASS.'
+
+      - name: Stage public Metadata v0.1.1 and verify restart activation
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $componentRoot = Join-Path $env:LOCALAPPDATA 'Eizo\Components\Recognition'
+          $versionsRoot = Join-Path $componentRoot 'versions'
+          $versionRoot = Join-Path $versionsRoot '0.1.1'
+          if (Test-Path $componentRoot) { Remove-Item -LiteralPath $componentRoot -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $versionRoot | Out-Null
+
+          $metadataZip = Join-Path $env:RUNNER_TEMP 'Eizo.Recognition.Runtime-v0.1.1-x64.zip'
+          Invoke-WebRequest -Uri 'https://github.com/KiYouJyo/Eizo.Metadata/releases/download/v0.1.1/Eizo.Recognition.Runtime-v0.1.1-x64.zip' -OutFile $metadataZip -UseBasicParsing
+          $expected = 'c29a5466a9a9b92b8d04b04bc16709bd11827124338cfebf76e4a205fa0263cf'
+          $actual = (Get-FileHash -LiteralPath $metadataZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "Published Metadata v0.1.1 SHA-256 mismatch: $actual" }
+          Expand-Archive -LiteralPath $metadataZip -DestinationPath $versionRoot -Force
+          if (-not (Test-Path (Join-Path $versionRoot 'eizo-recognition-release.json'))) { throw 'Metadata manifest missing after extraction.' }
+          if (-not (Test-Path (Join-Path $versionRoot 'bin\Eizo.Metadata.Recognition.dll'))) { throw 'Metadata Recognition module missing after extraction.' }
+          '{"Version":"0.1.1"}' | Set-Content -LiteralPath (Join-Path $componentRoot 'pending.json') -Encoding utf8NoBOM
+
+          Add-AppxPackage -Path $env:BUNDLE_PATH -ForceApplicationShutdown
+          $pkg = Get-AppxPackage -Name Eizo
+          $manifest = Get-AppxPackageManifest -Package $pkg
+          $appId = [string]$manifest.Package.Applications.Application.Id
+          $activation = "shell:AppsFolder\$($pkg.PackageFamilyName)!$appId"
+          Start-Process explorer.exe -ArgumentList $activation
+          Start-Sleep -Seconds 8
+
+          $installRoot = [IO.Path]::GetFullPath($pkg.InstallLocation)
+          $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+            try { $_.Path -and ([IO.Path]::GetFullPath($_.Path)).StartsWith($installRoot, [StringComparison]::OrdinalIgnoreCase) }
+            catch { $false }
+          })
+          if ($running.Count -eq 0) { throw 'Eizo failed to launch with staged Metadata runtime.' }
+
+          $activePath = Join-Path $componentRoot 'active.json'
+          $pendingPath = Join-Path $componentRoot 'pending.json'
+          if (-not (Test-Path $activePath)) { throw 'Metadata active.json was not promoted on restart.' }
+          $active = Get-Content -LiteralPath $activePath -Raw | ConvertFrom-Json
+          if ([string]$active.Version -ne '0.1.1') { throw "Unexpected active Metadata version: $($active.Version)" }
+          if (Test-Path $pendingPath) { throw 'Metadata pending.json still exists after successful activation.' }
+
+          $activationLog = Join-Path $env:LOCALAPPDATA 'Eizo\Components\activation.log'
+          if (-not (Test-Path $activationLog)) { throw 'Component activation diagnostics log was not written.' }
+          $log = Get-Content -LiteralPath $activationLog -Raw
+          if ($log -notmatch 'Metadata\tcurrent=0\.1\.1\tbundled=0\.1\.0\texternal=True') {
+            throw "Metadata external activation was not recorded. Log:`n$log"
+          }
+
+          $running | Stop-Process -Force -ErrorAction SilentlyContinue
+          Get-AppxPackage -Name Eizo | Remove-AppxPackage -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'Eizo\Components') -Recurse -Force -ErrorAction SilentlyContinue
+          Write-Host 'Metadata v0.1.1 restart activation PASS.'
 
       - name: Generate one-click acceptance package
         shell: pwsh
