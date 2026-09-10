@@ -58,6 +58,7 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
     throw '.NET SDK is required to restore Eizo.Playback.'
 }
 
+$dependencyCheckoutCreated = $false
 if (-not (Test-Path -LiteralPath (Join-Path $dependencyRoot '.git'))) {
     if (Test-Path -LiteralPath $dependencyRoot) {
         $resolvedDependency = [IO.Path]::GetFullPath($dependencyRoot)
@@ -72,6 +73,8 @@ if (-not (Test-Path -LiteralPath (Join-Path $dependencyRoot '.git'))) {
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to clone Eizo.Playback from $repository."
     }
+
+    $dependencyCheckoutCreated = $true
 }
 
 & git -C $dependencyRoot fetch --force origin $commit
@@ -79,19 +82,29 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed to fetch Eizo.Playback commit $commit."
 }
 
-# Never erase an independently edited dependency checkout. A clean checkout or
-# the exact checked-in patch is reproducible and may be reset for bootstrap.
-$dependencyDiff = & git -C $dependencyRoot status --porcelain
-if ($dependencyDiff) {
-    & git -C $dependencyRoot apply --reverse --check $patchPath
-    if ($LASTEXITCODE -ne 0) { throw 'Dependency has local changes beyond the saved patch. Preserve them before restoring.' }
-    & git -C $dependencyRoot apply --reverse $patchPath
-    if ($LASTEXITCODE -ne 0) { throw 'Could not reverse the saved dependency patch.' }
-    if (& git -C $dependencyRoot status --porcelain) { throw 'Dependency still has local changes; refusing checkout.' }
+# Never erase an independently edited dependency checkout. A brand-new
+# --no-checkout clone has an intentionally empty worktree, so checkout the
+# pinned commit first instead of misclassifying every tracked file as deleted.
+if ($dependencyCheckoutCreated) {
+    & git -C $dependencyRoot checkout --detach --force $commit
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to checkout fresh Eizo.Playback commit $commit."
+    }
 }
-& git -C $dependencyRoot checkout --detach $commit
-if ($LASTEXITCODE -ne 0) {
-    throw "Failed to checkout Eizo.Playback commit $commit."
+else {
+    $dependencyDiff = & git -C $dependencyRoot status --porcelain
+    if ($dependencyDiff) {
+        & git -C $dependencyRoot apply --reverse --check $patchPath
+        if ($LASTEXITCODE -ne 0) { throw 'Dependency has local changes beyond the saved patch. Preserve them before restoring.' }
+        & git -C $dependencyRoot apply --reverse $patchPath
+        if ($LASTEXITCODE -ne 0) { throw 'Could not reverse the saved dependency patch.' }
+        if (& git -C $dependencyRoot status --porcelain) { throw 'Dependency still has local changes; refusing checkout.' }
+    }
+
+    & git -C $dependencyRoot checkout --detach $commit
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to checkout Eizo.Playback commit $commit."
+    }
 }
 
 & git -C $dependencyRoot apply --check $patchPath
