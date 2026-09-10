@@ -3,6 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Eizo.RecognitionIntegration</AssemblyName>
     <RootNamespace>Eizo.Recognition</RootNamespace>
+    <RestoreAdditionalProjectSources>$(MSBuildThisFileDirectory)../../.packages/Eizo.Metadata;$(RestoreAdditionalProjectSources)</RestoreAdditionalProjectSources>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Eizo.Metadata.Recognition" Version="0.1.0" />
