@@ -44,11 +44,18 @@ if ($playerCode -match 'FileOpenPicker' -or
     throw 'Player UI contract violation: player-local file picker entry was reintroduced.'
 }
 
-if (($sourcesXaml -notmatch 'SectionCardStyle') -and
-    ($sourcesXaml -notmatch 'CardBackgroundFillColorDefaultBrush' -or
-     $sourcesXaml -notmatch 'Property="CornerRadius" Value="10"' -or
-     $sourcesXaml -notmatch 'Property="BorderThickness" Value="0"')) {
-    throw 'Media-source UI contract violation: source entries must render as rounded native card surfaces without an outer outline.'
+if ($sourcesXaml -notmatch 'x:Name="CardSurface"' -or
+    $sourcesXaml -notmatch '<ControlTemplate TargetType="ListViewItem">' -or
+    $sourcesXaml -notmatch 'CornerRadius="10"' -or
+    $sourcesXaml -notmatch 'PointerOver' -or
+    $sourcesXaml -notmatch 'Pressed') {
+    throw 'Media-source UI contract violation: the visible source-card surface must be rounded inside the ListViewItem control template.'
+}
+
+if ($sourcesXaml -notmatch 'HorizontalContentAlignment="Center"' -or
+    $sourcesXaml -notmatch 'VerticalContentAlignment="Center"' -or
+    $sourcesXaml -notmatch 'HorizontalAlignment="Center"') {
+    throw 'Media-source UI contract violation: Scan now button content must stay centered in both idle and scanning states.'
 }
 
 Write-Host 'Player/source UI cleanup contract PASS.'
