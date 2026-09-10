@@ -33,10 +33,14 @@ public sealed record MediaScanSnapshot(
 
 public sealed class MediaScanCoordinator
 {
+    private const long ProgressNotificationIntervalMilliseconds = 100;
+
     private readonly object _sync = new();
     private readonly Dictionary<string, MediaScanSnapshot> _snapshots =
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, Task<MediaScanSnapshot>> _jobs =
+        new(StringComparer.Ordinal);
+    private readonly Dictionary<string, long> _lastProgressNotifications =
         new(StringComparer.Ordinal);
 
     private MediaScanCoordinator()
@@ -89,6 +93,7 @@ public sealed class MediaScanCoordinator
                 StartedUtc: DateTimeOffset.UtcNow);
 
             _snapshots[source.Id] = started;
+            _lastProgressNotifications[source.Id] = 0;
             task = Task.Run(
                 () => RunAsync(source, started, cancellationToken),
                 CancellationToken.None);
@@ -169,6 +174,7 @@ public sealed class MediaScanCoordinator
         {
             _snapshots[source.Id] = finished;
             _jobs.Remove(source.Id);
+            _lastProgressNotifications.Remove(source.Id);
         }
 
         RaiseChanged();
@@ -179,6 +185,7 @@ public sealed class MediaScanCoordinator
         MediaScanSnapshot started,
         MediaScanProgress progress)
     {
+        var shouldNotify = false;
         lock (_sync)
         {
             if (!_jobs.ContainsKey(progress.SourceId))
@@ -194,9 +201,19 @@ public sealed class MediaScanCoordinator
                 ErrorCode = null,
                 ErrorDetail = null
             };
+
+            var now = Environment.TickCount64;
+            var last = _lastProgressNotifications.GetValueOrDefault(
+                progress.SourceId);
+            if (now - last >= ProgressNotificationIntervalMilliseconds)
+            {
+                _lastProgressNotifications[progress.SourceId] = now;
+                shouldNotify = true;
+            }
         }
 
-        RaiseChanged();
+        if (shouldNotify)
+            RaiseChanged();
     }
 
     private void RaiseChanged() =>
