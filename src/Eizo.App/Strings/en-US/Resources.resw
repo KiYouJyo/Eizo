@@ -799,4 +799,37 @@
   <data name="Sources_FoldersUpdatedNoScan" xml:space="preserve">
     <value>Saved the scanned folders. Select “Scan now” to apply the new scope.</value>
   </data>
+  <data name="Nav_Bangumi" xml:space="preserve">
+    <value>Bangumi</value>
+  </data>
+  <data name="Nav_BroadcastCalendar" xml:space="preserve">
+    <value>Broadcast calendar</value>
+  </data>
+  <data name="Nav_SeasonalAnime" xml:space="preserve">
+    <value>Seasonal anime</value>
+  </data>
+  <data name="Nav_RankDiscover" xml:space="preserve">
+    <value>Rankings &amp; discovery</value>
+  </data>
+  <data name="Nav_MyFollowing" xml:space="preserve">
+    <value>My following</value>
+  </data>
+  <data name="Bangumi_PlaceholderSubtitle" xml:space="preserve">
+    <value>Bangumi discovery</value>
+  </data>
+  <data name="Bangumi_PlaceholderStatus" xml:space="preserve">
+    <value>Page reserved</value>
+  </data>
+  <data name="Bangumi_CalendarPlaceholderDescription" xml:space="preserve">
+    <value>Reserved for date-based anime broadcasts and following updates. Bangumi data integration will be added in a later stage.</value>
+  </data>
+  <data name="Bangumi_SeasonalPlaceholderDescription" xml:space="preserve">
+    <value>Reserved for seasonal anime browsing, type filters, and sorting. Navigation and workspace tabs are wired now.</value>
+  </data>
+  <data name="Bangumi_DiscoverPlaceholderDescription" xml:space="preserve">
+    <value>Reserved for popularity, ratings, rankings, and themed discovery. Navigation and workspace tabs are wired now.</value>
+  </data>
+  <data name="Bangumi_FollowingPlaceholderDescription" xml:space="preserve">
+    <value>Reserved for Bangumi collection and episode-watch synchronization. Account sign-in and data sync will be added later.</value>
+  </data>
 </root>

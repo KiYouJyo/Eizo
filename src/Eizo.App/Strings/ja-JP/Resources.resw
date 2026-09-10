@@ -799,4 +799,37 @@
   <data name="Sources_FoldersUpdatedNoScan" xml:space="preserve">
     <value>読み込みフォルダーを保存しました。「今すぐスキャン」で新しい範囲を反映してください。</value>
   </data>
+  <data name="Nav_Bangumi" xml:space="preserve">
+    <value>Bangumi</value>
+  </data>
+  <data name="Nav_BroadcastCalendar" xml:space="preserve">
+    <value>放送カレンダー</value>
+  </data>
+  <data name="Nav_SeasonalAnime" xml:space="preserve">
+    <value>新番</value>
+  </data>
+  <data name="Nav_RankDiscover" xml:space="preserve">
+    <value>ランキング・発見</value>
+  </data>
+  <data name="Nav_MyFollowing" xml:space="preserve">
+    <value>視聴リスト</value>
+  </data>
+  <data name="Bangumi_PlaceholderSubtitle" xml:space="preserve">
+    <value>Bangumi 情報</value>
+  </data>
+  <data name="Bangumi_PlaceholderStatus" xml:space="preserve">
+    <value>ページを予約済み</value>
+  </data>
+  <data name="Bangumi_CalendarPlaceholderDescription" xml:space="preserve">
+    <value>日付ごとのアニメ放送予定と視聴中作品の更新表示用ページです。Bangumi データ連携は後続段階で追加します。</value>
+  </data>
+  <data name="Bangumi_SeasonalPlaceholderDescription" xml:space="preserve">
+    <value>クール別の新番一覧、種別フィルター、並び替え用ページです。今回はナビゲーションとタブ接続まで行います。</value>
+  </data>
+  <data name="Bangumi_DiscoverPlaceholderDescription" xml:space="preserve">
+    <value>人気、評価、ランキング、テーマ別発見用ページです。今回はナビゲーションとタブ接続まで行います。</value>
+  </data>
+  <data name="Bangumi_FollowingPlaceholderDescription" xml:space="preserve">
+    <value>Bangumi のコレクションとエピソード視聴状態の同期用ページです。アカウントログインと同期は後続段階で追加します。</value>
+  </data>
 </root>
