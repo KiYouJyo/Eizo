@@ -787,4 +787,16 @@
   <data name="Sources_FoldersUpdatedFormat" xml:space="preserve">
     <value>Rescanned the new folder scope and found {0} videos.</value>
   </data>
+  <data name="Sources_Scanning" xml:space="preserve">
+    <value>Scanning…</value>
+  </data>
+  <data name="Sources_WebDavAddedNoScanFormat" xml:space="preserve">
+    <value>Added {0}. Select “Scan now” to load media.</value>
+  </data>
+  <data name="Sources_WebDavUpdatedNoScanFormat" xml:space="preserve">
+    <value>Updated {0}. Select “Scan now” to refresh media.</value>
+  </data>
+  <data name="Sources_FoldersUpdatedNoScan" xml:space="preserve">
+    <value>Saved the scanned folders. Select “Scan now” to apply the new scope.</value>
+  </data>
 </root>
