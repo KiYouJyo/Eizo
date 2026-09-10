@@ -26,7 +26,7 @@ public sealed partial class CatalogView : UserControl
 
     private void ApplyText()
     {
-        PageTitle.Text = T("Nav_Categories");
+        PageTitle.Text = T("Nav_Library");
         PageSubtitle.Text = T("Catalog_Subtitle");
         SearchBox.PlaceholderText = T("Catalog_SearchPlaceholder");
         ClearSearchButton.Content = T("Catalog_Clear");
