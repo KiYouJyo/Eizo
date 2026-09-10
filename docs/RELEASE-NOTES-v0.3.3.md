@@ -1,3 +1,5 @@
+简体中文 | [日本語](RELEASE-NOTES-v0.3.3.ja.md) | [English](RELEASE-NOTES-v0.3.3.en.md)
+
 # Eizo v0.3.3
 
 ## 识别内核接入与媒体库验收

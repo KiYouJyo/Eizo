@@ -1,3 +1,5 @@
+日本語 | [简体中文](RELEASE-NOTES-v0.3.3.md) | [English](RELEASE-NOTES-v0.3.3.en.md)
+
 # Eizo v0.3.3
 
 ## 認識エンジン統合とメディアライブラリ検証
