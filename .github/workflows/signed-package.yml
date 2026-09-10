@@ -33,6 +33,14 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Restore pinned Eizo.Playback packages
+        shell: pwsh
+        run: ./scripts/Restore-EizoPlayback.ps1
+
+      - name: Restore pinned Eizo.Metadata Recognition package
+        shell: pwsh
+        run: ./scripts/Restore-EizoMetadata.ps1
+
       - name: Validate signing configuration
         shell: pwsh
         env:
