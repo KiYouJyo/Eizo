@@ -1,0 +1,242 @@
+name: Eizo v0.3.6 component-runtime acceptance
+
+on:
+  push:
+    branches:
+      - "codex/eizo-0.3.6-component-updates"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eizo-v036-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Build, validate, sign and smoke Eizo 0.3.6 x64
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Validate signing configuration
+        shell: pwsh
+        env:
+          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
+          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:RELEASE_CERTIFICATE_BASE64) -or [string]::IsNullOrWhiteSpace($env:RELEASE_CERTIFICATE_PASSWORD)) {
+            throw 'GitHub release signing secrets are not configured.'
+          }
+
+      - name: Restore pinned dependencies
+        shell: pwsh
+        run: |
+          ./scripts/Restore-EizoPlayback.ps1
+          ./scripts/Restore-EizoMetadata.ps1
+
+      - name: Restore and compile Release
+        shell: pwsh
+        run: |
+          msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:AppxPackageSigningEnabled=false /p:GenerateAppxPackageOnBuild=false
+          if ($LASTEXITCODE -ne 0) { throw "Release build failed: $LASTEXITCODE" }
+
+      - name: Verify relocatable component output contract
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Resolve-Path 'src\Eizo.App\bin\x64\Release\net10.0-windows10.0.19041.0\win-x64'
+          $rootForbidden = @(
+            'Eizo.Playback.Abstractions.dll',
+            'Eizo.Playback.Core.dll',
+            'Eizo.Playback.LibVLC.dll',
+            'Eizo.Playback.LibVLC.WinUI.dll',
+            'Eizo.Metadata.Recognition.dll'
+          )
+          foreach ($name in $rootForbidden) {
+            if (Test-Path (Join-Path $out $name)) { throw "Updateable implementation remains in default probing root: $name" }
+          }
+          foreach ($name in $rootForbidden[0..3]) {
+            if (-not (Test-Path (Join-Path $out "Components\Bundled\Playback\$name"))) { throw "Bundled Playback fallback missing: $name" }
+          }
+          if (-not (Test-Path (Join-Path $out 'Components\Bundled\Recognition\Eizo.Metadata.Recognition.dll'))) {
+            throw 'Bundled Recognition fallback missing.'
+          }
+          Write-Host 'Relocatable component output contract PASS.'
+
+      - name: Build unsigned x64 MSIX bundle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:RUNNER_TEMP 'Eizo-AppPackages'
+          msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Always /p:AppxBundlePlatforms=x64 /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir="$output\"
+          if ($LASTEXITCODE -ne 0) { throw "MSIX build failed: $LASTEXITCODE" }
+
+          $bundle = @(Get-ChildItem $output -Recurse -Filter '*.msixbundle' -File) | Select-Object -First 1
+          if (-not $bundle) { throw 'MSIX bundle was not produced.' }
+
+          $assets = Join-Path $env:RUNNER_TEMP 'Eizo-v0.3.6-acceptance'
+          New-Item -ItemType Directory -Force -Path $assets | Out-Null
+          $finalBundle = Join-Path $assets 'Eizo_0.3.6.0_x64.msixbundle'
+          Copy-Item -LiteralPath $bundle.FullName -Destination $finalBundle -Force
+
+          $runtimeInstaller = Join-Path $env:RUNNER_TEMP 'WindowsAppRuntimeInstall-x64.exe'
+          Invoke-WebRequest -Uri 'https://aka.ms/windowsappsdk/1.8/1.8.260710003/windowsappruntimeinstall-x64.exe' -OutFile $runtimeInstaller -UseBasicParsing
+          $runtimeSignature = Get-AuthenticodeSignature -FilePath $runtimeInstaller
+          if (-not $runtimeSignature.SignerCertificate -or $runtimeSignature.Status -ne 'Valid' -or $runtimeSignature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
+            throw "Windows App Runtime installer signature validation failed: $($runtimeSignature.Status) / $($runtimeSignature.SignerCertificate.Subject)"
+          }
+
+          "BUNDLE_PATH=$finalBundle" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "RUNTIME_INSTALLER_PATH=$runtimeInstaller" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "ASSETS_DIR=$assets" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Verify component and LibVLC payload inside bundle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $bundleExtract = Join-Path $env:RUNNER_TEMP 'bundle-extract'
+          New-Item -ItemType Directory -Force -Path $bundleExtract | Out-Null
+          [System.IO.Compression.ZipFile]::ExtractToDirectory($env:BUNDLE_PATH, $bundleExtract)
+          $inner = @(Get-ChildItem $bundleExtract -Recurse -Filter '*.msix' -File) | Select-Object -First 1
+          if (-not $inner) { throw 'Bundle contains no inner MSIX.' }
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($inner.FullName)
+          try {
+            $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\\','/') })
+
+            foreach ($name in @('libvlc.dll', 'libvlccore.dll')) {
+              if (-not ($entries | Where-Object { $_ -match "(^|/)$([regex]::Escape($name))$" })) {
+                throw "MSIX does not contain $name"
+              }
+            }
+            $plugins = @($entries | Where-Object { $_ -match '(^|/)plugins/.+\.dll$' })
+            if ($plugins.Count -eq 0) { throw 'MSIX contains no LibVLC plugins.' }
+
+            $forbiddenRoot = @(
+              'Eizo.Playback.Abstractions.dll',
+              'Eizo.Playback.Core.dll',
+              'Eizo.Playback.LibVLC.dll',
+              'Eizo.Playback.LibVLC.WinUI.dll',
+              'Eizo.Metadata.Recognition.dll'
+            )
+            foreach ($name in $forbiddenRoot) {
+              if ($entries -contains $name) { throw "MSIX default probing root still contains updateable implementation: $name" }
+            }
+            foreach ($name in $forbiddenRoot[0..3]) {
+              if ($entries -notcontains "Components/Bundled/Playback/$name") { throw "MSIX bundled Playback fallback missing: $name" }
+            }
+            if ($entries -notcontains 'Components/Bundled/Recognition/Eizo.Metadata.Recognition.dll') {
+              throw 'MSIX bundled Recognition fallback missing.'
+            }
+            Write-Host "Component bundle contract PASS. LibVLC plugins=$($plugins.Count)"
+          }
+          finally { $archive.Dispose() }
+
+      - name: Sign and verify bundle
+        shell: pwsh
+        env:
+          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
+          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pfx = Join-Path $env:RUNNER_TEMP 'eizo-release-signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:RELEASE_CERTIFICATE_BASE64))
+          $password = ConvertTo-SecureString $env:RELEASE_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $certificate = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          if ($certificate.Subject -cne 'CN=AppPublisher' -or $certificate.Thumbprint -cne 'BD85AD77A651C86CA01A480C8E9BC64952993F98' -or -not $certificate.HasPrivateKey) {
+            throw "Unexpected signing certificate: Subject=$($certificate.Subject); Thumbprint=$($certificate.Thumbprint); HasPrivateKey=$($certificate.HasPrivateKey)"
+          }
+
+          $cer = Join-Path $env:ASSETS_DIR 'Eizo-v0.3.6-AppPublisher.cer'
+          Export-Certificate -Cert $certificate -FilePath $cer | Out-Null
+          $kitsRoot = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
+          $signtool = Get-ChildItem (Join-Path $kitsRoot 'Windows Kits\10\bin') -Recurse -Filter signtool.exe | Where-Object FullName -match '\\x64\\signtool.exe$' | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { throw 'x64 signtool.exe was not found.' }
+
+          & $signtool.FullName sign /fd SHA256 /sha1 $certificate.Thumbprint /tr http://timestamp.digicert.com /td SHA256 $env:BUNDLE_PATH
+          if ($LASTEXITCODE -ne 0) { throw "signtool sign failed: $LASTEXITCODE" }
+          $signature = Get-AuthenticodeSignature -FilePath $env:BUNDLE_PATH
+          if (-not $signature.SignerCertificate -or $signature.SignerCertificate.Thumbprint -cne $certificate.Thumbprint) {
+            throw 'Signed bundle signer mismatch.'
+          }
+          Remove-Item -LiteralPath $pfx -Force
+          "CERTIFICATE_PATH=$cer" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install and launch bundled-fallback smoke test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($env:CERTIFICATE_PATH)
+          if (-not (Get-ChildItem Cert:\LocalMachine\TrustedPeople -ErrorAction SilentlyContinue | Where-Object Thumbprint -eq $cert.Thumbprint | Select-Object -First 1)) {
+            Import-Certificate -FilePath $env:CERTIFICATE_PATH -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+          }
+          Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
+          & $env:RUNTIME_INSTALLER_PATH --quiet
+          if ($LASTEXITCODE -ne 0) { throw "Windows App Runtime installer failed: $LASTEXITCODE" }
+          Add-AppxPackage -Path $env:BUNDLE_PATH -ForceApplicationShutdown
+          $pkg = Get-AppxPackage -Name Eizo
+          if (-not $pkg -or [string]$pkg.Version -ne '0.3.6.0') { throw "Installed package version mismatch: $($pkg.Version)" }
+          $manifest = Get-AppxPackageManifest -Package $pkg
+          $appId = [string]$manifest.Package.Applications.Application.Id
+          $activation = "shell:AppsFolder\$($pkg.PackageFamilyName)!$appId"
+          Start-Process explorer.exe -ArgumentList $activation
+          Start-Sleep -Seconds 8
+          $installRoot = [IO.Path]::GetFullPath($pkg.InstallLocation)
+          $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+            try { $_.Path -and ([IO.Path]::GetFullPath($_.Path)).StartsWith($installRoot, [StringComparison]::OrdinalIgnoreCase) }
+            catch { $false }
+          })
+          if ($running.Count -eq 0) { throw 'Eizo failed the bundled-fallback launch smoke test.' }
+          $running | Stop-Process -Force -ErrorAction SilentlyContinue
+          Get-AppxPackage -Name Eizo | Remove-AppxPackage -ErrorAction SilentlyContinue
+          Write-Host 'Install and bundled-fallback launch smoke PASS.'
+
+      - name: Generate one-click acceptance package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $staging = Join-Path $env:RUNNER_TEMP 'Eizo-one-click-staging'
+          New-Item -ItemType Directory -Force -Path $staging | Out-Null
+          & ./packaging/New-GitHubOneClickInstallerPackage.ps1 -SignedBundlePath $env:BUNDLE_PATH -PublicCertificatePath $env:CERTIFICATE_PATH -OutputDirectory $staging -DisplayVersion '0.3.6' -PackageVersion '0.3.6.0'
+          $packageRoot = Join-Path $staging 'Eizo-v0.3.6-x64-one-click'
+          & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $packageRoot
+          $zip = Join-Path $env:ASSETS_DIR 'Eizo-v0.3.6-x64-one-click.zip'
+          Compress-Archive -LiteralPath $packageRoot -DestinationPath $zip -CompressionLevel Optimal
+          "ONE_CLICK_PATH=$zip" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Generate SHA-256 manifest
+        shell: pwsh
+        run: |
+          $files = @($env:BUNDLE_PATH, $env:ONE_CLICK_PATH)
+          $lines = foreach ($file in $files) {
+            $item = Get-Item -LiteralPath $file
+            "{0}  {1}" -f (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant(), $item.Name
+          }
+          Set-Content -LiteralPath (Join-Path $env:ASSETS_DIR 'SHA256SUMS.txt') -Value $lines -Encoding ascii
+          Get-Content (Join-Path $env:ASSETS_DIR 'SHA256SUMS.txt')
+
+      - name: Upload acceptance assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: Eizo-v0.3.6-component-runtime-acceptance-assets
+          path: |
+            ${{ runner.temp }}/Eizo-v0.3.6-acceptance/Eizo_0.3.6.0_x64.msixbundle
+            ${{ runner.temp }}/Eizo-v0.3.6-acceptance/Eizo-v0.3.6-x64-one-click.zip
+            ${{ runner.temp }}/Eizo-v0.3.6-acceptance/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
