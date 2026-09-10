@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "product": {
     "version": "0.3.1",
-    "packageVersion": "0.3.1.2",
+    "packageVersion": "0.3.1.3",
     "title": {
-      "zh-CN": "WebDAV 来源与读取文件夹独立编辑",
-      "ja-JP": "WebDAV ソースと読み込みフォルダーの分離編集",
-      "en-US": "Separate WebDAV Source & Folder Editing"
+      "zh-CN": "媒体来源卡片与手动扫描 UI",
+      "ja-JP": "メディアソースカードと手動スキャン UI",
+      "en-US": "Media Source Cards & Manual Scan UI"
     }
   },
   "channels": {
