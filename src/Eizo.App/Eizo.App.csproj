@@ -12,10 +12,10 @@
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <AppxBundleAutoResourcePackageQualifiers>Scale|DXFeatureLevel</AppxBundleAutoResourcePackageQualifiers>
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
-    <Version>0.3.1</Version>
-    <AssemblyVersion>0.3.1.0</AssemblyVersion>
-    <FileVersion>0.3.1.0</FileVersion>
-    <InformationalVersion>0.3.1</InformationalVersion>
+    <Version>0.3.2</Version>
+    <AssemblyVersion>0.3.2.0</AssemblyVersion>
+    <FileVersion>0.3.2.0</FileVersion>
+    <InformationalVersion>0.3.2</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260710003" />
