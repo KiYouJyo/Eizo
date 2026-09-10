@@ -83,6 +83,10 @@ jobs:
             throw 'Dispatcher inline-path verification failed.'
           }
 
+      - name: Complete playback operation queue patch
+        shell: pwsh
+        run: ./scripts/Append-PR51OperationQueuePatch.ps1
+
       - name: Restore pinned Eizo.Playback packages
         shell: pwsh
         run: ./scripts/Restore-EizoPlayback.ps1
@@ -160,6 +164,7 @@ jobs:
           Fixed:
           - PlayerView.Dispatch executes inline when already on the UI thread, while retaining session guards for queued callbacks.
           - Fresh Eizo.Playback --no-checkout clones are no longer mistaken for dirty dependency worktrees.
+          - The missing PlaybackOperationQueue implementation is included in the pinned Eizo.Playback patch.
 
           Acceptance focus:
           1. Open a WebDAV video and verify the loading card appears immediately.
@@ -176,13 +181,14 @@ jobs:
           path: ${{ env.ASSETS_DIR }}
           if-no-files-found: error
 
-      - name: Commit source fix and remove temporary workflow
+      - name: Commit source fixes and remove temporary helpers
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm --ignore-unmatch .github/workflows/pr51-loading-regression-hotfix.yml
-          git add src/Eizo.App/Views/PlayerView.xaml.cs
-          git commit -m 'fix: restore loading dispatch ordering [pr51-loading-fixed]'
+          git rm --ignore-unmatch scripts/Append-PR51OperationQueuePatch.ps1
+          git add src/Eizo.App/Views/PlayerView.xaml.cs eng/playback-patches/0001-playback-concurrency.patch
+          git commit -m 'fix: restore loading dispatch and complete playback queue [pr51-loading-fixed]'
           git push origin HEAD:fix/playback-hang-and-controls
