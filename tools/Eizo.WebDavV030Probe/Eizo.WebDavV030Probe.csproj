@@ -21,5 +21,6 @@
              Link="Models/WebDavMediaSourceProvider.cs" />
     <Compile Include="../../src/Eizo.App/Models/MediaCatalogStore.cs"
              Link="Models/MediaCatalogStore.cs" />
+    <ProjectReference Include="../../src/Eizo.RecognitionIntegration/Eizo.RecognitionIntegration.csproj" />
   </ItemGroup>
 </Project>
