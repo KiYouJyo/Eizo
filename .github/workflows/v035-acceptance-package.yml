@@ -197,8 +197,8 @@ jobs:
         with:
           name: Eizo-v0.3.5-acceptance-assets
           path: |
-            ${{ env.ASSETS_DIR }}/Eizo_0.3.5.0_x64.msixbundle
-            ${{ env.ASSETS_DIR }}/Eizo-v0.3.5-x64-one-click.zip
-            ${{ env.ASSETS_DIR }}/SHA256SUMS.txt
+            ${{ runner.temp }}/Eizo-v0.3.5-acceptance/Eizo_0.3.5.0_x64.msixbundle
+            ${{ runner.temp }}/Eizo-v0.3.5-acceptance/Eizo-v0.3.5-x64-one-click.zip
+            ${{ runner.temp }}/Eizo-v0.3.5-acceptance/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
