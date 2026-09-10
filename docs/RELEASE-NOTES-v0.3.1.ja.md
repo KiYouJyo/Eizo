@@ -1,3 +1,5 @@
+日本語 | [简体中文](RELEASE-NOTES-v0.3.1.md) | [English](RELEASE-NOTES-v0.3.1.en.md)
+
 # Eizo v0.3.1 WebDAV メディアソース管理と Bangumi ナビゲーション再構成
 
 Eizo v0.3.1 ではローカル / WebDAV メディアライブラリをさらに整備し、今後の Bangumi 視聴管理・新番情報連携に向けたナビゲーションとページ構造を追加しました。
