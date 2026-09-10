@@ -1634,10 +1634,26 @@ public sealed partial class PlayerView : UserControl
     private void Dispatch(Action action)
     {
         var session = _session;
-        DispatcherQueue.TryEnqueue(() =>
+
+        void Invoke()
         {
-            if (!_isPreparingForDetach && ReferenceEquals(session, _session) && !session.Token.IsCancellationRequested) action();
-        });
+            if (_isPreparingForDetach ||
+                !ReferenceEquals(session, _session) ||
+                session.Token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            action();
+        }
+
+        if (DispatcherQueue.HasThreadAccess)
+        {
+            Invoke();
+            return;
+        }
+
+        DispatcherQueue.TryEnqueue(Invoke);
     }
 
     private static string FormatSubtitleTrack(SubtitleTrackInfo track)
