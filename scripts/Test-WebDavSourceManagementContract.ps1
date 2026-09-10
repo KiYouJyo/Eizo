@@ -5,6 +5,8 @@ $sourcesXaml = Get-Content -LiteralPath 'src/Eizo.App/Views/SourcesView.xaml' -R
 $sourceStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaSourceStore.cs' -Raw
 $credentialStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaCredentialStore.cs' -Raw
 $catalogStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaCatalogStore.cs' -Raw
+$scanCoordinator = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaScanCoordinator.cs' -Raw
+$scanModels = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaScanModels.cs' -Raw
 $folderPicker = Get-Content -LiteralPath 'src/Eizo.App/Views/WebDavFolderPickerWindow.cs' -Raw
 
 foreach ($required in @(
@@ -67,10 +69,14 @@ if ($folderPicker -match 'Application\.Current\.Resources\[\s*"TextFillColorSeco
     throw 'v0.3.1 contract violation: folder-picker text must not resolve secondary color from stale app-level theme resources.'
 }
 
-if ($sourcesView -notmatch '_scanningSourceIds' -or
-    $sourcesView -notmatch 'Task\.Run\(' -or
-    $sourcesView -notmatch 'Sources_Scanning') {
-    throw 'v0.3.1 contract violation: manual scan must expose asynchronous native progress state.'
+if ($sourcesView -notmatch 'MediaScanCoordinator\.Default' -or
+    $sourcesView -notmatch '_scanCoordinator\.Changed' -or
+    $sourcesView -notmatch '_scanCoordinator\.StartAsync\(' -or
+    $sourcesView -notmatch 'Sources_Scanning' -or
+    $catalogStore -notmatch 'Action<MediaScanProgress>' -or
+    $scanCoordinator -notmatch 'MediaScanStatus\.Running' -or
+    $scanModels -notmatch 'VideosDiscovered') {
+    throw 'v0.3.1 contract violation: manual scan must expose application-level asynchronous progress that survives page navigation.'
 }
 
 if ($sourcesView -notmatch 'ScanProgressSize: isScanning \? 16 : 0' -or
