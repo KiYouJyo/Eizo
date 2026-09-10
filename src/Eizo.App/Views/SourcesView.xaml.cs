@@ -21,8 +21,10 @@ public sealed partial class SourcesView : UserControl
     private readonly MediaCredentialStore _credentials =
         MediaCredentialStore.Default;
 
-    private readonly HashSet<string> _scanningSourceIds =
-        new(StringComparer.Ordinal);
+    private readonly MediaScanCoordinator _scanCoordinator =
+        MediaScanCoordinator.Default;
+
+    private bool _isLoaded;
 
     public SourcesView()
     {
@@ -46,25 +48,35 @@ public sealed partial class SourcesView : UserControl
 
     private void SourcesView_Loaded(object sender, RoutedEventArgs e)
     {
+        _isLoaded = true;
+
         _sources.Changed -= Sources_Changed;
         _sources.Changed += Sources_Changed;
 
         _catalog.Changed -= Catalog_Changed;
         _catalog.Changed += Catalog_Changed;
 
+        _scanCoordinator.Changed -= ScanCoordinator_Changed;
+        _scanCoordinator.Changed += ScanCoordinator_Changed;
+
         RefreshSources();
     }
 
     private void SourcesView_Unloaded(object sender, RoutedEventArgs e)
     {
+        _isLoaded = false;
         _sources.Changed -= Sources_Changed;
         _catalog.Changed -= Catalog_Changed;
+        _scanCoordinator.Changed -= ScanCoordinator_Changed;
     }
 
     private void Sources_Changed(object? sender, EventArgs e) =>
         DispatcherQueue.TryEnqueue(RefreshSources);
 
     private void Catalog_Changed(object? sender, EventArgs e) =>
+        DispatcherQueue.TryEnqueue(RefreshSources);
+
+    private void ScanCoordinator_Changed(object? sender, EventArgs e) =>
         DispatcherQueue.TryEnqueue(RefreshSources);
 
     private void RefreshSources()
@@ -87,6 +99,8 @@ public sealed partial class SourcesView : UserControl
             .Select(item => item.Location?.SizeBytes ?? 0L)
             .Where(value => value > 0)
             .Sum();
+        var scan = _scanCoordinator.SnapshotForSource(source.Id);
+        var isScanning = scan?.Status == MediaScanStatus.Running;
 
         var summaryParts = new List<string>();
 
@@ -108,15 +122,34 @@ public sealed partial class SourcesView : UserControl
             }
         }
 
-        summaryParts.Add(
-            string.Format(
-                T("Sources_VideoCountFormat"),
-                items.Count));
+        if (isScanning && scan is not null)
+        {
+            var knownTotal = Math.Max(
+                scan.DirectoriesProcessed,
+                scan.KnownDirectoryTotal);
+            var folderProgress = knownTotal > 0
+                ? $"{scan.DirectoriesProcessed}/{knownTotal}"
+                : scan.DirectoriesProcessed.ToString();
+
+            summaryParts.Add(
+                $"{T("Sources_Scanning")} {folderProgress}");
+            summaryParts.Add(
+                string.Format(
+                    T("Sources_VideoCountFormat"),
+                    scan.VideosDiscovered));
+        }
+        else
+        {
+            summaryParts.Add(
+                string.Format(
+                    T("Sources_VideoCountFormat"),
+                    items.Count));
+        }
 
         if (size > 0)
             summaryParts.Add(FormatBytes(size));
 
-        if (source.LastScanUtc is { } lastScan)
+        if (!isScanning && source.LastScanUtc is { } lastScan)
         {
             summaryParts.Add(
                 string.Format(
@@ -135,16 +168,12 @@ public sealed partial class SourcesView : UserControl
             _ => source.Kind.ToString()
         };
 
-        var isScanning =
-            _scanningSourceIds.Contains(
-                source.Id);
-
         return new SourceItemModel(
             source.Id,
             name,
             string.Join(" · ", summaryParts),
             kindLabel,
-            Removable: !source.IsBuiltIn,
+            Removable: !source.IsBuiltIn && !isScanning,
             IsScanning: isScanning,
             CanScan: !isScanning && !source.IsBuiltIn,
             ScanText: isScanning
@@ -170,7 +199,7 @@ public sealed partial class SourcesView : UserControl
 
         var flyout = new MenuFlyout();
 
-        if (source.Kind == MediaSourceKind.WebDav)
+        if (source.Kind == MediaSourceKind.WebDav && !item.IsScanning)
         {
             var editFolders = new MenuFlyoutItem
             {
@@ -209,7 +238,7 @@ public sealed partial class SourcesView : UserControl
         object sender,
         ItemClickEventArgs e)
     {
-        if (e.ClickedItem is not SourceItemModel item)
+        if (e.ClickedItem is not SourceItemModel item || item.IsScanning)
             return;
 
         var source = _sources.Find(item.Id);
@@ -232,17 +261,15 @@ public sealed partial class SourcesView : UserControl
     private async Task ScanSourceAsync(
         string sourceId)
     {
-        if (!_scanningSourceIds.Add(sourceId))
+        var source = _sources.Find(sourceId);
+        if (source is null || source.IsBuiltIn ||
+            _scanCoordinator.IsScanning(sourceId))
+        {
             return;
-
-        RefreshSources();
+        }
 
         try
         {
-            var source = _sources.Find(sourceId);
-            if (source is null || source.IsBuiltIn)
-                return;
-
             if (source.Kind == MediaSourceKind.Local &&
                 !string.IsNullOrWhiteSpace(source.AccessToken) &&
                 StorageApplicationPermissions.FutureAccessList.ContainsItem(
@@ -252,39 +279,38 @@ public sealed partial class SourcesView : UserControl
                     .FutureAccessList
                     .GetFolderAsync(source.AccessToken);
             }
-
-            await Task.Run(
-                async () =>
-                    await _catalog.ScanSourceAsync(
-                        source));
-        }
-        catch (MediaSourceException exception)
-        {
-            await ShowMessageAsync(
-                T("Sources_ScanFailed"),
-                FormatSourceError(
-                    exception.ErrorCode,
-                    exception.Message));
         }
         catch (Exception exception)
         {
-            await ShowMessageAsync(
-                T("Sources_ScanFailed"),
-                exception.Message);
+            if (_isLoaded)
+            {
+                await ShowMessageAsync(
+                    T("Sources_ScanFailed"),
+                    exception.Message);
+            }
+            return;
         }
-        finally
-        {
-            _scanningSourceIds.Remove(sourceId);
-            RefreshSources();
-        }
+
+        var result = await _scanCoordinator.StartAsync(source);
+        if (!_isLoaded || result.Status != MediaScanStatus.Failed)
+            return;
+
+        await ShowMessageAsync(
+            T("Sources_ScanFailed"),
+            FormatSourceError(
+                result.ErrorCode,
+                result.ErrorDetail));
     }
 
     private async void EditWebDavFoldersMenuItem_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (sender is not MenuFlyoutItem { Tag: string sourceId })
+        if (sender is not MenuFlyoutItem { Tag: string sourceId } ||
+            _scanCoordinator.IsScanning(sourceId))
+        {
             return;
+        }
 
         var source = _sources.Find(sourceId);
         if (source is not
@@ -353,8 +379,11 @@ public sealed partial class SourcesView : UserControl
         object sender,
         RoutedEventArgs e)
     {
-        if (sender is not MenuFlyoutItem { Tag: string sourceId })
+        if (sender is not MenuFlyoutItem { Tag: string sourceId } ||
+            _scanCoordinator.IsScanning(sourceId))
+        {
             return;
+        }
 
         var source = _sources.Find(sourceId);
         if (source is null || source.IsBuiltIn)
