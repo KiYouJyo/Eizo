@@ -84,7 +84,7 @@ internal sealed class WebDavFolderPickerWindow
         try
         {
             const int width = 1040;
-            const int height = 760;
+            const int height = 840;
 
             if (ownerWindowHandle != IntPtr.Zero &&
                 GetWindowRect(
@@ -254,6 +254,20 @@ internal sealed class WebDavFolderPickerWindow
                     _surfaceColor)
         };
 
+        var secondaryTextBrush =
+            new SolidColorBrush(
+                _windowTheme == ElementTheme.Dark
+                    ? ColorHelper.FromArgb(
+                        255,
+                        210,
+                        218,
+                        218)
+                    : ColorHelper.FromArgb(
+                        255,
+                        72,
+                        78,
+                        78));
+
         root.RowDefinitions.Add(
             new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(
@@ -284,8 +298,7 @@ internal sealed class WebDavFolderPickerWindow
                 Text = T("Sources_FolderPickerHint"),
                 TextWrapping = TextWrapping.Wrap,
                 Foreground =
-                    (Brush)Application.Current.Resources[
-                        "TextFillColorSecondaryBrush"]
+                    secondaryTextBrush
             });
         root.Children.Add(heading);
 
@@ -454,11 +467,9 @@ internal sealed class WebDavFolderPickerWindow
                 VerticalAlignment.Center
         };
         _selectionSummary.Foreground =
-            (Brush)Application.Current.Resources[
-                "TextFillColorSecondaryBrush"];
+            secondaryTextBrush;
         _statusText.Foreground =
-            (Brush)Application.Current.Resources[
-                "TextFillColorSecondaryBrush"];
+            secondaryTextBrush;
         _statusText.TextWrapping =
             TextWrapping.Wrap;
         footerText.Children.Add(
