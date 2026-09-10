@@ -35,11 +35,52 @@
           <Setter Property="Padding" Value="18,14" />
           <Setter Property="Margin" Value="0,0,0,10" />
           <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-          <Setter Property="Background"
-                  Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+          <Setter Property="VerticalContentAlignment" Value="Stretch" />
+          <Setter Property="Background" Value="Transparent" />
           <Setter Property="BorderThickness" Value="0" />
-          <Setter Property="CornerRadius" Value="10" />
           <Setter Property="UseSystemFocusVisuals" Value="False" />
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="ListViewItem">
+                <Grid>
+                  <VisualStateManager.VisualStateGroups>
+                    <VisualStateGroup x:Name="CommonStates">
+                      <VisualState x:Name="Normal" />
+                      <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                          <Setter Target="CardSurface.Background"
+                                  Value="{ThemeResource ControlFillColorSecondaryBrush}" />
+                        </VisualState.Setters>
+                      </VisualState>
+                      <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                          <Setter Target="CardSurface.Background"
+                                  Value="{ThemeResource ControlFillColorTertiaryBrush}" />
+                        </VisualState.Setters>
+                      </VisualState>
+                      <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                          <Setter Target="CardSurface.Opacity"
+                                  Value="0.55" />
+                        </VisualState.Setters>
+                      </VisualState>
+                    </VisualStateGroup>
+                  </VisualStateManager.VisualStateGroups>
+
+                  <Border x:Name="CardSurface"
+                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                          CornerRadius="10"
+                          Padding="{TemplateBinding Padding}">
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      ContentTransitions="{TemplateBinding ContentTransitions}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                  </Border>
+                </Grid>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
         </Style>
       </ListView.ItemContainerStyle>
 
@@ -73,9 +114,12 @@
                     MinWidth="0"
                     Padding="12,0"
                     CornerRadius="5"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
                     Click="ScanSourceButton_Click">
               <StackPanel Orientation="Horizontal"
                           Spacing="{x:Bind ScanSpacing}"
+                          HorizontalAlignment="Center"
                           VerticalAlignment="Center">
                 <ProgressRing Width="{x:Bind ScanProgressSize}"
                               Height="{x:Bind ScanProgressSize}"

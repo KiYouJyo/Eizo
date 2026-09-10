@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "product": {
     "version": "0.3.1",
-    "packageVersion": "0.3.1.4",
+    "packageVersion": "0.3.1.5",
     "title": {
-      "zh-CN": "媒体来源浅色主题与卡片细化",
-      "ja-JP": "メディアソースのライトテーマとカード調整",
-      "en-US": "Media Source Light Theme & Card Refinement"
+      "zh-CN": "媒体来源圆角卡片与扫描按钮对齐",
+      "ja-JP": "メディアソースの角丸カードとスキャンボタン整列",
+      "en-US": "Rounded Source Cards & Centered Scan Button"
     }
   },
   "channels": {
