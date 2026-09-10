@@ -188,7 +188,6 @@ public sealed partial class MainWindow : Window
         CalendarNav.Content = T("Nav_BroadcastCalendar");
         SeasonalNav.Content = T("Nav_SeasonalAnime");
         DiscoverNav.Content = T("Nav_RankDiscover");
-        FollowingNav.Content = T("Nav_MyFollowing");
         CategoryNav.Content = T("Nav_Library");
         AnimeNav.Content = T("Nav_Anime");
         MoviesNav.Content = T("Nav_Movies");
