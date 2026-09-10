@@ -77,7 +77,8 @@
           </NavigationViewItem>
 
           <NavigationViewItem x:Name="BangumiNav"
-                              SelectsOnInvoked="False"
+                              Tag="bangumi-following"
+                              SelectsOnInvoked="True"
                               IsExpanded="True">
             <NavigationViewItem.Icon><FontIcon Glyph="&#xE774;" /></NavigationViewItem.Icon>
             <NavigationViewItem.MenuItems>
@@ -89,9 +90,6 @@
               </NavigationViewItem>
               <NavigationViewItem x:Name="DiscoverNav" Tag="bangumi-discover">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE721;" /></NavigationViewItem.Icon>
-              </NavigationViewItem>
-              <NavigationViewItem x:Name="FollowingNav" Tag="bangumi-following">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE77B;" /></NavigationViewItem.Icon>
               </NavigationViewItem>
             </NavigationViewItem.MenuItems>
           </NavigationViewItem>
