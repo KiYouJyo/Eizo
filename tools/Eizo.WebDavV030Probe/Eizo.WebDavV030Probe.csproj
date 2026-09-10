@@ -19,6 +19,8 @@
              Link="Models/MediaCredentialContracts.cs" />
     <Compile Include="../../src/Eizo.App/Models/WebDavMediaSourceProvider.cs"
              Link="Models/WebDavMediaSourceProvider.cs" />
+    <Compile Include="../../src/Eizo.App/Models/MediaScanModels.cs"
+             Link="Models/MediaScanModels.cs" />
     <Compile Include="../../src/Eizo.App/Models/MediaCatalogStore.cs"
              Link="Models/MediaCatalogStore.cs" />
     <ProjectReference Include="../../src/Eizo.RecognitionIntegration/Eizo.RecognitionIntegration.csproj" />
