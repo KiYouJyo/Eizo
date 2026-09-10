@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260710003" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.0" />
     <PackageReference Include="Eizo.Playback.LibVLC.WinUI" Version="0.2.1" />
+    <PackageReference Include="Eizo.Metadata.Recognition" Version="0.1.0" />
     <!-- The final Windows host owns the native LibVLC runtime deployment.
          This is a runtime/package dependency only; Eizo UI code does not reference LibVLCSharp APIs. -->
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
