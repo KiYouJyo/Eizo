@@ -28,13 +28,10 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Apply PR51 regression hotfixes
+      - name: Apply loading-status dispatcher hotfix
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-
-          # 1) Restore the original Dispatch semantic on the UI thread while retaining
-          # PR51's session guard for callbacks that really need to cross threads.
           $path = 'src/Eizo.App/Views/PlayerView.xaml.cs'
           $text = (Get-Content -LiteralPath $path -Raw).Replace("`r`n", "`n")
 
@@ -85,79 +82,6 @@ jobs:
           if (-not (Select-String -LiteralPath $path -SimpleMatch 'if (DispatcherQueue.HasThreadAccess)' -Quiet)) {
             throw 'Dispatcher inline-path verification failed.'
           }
-
-          # 2) PR51 made dependency restore protect local edits, but a fresh --no-checkout
-          # clone looks like every tracked file was deleted. Distinguish a new clone from
-          # an existing edited checkout before running the dirty-worktree protection.
-          $restorePath = 'scripts/Restore-EizoPlayback.ps1'
-          $restore = (Get-Content -LiteralPath $restorePath -Raw).Replace("`r`n", "`n")
-
-          $marker = "if (-not (Test-Path -LiteralPath (Join-Path `$dependencyRoot '.git'))) {"
-          if (-not $restore.Contains($marker)) { throw 'Restore script clone marker was not found.' }
-          $restore = $restore.Replace($marker, "`$dependencyCheckoutCreated = `$false`n`n$marker")
-
-          $cloneSuccess = @'
-              if ($LASTEXITCODE -ne 0) {
-                  throw "Failed to clone Eizo.Playback from $repository."
-              }
-          '@.Replace("`r", '').Trim()
-          $cloneReplacement = @'
-              if ($LASTEXITCODE -ne 0) {
-                  throw "Failed to clone Eizo.Playback from $repository."
-              }
-              $dependencyCheckoutCreated = $true
-          '@.Replace("`r", '').Trim()
-          if (-not $restore.Contains($cloneSuccess)) { throw 'Restore script clone-success block was not found.' }
-          $restore = $restore.Replace($cloneSuccess, $cloneReplacement)
-
-          $oldRestoreBlock = @'
-              # Never erase an independently edited dependency checkout. A clean checkout or
-              # the exact checked-in patch is reproducible and may be reset for bootstrap.
-              $dependencyDiff = & git -C $dependencyRoot status --porcelain
-              if ($dependencyDiff) {
-                  & git -C $dependencyRoot apply --reverse --check $patchPath
-                  if ($LASTEXITCODE -ne 0) { throw 'Dependency has local changes beyond the saved patch. Preserve them before restoring.' }
-                  & git -C $dependencyRoot apply --reverse $patchPath
-                  if ($LASTEXITCODE -ne 0) { throw 'Could not reverse the saved dependency patch.' }
-                  if (& git -C $dependencyRoot status --porcelain) { throw 'Dependency still has local changes; refusing checkout.' }
-              }
-              & git -C $dependencyRoot checkout --detach $commit
-              if ($LASTEXITCODE -ne 0) {
-                  throw "Failed to checkout Eizo.Playback commit $commit."
-              }
-          '@.Replace("`r", '').Trim()
-
-          $newRestoreBlock = @'
-              # Never erase an independently edited dependency checkout. A brand-new
-              # --no-checkout clone has an intentionally empty worktree, so checkout the
-              # pinned commit first instead of misclassifying every tracked file as deleted.
-              if ($dependencyCheckoutCreated) {
-                  & git -C $dependencyRoot checkout --detach --force $commit
-                  if ($LASTEXITCODE -ne 0) {
-                      throw "Failed to checkout fresh Eizo.Playback commit $commit."
-                  }
-              }
-              else {
-                  $dependencyDiff = & git -C $dependencyRoot status --porcelain
-                  if ($dependencyDiff) {
-                      & git -C $dependencyRoot apply --reverse --check $patchPath
-                      if ($LASTEXITCODE -ne 0) { throw 'Dependency has local changes beyond the saved patch. Preserve them before restoring.' }
-                      & git -C $dependencyRoot apply --reverse $patchPath
-                      if ($LASTEXITCODE -ne 0) { throw 'Could not reverse the saved dependency patch.' }
-                      if (& git -C $dependencyRoot status --porcelain) { throw 'Dependency still has local changes; refusing checkout.' }
-                  }
-                  & git -C $dependencyRoot checkout --detach $commit
-                  if ($LASTEXITCODE -ne 0) {
-                      throw "Failed to checkout Eizo.Playback commit $commit."
-                  }
-              }
-          '@.Replace("`r", '').Trim()
-
-          if (-not $restore.Contains($oldRestoreBlock)) {
-            throw 'Expected dependency dirty-check block was not found; refusing an unsafe patch.'
-          }
-          $restore = $restore.Replace($oldRestoreBlock, $newRestoreBlock)
-          [IO.File]::WriteAllText($restorePath, $restore.Replace("`n", "`r`n"), [Text.UTF8Encoding]::new($false))
 
       - name: Restore pinned Eizo.Playback packages
         shell: pwsh
@@ -252,13 +176,13 @@ jobs:
           path: ${{ env.ASSETS_DIR }}
           if-no-files-found: error
 
-      - name: Commit source fixes and remove temporary workflow
+      - name: Commit source fix and remove temporary workflow
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm --ignore-unmatch .github/workflows/pr51-loading-regression-hotfix.yml
-          git add src/Eizo.App/Views/PlayerView.xaml.cs scripts/Restore-EizoPlayback.ps1
-          git commit -m 'fix: restore loading dispatch and clean dependency bootstrap [pr51-loading-fixed]'
+          git add src/Eizo.App/Views/PlayerView.xaml.cs
+          git commit -m 'fix: restore loading dispatch ordering [pr51-loading-fixed]'
           git push origin HEAD:fix/playback-hang-and-controls
