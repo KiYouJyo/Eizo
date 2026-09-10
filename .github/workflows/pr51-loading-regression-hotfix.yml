@@ -1,0 +1,156 @@
+name: PR51 loading regression hotfix
+
+on:
+  push:
+    branches:
+      - "fix/playback-hang-and-controls"
+
+permissions:
+  contents: write
+
+jobs:
+  hotfix-and-package:
+    if: ${{ !contains(github.event.head_commit.message, '[pr51-loading-fixed]') }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Apply loading-status dispatcher hotfix
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = 'src/Eizo.App/Views/PlayerView.xaml.cs'
+          $text = Get-Content -LiteralPath $path -Raw
+
+          $old = @'
+              private void Dispatch(Action action)
+              {
+                  var session = _session;
+                  DispatcherQueue.TryEnqueue(() =>
+                  {
+                      if (!_isPreparingForDetach && ReferenceEquals(session, _session) && !session.Token.IsCancellationRequested) action();
+                  });
+              }
+          '@.Replace("`r", '').Trim()
+
+          $new = @'
+              private void Dispatch(Action action)
+              {
+                  var session = _session;
+
+                  void Invoke()
+                  {
+                      if (_isPreparingForDetach ||
+                          !ReferenceEquals(session, _session) ||
+                          session.Token.IsCancellationRequested)
+                      {
+                          return;
+                      }
+
+                      action();
+                  }
+
+                  if (DispatcherQueue.HasThreadAccess)
+                  {
+                      Invoke();
+                      return;
+                  }
+
+                  DispatcherQueue.TryEnqueue(Invoke);
+              }
+          '@.Replace("`r", '').Trim()
+
+          $normalized = $text.Replace("`r`n", "`n")
+          if (-not $normalized.Contains($old)) {
+            throw 'Expected Dispatch implementation was not found; refusing an unsafe patch.'
+          }
+
+          $normalized = $normalized.Replace($old, $new)
+          [IO.File]::WriteAllText($path, $normalized.Replace("`n", "`r`n"), [Text.UTF8Encoding]::new($false))
+
+          if (-not (Select-String -LiteralPath $path -SimpleMatch 'if (DispatcherQueue.HasThreadAccess)' -Quiet)) {
+            throw 'Dispatcher inline-path verification failed.'
+          }
+
+      - name: Restore pinned Eizo.Playback packages
+        shell: pwsh
+        run: ./scripts/Restore-EizoPlayback.ps1
+
+      - name: Run concurrency tests
+        shell: pwsh
+        run: dotnet test tests/Eizo.Concurrency.Tests/Eizo.Concurrency.Tests.csproj --configuration Release
+
+      - name: Build Release x64
+        shell: pwsh
+        run: >
+          msbuild src\Eizo.App\Eizo.App.csproj
+          /restore
+          /m
+          /p:Configuration=Release
+          /p:Platform=x64
+          /p:AppxPackageSigningEnabled=false
+          /p:GenerateAppxPackageOnBuild=false
+
+      - name: Build unsigned acceptance MSIX bundle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:RUNNER_TEMP 'Eizo-AppPackages'
+          msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Always /p:AppxBundlePlatforms=x64 /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir="$output\"
+          if ($LASTEXITCODE -ne 0) { throw "MSIX build failed: $LASTEXITCODE" }
+
+          $bundle = @(Get-ChildItem $output -Recurse -Filter '*.msixbundle' -File) | Select-Object -First 1
+          if (-not $bundle) { throw 'MSIX bundle was not produced.' }
+
+          $assets = Join-Path $env:RUNNER_TEMP 'Eizo-PR51-loading-fix-acceptance'
+          New-Item -ItemType Directory -Force -Path $assets | Out-Null
+          Copy-Item -LiteralPath $bundle.FullName -Destination (Join-Path $assets 'Eizo_PR51_loading_fix_x64.msixbundle') -Force
+
+          @'
+          Eizo PR #51 loading-window regression acceptance build
+
+          Fix:
+          - Restore UI-thread inline execution in PlayerView.Dispatch.
+          - Preserve PR #51 session/lifetime guards for queued callbacks.
+          - Prevent the queued Idle/Stopped snapshot from hiding ShowLoadingStatus immediately after engine attachment.
+
+          Acceptance focus:
+          1. Open a WebDAV video and verify the loading card appears immediately.
+          2. Verify loading ring/metrics remain visible until Playing/Paused.
+          3. Switch subtitle tracks repeatedly.
+          4. Enter/exit fullscreen repeatedly.
+          5. Verify no hang regression.
+          '@ | Set-Content -LiteralPath (Join-Path $assets 'ACCEPTANCE.txt') -Encoding utf8
+
+          "ASSETS_DIR=$assets" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Upload acceptance artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Eizo-PR51-loading-fix-acceptance
+          path: ${{ env.ASSETS_DIR }}
+          if-no-files-found: error
+
+      - name: Commit source fix and remove temporary workflow
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm --ignore-unmatch .github/workflows/pr51-loading-regression-hotfix.yml
+          git add src/Eizo.App/Views/PlayerView.xaml.cs
+          git commit -m 'fix: restore loading status dispatch ordering [pr51-loading-fixed]'
+          git push origin HEAD:fix/playback-hang-and-controls
