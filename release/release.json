@@ -2,16 +2,16 @@
   "schemaVersion": 1,
   "product": {
     "version": "0.3.1",
-    "packageVersion": "0.3.1.5",
+    "packageVersion": "0.3.1.7",
     "title": {
-      "zh-CN": "媒体来源圆角卡片与扫描按钮对齐",
-      "ja-JP": "メディアソースの角丸カードとスキャンボタン整列",
-      "en-US": "Rounded Source Cards & Centered Scan Button"
+      "zh-CN": "WebDAV 媒体来源管理与 Bangumi 导航重构",
+      "ja-JP": "WebDAV メディアソース管理と Bangumi ナビゲーション再構成",
+      "en-US": "WebDAV Source Management & Bangumi Navigation"
     }
   },
   "channels": {
     "github": {
-      "publish": false
+      "publish": true
     }
   }
 }
