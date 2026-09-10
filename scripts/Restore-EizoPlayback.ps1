@@ -80,6 +80,11 @@ if ($LASTEXITCODE -ne 0) {
 Remove-Item -LiteralPath $feedRoot -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $feedRoot | Out-Null
 
+# NuGet.config contains both local Eizo feeds. Keep the sibling source present
+# even while this dependency is restored independently.
+$metadataFeedRoot = Join-Path $repoRoot '.packages/Eizo.Metadata'
+New-Item -ItemType Directory -Force -Path $metadataFeedRoot | Out-Null
+
 $solution = Join-Path $dependencyRoot 'Eizo.Playback.slnx'
 
 & dotnet restore $solution
