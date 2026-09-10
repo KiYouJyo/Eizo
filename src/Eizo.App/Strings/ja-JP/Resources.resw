@@ -787,4 +787,16 @@
   <data name="Sources_FoldersUpdatedFormat" xml:space="preserve">
     <value>新しいフォルダー範囲で再スキャンし、動画 {0} 件を検出しました。</value>
   </data>
+  <data name="Sources_Scanning" xml:space="preserve">
+    <value>スキャン中…</value>
+  </data>
+  <data name="Sources_WebDavAddedNoScanFormat" xml:space="preserve">
+    <value>{0} を追加しました。「今すぐスキャン」でメディアを読み込んでください。</value>
+  </data>
+  <data name="Sources_WebDavUpdatedNoScanFormat" xml:space="preserve">
+    <value>{0} を更新しました。メディアを更新するには「今すぐスキャン」を実行してください。</value>
+  </data>
+  <data name="Sources_FoldersUpdatedNoScan" xml:space="preserve">
+    <value>読み込みフォルダーを保存しました。「今すぐスキャン」で新しい範囲を反映してください。</value>
+  </data>
 </root>
