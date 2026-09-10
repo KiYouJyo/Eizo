@@ -1,7 +1,11 @@
+using System.Globalization;
+using System.Text;
 using Eizo.Localization;
 using Eizo.Models;
+using Eizo.Recognition;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace Eizo.Views;
 
@@ -218,7 +222,7 @@ public sealed partial class CatalogView : UserControl
 
         var type = new TextBlock
         {
-            Text = CategoryLabel(item.Category),
+            Text = RecognitionLabel(item) ?? CategoryLabel(item.Category),
             VerticalAlignment = VerticalAlignment.Center,
             Opacity = 0.68,
             FontSize = 12
@@ -237,6 +241,20 @@ public sealed partial class CatalogView : UserControl
             Content = row
         };
 
+        if (item.Recognition is not null)
+        {
+            var detailsItem = new MenuFlyoutItem
+            {
+                Text = "Recognition details",
+                Tag = item
+            };
+            detailsItem.Click += RecognitionDetails_Click;
+
+            var flyout = new MenuFlyout();
+            flyout.Items.Add(detailsItem);
+            button.ContextFlyout = flyout;
+        }
+
         button.Click += CatalogRow_Click;
         return button;
     }
@@ -247,6 +265,114 @@ public sealed partial class CatalogView : UserControl
             MediaRequested?.Invoke(this, item);
     }
 
+    private async void RecognitionDetails_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem
+            {
+                Tag: CatalogMediaItemModel
+                {
+                    Recognition: { } recognition
+                }
+            })
+        {
+            return;
+        }
+
+        var details = new TextBox
+        {
+            Text = BuildRecognitionDetails(recognition),
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = new FontFamily("Cascadia Mono"),
+            Height = 420,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+
+        var dialog = new ContentDialog
+        {
+            Title = "Recognition details",
+            Content = details,
+            CloseButtonText = "Close",
+            XamlRoot = XamlRoot
+        };
+
+        await dialog.ShowAsync();
+    }
+
+    private static string BuildRecognitionDetails(
+        MediaRecognitionSnapshot recognition)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine($"Logical path: {recognition.LogicalPath}");
+        builder.AppendLine($"Status: {recognition.Status}");
+        builder.AppendLine($"MediaKind: {recognition.MediaKind}");
+        builder.AppendLine($"SpecialKind: {recognition.SpecialKind}");
+        builder.AppendLine($"EpisodePart: {recognition.EpisodePart}");
+        builder.AppendLine($"Final episode: {recognition.IsFinalEpisode}");
+        builder.AppendLine($"Title: {recognition.Title ?? "-"}");
+        builder.AppendLine($"EpisodeTitle: {recognition.EpisodeTitle ?? "-"}");
+        builder.AppendLine($"Season: {recognition.SeasonNumber?.ToString(CultureInfo.InvariantCulture) ?? "-"}");
+        builder.AppendLine($"Cour: {recognition.CourNumber?.ToString(CultureInfo.InvariantCulture) ?? "-"}");
+        builder.AppendLine($"Episode: {FormatNullableNumber(recognition.EpisodeNumber)}");
+        builder.AppendLine($"EpisodeEnd: {FormatNullableNumber(recognition.EpisodeEndNumber)}");
+        builder.AppendLine($"Special: {FormatNullableNumber(recognition.SpecialNumber)}");
+        builder.AppendLine($"Year: {recognition.Year?.ToString(CultureInfo.InvariantCulture) ?? "-"}");
+        builder.AppendLine($"Confidence: {recognition.Confidence:0.000} ({recognition.ConfidenceLevel})");
+        builder.AppendLine($"Ambiguous: {recognition.IsAmbiguous}");
+
+        if (!string.IsNullOrWhiteSpace(recognition.ErrorCode))
+            builder.AppendLine($"Error: {recognition.ErrorCode}");
+
+        builder.AppendLine();
+        builder.AppendLine("Title candidates:");
+        if (recognition.TitleCandidates.Count == 0)
+        {
+            builder.AppendLine("  - none");
+        }
+        else
+        {
+            foreach (var candidate in recognition.TitleCandidates)
+            {
+                builder.AppendLine(
+                    $"  - {candidate.Title} | {candidate.Confidence:0.000} | {candidate.Source} | primary={candidate.IsPrimary}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Evidence:");
+        if (recognition.Evidence.Count == 0)
+        {
+            builder.AppendLine("  - none");
+        }
+        else
+        {
+            foreach (var evidence in recognition.Evidence)
+            {
+                builder.AppendLine(
+                    $"  - {evidence.Code} | {evidence.Value ?? "-"} | {evidence.Weight:0.000}");
+            }
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static string? RecognitionLabel(CatalogMediaItemModel item) =>
+        item.Recognition switch
+        {
+            { Status: MediaRecognitionStatus.Recognized } recognition =>
+                $"Recognition · {recognition.ConfidenceLevel}",
+            { Status: MediaRecognitionStatus.Ambiguous } =>
+                "Recognition · Ambiguous",
+            { Status: MediaRecognitionStatus.Unresolved } =>
+                "Recognition · Unresolved",
+            { Status: MediaRecognitionStatus.Error } =>
+                "Recognition · Error",
+            _ => null
+        };
+
     private static bool Matches(CatalogMediaItemModel item, string query)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -256,7 +382,13 @@ public sealed partial class CatalogView : UserControl
                item.SourceTitle.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
                (!string.IsNullOrWhiteSpace(item.NativeTitle) &&
                 item.NativeTitle.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
-               item.Meta.Contains(query, StringComparison.CurrentCultureIgnoreCase);
+               item.Meta.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+               (item.Recognition is { } recognition &&
+                ((!string.IsNullOrWhiteSpace(recognition.Title) &&
+                  recognition.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
+                 (!string.IsNullOrWhiteSpace(recognition.EpisodeTitle) &&
+                  recognition.EpisodeTitle.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
+                 recognition.LogicalPath.Contains(query, StringComparison.CurrentCultureIgnoreCase)));
     }
 
     private string CategoryLabel(MediaCategoryKind? category) => category switch
@@ -274,6 +406,9 @@ public sealed partial class CatalogView : UserControl
         MediaCategoryKind.Movies => 2,
         _ => 3
     };
+
+    private static string FormatNullableNumber(decimal? value) =>
+        value?.ToString("0.###", CultureInfo.InvariantCulture) ?? "-";
 
     private static string FormatBytes(long bytes)
     {

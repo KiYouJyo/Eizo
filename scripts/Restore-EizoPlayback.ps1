@@ -11,6 +11,20 @@ $dependencyRoot = Join-Path $repoRoot '.deps/Eizo.Playback'
 $feedRoot = Join-Path $repoRoot '.packages/Eizo.Playback'
 $stampPath = Join-Path $feedRoot '.source-commit'
 
+function Restore-MetadataDependency {
+    $metadataRestore = Join-Path $PSScriptRoot 'Restore-EizoMetadata.ps1'
+    if (-not (Test-Path -LiteralPath $metadataRestore -PathType Leaf)) {
+        throw "Metadata restore script was not found: $metadataRestore"
+    }
+
+    if ($Force) {
+        & $metadataRestore -Force
+    }
+    else {
+        & $metadataRestore
+    }
+}
+
 if (-not (Test-Path -LiteralPath $pinPath -PathType Leaf)) {
     throw "Playback pin file was not found: $pinPath"
 }
@@ -47,6 +61,7 @@ $feedReady =
 
 if ($feedReady) {
     Write-Host "Eizo.Playback $version is already restored from $commit."
+    Restore-MetadataDependency
     exit 0
 }
 
@@ -82,9 +97,6 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed to fetch Eizo.Playback commit $commit."
 }
 
-# Preserve existing edited dependency checkouts, but treat a fresh --no-checkout
-# clone as a clean bootstrap state: its intentionally empty worktree is not a set
-# of user deletions and must be populated before dirty-worktree protection runs.
 if ($dependencyCheckoutCreated) {
     & git -C $dependencyRoot checkout --detach --force $commit
     if ($LASTEXITCODE -ne 0) {
@@ -111,7 +123,6 @@ else {
 if ($LASTEXITCODE -ne 0) { throw 'Playback patch does not apply to the pinned commit.' }
 & git -C $dependencyRoot apply $patchPath
 if ($LASTEXITCODE -ne 0) { throw 'Playback patch failed.' }
-# Keep unrelated downloaded packages in the local feed.
 New-Item -ItemType Directory -Force -Path $feedRoot | Out-Null
 
 $solution = Join-Path $dependencyRoot 'Eizo.Playback.slnx'
@@ -142,3 +153,4 @@ Set-Content -LiteralPath $stampPath -Value $sourceStamp -Encoding ascii -NoNewli
 
 Write-Host "Restored Eizo.Playback $version from commit $commit."
 Write-Host "Local NuGet feed: $feedRoot"
+Restore-MetadataDependency
