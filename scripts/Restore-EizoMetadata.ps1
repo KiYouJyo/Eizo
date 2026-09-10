@@ -9,7 +9,14 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $pinPath = Join-Path $repoRoot 'eng/Eizo.Metadata.json'
 $dependencyRoot = Join-Path $repoRoot '.deps/Eizo.Metadata'
 $feedRoot = Join-Path $repoRoot '.packages/Eizo.Metadata'
+$playbackFeedRoot = Join-Path $repoRoot '.packages/Eizo.Playback'
 $stampPath = Join-Path $feedRoot '.source-commit'
+
+# NuGet.config contains the existing local Playback feed. NuGet validates all
+# configured local sources during restore, even when the current project does
+# not consume packages from that feed, so keep the directory present for the
+# standalone Recognition bootstrap/test path.
+New-Item -ItemType Directory -Force -Path $playbackFeedRoot | Out-Null
 
 if (-not (Test-Path -LiteralPath $pinPath -PathType Leaf)) {
     throw "Eizo.Metadata pin file was not found: $pinPath"
