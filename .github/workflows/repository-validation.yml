@@ -39,7 +39,7 @@ jobs:
       - name: Run WebDAV v0.3.0 runtime probe
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force .packages/Eizo.Playback | Out-Null
+          ./scripts/Restore-EizoMetadata.ps1
           dotnet run --project tools/Eizo.WebDavV030Probe/Eizo.WebDavV030Probe.csproj --configuration Release
 
       - name: Validate WebDAV v0.3.1 source management
