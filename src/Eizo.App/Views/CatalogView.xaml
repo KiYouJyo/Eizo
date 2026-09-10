@@ -48,6 +48,14 @@
                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                TextWrapping="Wrap" />
 
+    <TextBlock x:Name="EmptyStateText"
+               Grid.Row="4"
+               Margin="0,20,0,0"
+               FontSize="14"
+               Opacity="0.68"
+               TextWrapping="Wrap"
+               Visibility="Collapsed" />
+
     <ListView x:Name="ResultsList"
               Grid.Row="4"
               Margin="0,10,0,0"
