@@ -74,9 +74,8 @@ public sealed partial class SourcesView : UserControl
 
         SourceList.ItemsSource = _sources
             .Snapshot()
-            .Where(source => source.Enabled)
-            .OrderBy(source => source.IsBuiltIn ? 0 : 1)
-            .ThenBy(source => source.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .Where(source => source.Enabled && !source.IsBuiltIn)
+            .OrderBy(source => source.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .Select(CreateSourceItem)
             .ToArray();
     }
@@ -150,7 +149,9 @@ public sealed partial class SourcesView : UserControl
             CanScan: !isScanning && !source.IsBuiltIn,
             ScanText: isScanning
                 ? T("Sources_Scanning")
-                : T("Source_ScanNow"));
+                : T("Source_ScanNow"),
+            ScanProgressSize: isScanning ? 16 : 0,
+            ScanSpacing: isScanning ? 8 : 0);
     }
 
     private void SourceList_ContainerContentChanging(
@@ -180,14 +181,6 @@ public sealed partial class SourcesView : UserControl
             editFolders.Click += EditWebDavFoldersMenuItem_Click;
             flyout.Items.Add(editFolders);
 
-            var test = new MenuFlyoutItem
-            {
-                Text = T("Sources_TestConnection"),
-                Icon = new FontIcon { Glyph = "\uE774" },
-                Tag = source.Id
-            };
-            test.Click += TestConnectionMenuItem_Click;
-            flyout.Items.Add(test);
         }
 
         if (item.Removable)
@@ -286,20 +279,6 @@ public sealed partial class SourcesView : UserControl
         }
     }
 
-    private async void EditWebDavMenuItem_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (sender is not MenuFlyoutItem { Tag: string sourceId })
-            return;
-
-        var source = _sources.Find(sourceId);
-        if (source is not { Kind: MediaSourceKind.WebDav })
-            return;
-
-        await ShowWebDavEditorAsync(source);
-    }
-
     private async void EditWebDavFoldersMenuItem_Click(
         object sender,
         RoutedEventArgs e)
@@ -368,35 +347,6 @@ public sealed partial class SourcesView : UserControl
         await ShowMessageAsync(
             T("Sources_FoldersUpdated"),
             T("Sources_FoldersUpdatedNoScan"));
-    }
-
-    private async void TestConnectionMenuItem_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (sender is not MenuFlyoutItem { Tag: string sourceId })
-            return;
-
-        var source = _sources.Find(sourceId);
-        if (source is null ||
-            !MediaSourceProviderRegistry.TryGet(
-                source.Kind,
-                out var provider))
-        {
-            return;
-        }
-
-        var result = await provider.TestConnectionAsync(source);
-
-        await ShowMessageAsync(
-            result.IsAvailable
-                ? T("Sources_ConnectionSucceeded")
-                : T("Sources_ConnectionFailed"),
-            result.IsAvailable
-                ? source.DisplayName
-                : FormatSourceError(
-                    result.ErrorCode,
-                    result.Detail));
     }
 
     private void RemoveSourceMenuItem_Click(
@@ -543,9 +493,13 @@ public sealed partial class SourcesView : UserControl
         if (XamlRoot is null)
             return;
 
+        var dialogTheme = ResolveOverlayTheme();
+        panel.RequestedTheme = dialogTheme;
+
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = dialogTheme,
             Title = existingSource is null
                 ? T("Sources_WebDavDialogTitle")
                 : T("Sources_EditWebDavTitle"),
@@ -825,10 +779,22 @@ public sealed partial class SourcesView : UserControl
         await new ContentDialog
         {
             XamlRoot = XamlRoot,
+            RequestedTheme = ResolveOverlayTheme(),
             Title = title,
             Content = message,
             CloseButtonText = T("Common_Close")
         }.ShowAsync();
+    }
+
+    private ElementTheme ResolveOverlayTheme()
+    {
+        if (ActualTheme is ElementTheme.Light or ElementTheme.Dark)
+            return ActualTheme;
+
+        var persisted = ThemePreferenceStore.Load();
+        return persisted == ElementTheme.Default
+            ? ElementTheme.Light
+            : persisted;
     }
 
     private string FormatSourceError(

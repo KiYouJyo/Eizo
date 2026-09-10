@@ -8,7 +8,6 @@ $catalogStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaCatalogStore.
 $folderPicker = Get-Content -LiteralPath 'src/Eizo.App/Views/WebDavFolderPickerWindow.cs' -Raw
 
 foreach ($required in @(
-    'EditWebDavMenuItem_Click',
     'ShowWebDavEditorAsync',
     'CommitWebDavEditorAsync',
     'EditWebDavFoldersMenuItem_Click',
@@ -50,10 +49,35 @@ if ($sourcesView -match 'scan\.Click \+= ScanSourceMenuItem_Click' -or
     throw 'v0.3.1 contract violation: scan/source edit must not be hidden in the source context menu.'
 }
 
+if ($sourcesView -match 'TestConnectionMenuItem_Click' -or
+    $sourcesView -match 'Text = T\("Sources_TestConnection"\)') {
+    throw 'v0.3.1 contract violation: the standalone Test connection source action must be removed.'
+}
+
+if ($sourcesView -notmatch '!source\.IsBuiltIn') {
+    throw 'v0.3.1 contract violation: the built-in opened-local-videos pseudo source must stay hidden from the Sources page.'
+}
+
+if ($sourcesView -notmatch 'RequestedTheme = dialogTheme' -or
+    $sourcesView -notmatch 'ResolveOverlayTheme\(') {
+    throw 'v0.3.1 contract violation: source dialogs must explicitly follow the live light/dark page theme.'
+}
+
+if ($folderPicker -match 'Application\.Current\.Resources\[\s*"TextFillColorSecondaryBrush"\s*\]') {
+    throw 'v0.3.1 contract violation: folder-picker text must not resolve secondary color from stale app-level theme resources.'
+}
+
 if ($sourcesView -notmatch '_scanningSourceIds' -or
     $sourcesView -notmatch 'Task\.Run\(' -or
     $sourcesView -notmatch 'Sources_Scanning') {
     throw 'v0.3.1 contract violation: manual scan must expose asynchronous native progress state.'
+}
+
+if ($sourcesView -notmatch 'ScanProgressSize: isScanning \? 16 : 0' -or
+    $sourcesView -notmatch 'ScanSpacing: isScanning \? 8 : 0' -or
+    $sourcesXaml -notmatch 'MinWidth="0"' -or
+    $sourcesXaml -notmatch 'ScanProgressSize') {
+    throw 'v0.3.1 contract violation: idle scan button must stay compact and only expand when the ProgressRing is active.'
 }
 
 $editorStart = $sourcesView.IndexOf('private async Task ShowWebDavEditorAsync')
@@ -90,7 +114,7 @@ foreach ($pickerRequirement in @(
     'DoubleTapped',
     'new SizeInt32(',
     '1040',
-    '760',
+    '840',
     'titleBar.BackgroundColor',
     'titleBar.ButtonBackgroundColor',
     'RequestedTheme = _windowTheme',
@@ -110,7 +134,7 @@ $localAddEnd = $sourcesView.IndexOf('private async Task AddWebDavSourceAsync', $
 $commitStart = $sourcesView.IndexOf('private async Task CommitWebDavEditorAsync')
 $commitEnd = $sourcesView.IndexOf('private void RollBackWebDavTarget', $commitStart)
 $folderEditStart = $sourcesView.IndexOf('private async void EditWebDavFoldersMenuItem_Click')
-$folderEditEnd = $sourcesView.IndexOf('private async void TestConnectionMenuItem_Click', $folderEditStart)
+$folderEditEnd = $sourcesView.IndexOf('private void RemoveSourceMenuItem_Click', $folderEditStart)
 
 foreach ($segment in @(
     $sourcesView.Substring($localAddStart, $localAddEnd - $localAddStart),

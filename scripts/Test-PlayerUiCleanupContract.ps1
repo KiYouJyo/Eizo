@@ -46,9 +46,9 @@ if ($playerCode -match 'FileOpenPicker' -or
 
 if (($sourcesXaml -notmatch 'SectionCardStyle') -and
     ($sourcesXaml -notmatch 'CardBackgroundFillColorDefaultBrush' -or
-     $sourcesXaml -notmatch 'CardStrokeColorDefaultBrush' -or
-     $sourcesXaml -notmatch 'CornerRadius')) {
-    throw 'Media-source UI contract violation: source entries must render as native card surfaces.'
+     $sourcesXaml -notmatch 'Property="CornerRadius" Value="10"' -or
+     $sourcesXaml -notmatch 'Property="BorderThickness" Value="0"')) {
+    throw 'Media-source UI contract violation: source entries must render as rounded native card surfaces without an outer outline.'
 }
 
 Write-Host 'Player/source UI cleanup contract PASS.'

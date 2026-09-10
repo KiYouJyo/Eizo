@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "product": {
     "version": "0.3.1",
-    "packageVersion": "0.3.1.3",
+    "packageVersion": "0.3.1.4",
     "title": {
-      "zh-CN": "媒体来源卡片与手动扫描 UI",
-      "ja-JP": "メディアソースカードと手動スキャン UI",
-      "en-US": "Media Source Cards & Manual Scan UI"
+      "zh-CN": "媒体来源浅色主题与卡片细化",
+      "ja-JP": "メディアソースのライトテーマとカード調整",
+      "en-US": "Media Source Light Theme & Card Refinement"
     }
   },
   "channels": {
