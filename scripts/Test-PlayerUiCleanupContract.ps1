@@ -46,8 +46,8 @@ if ($playerCode -match 'FileOpenPicker' -or
 
 if (($sourcesXaml -notmatch 'SectionCardStyle') -and
     ($sourcesXaml -notmatch 'CardBackgroundFillColorDefaultBrush' -or
-     $sourcesXaml -notmatch 'CornerRadius="10"' -or
-     $sourcesXaml -notmatch 'BorderThickness" Value="0"')) {
+     $sourcesXaml -notmatch 'Property="CornerRadius" Value="10"' -or
+     $sourcesXaml -notmatch 'Property="BorderThickness" Value="0"')) {
     throw 'Media-source UI contract violation: source entries must render as rounded native card surfaces without an outer outline.'
 }
 
