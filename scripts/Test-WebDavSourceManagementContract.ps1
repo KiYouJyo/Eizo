@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $sourcesView = Get-Content -LiteralPath 'src/Eizo.App/Views/SourcesView.xaml.cs' -Raw
+$sourcesXaml = Get-Content -LiteralPath 'src/Eizo.App/Views/SourcesView.xaml' -Raw
 $sourceStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaSourceStore.cs' -Raw
 $credentialStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaCredentialStore.cs' -Raw
 $catalogStore = Get-Content -LiteralPath 'src/Eizo.App/Models/MediaCatalogStore.cs' -Raw
@@ -21,10 +22,38 @@ foreach ($required in @(
 
 if ($sourcesView -notmatch 'WebDavFolderPickerWindow' -or
     $sourcesView -notmatch 'EditWebDavFoldersMenuItem_Click' -or
-    $sourcesView -notmatch 'Sources_EditMediaSource' -or
+    $sourcesView -notmatch 'SourceList_ItemClick' -or
     $sourcesView -notmatch 'Sources_EditReadFolders' -or
     $folderPicker -notmatch '_provider\.ListAsync\(') {
     throw 'v0.3.1 contract violation: source editing and folder editing must be separate WebDAV actions.'
+}
+
+if ($sourcesXaml -match 'x:Name="SectionList"' -or
+    $sourcesView -match 'SectionList\.') {
+    throw 'v0.3.1 contract violation: the obsolete Sources section selector must be removed.'
+}
+
+foreach ($cardRequirement in @(
+    'IsItemClickEnabled="True"',
+    'ItemClick="SourceList_ItemClick"',
+    'ScanSourceButton_Click',
+    '<ProgressRing',
+    'CardBackgroundFillColorDefaultBrush',
+    'CornerRadius')) {
+    if ($sourcesXaml -notmatch [regex]::Escape($cardRequirement)) {
+        throw "v0.3.1 source-card contract missing: $cardRequirement"
+    }
+}
+
+if ($sourcesView -match 'scan\.Click \+= ScanSourceMenuItem_Click' -or
+    $sourcesView -match 'editSource\.Click \+= EditWebDavMenuItem_Click') {
+    throw 'v0.3.1 contract violation: scan/source edit must not be hidden in the source context menu.'
+}
+
+if ($sourcesView -notmatch '_scanningSourceIds' -or
+    $sourcesView -notmatch 'Task\.Run\(' -or
+    $sourcesView -notmatch 'Sources_Scanning') {
+    throw 'v0.3.1 contract violation: manual scan must expose asynchronous native progress state.'
 }
 
 $editorStart = $sourcesView.IndexOf('private async Task ShowWebDavEditorAsync')
@@ -58,7 +87,14 @@ foreach ($pickerRequirement in @(
     'ScrollBarVisibility.Disabled',
     'Sources_SelectedFoldersFormat',
     'Sources_SelectCurrentFolder',
-    'DoubleTapped')) {
+    'DoubleTapped',
+    'new SizeInt32(',
+    '1040',
+    '760',
+    'titleBar.BackgroundColor',
+    'titleBar.ButtonBackgroundColor',
+    'RequestedTheme = _windowTheme',
+    'Background =')) {
     if ($folderPicker -notmatch [regex]::Escape($pickerRequirement)) {
         throw "v0.3.1 picker contract missing: $pickerRequirement"
     }
@@ -67,6 +103,22 @@ foreach ($pickerRequirement in @(
 if ($sourceStore -notmatch 'SelectedPaths' -or
     $catalogStore -notmatch 'source\.SelectedPaths') {
     throw 'v0.3.1 contract violation: one WebDAV source must persist and scan multiple selected folder roots.'
+}
+
+$localAddStart = $sourcesView.IndexOf('private async Task AddLocalSourceAsync')
+$localAddEnd = $sourcesView.IndexOf('private async Task AddWebDavSourceAsync', $localAddStart)
+$commitStart = $sourcesView.IndexOf('private async Task CommitWebDavEditorAsync')
+$commitEnd = $sourcesView.IndexOf('private void RollBackWebDavTarget', $commitStart)
+$folderEditStart = $sourcesView.IndexOf('private async void EditWebDavFoldersMenuItem_Click')
+$folderEditEnd = $sourcesView.IndexOf('private async void TestConnectionMenuItem_Click', $folderEditStart)
+
+foreach ($segment in @(
+    $sourcesView.Substring($localAddStart, $localAddEnd - $localAddStart),
+    $sourcesView.Substring($commitStart, $commitEnd - $commitStart),
+    $sourcesView.Substring($folderEditStart, $folderEditEnd - $folderEditStart))) {
+    if ($segment -match '_catalog\.ScanSourceAsync') {
+        throw 'v0.3.1 contract violation: adding/editing a source or folder scope must not auto-scan.'
+    }
 }
 
 if ($sourcesView -notmatch 'ResolveEditorCredential' -or
@@ -107,7 +159,11 @@ foreach ($language in @('zh-CN','ja-JP','en-US')) {
         'Sources_SelectedFoldersFormat',
         'Sources_OpenFolder',
         'Sources_FoldersUpdated',
-        'Sources_FoldersUpdatedFormat')) {
+        'Sources_FoldersUpdatedFormat',
+        'Sources_FoldersUpdatedNoScan',
+        'Sources_Scanning',
+        'Sources_WebDavAddedNoScanFormat',
+        'Sources_WebDavUpdatedNoScanFormat')) {
         if ($resources -notmatch ('name="' + [regex]::Escape($key) + '"')) {
             throw "v0.3.1 localization contract missing $key in $language"
         }
