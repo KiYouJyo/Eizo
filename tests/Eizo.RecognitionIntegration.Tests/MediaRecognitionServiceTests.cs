@@ -97,6 +97,21 @@ public sealed class MediaRecognitionServiceTests
     {
         const string path = "[DBD-Raws][死亡笔记][34][1080P][BDRip][HEVC-10bit][FLAC].mkv";
 
-        Assert.Equal(_service.Recognize(path), _service.Recognize(path));
+        var first = _service.Recognize(path);
+        var second = _service.Recognize(path);
+
+        Assert.Equal(first.LogicalPath, second.LogicalPath);
+        Assert.Equal(first.Status, second.Status);
+        Assert.Equal(first.MediaKind, second.MediaKind);
+        Assert.Equal(first.Title, second.Title);
+        Assert.Equal(first.EpisodeTitle, second.EpisodeTitle);
+        Assert.Equal(first.SeasonNumber, second.SeasonNumber);
+        Assert.Equal(first.EpisodeNumber, second.EpisodeNumber);
+        Assert.Equal(first.Year, second.Year);
+        Assert.Equal(first.Confidence, second.Confidence);
+        Assert.Equal(first.ConfidenceLevel, second.ConfidenceLevel);
+        Assert.Equal(first.IsAmbiguous, second.IsAmbiguous);
+        Assert.Equal(first.TitleCandidates, second.TitleCandidates);
+        Assert.Equal(first.Evidence, second.Evidence);
     }
 }
