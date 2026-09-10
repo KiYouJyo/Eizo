@@ -1,3 +1,5 @@
+English | [简体中文](RELEASE-NOTES-v0.3.3.md) | [日本語](RELEASE-NOTES-v0.3.3.ja.md)
+
 # Eizo v0.3.3
 
 ## Recognition Integration & Library Validation
