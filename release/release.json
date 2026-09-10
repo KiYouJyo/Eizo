@@ -1,17 +1,17 @@
 {
-    "schemaVersion": 1,
-    "product": {
-        "version": "0.3.2",
-        "packageVersion": "0.3.2.0",
-        "title": {
-            "zh-CN": "播放器并发稳定性、字幕切换与全屏控制修复",
-            "ja-JP": "プレイヤー並行処理の安定化・字幕切替・全画面操作の修正",
-            "en-US": "Playback Concurrency, Subtitle Switching & Fullscreen Fixes"
-        }
-    },
-    "channels": {
-        "github": {
-            "publish": true
-        }
+  "schemaVersion": 1,
+  "product": {
+    "version": "0.3.3",
+    "packageVersion": "0.3.3.0",
+    "title": {
+      "zh-CN": "识别内核接入与媒体库验收",
+      "ja-JP": "認識エンジン統合とメディアライブラリ検証",
+      "en-US": "Recognition Integration & Library Validation"
     }
+  },
+  "channels": {
+    "github": {
+      "publish": true
+    }
+  }
 }

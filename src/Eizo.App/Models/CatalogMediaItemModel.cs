@@ -1,3 +1,5 @@
+using Eizo.Recognition;
+
 namespace Eizo.Models;
 
 public enum MediaLocationKind
@@ -19,7 +21,8 @@ public sealed record CatalogMediaItemModel(
     string? NativeTitle,
     MediaCategoryKind? Category,
     string Meta,
-    MediaLocationModel? Location = null)
+    MediaLocationModel? Location = null,
+    MediaRecognitionSnapshot? Recognition = null)
 {
     public bool IsParsed => !string.IsNullOrWhiteSpace(ParsedTitle);
 

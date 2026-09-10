@@ -39,7 +39,7 @@ jobs:
       - name: Run WebDAV v0.3.0 runtime probe
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force .packages/Eizo.Playback | Out-Null
+          ./scripts/Restore-EizoMetadata.ps1
           dotnet run --project tools/Eizo.WebDavV030Probe/Eizo.WebDavV030Probe.csproj --configuration Release
 
       - name: Validate WebDAV v0.3.1 source management
@@ -49,6 +49,25 @@ jobs:
       - name: Validate player/source UI cleanup contract
         shell: pwsh
         run: ./scripts/Test-PlayerUiCleanupContract.ps1
+
+  recognition-integration:
+    name: Validate Recognition integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore pinned Eizo.Metadata package
+        shell: pwsh
+        run: ./scripts/Restore-EizoMetadata.ps1
+
+      - name: Run Recognition integration tests
+        run: dotnet test tests/Eizo.RecognitionIntegration.Tests/Eizo.RecognitionIntegration.Tests.csproj --configuration Release
 
   winui-build:
     name: Build WinUI 3 app

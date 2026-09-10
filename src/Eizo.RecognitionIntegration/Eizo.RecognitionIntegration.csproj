@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Eizo.RecognitionIntegration</AssemblyName>
+    <RootNamespace>Eizo.Recognition</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../.deps/Eizo.Metadata/src/Eizo.Metadata.Recognition/Eizo.Metadata.Recognition.csproj" />
+  </ItemGroup>
+</Project>

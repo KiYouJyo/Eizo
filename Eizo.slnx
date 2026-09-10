@@ -1,4 +1,5 @@
 <Solution>
   <Configurations><Platform Name="x64" /></Configurations>
+  <Project Path="src/Eizo.RecognitionIntegration/Eizo.RecognitionIntegration.csproj" />
   <Project Path="src/Eizo.App/Eizo.App.csproj" />
 </Solution>

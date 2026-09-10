@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text.Json;
+using Eizo.Recognition;
 
 namespace Eizo.Models;
 
@@ -18,6 +20,8 @@ public sealed class MediaCatalogStore
             ".mkv", ".mp4", ".m4v", ".mov", ".avi", ".webm",
             ".ts", ".m2ts", ".wmv", ".mpg", ".mpeg"
         };
+
+    private static readonly MediaRecognitionService RecognitionService = new();
 
     private readonly object _sync = new();
     private readonly List<CatalogMediaItemModel> _items;
@@ -65,7 +69,10 @@ public sealed class MediaCatalogStore
         var fileInfo = new FileInfo(fullPath);
         var sourceId = MediaSourceStore.Default.ResolveLocalSourceId(fullPath);
 
-        var item = CreateLocalItem(sourceId, fileInfo);
+        var item = CreateLocalItem(
+            sourceId,
+            fileInfo,
+            fileInfo.Name);
         var changed = false;
 
         lock (_sync)
@@ -117,6 +124,15 @@ public sealed class MediaCatalogStore
                 cancellationToken);
         }
 
+        return await Task.Run(
+            () => ScanRemoteSourceCoreAsync(source, cancellationToken),
+            cancellationToken);
+    }
+
+    private async Task<int> ScanRemoteSourceCoreAsync(
+        MediaSourceDefinition source,
+        CancellationToken cancellationToken)
+    {
         if (!MediaSourceProviderRegistry.TryGet(
                 source.Kind,
                 out var provider))
@@ -206,10 +222,14 @@ public sealed class MediaCatalogStore
             return 0;
         }
 
-        var discovered = EnumerateVideoFilesSafe(source.RootLocation)
+        var root = Path.GetFullPath(source.RootLocation);
+        var discovered = EnumerateVideoFilesSafe(root)
             .Select(path => new FileInfo(path))
             .Where(info => info.Exists)
-            .Select(info => CreateLocalItem(source.Id, info))
+            .Select(info => CreateLocalItem(
+                source.Id,
+                info,
+                Path.GetRelativePath(root, info.FullName)))
             .ToArray();
 
         var discoveredPaths = discovered
@@ -287,37 +307,94 @@ public sealed class MediaCatalogStore
         if (string.IsNullOrWhiteSpace(title))
             title = entry.Name;
 
+        var logicalPath = string.IsNullOrWhiteSpace(entry.RelativePath)
+            ? entry.Name
+            : entry.RelativePath;
+        var recognition = RecognitionService.Recognize(logicalPath);
+
         return new CatalogMediaItemModel(
             title,
-            ParsedTitle: null,
+            recognition.ShouldApplyDisplayTitle
+                ? recognition.Title
+                : null,
             NativeTitle: null,
             Category: null,
-            Meta: string.Empty,
+            Meta: BuildRecognitionMeta(recognition),
             Location: new MediaLocationModel(
                 sourceId,
                 MediaLocationKind.RemoteUri,
                 entry.Locator!,
                 entry.SizeBytes,
-                entry.ModifiedUtc));
+                entry.ModifiedUtc),
+            Recognition: recognition);
     }
 
     private static CatalogMediaItemModel CreateLocalItem(
         string sourceId,
-        FileInfo fileInfo)
+        FileInfo fileInfo,
+        string logicalPath)
     {
+        var recognition = RecognitionService.Recognize(logicalPath);
+
         return new CatalogMediaItemModel(
             Path.GetFileNameWithoutExtension(fileInfo.Name),
-            ParsedTitle: null,
+            recognition.ShouldApplyDisplayTitle
+                ? recognition.Title
+                : null,
             NativeTitle: null,
             Category: null,
-            Meta: string.Empty,
+            Meta: BuildRecognitionMeta(recognition),
             Location: new MediaLocationModel(
                 sourceId,
                 MediaLocationKind.LocalFile,
                 fileInfo.FullName,
                 fileInfo.Length,
-                fileInfo.LastWriteTimeUtc));
+                fileInfo.LastWriteTimeUtc),
+            Recognition: recognition);
     }
+
+    private static string BuildRecognitionMeta(
+        MediaRecognitionSnapshot recognition)
+    {
+        var parts = new List<string>();
+
+        if (recognition.SeasonNumber is { } season &&
+            recognition.EpisodeNumber is { } seasonEpisode)
+        {
+            parts.Add($"S{season:00}E{FormatNumber(seasonEpisode)}");
+        }
+        else if (recognition.EpisodeNumber is { } episode)
+        {
+            parts.Add($"EP{FormatNumber(episode)}");
+        }
+        else if (recognition.SpecialNumber is { } special)
+        {
+            parts.Add($"SP{FormatNumber(special)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(recognition.EpisodeTitle))
+            parts.Add(recognition.EpisodeTitle!);
+
+        if (recognition.Year is { } year)
+            parts.Add(year.ToString(CultureInfo.InvariantCulture));
+
+        parts.Add(recognition.Status switch
+        {
+            MediaRecognitionStatus.Recognized => recognition.ConfidenceLevel,
+            MediaRecognitionStatus.Ambiguous => "Ambiguous",
+            MediaRecognitionStatus.Unresolved => "Unresolved",
+            MediaRecognitionStatus.Error =>
+                string.IsNullOrWhiteSpace(recognition.ErrorCode)
+                    ? "Recognition error"
+                    : $"Recognition error: {recognition.ErrorCode}",
+            _ => recognition.Status.ToString()
+        });
+
+        return string.Join(" · ", parts);
+    }
+
+    private static string FormatNumber(decimal value) =>
+        value.ToString("0.###", CultureInfo.InvariantCulture);
 
     private static IEnumerable<string> EnumerateVideoFilesSafe(string root)
     {
