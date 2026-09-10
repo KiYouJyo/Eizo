@@ -17,11 +17,15 @@ public sealed class WebDavMediaSourceProvider(
     IMediaCredentialProvider credentialStore)
     : IMediaSourceProvider
 {
+    private const int MaxDirectoryRequestAttempts = 4;
     private static readonly HttpMethod PropFindMethod = new("PROPFIND");
     private static readonly XNamespace Dav = "DAV:";
 
     private readonly IMediaCredentialProvider _credentialStore =
         credentialStore ?? throw new ArgumentNullException(nameof(credentialStore));
+    private readonly object _clientSync = new();
+    private readonly Dictionary<string, HttpClient> _sharedClients =
+        new(StringComparer.Ordinal);
 
     public MediaSourceKind Kind => MediaSourceKind.WebDav;
 
@@ -63,7 +67,7 @@ public sealed class WebDavMediaSourceProvider(
             return new MediaSourceConnectionResult(
                 false,
                 "NetworkError",
-                exception.Message);
+                DescribeNetworkFailure(exception));
         }
         catch (MediaSourceException exception)
         {
@@ -84,23 +88,11 @@ public sealed class WebDavMediaSourceProvider(
 
         var rootUri = new Uri(source.RootLocation!, UriKind.Absolute);
         var requestUri = BuildRequestUri(rootUri, relativePath);
-
-        using var client = CreateClient(source);
-        using var request = CreatePropFindRequest(requestUri, depth: 1);
-        using var response = await client.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
+        var xml = await ReadDirectoryXmlWithRetryAsync(
+            source,
+            requestUri,
             cancellationToken);
 
-        if (response.StatusCode != HttpStatusCode.MultiStatus &&
-            !response.IsSuccessStatusCode)
-        {
-            throw new MediaSourceException(
-                MapStatusCode(response.StatusCode),
-                $"WebDAV PROPFIND failed with {(int)response.StatusCode} {response.ReasonPhrase}.");
-        }
-
-        var xml = await response.Content.ReadAsStringAsync(cancellationToken);
         XDocument document;
 
         try
@@ -259,7 +251,7 @@ public sealed class WebDavMediaSourceProvider(
                 false,
                 false,
                 ErrorCode: "NetworkError",
-                Detail: exception.Message);
+                Detail: DescribeNetworkFailure(exception));
         }
         catch (MediaSourceException exception)
         {
@@ -271,6 +263,92 @@ public sealed class WebDavMediaSourceProvider(
         }
     }
 
+    private async Task<string> ReadDirectoryXmlWithRetryAsync(
+        MediaSourceDefinition source,
+        Uri requestUri,
+        CancellationToken cancellationToken)
+    {
+        Exception? lastFailure = null;
+
+        for (var attempt = 1; attempt <= MaxDirectoryRequestAttempts; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                using var request = CreatePropFindRequest(requestUri, depth: 1);
+                using var response = await GetSharedClient(source).SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+
+                if (response.StatusCode == HttpStatusCode.MultiStatus ||
+                    response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadAsStringAsync(cancellationToken);
+                }
+
+                if (!IsTransientStatus(response.StatusCode) ||
+                    attempt == MaxDirectoryRequestAttempts)
+                {
+                    throw new MediaSourceException(
+                        MapStatusCode(response.StatusCode),
+                        $"WebDAV PROPFIND failed with {(int)response.StatusCode} {response.ReasonPhrase}.");
+                }
+
+                lastFailure = new HttpRequestException(
+                    $"Transient WebDAV response {(int)response.StatusCode} {response.ReasonPhrase}.");
+            }
+            catch (TaskCanceledException exception)
+                when (!cancellationToken.IsCancellationRequested)
+            {
+                lastFailure = exception;
+                if (attempt == MaxDirectoryRequestAttempts)
+                {
+                    throw new MediaSourceException(
+                        "Timeout",
+                        "The WebDAV directory request timed out after retrying.",
+                        exception);
+                }
+            }
+            catch (HttpRequestException exception)
+            {
+                lastFailure = exception;
+                if (attempt == MaxDirectoryRequestAttempts)
+                {
+                    throw new MediaSourceException(
+                        "NetworkError",
+                        DescribeNetworkFailure(exception),
+                        exception);
+                }
+            }
+
+            await Task.Delay(
+                RetryDelay(attempt),
+                cancellationToken);
+        }
+
+        throw new MediaSourceException(
+            "NetworkError",
+            lastFailure is HttpRequestException requestFailure
+                ? DescribeNetworkFailure(requestFailure)
+                : lastFailure?.Message ?? "The WebDAV directory request failed.",
+            lastFailure);
+    }
+
+    private HttpClient GetSharedClient(MediaSourceDefinition source)
+    {
+        lock (_clientSync)
+        {
+            if (_sharedClients.TryGetValue(source.Id, out var client))
+                return client;
+
+            client = CreateClient(source);
+            _sharedClients[source.Id] = client;
+            return client;
+        }
+    }
+
     private HttpClient CreateClient(MediaSourceDefinition source)
     {
         var handler = new HttpClientHandler
@@ -279,22 +357,17 @@ public sealed class WebDavMediaSourceProvider(
             AutomaticDecompression =
                 DecompressionMethods.GZip |
                 DecompressionMethods.Deflate,
-            PreAuthenticate = true
+            PreAuthenticate = true,
+            Credentials = new RefreshingWebDavCredentials(
+                _credentialStore,
+                source)
         };
-
-        var credential = _credentialStore.GetWebDav(source);
-        if (credential is not null)
-        {
-            handler.Credentials = new NetworkCredential(
-                credential.UserName,
-                credential.Password);
-        }
 
         var client = new HttpClient(handler)
         {
-            Timeout = TimeSpan.FromSeconds(30)
+            Timeout = TimeSpan.FromSeconds(90)
         };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Eizo/0.3.0");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Eizo/0.3");
         return client;
     }
 
@@ -444,6 +517,30 @@ public sealed class WebDavMediaSourceProvider(
             right.GetLeftPart(UriPartial.Path).TrimEnd('/'),
             StringComparison.OrdinalIgnoreCase);
 
+    private static bool IsTransientStatus(HttpStatusCode statusCode) =>
+        statusCode == HttpStatusCode.RequestTimeout ||
+        statusCode == HttpStatusCode.TooManyRequests ||
+        statusCode == HttpStatusCode.InternalServerError ||
+        statusCode == HttpStatusCode.BadGateway ||
+        statusCode == HttpStatusCode.ServiceUnavailable ||
+        statusCode == HttpStatusCode.GatewayTimeout;
+
+    private static TimeSpan RetryDelay(int attempt) =>
+        TimeSpan.FromMilliseconds(attempt switch
+        {
+            1 => 350,
+            2 => 800,
+            _ => 1600
+        });
+
+    private static string DescribeNetworkFailure(HttpRequestException exception)
+    {
+        var inner = exception.InnerException?.Message;
+        return string.IsNullOrWhiteSpace(inner)
+            ? exception.Message
+            : $"{exception.Message} {inner}";
+    }
+
     private static void ValidateSource(MediaSourceDefinition source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -479,4 +576,20 @@ public sealed class WebDavMediaSourceProvider(
             HttpStatusCode.RequestTimeout => "Timeout",
             _ => "HttpError"
         };
+
+    private sealed class RefreshingWebDavCredentials(
+        IMediaCredentialProvider provider,
+        MediaSourceDefinition source)
+        : ICredentials
+    {
+        public NetworkCredential? GetCredential(Uri uri, string authType)
+        {
+            var credential = provider.GetWebDav(source);
+            return credential is null
+                ? null
+                : new NetworkCredential(
+                    credential.UserName,
+                    credential.Password);
+        }
+    }
 }
