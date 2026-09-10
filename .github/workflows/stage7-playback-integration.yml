@@ -43,6 +43,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Restore-EizoPlayback.ps1
 
+      - name: Restore pinned Eizo.Metadata Recognition package
+        shell: pwsh
+        run: ./scripts/Restore-EizoMetadata.ps1
+
       - name: Restore and compile Eizo
         shell: pwsh
         run: |
