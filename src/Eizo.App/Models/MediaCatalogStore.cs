@@ -111,26 +111,54 @@ public sealed class MediaCatalogStore
         return true;
     }
 
+    public Task<int> ScanSourceAsync(
+        MediaSourceDefinition source,
+        CancellationToken cancellationToken = default) =>
+        ScanSourceAsync(source, progress: null, cancellationToken);
+
     public async Task<int> ScanSourceAsync(
         MediaSourceDefinition source,
+        Action<MediaScanProgress>? progress,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         if (source.Kind == MediaSourceKind.Local)
         {
-            return await Task.Run(
+            progress?.Invoke(
+                new MediaScanProgress(
+                    source.Id,
+                    DirectoriesProcessed: 0,
+                    DirectoriesPending: 1,
+                    VideosDiscovered: 0,
+                    source.RootLocation));
+
+            var count = await Task.Run(
                 () => ScanLocalSource(source),
                 cancellationToken);
+
+            progress?.Invoke(
+                new MediaScanProgress(
+                    source.Id,
+                    DirectoriesProcessed: 1,
+                    DirectoriesPending: 0,
+                    VideosDiscovered: count,
+                    source.RootLocation));
+
+            return count;
         }
 
         return await Task.Run(
-            () => ScanRemoteSourceCoreAsync(source, cancellationToken),
+            () => ScanRemoteSourceCoreAsync(
+                source,
+                progress,
+                cancellationToken),
             cancellationToken);
     }
 
     private async Task<int> ScanRemoteSourceCoreAsync(
         MediaSourceDefinition source,
+        Action<MediaScanProgress>? progress,
         CancellationToken cancellationToken)
     {
         if (!MediaSourceProviderRegistry.TryGet(
@@ -146,6 +174,7 @@ public sealed class MediaCatalogStore
         var pending = new Queue<string>();
         var visited = new HashSet<string>(
             StringComparer.OrdinalIgnoreCase);
+        var directoriesProcessed = 0;
 
         var scanRoots = source.SelectedPaths is { Count: > 0 }
             ? source.SelectedPaths
@@ -154,6 +183,14 @@ public sealed class MediaCatalogStore
         foreach (var scanRoot in scanRoots)
             pending.Enqueue(scanRoot);
 
+        ReportProgress(
+            source.Id,
+            directoriesProcessed,
+            pending.Count,
+            discovered.Count,
+            currentPath: null,
+            progress);
+
         while (pending.Count > 0)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -161,6 +198,14 @@ public sealed class MediaCatalogStore
             var relativePath = pending.Dequeue();
             if (!visited.Add(relativePath))
                 continue;
+
+            ReportProgress(
+                source.Id,
+                directoriesProcessed,
+                pending.Count + 1,
+                discovered.Count,
+                relativePath,
+                progress);
 
             await foreach (var entry in provider.ListAsync(
                                source,
@@ -188,7 +233,27 @@ public sealed class MediaCatalogStore
                     CreateRemoteItem(
                         source.Id,
                         entry));
+
+                if (discovered.Count % 25 == 0)
+                {
+                    ReportProgress(
+                        source.Id,
+                        directoriesProcessed,
+                        pending.Count + 1,
+                        discovered.Count,
+                        relativePath,
+                        progress);
+                }
             }
+
+            directoriesProcessed++;
+            ReportProgress(
+                source.Id,
+                directoriesProcessed,
+                pending.Count,
+                discovered.Count,
+                relativePath,
+                progress);
         }
 
         lock (_sync)
@@ -209,6 +274,23 @@ public sealed class MediaCatalogStore
 
         Changed?.Invoke(this, EventArgs.Empty);
         return discovered.Count;
+    }
+
+    private static void ReportProgress(
+        string sourceId,
+        int directoriesProcessed,
+        int directoriesPending,
+        int videosDiscovered,
+        string? currentPath,
+        Action<MediaScanProgress>? progress)
+    {
+        progress?.Invoke(
+            new MediaScanProgress(
+                sourceId,
+                directoriesProcessed,
+                directoriesPending,
+                videosDiscovered,
+                currentPath));
     }
 
     public int ScanLocalSource(MediaSourceDefinition source)
