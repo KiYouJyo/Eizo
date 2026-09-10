@@ -4,12 +4,14 @@
              xmlns:models="using:Eizo.Models">
   <Grid Padding="24,16,24,32"
         HorizontalAlignment="Stretch"
-        RowDefinitions="Auto,14,Auto,14,*"
+        RowDefinitions="Auto,18,*"
         UseLayoutRounding="True">
     <Grid ColumnDefinitions="*,Auto">
       <StackPanel Spacing="4">
-        <TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleText}" />
-        <TextBlock x:Name="PageSubtitle" Style="{StaticResource MetadataText}" />
+        <TextBlock x:Name="PageTitle"
+                   Style="{StaticResource PageTitleText}" />
+        <TextBlock x:Name="PageSubtitle"
+                   Style="{StaticResource MetadataText}" />
       </StackPanel>
       <Button x:Name="AddSourceButton"
               Grid.Column="1"
@@ -18,64 +20,69 @@
               Click="AddSourceButton_Click" />
     </Grid>
 
-    <ListView x:Name="SectionList"
-              Grid.Row="2"
-              SelectedIndex="0"
-              IsItemClickEnabled="True"
-              SelectionMode="Single"
-              ScrollViewer.HorizontalScrollBarVisibility="Auto"
-              ScrollViewer.HorizontalScrollMode="Auto"
-              ScrollViewer.VerticalScrollBarVisibility="Disabled"
-              ScrollViewer.VerticalScrollMode="Disabled">
-      <ListView.ItemsPanel>
-        <ItemsPanelTemplate><ItemsStackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-      </ListView.ItemsPanel>
-      <ListView.ItemTemplate>
-        <DataTemplate>
-          <TextBlock Text="{Binding}"
-                     Margin="8,2"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
-        </DataTemplate>
-      </ListView.ItemTemplate>
-    </ListView>
-
     <ListView x:Name="SourceList"
-              Grid.Row="4"
+              Grid.Row="2"
               SelectionMode="None"
-              ContainerContentChanging="SourceList_ContainerContentChanging">
+              IsItemClickEnabled="True"
+              ItemClick="SourceList_ItemClick"
+              ContainerContentChanging="SourceList_ContainerContentChanging"
+              ScrollViewer.HorizontalScrollMode="Disabled"
+              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
       <ListView.ItemContainerStyle>
         <Style TargetType="ListViewItem"
                BasedOn="{StaticResource SourceListItemStyle}">
-          <Setter Property="Padding" Value="0" />
+          <Setter Property="MinHeight" Value="82" />
+          <Setter Property="Padding" Value="18,14" />
           <Setter Property="Margin" Value="0,0,0,10" />
           <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+          <Setter Property="Background"
+                  Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+          <Setter Property="BorderBrush"
+                  Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+          <Setter Property="BorderThickness" Value="1" />
+          <Setter Property="CornerRadius" Value="8" />
         </Style>
       </ListView.ItemContainerStyle>
+
       <ListView.ItemTemplate>
         <DataTemplate x:DataType="models:SourceItemModel">
-          <Border Style="{StaticResource SectionCardStyle}"
-                  Padding="18,14">
-            <Grid MinHeight="48"
-                  ColumnDefinitions="*,Auto">
-              <StackPanel VerticalAlignment="Center"
-                          Spacing="4">
-                <TextBlock Text="{x:Bind Name}"
-                           Style="{StaticResource CardTitleText}" />
-                <TextBlock Text="{x:Bind Kind}"
-                           Style="{StaticResource MetadataText}"
-                           Opacity="0.7" />
+          <Grid MinHeight="52"
+                ColumnDefinitions="*,Auto,Auto"
+                ColumnSpacing="16">
+            <StackPanel VerticalAlignment="Center"
+                        Spacing="4">
+              <TextBlock Text="{x:Bind Name}"
+                         Style="{StaticResource CardTitleText}" />
+              <TextBlock Text="{x:Bind Kind}"
+                         Style="{StaticResource MetadataText}"
+                         Opacity="0.7" />
+            </StackPanel>
+
+            <TextBlock Grid.Column="1"
+                       Text="{x:Bind Summary}"
+                       VerticalAlignment="Center"
+                       TextAlignment="Right"
+                       TextWrapping="Wrap"
+                       MaxWidth="560"
+                       Style="{StaticResource MetadataText}" />
+
+            <Button Grid.Column="2"
+                    Tag="{x:Bind Id}"
+                    IsEnabled="{x:Bind CanScan}"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource CompactActionButton}"
+                    Click="ScanSourceButton_Click">
+              <StackPanel Orientation="Horizontal"
+                          Spacing="8"
+                          VerticalAlignment="Center">
+                <ProgressRing Width="16"
+                              Height="16"
+                              IsActive="{x:Bind IsScanning}" />
+                <TextBlock Text="{x:Bind ScanText}"
+                           VerticalAlignment="Center" />
               </StackPanel>
-              <TextBlock Grid.Column="1"
-                         Text="{x:Bind Summary}"
-                         Margin="24,0,0,0"
-                         VerticalAlignment="Center"
-                         TextAlignment="Right"
-                         TextWrapping="Wrap"
-                         MaxWidth="620"
-                         Style="{StaticResource MetadataText}" />
-            </Grid>
-          </Border>
+            </Button>
+          </Grid>
         </DataTemplate>
       </ListView.ItemTemplate>
     </ListView>
