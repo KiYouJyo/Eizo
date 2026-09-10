@@ -233,7 +233,6 @@ public sealed partial class SourcesView : UserControl
         if (sender is not Button { Tag: string sourceId })
             return;
 
-        e.Handled = true;
         await ScanSourceAsync(sourceId);
     }
 
