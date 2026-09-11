@@ -184,27 +184,27 @@ try {
     $running | Stop-Process -Force -ErrorAction SilentlyContinue
     Write-Host 'Bundled fallback launch and real Recognition call PASS.'
 
-    Write-Host '== Stage published Metadata v0.1.1 and simulate restart =='
+    Write-Host '== Stage published Metadata v0.1.2 and simulate restart =='
     $metadataRoot = Join-Path $componentsRoot 'Recognition'
-    $metadataVersionRoot = Join-Path $metadataRoot 'versions\0.1.1'
+    $metadataVersionRoot = Join-Path $metadataRoot 'versions\0.1.2'
     Remove-Item -LiteralPath $metadataRoot -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $metadataVersionRoot | Out-Null
-    $metadataZip = Join-Path $runnerTemp 'Eizo.Recognition.Runtime-v0.1.1-x64.zip'
-    Invoke-WebRequest -Uri 'https://github.com/KiYouJyo/Eizo.Metadata/releases/download/v0.1.1/Eizo.Recognition.Runtime-v0.1.1-x64.zip' -OutFile $metadataZip -UseBasicParsing
-    $metadataExpected = 'c29a5466a9a9b92b8d04b04bc16709bd11827124338cfebf76e4a205fa0263cf'
+    $metadataZip = Join-Path $runnerTemp 'Eizo.Recognition.Runtime-v0.1.2-x64.zip'
+    Invoke-WebRequest -Uri 'https://github.com/KiYouJyo/Eizo.Metadata/releases/download/v0.1.2/Eizo.Recognition.Runtime-v0.1.2-x64.zip' -OutFile $metadataZip -UseBasicParsing
+    $metadataExpected = '81861e657fb0d58cd2f4102cd483c9ca88036b4ae77320fb191180f2e82b7442'
     $metadataActual = (Get-FileHash -LiteralPath $metadataZip -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($metadataActual -ne $metadataExpected) { throw "Published Metadata v0.1.1 digest mismatch: $metadataActual" }
+    if ($metadataActual -ne $metadataExpected) { throw "Published Metadata v0.1.2 digest mismatch: $metadataActual" }
     Expand-Archive -LiteralPath $metadataZip -DestinationPath $metadataVersionRoot -Force
     if (-not (Test-Path (Join-Path $metadataVersionRoot 'eizo-recognition-release.json'))) { throw 'Metadata manifest is missing.' }
     if (-not (Test-Path (Join-Path $metadataVersionRoot 'bin\Eizo.Metadata.Recognition.dll'))) { throw 'Metadata Recognition module is missing.' }
-    '{"Version":"0.1.1"}' | Set-Content -LiteralPath (Join-Path $metadataRoot 'pending.json') -Encoding utf8NoBOM
+    '{"Version":"0.1.2"}' | Set-Content -LiteralPath (Join-Path $metadataRoot 'pending.json') -Encoding utf8NoBOM
 
     $running = Start-EizoAndAssertAlive $pkg
     $activePath = Join-Path $metadataRoot 'active.json'
     $pendingPath = Join-Path $metadataRoot 'pending.json'
     if (-not (Test-Path $activePath)) { throw 'Metadata active.json was not promoted on restart.' }
     $active = Get-Content -LiteralPath $activePath -Raw | ConvertFrom-Json
-    if ([string]$active.Version -ne '0.1.1') { throw "Unexpected active Metadata version: $($active.Version)" }
+    if ([string]$active.Version -ne '0.1.2') { throw "Unexpected active Metadata version: $($active.Version)" }
     if (Test-Path $pendingPath) { throw 'Metadata pending.json still exists after activation.' }
     $activationLog = Join-Path $componentsRoot 'activation.log'
     if (-not (Test-Path $activationLog)) { throw 'Component activation diagnostics log was not written.' }
@@ -219,11 +219,11 @@ try {
     $externalAssembly = Join-Path $metadataVersionRoot 'bin\Eizo.Metadata.Recognition.dll'
     if ($runtimeLine -notmatch '\tversion=0\.1\.1\texternal=True\tprobe=' -or
         $runtimeLine -notmatch ([regex]::Escape($externalAssembly))) {
-        throw "Metadata v0.1.1 state was promoted but the external Recognition runtime was not actually invoked. Log:`n$runtimeLine"
+        throw "Metadata v0.1.2 state was promoted but the external Recognition runtime was not actually invoked. Log:`n$runtimeLine"
     }
 
     $running | Stop-Process -Force -ErrorAction SilentlyContinue
-    Write-Host 'Metadata v0.1.1 restart activation and real Recognition call PASS.'
+    Write-Host 'Metadata v0.1.2 restart activation and real Recognition call PASS.'
 
     Write-Host '== Build one-click acceptance assets =='
     Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
