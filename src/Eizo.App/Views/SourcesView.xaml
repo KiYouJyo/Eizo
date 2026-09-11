@@ -91,10 +91,10 @@
                 ColumnSpacing="16">
             <StackPanel VerticalAlignment="Center"
                         Spacing="4">
-              <TextBlock Text="{x:Bind Name}"
+              <TextBlock Text="{x:Bind Name, Mode=OneWay}"
                          Style="{StaticResource CardTitleText}"
                          TextTrimming="CharacterEllipsis" />
-              <TextBlock Text="{x:Bind Kind}"
+              <TextBlock Text="{x:Bind Kind, Mode=OneWay}"
                          Style="{StaticResource MetadataText}"
                          Opacity="0.7"
                          TextTrimming="CharacterEllipsis" />
@@ -102,7 +102,7 @@
 
             <TextBlock Grid.Column="1"
                        Width="340"
-                       Text="{x:Bind Summary}"
+                       Text="{x:Bind Summary, Mode=OneWay}"
                        VerticalAlignment="Center"
                        HorizontalAlignment="Right"
                        TextAlignment="Right"
@@ -111,8 +111,8 @@
                        Style="{StaticResource MetadataText}" />
 
             <Button Grid.Column="2"
-                    Tag="{x:Bind Id}"
-                    IsEnabled="{x:Bind CanScan}"
+                    Tag="{x:Bind Id, Mode=OneWay}"
+                    IsEnabled="{x:Bind CanScan, Mode=OneWay}"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Right"
                     Height="32"
@@ -124,13 +124,13 @@
                     VerticalContentAlignment="Center"
                     Click="ScanSourceButton_Click">
               <StackPanel Orientation="Horizontal"
-                          Spacing="{x:Bind ScanSpacing}"
+                          Spacing="{x:Bind ScanSpacing, Mode=OneWay}"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Center">
-                <ProgressRing Width="{x:Bind ScanProgressSize}"
-                              Height="{x:Bind ScanProgressSize}"
-                              IsActive="{x:Bind IsScanning}" />
-                <TextBlock Text="{x:Bind ScanText}"
+                <ProgressRing Width="{x:Bind ScanProgressSize, Mode=OneWay}"
+                              Height="{x:Bind ScanProgressSize, Mode=OneWay}"
+                              IsActive="{x:Bind IsScanning, Mode=OneWay}" />
+                <TextBlock Text="{x:Bind ScanText, Mode=OneWay}"
                            VerticalAlignment="Center" />
               </StackPanel>
             </Button>
