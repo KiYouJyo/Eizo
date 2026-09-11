@@ -556,7 +556,7 @@ public sealed class MediaCatalogStore
         var discoveredPaths = discovered
             .Select(item => item.LocalPath)
             .Where(static path => !string.IsNullOrWhiteSpace(path))
-            .Select(Path.GetFullPath)
+            .Select(static path => Path.GetFullPath(path!))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         lock (_sync)
