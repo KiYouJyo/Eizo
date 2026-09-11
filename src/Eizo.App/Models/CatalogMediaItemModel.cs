@@ -1,3 +1,4 @@
+using Eizo.MetadataIntegration;
 using Eizo.Recognition;
 
 namespace Eizo.Models;
@@ -22,19 +23,37 @@ public sealed record CatalogMediaItemModel(
     MediaCategoryKind? Category,
     string Meta,
     MediaLocationModel? Location = null,
-    MediaRecognitionSnapshot? Recognition = null)
+    MediaRecognitionSnapshot? Recognition = null,
+    MediaMetadataSnapshot? Metadata = null)
 {
     public bool IsParsed => !string.IsNullOrWhiteSpace(ParsedTitle);
 
     public string DisplayTitle =>
-        IsParsed
-            ? ParsedTitle!
-            : SourceTitle;
+        Metadata is { IsResolved: true, CanonicalTitle.Length: > 0 } metadata
+            ? metadata.CanonicalTitle!
+            : IsParsed
+                ? ParsedTitle!
+                : SourceTitle;
 
-    public string SecondaryTitle =>
-        IsParsed && !string.IsNullOrWhiteSpace(NativeTitle)
-            ? NativeTitle!
-            : SourceTitle;
+    public string SecondaryTitle
+    {
+        get
+        {
+            if (Metadata is { IsResolved: true } metadata &&
+                !string.IsNullOrWhiteSpace(metadata.OriginalTitle) &&
+                !string.Equals(
+                    metadata.OriginalTitle,
+                    DisplayTitle,
+                    StringComparison.CurrentCultureIgnoreCase))
+            {
+                return metadata.OriginalTitle!;
+            }
+
+            return IsParsed && !string.IsNullOrWhiteSpace(NativeTitle)
+                ? NativeTitle!
+                : SourceTitle;
+        }
+    }
 
     public string? LocalPath =>
         Location is { Kind: MediaLocationKind.LocalFile }
