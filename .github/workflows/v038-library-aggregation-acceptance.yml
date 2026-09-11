@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: eizo-v038-metadata-runtime-${{ github.ref }}
+  group: eizo-v038-library-aggregation-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
         with:
           name: Eizo-v0.3.8-library-aggregation-acceptance-assets
           path: |
-            ${{ runner.temp }}/Eizo-v0.3.8-acceptance/Eizo_0.3.7.0_x64.msixbundle
+            ${{ runner.temp }}/Eizo-v0.3.8-acceptance/Eizo_0.3.8.0_x64.msixbundle
             ${{ runner.temp }}/Eizo-v0.3.8-acceptance/Eizo-v0.3.8-x64-one-click.zip
             ${{ runner.temp }}/Eizo-v0.3.8-acceptance/SHA256SUMS.txt
           if-no-files-found: error
