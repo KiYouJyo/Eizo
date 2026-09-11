@@ -216,7 +216,7 @@ try {
     Remove-Item -LiteralPath $metadataRoot -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $metadataVersionRoot | Out-Null
     $metadataZip = Join-Path $runnerTemp 'Eizo.Recognition.Runtime-v0.2.8-x64.zip'
-    Invoke-WebRequest -Uri 'https://github.com/KiYouJyo/Eizo.Metadata/releases/download/v0.2.3/Eizo.Recognition.Runtime-v0.2.3-x64.zip' -OutFile $metadataZip -UseBasicParsing
+    Invoke-WebRequest -Uri 'https://github.com/KiYouJyo/Eizo.Metadata/releases/download/v0.2.8/Eizo.Recognition.Runtime-v0.2.8-x64.zip' -OutFile $metadataZip -UseBasicParsing
     $metadataExpected = '829534cc8444fc74061aaa87e44f129e72f91857a801341a59d3eb8dc696d0c9'
     $metadataActual = (Get-FileHash -LiteralPath $metadataZip -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($metadataActual -ne $metadataExpected) { throw "Published Metadata v0.2.8 digest mismatch: $metadataActual" }
@@ -280,7 +280,7 @@ try {
     Write-Host '== Build one-click acceptance assets =='
     Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $componentsRoot -Recurse -Force -ErrorAction SilentlyContinue
-    & ./packaging/New-GitHubOneClickInstallerPackage.ps1 -SignedBundlePath $bundlePath -PublicCertificatePath $cer -OutputDirectory $oneClickStaging -DisplayVersion '0.3.7' -PackageVersion '0.3.8.0'
+    & ./packaging/New-GitHubOneClickInstallerPackage.ps1 -SignedBundlePath $bundlePath -PublicCertificatePath $cer -OutputDirectory $oneClickStaging -DisplayVersion '0.3.8' -PackageVersion '0.3.8.0'
     $packageRoot = Join-Path $oneClickStaging 'Eizo-v0.3.8-x64-one-click'
     & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $packageRoot
     $oneClickZip = Join-Path $assets 'Eizo-v0.3.8-x64-one-click.zip'
