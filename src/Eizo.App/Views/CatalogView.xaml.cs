@@ -194,8 +194,8 @@ public sealed partial class CatalogView : UserControl
         }
 
         return new CatalogListItemViewModel(
-            Subject: subject,
-            Item: null,
+            subject,
+            null,
             subject.Category,
             subject.Category switch
             {
@@ -270,8 +270,8 @@ public sealed partial class CatalogView : UserControl
         }
 
         return new CatalogListItemViewModel(
-            Subject: null,
-            Item: item,
+            null,
+            item,
             item.Category,
             item.Category switch
             {
@@ -895,14 +895,14 @@ public sealed partial class CatalogView : UserControl
             CatalogSubjectModel subject) =>
             new(
                 subject,
-                Item: null,
+                null,
                 subject.Category,
                 subject.Title);
 
         public static CatalogDisplayEntry FromItem(
             CatalogMediaItemModel item) =>
             new(
-                Subject: null,
+                null,
                 item,
                 item.Category,
                 item.DisplayTitle);
