@@ -570,7 +570,7 @@ public sealed partial class CatalogView : UserControl
     }
 
     private static string BuildMetadataDetails(
-        MetadataIntegration.MediaMetadataSnapshot metadata)
+        Eizo.MetadataIntegration.MediaMetadataSnapshot metadata)
     {
         var builder = new StringBuilder();
         builder.AppendLine($"Runtime version: {metadata.RuntimeVersion}");
