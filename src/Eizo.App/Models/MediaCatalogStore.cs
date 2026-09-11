@@ -105,6 +105,12 @@ public sealed class MediaCatalogStore
                                 : null,
                             Meta = BuildRecognitionMeta(recognition),
                             Recognition = recognition,
+                            // Metadata is provenance-bound to the Recognition
+                            // snapshot that produced its provider search request.
+                            // Once Recognition is refreshed, keeping the old
+                            // Metadata snapshot would expose a known-invalid
+                            // runtime pairing until the next enrichment pass.
+                            Metadata = null,
                         };
                     }
 
@@ -321,6 +327,14 @@ public sealed class MediaCatalogStore
     {
         if (string.IsNullOrWhiteSpace(sourceId))
             return 0;
+
+        // The standalone scrape action does not rediscover media files, so it
+        // must explicitly refresh persisted Recognition snapshots before
+        // Metadata consumes them. Otherwise a component update can run the
+        // current Metadata runtime against Recognition output from an older
+        // runtime (for example Metadata 0.2.5 + Recognition snapshot 0.2.3).
+        await EnsureRecognitionRuntimeCurrentAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         CatalogMediaItemModel[] current;
         lock (_sync)
