@@ -388,9 +388,14 @@ public sealed partial class MainWindow : Window
         view.PlayRequested += (_, title) => OpenDetail(title, startPlaying: true);
     }
 
-    private void WireWorkspaceMediaView(CatalogView view) =>
+    private void WireWorkspaceMediaView(CatalogView view)
+    {
+        view.SubjectRequested += (_, subject) =>
+            OpenCatalogSubject(subject);
+
         view.MediaRequested += async (_, item) =>
             await OpenCatalogMediaAsync(item);
+    }
 
     private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch
     {
@@ -411,6 +416,53 @@ public sealed partial class MainWindow : Window
         "settings" => (T("Nav_Settings"), "\uE713"),
         _ => (T("Nav_Home"), "\uE80F")
     };
+
+    private void OpenCatalogSubject(
+        CatalogSubjectModel subject)
+    {
+        ArgumentNullException.ThrowIfNull(subject);
+
+        var key = "subject:" + subject.Key;
+
+        if (_tabs.TryGetValue(key, out var existing))
+        {
+            ShowCatalogSubjectInTab(existing, subject);
+            SelectTab(existing.Key);
+            return;
+        }
+
+        var state = new ShellTabState(
+            key,
+            ShellTabKind.Detail,
+            pageKey: null,
+            subject.Title,
+            "\uE8B2",
+            new Grid(),
+            navItem: null,
+            PreferredTabWidth)
+        {
+            MediaTitle = subject.Title
+        };
+
+        ShowCatalogSubjectInTab(state, subject);
+        AddTab(state, select: true);
+    }
+
+    private void ShowCatalogSubjectInTab(
+        ShellTabState state,
+        CatalogSubjectModel subject)
+    {
+        var view = new DetailView(subject);
+        view.MediaPlayRequested += async (_, item) =>
+            await OpenCatalogMediaAsync(item);
+
+        state.MediaTitle = subject.Title;
+        state.Episode = null;
+        ReplaceTabView(state, view);
+        state.Title = subject.Title;
+        state.Glyph = "\uE8B2";
+        UpdateTabIdentity(state);
+    }
 
     private async Task OpenCatalogMediaAsync(
         CatalogMediaItemModel item)
