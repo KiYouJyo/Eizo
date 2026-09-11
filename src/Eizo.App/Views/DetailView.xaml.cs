@@ -25,6 +25,9 @@ public sealed partial class DetailView : UserControl
         NativeTitleText.Text = title;
         MetaText.Text = string.Empty;
         OverviewText.Text = T("Detail_Overview");
+        ReleaseStatText.Text = "-";
+        EpisodeStatText.Text = L("2 集", "2 話", "2 episodes");
+        SourceStatText.Text = L("示例", "サンプル", "Sample");
 
         EpisodeList.ItemsSource = new EpisodeItemModel[]
         {
@@ -103,6 +106,7 @@ public sealed partial class DetailView : UserControl
             : metadata!.Overview;
 
         ApplyPoster(metadata?.PosterUrl);
+        ApplyBackdrop(metadata?.BackdropUrl);
 
         var provider = metadata?.Provider ?? "-";
         var subjectId = metadata?.ProviderSubjectId ?? "-";
@@ -112,6 +116,37 @@ public sealed partial class DetailView : UserControl
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.Ordinal)
             .Count();
+        var hasLocal = _subject.Items.Any(static item =>
+            item.Location?.Kind == MediaLocationKind.LocalFile);
+        var hasRemote = _subject.Items.Any(static item =>
+            item.Location?.Kind == MediaLocationKind.RemoteUri);
+        var sourceKind = (hasLocal, hasRemote) switch
+        {
+            (true, true) => L("本地 + 网盘", "ローカル + リモート", "Local + remote"),
+            (true, false) => L("本地", "ローカル", "Local"),
+            (false, true) => L("网盘", "リモート", "Remote"),
+            _ => L("未知来源", "不明なソース", "Unknown source"),
+        };
+
+        var releaseYear = metadata?.ReleaseDate is { Length: > 0 } releaseText &&
+                          DateOnly.TryParse(releaseText, out var releaseDate)
+            ? releaseDate.Year.ToString(CultureInfo.CurrentCulture)
+            : _subject.Items
+                .Select(static item => item.Recognition?.Year)
+                .FirstOrDefault(static year => year is not null)?
+                .ToString() ?? "-";
+
+        ReleaseStatText.Text = releaseYear;
+        EpisodeStatText.Text = L(
+            $"{_subject.EpisodeCount} 集",
+            $"{_subject.EpisodeCount} 話",
+            $"{_subject.EpisodeCount} episodes");
+        SourceStatText.Text = sourceCount > 0
+            ? L(
+                $"{sourceKind} · {sourceCount}",
+                $"{sourceKind} · {sourceCount}",
+                $"{sourceKind} · {sourceCount}")
+            : sourceKind;
 
         InfoText.Text = string.Join(
             Environment.NewLine,
@@ -148,24 +183,38 @@ public sealed partial class DetailView : UserControl
 
     private void ApplyPoster(string? posterUrl)
     {
-        PosterImage.Source = null;
-        PosterPlaceholder.Visibility = Visibility.Visible;
+        PosterImage.Source = CreateRemoteImage(posterUrl, 480);
+        PosterPlaceholder.Visibility = PosterImage.Source is null
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
 
-        if (string.IsNullOrWhiteSpace(posterUrl) ||
-            !Uri.TryCreate(posterUrl, UriKind.Absolute, out var uri))
+    private void ApplyBackdrop(string? backdropUrl) =>
+        BackdropImage.Source = CreateRemoteImage(backdropUrl, 1400);
+
+    private static BitmapImage? CreateRemoteImage(
+        string? url,
+        int decodePixelWidth)
+    {
+        if (string.IsNullOrWhiteSpace(url) ||
+            !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+             !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
         {
-            return;
+            return null;
         }
 
         try
         {
-            PosterImage.Source = new BitmapImage(uri);
-            PosterPlaceholder.Visibility = Visibility.Collapsed;
+            return new BitmapImage
+            {
+                UriSource = uri,
+                DecodePixelWidth = decodePixelWidth,
+            };
         }
-        catch (Exception)
+        catch
         {
-            PosterImage.Source = null;
-            PosterPlaceholder.Visibility = Visibility.Visible;
+            return null;
         }
     }
 
@@ -226,7 +275,10 @@ public sealed partial class DetailView : UserControl
             string.Empty,
             sourceStatus,
             0,
-            episode.PrimaryItem);
+            episode.PrimaryItem,
+            CreateRemoteImage(
+                episode.PrimaryItem.Metadata?.EpisodeThumbnailUrl,
+                320));
     }
 
     private static string FormatEpisodeNumber(decimal value) =>
