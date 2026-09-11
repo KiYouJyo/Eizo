@@ -128,7 +128,7 @@
                       ItemClick="EpisodeList_ItemClick"
                       ItemContainerStyle="{StaticResource SourceListItemStyle}">
               <ListView.ItemTemplate>
-                <DataTemplate x:DataType="models:EpisodeItemModel">
+                <DataTemplate x:DataType="models:EpisodeDisplayItemModel">
                   <Grid Height="88"
                         ColumnDefinitions="118,48,*,112"
                         ColumnSpacing="10">
