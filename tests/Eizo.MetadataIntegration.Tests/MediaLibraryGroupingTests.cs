@@ -40,6 +40,75 @@ public sealed class MediaLibraryGroupingTests
     }
 
     [Fact]
+    public void MixedResolvedAndUnresolvedEpisodesCollapseIntoResolvedSubject()
+    {
+        var assignments = MediaLibraryGrouping.AssignSubjectIdentities(
+        [
+            new(
+                "ep1",
+                Recognition("CLANNAD", 2007, 1),
+                Metadata("bangumi", "51", "CLANNAD")),
+            new(
+                "ep2",
+                Recognition("CLANNAD", 2007, 2),
+                Metadata: null),
+        ]);
+
+        Assert.Equal(2, assignments.Count);
+        Assert.NotNull(assignments[0].Identity);
+        Assert.NotNull(assignments[1].Identity);
+        Assert.Equal("metadata|bangumi|51", assignments[0].Identity!.Key);
+        Assert.Equal(assignments[0].Identity, assignments[1].Identity);
+    }
+
+    [Fact]
+    public void RecognitionFallbackDoesNotCrossMergeAmbiguousMetadataSubjects()
+    {
+        var assignments = MediaLibraryGrouping.AssignSubjectIdentities(
+        [
+            new(
+                "resolved-a",
+                Recognition("Example", 2024, 1),
+                Metadata("bangumi", "100", "Example")),
+            new(
+                "resolved-b",
+                Recognition("Example", 2024, 2),
+                Metadata("bangumi", "200", "Example")),
+            new(
+                "unresolved",
+                Recognition("Example", 2024, 3),
+                Metadata: null),
+        ]);
+
+        Assert.Equal("metadata|bangumi|100", assignments[0].Identity!.Key);
+        Assert.Equal("metadata|bangumi|200", assignments[1].Identity!.Key);
+        Assert.Equal(
+            "recognition|EXAMPLE|2024",
+            assignments[2].Identity!.Key);
+    }
+
+    [Fact]
+    public void RecognitionFallbackKeepsDifferentReleaseYearsSeparate()
+    {
+        var assignments = MediaLibraryGrouping.AssignSubjectIdentities(
+        [
+            new(
+                "resolved",
+                Recognition("Example", 2024, 1),
+                Metadata("bangumi", "100", "Example")),
+            new(
+                "remake",
+                Recognition("Example", 2025, 1),
+                Metadata: null),
+        ]);
+
+        Assert.Equal("metadata|bangumi|100", assignments[0].Identity!.Key);
+        Assert.Equal(
+            "recognition|EXAMPLE|2025",
+            assignments[1].Identity!.Key);
+    }
+
+    [Fact]
     public void AmbiguousItemsRemainStandalone()
     {
         var recognition = Recognition("Conflicting Show", 2020, 1) with

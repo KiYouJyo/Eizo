@@ -108,9 +108,8 @@ public sealed partial class CatalogView : UserControl
 
         var query = SearchBox?.Text?.Trim() ?? string.Empty;
         var snapshot = _catalog.SnapshotForDisplay();
-        UpdateRecognitionSummary(snapshot);
-
         var aggregation = CatalogSubjectAggregator.Build(snapshot);
+        UpdateRecognitionSummary(snapshot, aggregation);
         var displayEntries = aggregation.Subjects
             .Select(static subject =>
                 CatalogDisplayEntry.FromSubject(subject))
@@ -477,7 +476,8 @@ public sealed partial class CatalogView : UserControl
     }
 
     private void UpdateRecognitionSummary(
-        IReadOnlyList<CatalogMediaItemModel> items)
+        IReadOnlyList<CatalogMediaItemModel> items,
+        CatalogLibraryAggregation aggregation)
     {
         var recognized = 0;
         var ambiguous = 0;
@@ -517,9 +517,9 @@ public sealed partial class CatalogView : UserControl
         }
 
         RecognitionSummary.Text = L(
-            $"识别报告：共 {items.Count} · 已识别 {recognized} · 歧义 {ambiguous} · 未解决 {unresolved} · 错误 {errors} · 无快照 {missing} · 建议复核 {review}",
-            $"認識レポート：合計 {items.Count} · 認識済み {recognized} · 曖昧 {ambiguous} · 未解決 {unresolved} · エラー {errors} · スナップショットなし {missing} · 要確認 {review}",
-            $"Recognition report: {items.Count} total · {recognized} recognized · {ambiguous} ambiguous · {unresolved} unresolved · {errors} errors · {missing} missing snapshots · {review} review candidates");
+            $"媒体库：作品 {aggregation.Subjects.Count} · 独立媒体 {aggregation.StandaloneItems.Count} · 文件 {items.Count} ｜ 识别：已识别 {recognized} · 歧义 {ambiguous} · 未解决 {unresolved} · 错误 {errors} · 无快照 {missing} · 建议复核 {review}",
+            $"メディアライブラリ：作品 {aggregation.Subjects.Count} · 単独メディア {aggregation.StandaloneItems.Count} · ファイル {items.Count} ｜ 認識：認識済み {recognized} · 曖昧 {ambiguous} · 未解決 {unresolved} · エラー {errors} · スナップショットなし {missing} · 要確認 {review}",
+            $"Library: {aggregation.Subjects.Count} titles · {aggregation.StandaloneItems.Count} standalone media · {items.Count} files | Recognition: {recognized} recognized · {ambiguous} ambiguous · {unresolved} unresolved · {errors} errors · {missing} missing snapshots · {review} review candidates");
     }
 
     private static string BuildRecognitionCsv(
