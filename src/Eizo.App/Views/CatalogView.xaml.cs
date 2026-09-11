@@ -384,8 +384,9 @@ public sealed partial class CatalogView : UserControl
         IReadOnlyDictionary<string, string> sourceLabels)
     {
         var builder = new StringBuilder();
+        var runtimeVersion = MediaRecognitionService.RuntimeVersion;
         builder.AppendLine(
-            "NeedsReview,ReviewPriority,ReviewReason,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence");
+            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence");
 
         foreach (var item in items)
         {
@@ -415,6 +416,7 @@ public sealed partial class CatalogView : UserControl
                 needsReview ? "true" : "false",
                 reviewPriority,
                 ReviewReason(recognition),
+                runtimeVersion,
                 source,
                 item.SourceTitle,
                 recognition?.LogicalPath ?? string.Empty,
