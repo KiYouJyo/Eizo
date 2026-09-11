@@ -1,3 +1,5 @@
+using Eizo.MetadataIntegration;
+using Eizo.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 
@@ -59,6 +61,9 @@ public partial class App : Application
         try
         {
             _window = MainWindow = new MainWindow();
+
+            StartMetadataEnrichment();
+
             ActivatePendingRedirectedWindow();
             _window.Activate();
         }
@@ -66,6 +71,44 @@ public partial class App : Application
         {
             WriteStartupFailure("App.OnLaunched", ex);
             throw;
+        }
+    }
+
+    private void StartMetadataEnrichment()
+    {
+        if (string.Equals(
+                Environment.GetEnvironmentVariable("EIZO_METADATA_DISABLE"),
+                "1",
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var cacheDirectory = Path.Combine(
+            Windows.Storage.ApplicationData.Current.LocalCacheFolder.Path,
+            "Eizo",
+            "MetadataCache");
+
+        var options = new MediaMetadataServiceOptions(
+            EnableBangumi: true,
+            PreferredLanguage:
+                Localization.AppLocalizationService.Default.CurrentLanguage,
+            TmdbReadAccessToken:
+                Environment.GetEnvironmentVariable(
+                    "EIZO_TMDB_READ_ACCESS_TOKEN"),
+            CacheDirectory: cacheDirectory);
+
+        _metadataEnrichment = new MetadataEnrichmentCoordinator(
+            MediaCatalogStore.Default,
+            new MediaMetadataService(options));
+
+        if (_window is not null)
+        {
+            _window.Closed += (_, _) =>
+            {
+                _metadataEnrichment?.Dispose();
+                _metadataEnrichment = null;
+            };
         }
     }
 
