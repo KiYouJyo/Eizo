@@ -1,3 +1,4 @@
+using Eizo.MetadataIntegration;
 using Eizo.Recognition;
 
 namespace Eizo;
@@ -25,6 +26,7 @@ internal static class ComponentActivationDiagnostics
             }
 
             WriteRecognitionRuntimeProbe();
+            WriteMetadataRuntimeProbe();
         }
         catch (Exception) when (true)
         {
@@ -50,6 +52,39 @@ internal static class ComponentActivationDiagnostics
             ComponentRuntimeBootstrapper.MarkActivationFailed(EizoComponents.Recognition, exception.Message);
             var line =
                 $"{DateTimeOffset.UtcNow:O}\tversion=-\texternal=failed\tprobe=failed\tassembly=-\terror={Sanitize(exception.ToString())}{Environment.NewLine}";
+
+            lock (Gate)
+                File.AppendAllText(path, line);
+        }
+    }
+
+    private static void WriteMetadataRuntimeProbe()
+    {
+        var path = Path.Combine(
+            ComponentRuntimeBootstrapper.ComponentsRoot,
+            "metadata-runtime.log");
+
+        try
+        {
+            var runtime = MediaMetadataService.ProbeRuntime();
+            var status = ComponentRuntimeBootstrapper.GetStatus(
+                EizoComponents.Recognition);
+
+            var line =
+                $"{DateTimeOffset.UtcNow:O}\tversion={runtime.Version}\texternal={status.IsUsingExternalComponent}\tprobe={runtime.ProbeStatus}\tcore={Sanitize(runtime.CoreAssemblyPath)}\tproviders={Sanitize(runtime.ProvidersAssemblyPath)}{Environment.NewLine}";
+
+            lock (Gate)
+                File.AppendAllText(path, line);
+        }
+        catch (Exception exception)
+            when (exception is not OperationCanceledException)
+        {
+            ComponentRuntimeBootstrapper.MarkActivationFailed(
+                EizoComponents.Recognition,
+                exception.Message);
+
+            var line =
+                $"{DateTimeOffset.UtcNow:O}\tversion=-\texternal=failed\tprobe=failed\tcore=-\tproviders=-\terror={Sanitize(exception.ToString())}{Environment.NewLine}";
 
             lock (Gate)
                 File.AppendAllText(path, line);
