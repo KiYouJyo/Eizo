@@ -12,6 +12,16 @@ public sealed record MetadataProviderErrorSnapshot(
     string ErrorType,
     string Message);
 
+public sealed record MetadataResolutionCandidateSnapshot(
+    string Provider,
+    string ProviderSubjectId,
+    string SubjectKind,
+    string Title,
+    int? Year,
+    int ProviderRank,
+    double Score,
+    List<string> Evidence);
+
 public sealed record MediaMetadataSnapshot(
     string RuntimeVersion,
     string? RecognitionRuntimeVersion,
@@ -39,6 +49,24 @@ public sealed record MediaMetadataSnapshot(
     List<MetadataProviderErrorSnapshot> Errors,
     DateTimeOffset UpdatedAtUtc)
 {
+    public string? ResolutionReason { get; init; }
+
+    public List<string> SearchTitles { get; init; } = [];
+
+    public int CandidateCount { get; init; }
+
+    public double AutoResolveThreshold { get; init; } = 0.82;
+
+    public double MinimumLead { get; init; } = 0.06;
+
+    public double? BestScore { get; init; }
+
+    public double? SecondScore { get; init; }
+
+    public double? Lead { get; init; }
+
+    public List<MetadataResolutionCandidateSnapshot> TopCandidates { get; init; } = [];
+
     public bool IsResolved =>
         Status == MediaMetadataStatus.Resolved &&
         !string.IsNullOrWhiteSpace(Provider) &&
