@@ -79,7 +79,7 @@ internal static class EizoComponents
 
     public static readonly ComponentDefinition Recognition = new(
         Id: "Eizo.Recognition",
-        DisplayName: "Recognition",
+        DisplayName: "Metadata",
         FolderName: "Recognition",
         Repository: "KiYouJyo/Eizo.Metadata",
         ArchivePrefix: "Eizo.Recognition.Runtime",
@@ -87,7 +87,12 @@ internal static class EizoComponents
         HostContractName: "Eizo.Recognition.Host",
         HostContractVersion: new Version(1, 0, 0),
         AnchorAssemblyName: "Eizo.Metadata.Recognition",
-        RequiredAssemblyNames: ["Eizo.Metadata.Recognition"]);
+        RequiredAssemblyNames:
+        [
+            "Eizo.Metadata.Recognition",
+            "Eizo.Metadata.Core",
+            "Eizo.Metadata.Providers"
+        ]);
 
     public static IReadOnlyList<ComponentDefinition> All { get; } = [Playback, Recognition];
 }
