@@ -56,7 +56,7 @@
                TextWrapping="Wrap"
                Visibility="Collapsed" />
 
-    <ListView x:Name="ResultsList"
+    <GridView x:Name="ResultsList"
               Grid.Row="4"
               Margin="0,10,0,0"
               ItemsSource="{Binding Source={StaticResource GroupedCatalogItems}}"
@@ -66,60 +66,97 @@
               ContainerContentChanging="ResultsList_ContainerContentChanging"
               ScrollViewer.HorizontalScrollMode="Disabled"
               ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-      <ListView.GroupStyle>
+      <GridView.ItemsPanel>
+        <ItemsPanelTemplate>
+          <ItemsWrapGrid Orientation="Horizontal"
+                         ItemWidth="188"
+                         ItemHeight="318" />
+        </ItemsPanelTemplate>
+      </GridView.ItemsPanel>
+
+      <GridView.GroupStyle>
         <GroupStyle>
           <GroupStyle.HeaderTemplate>
             <DataTemplate>
               <TextBlock Text="{Binding Key}"
-                         Margin="0,12,0,6"
+                         Margin="0,14,0,8"
                          FontSize="18"
                          FontWeight="SemiBold" />
             </DataTemplate>
           </GroupStyle.HeaderTemplate>
         </GroupStyle>
-      </ListView.GroupStyle>
+      </GridView.GroupStyle>
 
-      <ListView.ItemContainerStyle>
-        <Style TargetType="ListViewItem">
-          <Setter Property="MinHeight" Value="68" />
-          <Setter Property="Padding" Value="14,8" />
-          <Setter Property="Margin" Value="0,0,0,8" />
+      <GridView.ItemContainerStyle>
+        <Style TargetType="GridViewItem">
+          <Setter Property="Width" Value="188" />
+          <Setter Property="Height" Value="318" />
+          <Setter Property="Padding" Value="0" />
+          <Setter Property="Margin" Value="0,0,12,14" />
           <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-          <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
-          <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
-          <Setter Property="BorderThickness" Value="1" />
-          <Setter Property="CornerRadius" Value="8" />
+          <Setter Property="VerticalContentAlignment" Value="Stretch" />
         </Style>
-      </ListView.ItemContainerStyle>
+      </GridView.ItemContainerStyle>
 
-      <ListView.ItemTemplate>
+      <GridView.ItemTemplate>
         <DataTemplate>
-          <Grid ColumnDefinitions="34,*,Auto"
-                ColumnSpacing="12">
-            <FontIcon Glyph="{Binding IconGlyph}"
-                      FontSize="18"
-                      VerticalAlignment="Center" />
+          <Border Width="180"
+                  Height="306"
+                  Margin="4,4,4,8"
+                  CornerRadius="10"
+                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                  BorderThickness="1">
+            <Grid RowDefinitions="220,*">
+              <Border CornerRadius="9,9,0,0"
+                      Background="{ThemeResource EizoSelectionBrush}">
+                <Grid>
+                  <FontIcon Glyph="{Binding IconGlyph}"
+                            FontSize="48"
+                            Opacity="0.18"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                  <Image Source="{Binding Artwork}"
+                         Stretch="UniformToFill" />
+                  <Border HorizontalAlignment="Right"
+                          VerticalAlignment="Top"
+                          Margin="8"
+                          Padding="7,3"
+                          CornerRadius="10"
+                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <TextBlock Text="{Binding TypeLabel}"
+                               FontSize="11"
+                               FontWeight="SemiBold" />
+                  </Border>
+                </Grid>
+              </Border>
 
-            <StackPanel Grid.Column="1"
-                        Spacing="2"
-                        VerticalAlignment="Center">
-              <TextBlock Text="{Binding Title}"
-                         FontWeight="SemiBold"
-                         TextTrimming="CharacterEllipsis" />
-              <TextBlock Text="{Binding Secondary}"
-                         Opacity="0.68"
-                         FontSize="12"
-                         TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-
-            <TextBlock Grid.Column="2"
-                       Text="{Binding TypeLabel}"
-                       VerticalAlignment="Center"
-                       Opacity="0.68"
-                       FontSize="12" />
-          </Grid>
+              <StackPanel Grid.Row="1"
+                          Padding="10,8,10,10"
+                          Spacing="3">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           MaxLines="2"
+                           TextWrapping="WrapWholeWords"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Subtitle}"
+                           FontSize="11"
+                           Opacity="0.62"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding MetaLine}"
+                           FontSize="11"
+                           Opacity="0.78"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding SourceLabel}"
+                           FontSize="10.5"
+                           Opacity="0.58"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Grid>
+          </Border>
         </DataTemplate>
-      </ListView.ItemTemplate>
-    </ListView>
+      </GridView.ItemTemplate>
+    </GridView>
   </Grid>
 </UserControl>
