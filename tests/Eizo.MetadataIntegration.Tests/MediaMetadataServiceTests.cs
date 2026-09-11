@@ -97,6 +97,11 @@ public sealed class MediaMetadataServiceTests
         Assert.Equal("攻壳机动队 STAND ALONE COMPLEX", result.CanonicalTitle);
         Assert.Equal("公安九课", result.EpisodeTitle);
         Assert.Equal(1m, result.EpisodeNumber);
+        Assert.Equal("Resolved", result.ResolutionReason);
+        Assert.Equal(1, result.CandidateCount);
+        Assert.NotNull(result.BestScore);
+        Assert.True(result.BestScore >= result.AutoResolveThreshold);
+        Assert.Contains("攻殻機動隊 STAND ALONE COMPLEX", result.SearchTitles);
     }
 
     [Fact]
@@ -175,6 +180,49 @@ public sealed class MediaMetadataServiceTests
         Assert.Equal(1, searchCalls);
         Assert.Equal(1, subjectCalls);
         Assert.Equal(1, episodeCalls);
+    }
+
+    [Fact]
+    public async Task EnrichAsync_ReportsNoCandidatesAndEffectiveSearchTitles()
+    {
+        using var cache = new TempDirectory();
+        var handler = new RecordingHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith(
+                    "/v0/search/subjects",
+                    StringComparison.Ordinal))
+            {
+                return Json("""{"data":[],"total":0}""");
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var service = new MediaMetadataService(
+            new MediaMetadataServiceOptions(
+                CacheDirectory: cache.Path),
+            new HttpClient(handler));
+
+        var result = await service.EnrichAsync(
+            Recognition(
+                "S01 攻壳机动队 STAND ALONE COMPLEX",
+                year: 2002,
+                episode: 1),
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(MediaMetadataStatus.Unresolved, result.Status);
+        Assert.Equal("NoCandidates", result.ResolutionReason);
+        Assert.Equal(0, result.CandidateCount);
+        Assert.Null(result.BestScore);
+        Assert.Contains(
+            "S01 攻壳机动队 STAND ALONE COMPLEX",
+            result.SearchTitles);
+        Assert.Contains(
+            "攻壳机动队 STAND ALONE COMPLEX",
+            result.SearchTitles);
+        Assert.Equal(0.82, result.AutoResolveThreshold, precision: 3);
+        Assert.Equal(0.06, result.MinimumLead, precision: 3);
     }
 
     [Fact]
