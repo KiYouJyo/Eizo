@@ -77,7 +77,10 @@ public sealed class MediaRecognitionService
                         evidence.Code,
                         evidence.Value,
                         evidence.Weight))
-                    .ToList());
+                    .ToList())
+            {
+                RuntimeVersion = RuntimeVersion,
+            };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -101,7 +104,10 @@ public sealed class MediaRecognitionService
                 ConfidenceLevel: "None",
                 IsAmbiguous: false,
                 Evidence: [],
-                ErrorCode: ex.GetType().Name);
+                ErrorCode: ex.GetType().Name)
+            {
+                RuntimeVersion = RuntimeVersion,
+            };
         }
     }
 
