@@ -46,6 +46,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-WebDavSourceManagementContract.ps1
 
+      - name: Validate Metadata scan lifecycle and diagnostics contract
+        shell: pwsh
+        run: ./scripts/Test-MetadataScanLifecycleContract.ps1
+
       - name: Validate player/source UI cleanup contract
         shell: pwsh
         run: ./scripts/Test-PlayerUiCleanupContract.ps1
