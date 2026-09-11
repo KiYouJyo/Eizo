@@ -15,6 +15,10 @@ public sealed record MediaMetadataServiceOptions(
 
 public sealed class MediaMetadataService
 {
+    private const double AutoResolveThreshold = 0.82;
+    private const double MinimumLead = 0.06;
+    private const int DiagnosticCandidateLimit = 5;
+
     private static readonly HttpClient SharedBangumiHttpClient = CreateHttpClient();
     private static readonly HttpClient SharedTmdbHttpClient = CreateHttpClient();
 
@@ -81,7 +85,11 @@ public sealed class MediaMetadataService
 
         _resolver = providers.Count == 0
             ? null
-            : new Core.MetadataResolver(providers);
+            : new Core.MetadataResolver(
+                providers,
+                new Core.MetadataResolverOptions(
+                    AutoResolveThreshold,
+                    MinimumLead));
     }
 
     public static string RuntimeVersion => ProbeRuntime().Version;
@@ -130,6 +138,7 @@ public sealed class MediaMetadataService
             recognition.EpisodeNumber ?? recognition.SpecialNumber,
             _preferredLanguage,
             Limit: 10);
+        var providerRequest = request.ForProviderSearch();
 
         Core.MetadataEnrichmentResult result;
         try
@@ -162,66 +171,74 @@ public sealed class MediaMetadataService
             result.Resolution.Best is null ||
             result.Subject is null)
         {
-            return new MediaMetadataSnapshot(
-                RuntimeVersion,
-                recognition.RuntimeVersion,
-                MediaMetadataStatus.Unresolved,
-                Provider: null,
-                ProviderSubjectId: null,
-                SubjectKind: null,
-                CanonicalTitle: null,
-                OriginalTitle: null,
-                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
-                [],
-                Overview: null,
-                ReleaseDate: null,
-                EpisodeCount: null,
-                PosterUrl: null,
-                BackdropUrl: null,
-                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
-                EpisodeNumber: recognition.EpisodeNumber ?? recognition.SpecialNumber,
-                EpisodeTitle: null,
-                EpisodeOriginalTitle: null,
-                EpisodeOverview: null,
-                EpisodeAirDate: null,
-                EpisodeThumbnailUrl: null,
-                result.Resolution.Confidence,
-                errors,
-                DateTimeOffset.UtcNow);
+            return WithResolutionDiagnostics(
+                new MediaMetadataSnapshot(
+                    RuntimeVersion,
+                    recognition.RuntimeVersion,
+                    MediaMetadataStatus.Unresolved,
+                    Provider: null,
+                    ProviderSubjectId: null,
+                    SubjectKind: null,
+                    CanonicalTitle: null,
+                    OriginalTitle: null,
+                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                    [],
+                    Overview: null,
+                    ReleaseDate: null,
+                    EpisodeCount: null,
+                    PosterUrl: null,
+                    BackdropUrl: null,
+                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                    EpisodeNumber: recognition.EpisodeNumber ?? recognition.SpecialNumber,
+                    EpisodeTitle: null,
+                    EpisodeOriginalTitle: null,
+                    EpisodeOverview: null,
+                    EpisodeAirDate: null,
+                    EpisodeThumbnailUrl: null,
+                    result.Resolution.Confidence,
+                    errors,
+                    DateTimeOffset.UtcNow),
+                providerRequest,
+                result.Resolution,
+                result.Subject);
         }
 
         var subject = result.Subject;
         var episode = result.Episode;
-        return new MediaMetadataSnapshot(
-            RuntimeVersion,
-            recognition.RuntimeVersion,
-            MediaMetadataStatus.Resolved,
-            subject.Id.Provider,
-            subject.Id.Value,
-            subject.Id.Kind.ToString(),
-            subject.Titles.Primary,
-            subject.Titles.Original,
-            new Dictionary<string, string>(
-                subject.Titles.Localized,
-                StringComparer.OrdinalIgnoreCase),
-            subject.Titles.Aliases.ToList(),
-            subject.Overview,
-            subject.ReleaseDate?.ToString("yyyy-MM-dd"),
-            subject.EpisodeCount,
-            subject.Artwork.PosterUrl,
-            subject.Artwork.BackdropUrl,
-            new Dictionary<string, string>(
-                subject.ExternalIds,
-                StringComparer.OrdinalIgnoreCase),
-            episode?.EpisodeNumber ?? recognition.EpisodeNumber ?? recognition.SpecialNumber,
-            episode?.Titles.Primary,
-            episode?.Titles.Original,
-            episode?.Overview,
-            episode?.AirDate?.ToString("yyyy-MM-dd"),
-            episode?.ThumbnailUrl,
-            result.Resolution.Confidence,
-            errors,
-            DateTimeOffset.UtcNow);
+        return WithResolutionDiagnostics(
+            new MediaMetadataSnapshot(
+                RuntimeVersion,
+                recognition.RuntimeVersion,
+                MediaMetadataStatus.Resolved,
+                subject.Id.Provider,
+                subject.Id.Value,
+                subject.Id.Kind.ToString(),
+                subject.Titles.Primary,
+                subject.Titles.Original,
+                new Dictionary<string, string>(
+                    subject.Titles.Localized,
+                    StringComparer.OrdinalIgnoreCase),
+                subject.Titles.Aliases.ToList(),
+                subject.Overview,
+                subject.ReleaseDate?.ToString("yyyy-MM-dd"),
+                subject.EpisodeCount,
+                subject.Artwork.PosterUrl,
+                subject.Artwork.BackdropUrl,
+                new Dictionary<string, string>(
+                    subject.ExternalIds,
+                    StringComparer.OrdinalIgnoreCase),
+                episode?.EpisodeNumber ?? recognition.EpisodeNumber ?? recognition.SpecialNumber,
+                episode?.Titles.Primary,
+                episode?.Titles.Original,
+                episode?.Overview,
+                episode?.AirDate?.ToString("yyyy-MM-dd"),
+                episode?.ThumbnailUrl,
+                result.Resolution.Confidence,
+                errors,
+                DateTimeOffset.UtcNow),
+            providerRequest,
+            result.Resolution,
+            subject);
     }
 
     public static MetadataRuntimeIdentity ProbeRuntime()
@@ -278,7 +295,85 @@ public sealed class MediaMetadataService
             EpisodeThumbnailUrl: null,
             Confidence: 0,
             [new MetadataProviderErrorSnapshot(provider, errorType, message)],
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow)
+        {
+            ResolutionReason = "Exception",
+        };
+
+    private static MediaMetadataSnapshot WithResolutionDiagnostics(
+        MediaMetadataSnapshot snapshot,
+        Core.MetadataSearchRequest providerRequest,
+        Core.MetadataResolution resolution,
+        Core.MetadataSubject? subject)
+    {
+        var best = resolution.Candidates.FirstOrDefault();
+        var second = resolution.Candidates.Skip(1).FirstOrDefault();
+        var lead = best is null
+            ? (double?)null
+            : second is null
+                ? 1.0
+                : best.Score - second.Score;
+
+        return snapshot with
+        {
+            ResolutionReason = ResolutionReason(resolution, subject),
+            SearchTitles = providerRequest.Titles.ToList(),
+            CandidateCount = resolution.Candidates.Count,
+            AutoResolveThreshold = AutoResolveThreshold,
+            MinimumLead = MinimumLead,
+            BestScore = best?.Score,
+            SecondScore = second?.Score,
+            Lead = lead,
+            TopCandidates = resolution.Candidates
+                .Take(DiagnosticCandidateLimit)
+                .Select(static candidate =>
+                    new MetadataResolutionCandidateSnapshot(
+                        candidate.Candidate.Id.Provider,
+                        candidate.Candidate.Id.Value,
+                        candidate.Candidate.Id.Kind.ToString(),
+                        candidate.Candidate.Titles.Primary,
+                        candidate.Candidate.Year,
+                        candidate.Candidate.ProviderRank,
+                        candidate.Score,
+                        candidate.Evidence.ToList()))
+                .ToList(),
+        };
+    }
+
+    private static string ResolutionReason(
+        Core.MetadataResolution resolution,
+        Core.MetadataSubject? subject)
+    {
+        if (resolution.Candidates.Count == 0)
+        {
+            return resolution.ProviderErrors.Count > 0
+                ? "ProviderErrorNoCandidates"
+                : "NoCandidates";
+        }
+
+        var best = resolution.Candidates[0];
+        var second = resolution.Candidates.Skip(1).FirstOrDefault();
+
+        if (best.Score < AutoResolveThreshold)
+        {
+            return "BelowAutoResolveThreshold";
+        }
+
+        if (second is not null &&
+            best.Score - second.Score < MinimumLead)
+        {
+            return "InsufficientLead";
+        }
+
+        if (!resolution.IsResolved)
+        {
+            return "Unresolved";
+        }
+
+        return subject is null
+            ? "SubjectUnavailable"
+            : "Resolved";
+    }
 
     private static RecognitionContracts.MediaKind ParseMediaKind(string value) =>
         Enum.TryParse<RecognitionContracts.MediaKind>(
