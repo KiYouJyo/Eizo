@@ -565,6 +565,9 @@ public sealed class MediaCatalogStore
                     case MediaMetadataStatus.Resolved:
                         resolved++;
                         break;
+                    case MediaMetadataStatus.Unresolved:
+                        unresolved++;
+                        break;
                     case MediaMetadataStatus.Error:
                         errors++;
                         break;
