@@ -8,6 +8,6 @@ public sealed record EpisodeDisplayItemModel(
     string NativeTitle,
     string Duration,
     string Status,
-    double Progress,
-    CatalogMediaItemModel? MediaItem,
-    ImageSource? Thumbnail);
+    double Progress = 0,
+    CatalogMediaItemModel? MediaItem = null,
+    ImageSource? Thumbnail = null);
