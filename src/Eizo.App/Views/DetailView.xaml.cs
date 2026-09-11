@@ -26,27 +26,27 @@ public sealed partial class DetailView : UserControl
         MetaText.Text = string.Empty;
         OverviewText.Text = T("Detail_Overview");
 
-        EpisodeList.ItemsSource =
-        [
-            new EpisodeItemModel(
+        EpisodeList.ItemsSource = new EpisodeItemModel[]
+        {
+            new(
                 "18",
                 "一级魔法使考试",
                 "一級魔法使試験",
                 "23:41",
                 "12:08",
                 52),
-            new EpisodeItemModel(
+            new(
                 "19",
                 "周密的计划",
                 "入念な計画",
                 "24:03",
                 T("Category_Unwatched")),
-        ];
+        };
 
-        SeasonComboBox.ItemsSource =
-        [
-            new SeasonOption(1, "Season 1"),
-        ];
+        SeasonComboBox.ItemsSource = new SeasonOption[]
+        {
+            new(1, "Season 1"),
+        };
         SeasonComboBox.SelectedIndex = 0;
         EpisodeCountText.Text = "2";
         InfoText.Text = T("Catalog_Unparsed");
