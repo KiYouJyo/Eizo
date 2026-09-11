@@ -33,8 +33,6 @@ public sealed class MediaCatalogStore
         _items = LoadCore();
         if (PruneMissingLocalFilesCore())
             SaveCore(_items);
-
-        _ = Task.Run(RefreshRecognitionRuntimeInBackgroundAsync);
     }
 
     public static MediaCatalogStore Default { get; } = new();
@@ -155,20 +153,6 @@ public sealed class MediaCatalogStore
         finally
         {
             _recognitionRefreshGate.Release();
-        }
-    }
-
-    private async Task RefreshRecognitionRuntimeInBackgroundAsync()
-    {
-        try
-        {
-            await EnsureRecognitionRuntimeCurrentAsync();
-        }
-        catch (Exception exception) when (
-            exception is not OperationCanceledException)
-        {
-            // Runtime refresh is opportunistic at startup. A later source scan
-            // or report export retries it and must not make startup fail.
         }
     }
 
@@ -674,7 +658,6 @@ public sealed class MediaCatalogStore
 
     private static bool IsTransportMetadataFailure(
         MediaMetadataSnapshot metadata) =>
-        metadata.Status == MediaMetadataStatus.Error &&
         metadata.Errors.Any(static error =>
             string.Equals(
                 error.ErrorType,
