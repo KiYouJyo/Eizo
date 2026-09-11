@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Eizo.MetadataIntegration</AssemblyName>
+    <RootNamespace>Eizo.MetadataIntegration</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Eizo.RecognitionIntegration/Eizo.RecognitionIntegration.csproj" />
+    <ProjectReference Include="../../.deps/Eizo.Metadata/src/Eizo.Metadata.Core/Eizo.Metadata.Core.csproj" />
+    <ProjectReference Include="../../.deps/Eizo.Metadata/src/Eizo.Metadata.Providers/Eizo.Metadata.Providers.csproj" />
+  </ItemGroup>
+</Project>
