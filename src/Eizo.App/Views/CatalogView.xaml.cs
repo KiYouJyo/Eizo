@@ -168,6 +168,19 @@ public sealed partial class CatalogView : UserControl
         if (!string.IsNullOrWhiteSpace(item.Meta))
             secondaryParts.Add(item.Meta);
 
+        if (item.Metadata is { IsResolved: true } metadata)
+        {
+            var metadataParts = new List<string>
+            {
+                $"Metadata:{metadata.Provider}"
+            };
+
+            if (DateOnly.TryParse(metadata.ReleaseDate, out var releaseDate))
+                metadataParts.Add(releaseDate.Year.ToString(CultureInfo.InvariantCulture));
+
+            secondaryParts.Add(string.Join(" ", metadataParts));
+        }
+
         if (!item.IsParsed)
             secondaryParts.Add(T("Catalog_Unparsed"));
 
@@ -239,6 +252,18 @@ public sealed partial class CatalogView : UserControl
 
         var flyout = new MenuFlyout();
         flyout.Items.Add(detailsItem);
+
+        if (viewModel.Item.Metadata is { IsResolved: true })
+        {
+            var metadataItem = new MenuFlyoutItem
+            {
+                Text = "Metadata details",
+                Tag = viewModel.Item
+            };
+            metadataItem.Click += MetadataDetails_Click;
+            flyout.Items.Add(metadataItem);
+        }
+
         container.ContextFlyout = flyout;
     }
 
@@ -277,6 +302,41 @@ public sealed partial class CatalogView : UserControl
         };
 
         await dialog.ShowAsync();
+    }
+
+    private async void MetadataDetails_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem
+            {
+                Tag: CatalogMediaItemModel
+                {
+                    Metadata: { IsResolved: true } metadata
+                }
+            })
+        {
+            return;
+        }
+
+        var details = new TextBox
+        {
+            Text = BuildMetadataDetails(metadata),
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = new FontFamily("Cascadia Mono"),
+            Height = 420,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+
+        await new ContentDialog
+        {
+            Title = "Metadata details",
+            Content = details,
+            CloseButtonText = "Close",
+            XamlRoot = XamlRoot
+        }.ShowAsync();
     }
 
     private async void ExportRecognitionButton_Click(
@@ -509,6 +569,47 @@ public sealed partial class CatalogView : UserControl
         return string.Empty;
     }
 
+    private static string BuildMetadataDetails(
+        MetadataIntegration.MediaMetadataSnapshot metadata)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine($"Runtime version: {metadata.RuntimeVersion}");
+        builder.AppendLine($"Recognition runtime: {metadata.RecognitionRuntimeVersion ?? "-"}");
+        builder.AppendLine($"Provider: {metadata.Provider ?? "-"}");
+        builder.AppendLine($"Subject ID: {metadata.ProviderSubjectId ?? "-"}");
+        builder.AppendLine($"Subject kind: {metadata.SubjectKind ?? "-"}");
+        builder.AppendLine($"Confidence: {metadata.Confidence:0.000}");
+        builder.AppendLine($"Canonical title: {metadata.CanonicalTitle ?? "-"}");
+        builder.AppendLine($"Original title: {metadata.OriginalTitle ?? "-"}");
+        builder.AppendLine($"Release date: {metadata.ReleaseDate ?? "-"}");
+        builder.AppendLine($"Episode count: {metadata.EpisodeCount?.ToString(CultureInfo.InvariantCulture) ?? "-"}");
+        builder.AppendLine($"Episode: {FormatNullableNumber(metadata.EpisodeNumber)}");
+        builder.AppendLine($"Episode title: {metadata.EpisodeTitle ?? "-"}");
+        builder.AppendLine($"Episode original title: {metadata.EpisodeOriginalTitle ?? "-"}");
+        builder.AppendLine($"Episode air date: {metadata.EpisodeAirDate ?? "-"}");
+        builder.AppendLine($"Poster: {metadata.PosterUrl ?? "-"}");
+        builder.AppendLine($"Backdrop: {metadata.BackdropUrl ?? "-"}");
+        builder.AppendLine($"Updated: {metadata.UpdatedAtUtc:O}");
+
+        if (metadata.ExternalIds.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("External IDs:");
+            foreach (var pair in metadata.ExternalIds.OrderBy(static item => item.Key))
+                builder.AppendLine($"  - {pair.Key}: {pair.Value}");
+        }
+
+        if (metadata.Errors.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Provider warnings:");
+            foreach (var error in metadata.Errors)
+                builder.AppendLine($"  - {error.Provider} | {error.ErrorType} | {error.Message}");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
     private static string BuildRecognitionDetails(
         MediaRecognitionSnapshot recognition)
     {
@@ -591,6 +692,17 @@ public sealed partial class CatalogView : UserControl
                (!string.IsNullOrWhiteSpace(item.NativeTitle) &&
                 item.NativeTitle.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
                item.Meta.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+               (item.Metadata is { } metadata &&
+                ((!string.IsNullOrWhiteSpace(metadata.CanonicalTitle) &&
+                  metadata.CanonicalTitle.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
+                 (!string.IsNullOrWhiteSpace(metadata.OriginalTitle) &&
+                  metadata.OriginalTitle.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
+                 metadata.LocalizedTitles.Values.Any(title =>
+                    title.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
+                 metadata.Aliases.Any(title =>
+                    title.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
+                 (!string.IsNullOrWhiteSpace(metadata.EpisodeTitle) &&
+                  metadata.EpisodeTitle.Contains(query, StringComparison.CurrentCultureIgnoreCase)))) ||
                (item.Recognition is { } recognition &&
                 ((!string.IsNullOrWhiteSpace(recognition.Title) &&
                   recognition.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
