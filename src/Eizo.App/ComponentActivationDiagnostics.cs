@@ -1,3 +1,5 @@
+using Eizo.Recognition;
+
 namespace Eizo;
 
 internal static class ComponentActivationDiagnostics
@@ -21,10 +23,36 @@ internal static class ComponentActivationDiagnostics
                 };
                 File.AppendAllLines(path, lines);
             }
+
+            WriteRecognitionRuntimeProbe();
         }
         catch (Exception) when (true)
         {
             // Diagnostics must never block application startup or bundled fallback.
+        }
+    }
+
+    private static void WriteRecognitionRuntimeProbe()
+    {
+        var path = Path.Combine(ComponentRuntimeBootstrapper.ComponentsRoot, "recognition-runtime.log");
+        try
+        {
+            var runtime = MediaRecognitionService.ProbeRuntime();
+            var status = ComponentRuntimeBootstrapper.GetStatus(EizoComponents.Recognition);
+            var line =
+                $"{DateTimeOffset.UtcNow:O}\tversion={runtime.Version}\texternal={status.IsUsingExternalComponent}\tprobe={runtime.ProbeStatus}\tassembly={Sanitize(runtime.AssemblyPath)}{Environment.NewLine}";
+
+            lock (Gate)
+                File.AppendAllText(path, line);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            ComponentRuntimeBootstrapper.MarkActivationFailed(EizoComponents.Recognition, exception.Message);
+            var line =
+                $"{DateTimeOffset.UtcNow:O}\tversion=-\texternal=failed\tprobe=failed\tassembly=-\terror={Sanitize(exception.ToString())}{Environment.NewLine}";
+
+            lock (Gate)
+                File.AppendAllText(path, line);
         }
     }
 
