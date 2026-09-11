@@ -60,19 +60,27 @@ internal static class CatalogSubjectAggregator
             StringComparer.Ordinal);
         var standalone = new List<CatalogMediaItemModel>();
 
-        foreach (var item in items)
+        var groupingInputs = items
+            .Select((item, index) =>
+                new MediaLibraryGroupingInput(
+                    index.ToString(CultureInfo.InvariantCulture),
+                    item.Recognition,
+                    item.Metadata))
+            .ToArray();
+        var assignments = MediaLibraryGrouping
+            .AssignSubjectIdentities(groupingInputs)
+            .ToDictionary(
+                static assignment => assignment.ItemKey,
+                static assignment => assignment.Identity,
+                StringComparer.Ordinal);
+
+        for (var index = 0; index < items.Count; index++)
         {
-            if (item.Recognition is null)
-            {
-                standalone.Add(item);
-                continue;
-            }
+            var item = items[index];
+            var itemKey = index.ToString(CultureInfo.InvariantCulture);
 
-            var identity = MediaLibraryGrouping.TryGetSubjectIdentity(
-                item.Recognition,
-                item.Metadata);
-
-            if (identity is null)
+            if (!assignments.TryGetValue(itemKey, out var identity) ||
+                identity is null)
             {
                 standalone.Add(item);
                 continue;
