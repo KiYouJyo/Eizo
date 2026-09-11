@@ -37,6 +37,7 @@ public sealed partial class CatalogView : UserControl
     }
 
     public event EventHandler<CatalogMediaItemModel>? MediaRequested;
+    public event EventHandler<CatalogSubjectModel>? SubjectRequested;
 
     private string T(string key) => _localization.GetString(key);
 
@@ -109,13 +110,19 @@ public sealed partial class CatalogView : UserControl
         var snapshot = _catalog.SnapshotForDisplay();
         UpdateRecognitionSummary(snapshot);
 
-        var filtered = snapshot
-            .Where(item => Matches(item, query))
-            .OrderBy(item => CategoryOrder(item.Category))
-            .ThenBy(item => item.DisplayTitle, StringComparer.CurrentCultureIgnoreCase)
+        var aggregation = CatalogSubjectAggregator.Build(snapshot);
+        var displayEntries = aggregation.Subjects
+            .Select(static subject =>
+                CatalogDisplayEntry.FromSubject(subject))
+            .Concat(
+                aggregation.StandaloneItems.Select(static item =>
+                    CatalogDisplayEntry.FromItem(item)))
+            .Where(entry => Matches(entry, query))
+            .OrderBy(entry => CategoryOrder(entry.Category))
+            .ThenBy(entry => entry.Title, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
 
-        if (filtered.Length == 0)
+        if (displayEntries.Length == 0)
         {
             ((CollectionViewSource)Resources["GroupedCatalogItems"]).Source =
                 Array.Empty<CatalogGroup>();
@@ -136,17 +143,72 @@ public sealed partial class CatalogView : UserControl
                     : source.DisplayName,
                 StringComparer.Ordinal);
 
-        var groups = filtered
-            .GroupBy(item => item.Category, CatalogCategoryComparer.Default)
+        var groups = displayEntries
+            .GroupBy(entry => entry.Category, CatalogCategoryComparer.Default)
             .Select(group =>
                 new CatalogGroup(
                     CategoryLabel(group.Key),
-                    group.Select(item => CreateListItem(item, sourceLabels))))
+                    group.Select(entry =>
+                        entry.Subject is { } subject
+                            ? CreateSubjectListItem(subject)
+                            : CreateListItem(entry.Item!, sourceLabels))))
             .ToArray();
 
         ((CollectionViewSource)Resources["GroupedCatalogItems"]).Source = groups;
         EmptyStateText.Visibility = Visibility.Collapsed;
         ResultsList.Visibility = Visibility.Visible;
+    }
+
+    private CatalogListItemViewModel CreateSubjectListItem(
+        CatalogSubjectModel subject)
+    {
+        var secondaryParts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(subject.NativeTitle) &&
+            !string.Equals(
+                subject.NativeTitle,
+                subject.Title,
+                StringComparison.CurrentCultureIgnoreCase))
+        {
+            secondaryParts.Add(subject.NativeTitle);
+        }
+
+        if (!string.IsNullOrWhiteSpace(subject.Meta))
+        {
+            secondaryParts.Add(subject.Meta);
+        }
+
+        var sources = subject.Items
+            .Select(static item => item.Location?.SourceId)
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+
+        if (sources > 1)
+        {
+            secondaryParts.Add(
+                L(
+                    $"{sources} 个来源",
+                    $"{sources} ソース",
+                    $"{sources} sources"));
+        }
+
+        return new CatalogListItemViewModel(
+            Subject: subject,
+            Item: null,
+            subject.Category,
+            subject.Category switch
+            {
+                MediaCategoryKind.Anime => "\uE8B2",
+                MediaCategoryKind.Series => "\uE8FD",
+                _ => "\uE8FD",
+            },
+            subject.Title,
+            string.Join(" · ", secondaryParts),
+            L(
+                $"{subject.EpisodeCount} 集",
+                $"{subject.EpisodeCount} 話",
+                $"{subject.EpisodeCount} episodes"));
     }
 
     private CatalogListItemViewModel CreateListItem(
@@ -208,7 +270,9 @@ public sealed partial class CatalogView : UserControl
         }
 
         return new CatalogListItemViewModel(
-            item,
+            Subject: null,
+            Item: item,
+            item.Category,
             item.Category switch
             {
                 MediaCategoryKind.Anime => "\uE8B2",
@@ -223,8 +287,21 @@ public sealed partial class CatalogView : UserControl
 
     private void ResultsList_ItemClick(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is CatalogListItemViewModel viewModel)
-            MediaRequested?.Invoke(this, viewModel.Item);
+        if (e.ClickedItem is not CatalogListItemViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.Subject is { } subject)
+        {
+            SubjectRequested?.Invoke(this, subject);
+            return;
+        }
+
+        if (viewModel.Item is { } item)
+        {
+            MediaRequested?.Invoke(this, item);
+        }
     }
 
     private void ResultsList_ContainerContentChanging(
@@ -237,34 +314,39 @@ public sealed partial class CatalogView : UserControl
             return;
         }
 
-        if (viewModel.Item.Recognition is null)
+        var flyout = new MenuFlyout();
+
+        if (viewModel.Item is { Recognition: { } } item)
         {
-            container.ContextFlyout = null;
-            return;
+            var detailsItem = new MenuFlyoutItem
+            {
+                Text = "Recognition details",
+                Tag = item
+            };
+            detailsItem.Click += RecognitionDetails_Click;
+            flyout.Items.Add(detailsItem);
         }
 
-        var detailsItem = new MenuFlyoutItem
-        {
-            Text = "Recognition details",
-            Tag = viewModel.Item
-        };
-        detailsItem.Click += RecognitionDetails_Click;
+        var metadataOwner = viewModel.Item?.Metadata is { IsResolved: true }
+            ? viewModel.Item
+            : viewModel.Subject?.Items.FirstOrDefault(static item =>
+                item.Metadata is { IsResolved: true });
 
-        var flyout = new MenuFlyout();
-        flyout.Items.Add(detailsItem);
-
-        if (viewModel.Item.Metadata is { IsResolved: true })
+        if (metadataOwner is not null)
         {
             var metadataItem = new MenuFlyoutItem
             {
                 Text = "Metadata details",
-                Tag = viewModel.Item
+                Tag = metadataOwner
             };
             metadataItem.Click += MetadataDetails_Click;
             flyout.Items.Add(metadataItem);
         }
 
-        container.ContextFlyout = flyout;
+        container.ContextFlyout =
+            flyout.Items.Count > 0
+                ? flyout
+                : null;
     }
 
     private async void RecognitionDetails_Click(
@@ -682,6 +764,62 @@ public sealed partial class CatalogView : UserControl
             _ => null
         };
 
+    private static bool Matches(
+        CatalogDisplayEntry entry,
+        string query)
+    {
+        if (entry.Subject is { } subject)
+        {
+            return Matches(subject, query);
+        }
+
+        return entry.Item is { } item && Matches(item, query);
+    }
+
+    private static bool Matches(
+        CatalogSubjectModel subject,
+        string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        if (subject.Title.Contains(
+                query,
+                StringComparison.CurrentCultureIgnoreCase) ||
+            subject.NativeTitle.Contains(
+                query,
+                StringComparison.CurrentCultureIgnoreCase) ||
+            subject.Meta.Contains(
+                query,
+                StringComparison.CurrentCultureIgnoreCase))
+        {
+            return true;
+        }
+
+        if (subject.Metadata is { } metadata &&
+            (metadata.LocalizedTitles.Values.Any(title =>
+                 title.Contains(
+                     query,
+                     StringComparison.CurrentCultureIgnoreCase)) ||
+             metadata.Aliases.Any(title =>
+                 title.Contains(
+                     query,
+                     StringComparison.CurrentCultureIgnoreCase))))
+        {
+            return true;
+        }
+
+        return subject.Episodes.Any(episode =>
+            episode.Title.Contains(
+                query,
+                StringComparison.CurrentCultureIgnoreCase) ||
+            episode.NativeTitle.Contains(
+                query,
+                StringComparison.CurrentCultureIgnoreCase));
+    }
+
     private static bool Matches(CatalogMediaItemModel item, string query)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -747,8 +885,33 @@ public sealed partial class CatalogView : UserControl
             : $"{value:0.#} {units[unit]}";
     }
 
+    private sealed record CatalogDisplayEntry(
+        CatalogSubjectModel? Subject,
+        CatalogMediaItemModel? Item,
+        MediaCategoryKind? Category,
+        string Title)
+    {
+        public static CatalogDisplayEntry FromSubject(
+            CatalogSubjectModel subject) =>
+            new(
+                subject,
+                Item: null,
+                subject.Category,
+                subject.Title);
+
+        public static CatalogDisplayEntry FromItem(
+            CatalogMediaItemModel item) =>
+            new(
+                Subject: null,
+                item,
+                item.Category,
+                item.DisplayTitle);
+    }
+
     private sealed record CatalogListItemViewModel(
-        CatalogMediaItemModel Item,
+        CatalogSubjectModel? Subject,
+        CatalogMediaItemModel? Item,
+        MediaCategoryKind? Category,
         string IconGlyph,
         string Title,
         string Secondary,
