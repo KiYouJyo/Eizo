@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using Eizo.MetadataIntegration;
 using Eizo.Recognition;
 
 namespace Eizo.Models;
@@ -40,6 +41,13 @@ public sealed class MediaCatalogStore
 
     public event EventHandler? Changed;
 
+    /// <summary>
+    /// Raised only when new or refreshed Recognition input should be considered
+    /// for online metadata enrichment. Metadata writes themselves do not raise
+    /// this event, preventing enrichment feedback loops.
+    /// </summary>
+    public event EventHandler? MetadataEnrichmentRequested;
+
     public IReadOnlyList<CatalogMediaItemModel> Snapshot()
     {
         lock (_sync)
@@ -61,6 +69,81 @@ public sealed class MediaCatalogStore
                         StringComparison.Ordinal))
                 .ToArray();
         }
+    }
+
+    internal CatalogMediaItemModel? FindByKey(string key)
+    {
+        lock (_sync)
+        {
+            return _items.FirstOrDefault(item =>
+                string.Equals(
+                    ItemKey(item),
+                    key,
+                    StringComparison.Ordinal));
+        }
+    }
+
+    internal bool ApplyMetadata(
+        string key,
+        MediaMetadataSnapshot metadata)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentNullException.ThrowIfNull(metadata);
+
+        var changed = false;
+        lock (_sync)
+        {
+            var index = _items.FindIndex(item =>
+                string.Equals(
+                    ItemKey(item),
+                    key,
+                    StringComparison.Ordinal));
+            if (index < 0)
+            {
+                return false;
+            }
+
+            var current = _items[index];
+            if (current.Recognition is null ||
+                !metadata.MatchesRecognitionRuntime(
+                    current.Recognition.RuntimeVersion))
+            {
+                return false;
+            }
+
+            if (current.Metadata is { } existing &&
+                string.Equals(
+                    existing.RuntimeVersion,
+                    metadata.RuntimeVersion,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    existing.Provider,
+                    metadata.Provider,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    existing.ProviderSubjectId,
+                    metadata.ProviderSubjectId,
+                    StringComparison.Ordinal) &&
+                existing.EpisodeNumber == metadata.EpisodeNumber &&
+                string.Equals(
+                    existing.EpisodeTitle,
+                    metadata.EpisodeTitle,
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            _items[index] = current with { Metadata = metadata };
+            SaveCore(_items);
+            changed = true;
+        }
+
+        if (changed)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        return changed;
     }
 
     public async Task<int> EnsureRecognitionRuntimeCurrentAsync(
@@ -99,7 +182,7 @@ public sealed class MediaCatalogStore
 
                         var logicalPath = item.Recognition!.LogicalPath;
                         var recognition = RecognitionService.Recognize(logicalPath);
-                        result[RecognitionCacheKey(item)] = item with
+                        result[ItemKey(item)] = item with
                         {
                             ParsedTitle = recognition.ShouldApplyDisplayTitle
                                 ? recognition.Title
@@ -120,7 +203,7 @@ public sealed class MediaCatalogStore
                 {
                     var item = _items[i];
                     if (!refreshed.TryGetValue(
-                            RecognitionCacheKey(item),
+                            ItemKey(item),
                             out var updated))
                     {
                         continue;
@@ -145,7 +228,10 @@ public sealed class MediaCatalogStore
             }
 
             if (changed > 0)
+            {
                 Changed?.Invoke(this, EventArgs.Empty);
+                MetadataEnrichmentRequested?.Invoke(this, EventArgs.Empty);
+            }
 
             return changed;
         }
@@ -169,7 +255,7 @@ public sealed class MediaCatalogStore
         }
     }
 
-    private static string RecognitionCacheKey(CatalogMediaItemModel item)
+    internal static string ItemKey(CatalogMediaItemModel item)
     {
         var location = item.Location;
         return location is null
@@ -210,7 +296,13 @@ public sealed class MediaCatalogStore
 
             if (index >= 0)
             {
-                if (_items[index] != item)
+                var existing = _items[index];
+                if (CanReuseMetadata(existing, item))
+                {
+                    item = item with { Metadata = existing.Metadata };
+                }
+
+                if (existing != item)
                 {
                     _items[index] = item;
                     changed = true;
@@ -227,7 +319,10 @@ public sealed class MediaCatalogStore
         }
 
         if (changed)
+        {
             Changed?.Invoke(this, EventArgs.Empty);
+            MetadataEnrichmentRequested?.Invoke(this, EventArgs.Empty);
+        }
 
         return true;
     }
@@ -379,13 +474,35 @@ public sealed class MediaCatalogStore
 
         lock (_sync)
         {
+            var previous = _items
+                .Where(item =>
+                    string.Equals(
+                        item.Location?.SourceId,
+                        source.Id,
+                        StringComparison.Ordinal))
+                .ToDictionary(
+                    ItemKey,
+                    StringComparer.Ordinal);
+
             _items.RemoveAll(item =>
                 string.Equals(
                     item.Location?.SourceId,
                     source.Id,
                     StringComparison.Ordinal));
 
-            _items.AddRange(discovered);
+            foreach (var item in discovered)
+            {
+                if (previous.TryGetValue(ItemKey(item), out var existing) &&
+                    CanReuseMetadata(existing, item))
+                {
+                    _items.Add(item with { Metadata = existing.Metadata });
+                }
+                else
+                {
+                    _items.Add(item);
+                }
+            }
+
             SaveCore(_items);
         }
 
@@ -394,6 +511,7 @@ public sealed class MediaCatalogStore
             DateTimeOffset.UtcNow);
 
         Changed?.Invoke(this, EventArgs.Empty);
+        MetadataEnrichmentRequested?.Invoke(this, EventArgs.Empty);
         return discovered.Count;
     }
 
@@ -443,6 +561,18 @@ public sealed class MediaCatalogStore
 
         lock (_sync)
         {
+            var previous = _items
+                .Where(item =>
+                    string.Equals(
+                        item.Location?.SourceId,
+                        source.Id,
+                        StringComparison.Ordinal) ||
+                    (item.LocalPath is { Length: > 0 } localPath &&
+                     discoveredPaths.Contains(Path.GetFullPath(localPath))))
+                .ToDictionary(
+                    ItemKey,
+                    StringComparer.Ordinal);
+
             _items.RemoveAll(item =>
                 string.Equals(
                     item.Location?.SourceId,
@@ -451,7 +581,19 @@ public sealed class MediaCatalogStore
                 (item.LocalPath is { Length: > 0 } localPath &&
                  discoveredPaths.Contains(Path.GetFullPath(localPath))));
 
-            _items.AddRange(discovered);
+            foreach (var item in discovered)
+            {
+                if (previous.TryGetValue(ItemKey(item), out var existing) &&
+                    CanReuseMetadata(existing, item))
+                {
+                    _items.Add(item with { Metadata = existing.Metadata });
+                }
+                else
+                {
+                    _items.Add(item);
+                }
+            }
+
             SaveCore(_items);
         }
 
@@ -460,6 +602,7 @@ public sealed class MediaCatalogStore
             DateTimeOffset.UtcNow);
 
         Changed?.Invoke(this, EventArgs.Empty);
+        MetadataEnrichmentRequested?.Invoke(this, EventArgs.Empty);
         return discovered.Length;
     }
 
@@ -664,6 +807,28 @@ public sealed class MediaCatalogStore
                 pending.Push(directory);
             }
         }
+    }
+
+    private static bool CanReuseMetadata(
+        CatalogMediaItemModel existing,
+        CatalogMediaItemModel discovered)
+    {
+        if (existing.Metadata is null ||
+            existing.Recognition is null ||
+            discovered.Recognition is null)
+        {
+            return false;
+        }
+
+        var left = existing.Recognition;
+        var right = discovered.Recognition;
+
+        return string.Equals(left.Title, right.Title, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(left.MediaKind, right.MediaKind, StringComparison.OrdinalIgnoreCase) &&
+               left.Year == right.Year &&
+               left.SeasonNumber == right.SeasonNumber &&
+               left.EpisodeNumber == right.EpisodeNumber &&
+               left.SpecialNumber == right.SpecialNumber;
     }
 
     private static bool IsAvailable(CatalogMediaItemModel item) =>
