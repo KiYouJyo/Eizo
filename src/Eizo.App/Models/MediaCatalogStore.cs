@@ -313,9 +313,9 @@ public sealed class MediaCatalogStore
         progress?.Invoke(
             new MediaScanProgress(
                 source.Id,
-                directoriesProcessed: 0,
-                directoriesPending: 0,
-                videosDiscovered: discovered.Length,
+                DirectoriesProcessed: 0,
+                DirectoriesPending: 0,
+                VideosDiscovered: discovered.Length,
                 CurrentPath: null,
                 Stage: MediaScanStage.Committing));
 
@@ -619,9 +619,9 @@ public sealed class MediaCatalogStore
             progress?.Invoke(
                 new MediaScanProgress(
                     sourceId,
-                    directoriesProcessed: 0,
-                    directoriesPending: 0,
-                    videosDiscovered: discovered.Length,
+                    DirectoriesProcessed: 0,
+                    DirectoriesPending: 0,
+                    VideosDiscovered: discovered.Length,
                     CurrentPath: null,
                     Stage: MediaScanStage.Metadata,
                     MetadataProcessed: processed,
