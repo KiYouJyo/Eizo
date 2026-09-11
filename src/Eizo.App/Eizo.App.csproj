@@ -68,4 +68,42 @@
     <Message Importance="high"
              Text="Relocated bundled Playback and Recognition implementations for independent runtime resolution." />
   </Target>
+
+  <!-- MSIX packaging reconstructs PackageLayout from resolved package/project inputs after
+       CopyFilesToOutputDirectory. Relocate the updateable managed runtimes at that boundary too,
+       otherwise the root probing path shadows a validated external component. -->
+  <Target Name="RelocatePackagedUpdateableComponents"
+          AfterTargets="_CreatePackageLayout"
+          BeforeTargets="_CreateMainPackageFileMap"
+          Condition="'$(Configuration)' == 'Release' and Exists('$(IntermediateOutputPath)PackageLayout')">
+    <PropertyGroup>
+      <_EizoPackageLayoutRoot>$(IntermediateOutputPath)PackageLayout</_EizoPackageLayoutRoot>
+    </PropertyGroup>
+    <ItemGroup>
+      <_PackagedPlaybackComponentAssembly Include="$(_EizoPackageLayoutRoot)\Eizo.Playback.Abstractions.dll" />
+      <_PackagedPlaybackComponentAssembly Include="$(_EizoPackageLayoutRoot)\Eizo.Playback.Core.dll" />
+      <_PackagedPlaybackComponentAssembly Include="$(_EizoPackageLayoutRoot)\Eizo.Playback.LibVLC.dll" />
+      <_PackagedPlaybackComponentAssembly Include="$(_EizoPackageLayoutRoot)\Eizo.Playback.LibVLC.WinUI.dll" />
+      <_PackagedRecognitionComponentAssembly Include="$(_EizoPackageLayoutRoot)\Eizo.Metadata.Recognition.dll" />
+    </ItemGroup>
+
+    <Error Condition="!Exists('%(_PackagedPlaybackComponentAssembly.Identity)')"
+           Text="Playback runtime assembly is missing from PackageLayout before relocation: %(_PackagedPlaybackComponentAssembly.Identity)" />
+    <Error Condition="!Exists('%(_PackagedRecognitionComponentAssembly.Identity)')"
+           Text="Recognition runtime assembly is missing from PackageLayout before relocation: %(_PackagedRecognitionComponentAssembly.Identity)" />
+
+    <MakeDir Directories="$(_EizoPackageLayoutRoot)\Components\Bundled\Playback" />
+    <MakeDir Directories="$(_EizoPackageLayoutRoot)\Components\Bundled\Recognition" />
+    <Copy SourceFiles="@(_PackagedPlaybackComponentAssembly)"
+          DestinationFolder="$(_EizoPackageLayoutRoot)\Components\Bundled\Playback"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_PackagedRecognitionComponentAssembly)"
+          DestinationFolder="$(_EizoPackageLayoutRoot)\Components\Bundled\Recognition"
+          SkipUnchangedFiles="true" />
+    <Delete Files="@(_PackagedPlaybackComponentAssembly)" />
+    <Delete Files="@(_PackagedRecognitionComponentAssembly)" />
+    <Message Importance="high"
+             Text="Relocated packaged Playback and Recognition runtimes out of the MSIX default probing root." />
+  </Target>
+
 </Project>
