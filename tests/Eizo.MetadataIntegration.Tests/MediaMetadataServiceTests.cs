@@ -100,6 +100,84 @@ public sealed class MediaMetadataServiceTests
     }
 
     [Fact]
+    public async Task EnrichAsync_ReusesSubjectAndEpisodeCachesAcrossEpisodes()
+    {
+        using var cache = new TempDirectory();
+        var searchCalls = 0;
+        var subjectCalls = 0;
+        var episodeCalls = 0;
+
+        var handler = new RecordingHandler(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+            if (path.EndsWith("/v0/search/subjects", StringComparison.Ordinal))
+            {
+                searchCalls++;
+                return Json("""
+                {
+                  "data": [
+                    {
+                      "id": 253,
+                      "name": "攻殻機動隊 STAND ALONE COMPLEX",
+                      "name_cn": "攻壳机动队 STAND ALONE COMPLEX",
+                      "date": "2002-10-01",
+                      "platform": "TV"
+                    }
+                  ],
+                  "total": 1
+                }
+                """);
+            }
+
+            if (path.EndsWith("/v0/subjects/253", StringComparison.Ordinal))
+            {
+                subjectCalls++;
+                return Json("""
+                {
+                  "id": 253,
+                  "name": "攻殻機動隊 STAND ALONE COMPLEX",
+                  "name_cn": "攻壳机动队 STAND ALONE COMPLEX",
+                  "date": "2002-10-01",
+                  "platform": "TV",
+                  "eps": 26
+                }
+                """);
+            }
+
+            if (path.EndsWith("/v0/episodes", StringComparison.Ordinal))
+            {
+                episodeCalls++;
+                return Json("""
+                {
+                  "data": [
+                    { "id": 1001, "type": 0, "sort": 1, "name": "EP1" },
+                    { "id": 1002, "type": 0, "sort": 2, "name": "EP2" }
+                  ],
+                  "total": 2
+                }
+                """);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var service = new MediaMetadataService(
+            new MediaMetadataServiceOptions(CacheDirectory: cache.Path),
+            new HttpClient(handler));
+
+        _ = await service.EnrichAsync(
+            Recognition("攻殻機動隊 STAND ALONE COMPLEX", 2002, 1),
+            TestContext.Current.CancellationToken);
+        _ = await service.EnrichAsync(
+            Recognition("攻殻機動隊 STAND ALONE COMPLEX", 2002, 2),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, searchCalls);
+        Assert.Equal(1, subjectCalls);
+        Assert.Equal(1, episodeCalls);
+    }
+
+    [Fact]
     public async Task EnrichAsync_DoesNotCallNetworkForAmbiguousRecognition()
     {
         using var cache = new TempDirectory();
