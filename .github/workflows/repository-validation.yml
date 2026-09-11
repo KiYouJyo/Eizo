@@ -69,6 +69,9 @@ jobs:
       - name: Run Recognition integration tests
         run: dotnet test tests/Eizo.RecognitionIntegration.Tests/Eizo.RecognitionIntegration.Tests.csproj --configuration Release
 
+      - name: Run Metadata integration tests
+        run: dotnet test tests/Eizo.MetadataIntegration.Tests/Eizo.MetadataIntegration.Tests.csproj --configuration Release
+
   winui-build:
     name: Build WinUI 3 app
     runs-on: windows-latest
@@ -87,6 +90,10 @@ jobs:
       - name: Restore pinned Eizo.Playback packages
         shell: pwsh
         run: ./scripts/Restore-EizoPlayback.ps1
+
+      - name: Restore pinned Eizo.Metadata source
+        shell: pwsh
+        run: ./scripts/Restore-EizoMetadata.ps1
 
       - name: Restore and build
         shell: pwsh
