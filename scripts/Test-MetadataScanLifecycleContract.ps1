@@ -55,6 +55,41 @@ foreach ($required in @(
     }
 }
 
+$scrapeStart = $catalog.IndexOf('public async Task<int> ScrapeSourceMetadataAsync(')
+$scrapeEnd = $catalog.IndexOf(
+    'private async Task<CatalogMediaItemModel[]> DiscoverRemoteSourceAsync',
+    $scrapeStart)
+if ($scrapeStart -lt 0 -or $scrapeEnd -le $scrapeStart) {
+    throw 'Metadata scrape-recognition contract violation: standalone scrape method was not found.'
+}
+
+$scrapeMethod = $catalog.Substring(
+    $scrapeStart,
+    $scrapeEnd - $scrapeStart)
+$refreshIndex = $scrapeMethod.IndexOf('EnsureRecognitionRuntimeCurrentAsync(')
+$snapshotIndex = $scrapeMethod.IndexOf('current = _items')
+if ($refreshIndex -lt 0 -or
+    $snapshotIndex -lt 0 -or
+    $refreshIndex -ge $snapshotIndex) {
+    throw 'Metadata scrape-recognition contract violation: Recognition must refresh before the standalone scrape snapshots catalog items.'
+}
+
+$recognitionRefreshStart = $catalog.IndexOf(
+    'public async Task<int> EnsureRecognitionRuntimeCurrentAsync(')
+$itemKeyStart = $catalog.IndexOf(
+    'internal static string ItemKey',
+    $recognitionRefreshStart)
+if ($recognitionRefreshStart -lt 0 -or $itemKeyStart -le $recognitionRefreshStart) {
+    throw 'Metadata scrape-recognition contract violation: Recognition refresh method was not found.'
+}
+
+$recognitionRefresh = $catalog.Substring(
+    $recognitionRefreshStart,
+    $itemKeyStart - $recognitionRefreshStart)
+if ($recognitionRefresh -notmatch 'Metadata\s*=\s*null') {
+    throw 'Metadata scrape-recognition contract violation: refreshing Recognition must invalidate Metadata bound to the stale Recognition snapshot.'
+}
+
 $scanRunStart = $scanCoordinator.IndexOf('private async Task<MediaScanSnapshot> RunAsync(')
 $metadataRunStart = $scanCoordinator.IndexOf('private async Task<MediaScanSnapshot> RunMetadataAsync(')
 if ($scanRunStart -lt 0 -or $metadataRunStart -le $scanRunStart) {
