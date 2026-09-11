@@ -147,8 +147,8 @@ try {
         Import-Certificate -FilePath $cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
     }
     Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
-    $componentsRoot = Join-Path $env:LOCALAPPDATA 'Eizo\Components'
-    Remove-Item -LiteralPath $componentsRoot -Recurse -Force -ErrorAction SilentlyContinue
+    $legacyComponentsRoot = Join-Path $env:LOCALAPPDATA 'Eizo\Components'
+    Remove-Item -LiteralPath $legacyComponentsRoot -Recurse -Force -ErrorAction SilentlyContinue
 
     $runtimeInstaller = Join-Path $runnerTemp 'WindowsAppRuntimeInstall-x64.exe'
     Invoke-WebRequest -Uri 'https://aka.ms/windowsappsdk/1.8/1.8.260710003/windowsappruntimeinstall-x64.exe' -OutFile $runtimeInstaller -UseBasicParsing
@@ -165,9 +165,24 @@ try {
     if (-not $pkg -or [string]$pkg.Version -ne '0.3.6.0') {
         throw "Installed package version mismatch: $($pkg.Version)"
     }
+
+    $packageLocalState = Join-Path $env:LOCALAPPDATA "Packages\$($pkg.PackageFamilyName)\LocalState"
+    $componentsRoot = Join-Path $packageLocalState 'Eizo\Components'
+    Remove-Item -LiteralPath $componentsRoot -Recurse -Force -ErrorAction SilentlyContinue
+
     $running = Start-EizoAndAssertAlive $pkg
+    $bundledRuntimeLog = Join-Path $componentsRoot 'recognition-runtime.log'
+    if (-not (Test-Path $bundledRuntimeLog)) {
+        throw "Bundled Recognition runtime probe log was not written at $bundledRuntimeLog"
+    }
+    $bundledRuntimeLine = @(Get-Content -LiteralPath $bundledRuntimeLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
+    $bundledAssembly = Join-Path ([string]$pkg.InstallLocation) 'Components\Bundled\Recognition\Eizo.Metadata.Recognition.dll'
+    if ($bundledRuntimeLine -notmatch '\tversion=0\.1\.0\texternal=False\tprobe=' -or
+        $bundledRuntimeLine -notmatch ([regex]::Escape($bundledAssembly))) {
+        throw "Bundled Recognition runtime was not actually invoked from the packaged fallback. Log:`n$bundledRuntimeLine"
+    }
     $running | Stop-Process -Force -ErrorAction SilentlyContinue
-    Write-Host 'Bundled fallback launch PASS.'
+    Write-Host 'Bundled fallback launch and real Recognition call PASS.'
 
     Write-Host '== Stage published Metadata v0.1.1 and simulate restart =='
     $metadataRoot = Join-Path $componentsRoot 'Recognition'
@@ -197,8 +212,18 @@ try {
     if ($log -notmatch 'Metadata\tcurrent=0\.1\.1\tbundled=0\.1\.0\texternal=True') {
         throw "Metadata external activation was not recorded. Log:`n$log"
     }
+
+    $runtimeLog = Join-Path $componentsRoot 'recognition-runtime.log'
+    if (-not (Test-Path $runtimeLog)) { throw 'Recognition runtime probe log was not written.' }
+    $runtimeLine = @(Get-Content -LiteralPath $runtimeLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
+    $externalAssembly = Join-Path $metadataVersionRoot 'bin\Eizo.Metadata.Recognition.dll'
+    if ($runtimeLine -notmatch '\tversion=0\.1\.1\texternal=True\tprobe=' -or
+        $runtimeLine -notmatch ([regex]::Escape($externalAssembly))) {
+        throw "Metadata v0.1.1 state was promoted but the external Recognition runtime was not actually invoked. Log:`n$runtimeLine"
+    }
+
     $running | Stop-Process -Force -ErrorAction SilentlyContinue
-    Write-Host 'Metadata v0.1.1 restart activation PASS.'
+    Write-Host 'Metadata v0.1.1 restart activation and real Recognition call PASS.'
 
     Write-Host '== Build one-click acceptance assets =='
     Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
