@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
@@ -161,36 +162,57 @@ public sealed partial class CatalogView : UserControl
     private CatalogListItemViewModel CreateSubjectListItem(
         CatalogSubjectModel subject)
     {
-        var secondaryParts = new List<string>();
+        var metadata = subject.Metadata;
+        var subtitle = !string.IsNullOrWhiteSpace(subject.NativeTitle) &&
+                       !string.Equals(
+                           subject.NativeTitle,
+                           subject.Title,
+                           StringComparison.CurrentCultureIgnoreCase)
+            ? subject.NativeTitle
+            : string.Empty;
 
-        if (!string.IsNullOrWhiteSpace(subject.NativeTitle) &&
-            !string.Equals(
-                subject.NativeTitle,
-                subject.Title,
-                StringComparison.CurrentCultureIgnoreCase))
+        var metaParts = new List<string>();
+        if (metadata?.ReleaseDate is { Length: > 0 } release &&
+            DateOnly.TryParse(release, out var releaseDate))
         {
-            secondaryParts.Add(subject.NativeTitle);
+            metaParts.Add(releaseDate.Year.ToString(CultureInfo.InvariantCulture));
+        }
+        else if (subject.Items
+                 .Select(static item => item.Recognition?.Year)
+                 .FirstOrDefault(static value => value is not null) is { } recognitionYear)
+        {
+            metaParts.Add(recognitionYear.ToString(CultureInfo.InvariantCulture));
         }
 
-        if (!string.IsNullOrWhiteSpace(subject.Meta))
-        {
-            secondaryParts.Add(subject.Meta);
-        }
+        metaParts.Add(
+            L(
+                $"{subject.EpisodeCount} 集",
+                $"{subject.EpisodeCount} 話",
+                $"{subject.EpisodeCount} episodes"));
 
-        var sources = subject.Items
+        var sourceIds = subject.Items
             .Select(static item => item.Location?.SourceId)
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.Ordinal)
             .Count();
-
-        if (sources > 1)
+        var hasLocal = subject.Items.Any(static item =>
+            item.Location?.Kind == MediaLocationKind.LocalFile);
+        var hasRemote = subject.Items.Any(static item =>
+            item.Location?.Kind == MediaLocationKind.RemoteUri);
+        var sourceKind = (hasLocal, hasRemote) switch
         {
-            secondaryParts.Add(
-                L(
-                    $"{sources} 个来源",
-                    $"{sources} ソース",
-                    $"{sources} sources"));
-        }
+            (true, true) => L("本地 + 网盘", "ローカル + リモート", "Local + remote"),
+            (true, false) => L("本地", "ローカル", "Local"),
+            (false, true) => L("网盘", "リモート", "Remote"),
+            _ => L("未知来源", "不明なソース", "Unknown source"),
+        };
+
+        var sourceLabel = sourceIds > 0
+            ? L(
+                $"{sourceKind} · {sourceIds} 个来源",
+                $"{sourceKind} · {sourceIds} ソース",
+                $"{sourceKind} · {sourceIds} sources")
+            : sourceKind;
 
         return new CatalogListItemViewModel(
             subject,
@@ -202,49 +224,43 @@ public sealed partial class CatalogView : UserControl
                 MediaCategoryKind.Series => "\uE8FD",
                 _ => "\uE8FD",
             },
+            CreateArtwork(metadata?.PosterUrl, 360),
             subject.Title,
-            string.Join(" · ", secondaryParts),
+            subtitle,
+            string.Join(" · ", metaParts),
+            sourceLabel,
             L(
                 $"{subject.EpisodeCount} 集",
                 $"{subject.EpisodeCount} 話",
-                $"{subject.EpisodeCount} episodes"));
+                $"{subject.EpisodeCount} eps"));
     }
 
     private CatalogListItemViewModel CreateListItem(
         CatalogMediaItemModel item,
         IReadOnlyDictionary<string, string> sourceLabels)
     {
-        var secondaryParts = new List<string>();
+        var subtitle = item.IsParsed &&
+                       !string.IsNullOrWhiteSpace(item.SecondaryTitle) &&
+                       !string.Equals(
+                           item.SecondaryTitle,
+                           item.DisplayTitle,
+                           StringComparison.CurrentCultureIgnoreCase)
+            ? item.SecondaryTitle
+            : string.Empty;
 
-        if (item.IsParsed &&
-            !string.IsNullOrWhiteSpace(item.SecondaryTitle) &&
-            !string.Equals(
-                item.SecondaryTitle,
-                item.DisplayTitle,
-                StringComparison.CurrentCultureIgnoreCase))
+        var metaParts = new List<string>();
+        if (item.Metadata is { IsResolved: true } metadata &&
+            DateOnly.TryParse(metadata.ReleaseDate, out var releaseDate))
         {
-            secondaryParts.Add(item.SecondaryTitle);
+            metaParts.Add(releaseDate.Year.ToString(CultureInfo.InvariantCulture));
         }
 
         if (!string.IsNullOrWhiteSpace(item.Meta))
-            secondaryParts.Add(item.Meta);
-
-        if (item.Metadata is { IsResolved: true } metadata)
         {
-            var metadataParts = new List<string>
-            {
-                $"Metadata:{metadata.Provider}"
-            };
-
-            if (DateOnly.TryParse(metadata.ReleaseDate, out var releaseDate))
-                metadataParts.Add(releaseDate.Year.ToString(CultureInfo.InvariantCulture));
-
-            secondaryParts.Add(string.Join(" ", metadataParts));
+            metaParts.Add(item.Meta);
         }
 
-        if (!item.IsParsed)
-            secondaryParts.Add(T("Catalog_Unparsed"));
-
+        var sourceLabel = string.Empty;
         if (item.Location is { } location)
         {
             var extensionSource = location.Locator;
@@ -254,18 +270,32 @@ public sealed partial class CatalogView : UserControl
                 extensionSource = Uri.UnescapeDataString(remoteUri.AbsolutePath);
             }
 
+            var locationParts = new List<string>();
             var extension = Path.GetExtension(extensionSource)
                 .TrimStart('.')
                 .ToUpperInvariant();
 
             if (!string.IsNullOrWhiteSpace(extension))
-                secondaryParts.Add(extension);
+            {
+                locationParts.Add(extension);
+            }
 
             if (location.SizeBytes is > 0)
-                secondaryParts.Add(FormatBytes(location.SizeBytes.Value));
+            {
+                locationParts.Add(FormatBytes(location.SizeBytes.Value));
+            }
 
-            if (sourceLabels.TryGetValue(location.SourceId, out var sourceLabel))
-                secondaryParts.Add(sourceLabel);
+            if (sourceLabels.TryGetValue(location.SourceId, out var label))
+            {
+                locationParts.Add(label);
+            }
+
+            sourceLabel = string.Join(" · ", locationParts);
+        }
+
+        if (!item.IsParsed && metaParts.Count == 0)
+        {
+            metaParts.Add(T("Catalog_Unparsed"));
         }
 
         return new CatalogListItemViewModel(
@@ -279,9 +309,38 @@ public sealed partial class CatalogView : UserControl
                 MediaCategoryKind.Movies => "\uE714",
                 _ => "\uE8A5"
             },
+            CreateArtwork(item.Metadata?.PosterUrl, 360),
             item.DisplayTitle,
-            string.Join(" · ", secondaryParts),
+            subtitle,
+            string.Join(" · ", metaParts),
+            sourceLabel,
             RecognitionLabel(item) ?? CategoryLabel(item.Category));
+    }
+
+    private static BitmapImage? CreateArtwork(
+        string? url,
+        int decodePixelWidth)
+    {
+        if (string.IsNullOrWhiteSpace(url) ||
+            !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+             !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
+        {
+            return null;
+        }
+
+        try
+        {
+            return new BitmapImage
+            {
+                UriSource = uri,
+                DecodePixelWidth = decodePixelWidth,
+            };
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void ResultsList_ItemClick(object sender, ItemClickEventArgs e)
@@ -307,7 +366,7 @@ public sealed partial class CatalogView : UserControl
         ListViewBase sender,
         ContainerContentChangingEventArgs args)
     {
-        if (args.ItemContainer is not ListViewItem container ||
+        if (args.ItemContainer is not GridViewItem container ||
             args.Item is not CatalogListItemViewModel viewModel)
         {
             return;
@@ -1032,8 +1091,11 @@ public sealed partial class CatalogView : UserControl
         CatalogMediaItemModel? Item,
         MediaCategoryKind? Category,
         string IconGlyph,
+        BitmapImage? Artwork,
         string Title,
-        string Secondary,
+        string Subtitle,
+        string MetaLine,
+        string SourceLabel,
         string TypeLabel);
 
     private sealed class CatalogGroup : ObservableCollection<CatalogListItemViewModel>

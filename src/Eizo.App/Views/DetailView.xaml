@@ -5,62 +5,100 @@
              xmlns:controls="using:Eizo.Controls">
   <ScrollViewer>
     <StackPanel Margin="28"
-                Spacing="16">
-      <Border Height="300"
-              CornerRadius="10"
+                Spacing="18">
+      <Border MinHeight="330"
+              CornerRadius="12"
               Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
               BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
               BorderThickness="1">
-        <Grid ColumnDefinitions="220,*"
-              Padding="22">
-          <Border CornerRadius="8"
-                  Background="{ThemeResource EizoSelectionBrush}">
-            <Grid>
-              <Image x:Name="PosterImage"
-                     Stretch="UniformToFill" />
-              <FontIcon x:Name="PosterPlaceholder"
-                        Glyph="&#xE8B9;"
-                        FontSize="64"
-                        Opacity="0.22"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center" />
-            </Grid>
-          </Border>
+        <Grid>
+          <Image x:Name="BackdropImage"
+                 Stretch="UniformToFill"
+                 Opacity="0.14" />
+          <Rectangle Fill="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                     Opacity="0.72" />
 
-          <StackPanel Grid.Column="1"
-                      Padding="26,8"
-                      Spacing="10"
-                      VerticalAlignment="Center">
-            <TextBlock x:Name="TitleText"
-                       FontSize="30"
-                       FontWeight="SemiBold"
-                       TextWrapping="Wrap" />
-            <TextBlock x:Name="NativeTitleText"
-                       FontSize="16"
-                       TextWrapping="Wrap" />
-            <TextBlock x:Name="MetaText"
-                       Style="{StaticResource MetadataText}"
-                       TextWrapping="Wrap" />
-            <TextBlock x:Name="OverviewText"
-                       MaxWidth="760"
-                       MaxHeight="110"
-                       TextWrapping="Wrap"
-                       TextTrimming="CharacterEllipsis"
-                       Style="{StaticResource BodyText}" />
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8">
-              <Button x:Name="PlayButton"
-                      Style="{StaticResource CompactActionButton}"
-                      Click="PlayButton_Click" />
-              <Button x:Name="FavoriteButton"
-                      Style="{StaticResource CompactActionButton}" />
+          <Grid ColumnDefinitions="220,*"
+                Padding="22">
+            <Border Width="190"
+                    Height="286"
+                    CornerRadius="9"
+                    Background="{ThemeResource EizoSelectionBrush}"
+                    VerticalAlignment="Center">
+              <Grid>
+                <FontIcon x:Name="PosterPlaceholder"
+                          Glyph="&#xE8B9;"
+                          FontSize="64"
+                          Opacity="0.22"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+                <Image x:Name="PosterImage"
+                       Stretch="UniformToFill" />
+              </Grid>
+            </Border>
+
+            <StackPanel Grid.Column="1"
+                        Padding="24,8"
+                        Spacing="10"
+                        VerticalAlignment="Center">
+              <TextBlock x:Name="TitleText"
+                         FontSize="30"
+                         FontWeight="SemiBold"
+                         TextWrapping="Wrap" />
+              <TextBlock x:Name="NativeTitleText"
+                         FontSize="15"
+                         Opacity="0.72"
+                         TextWrapping="Wrap" />
+
+              <StackPanel Orientation="Horizontal"
+                          Spacing="8">
+                <Border Padding="9,4"
+                        CornerRadius="12"
+                        Background="{ThemeResource EizoSelectionBrush}">
+                  <TextBlock x:Name="ReleaseStatText"
+                             FontSize="12"
+                             FontWeight="SemiBold" />
+                </Border>
+                <Border Padding="9,4"
+                        CornerRadius="12"
+                        Background="{ThemeResource EizoSelectionBrush}">
+                  <TextBlock x:Name="EpisodeStatText"
+                             FontSize="12"
+                             FontWeight="SemiBold" />
+                </Border>
+                <Border Padding="9,4"
+                        CornerRadius="12"
+                        Background="{ThemeResource EizoSelectionBrush}">
+                  <TextBlock x:Name="SourceStatText"
+                             FontSize="12"
+                             FontWeight="SemiBold" />
+                </Border>
+              </StackPanel>
+
+              <TextBlock x:Name="MetaText"
+                         Style="{StaticResource MetadataText}"
+                         TextWrapping="Wrap" />
+              <TextBlock x:Name="OverviewText"
+                         MaxWidth="820"
+                         MaxHeight="118"
+                         TextWrapping="Wrap"
+                         TextTrimming="CharacterEllipsis"
+                         Style="{StaticResource BodyText}" />
+              <StackPanel Orientation="Horizontal"
+                          Spacing="8">
+                <Button x:Name="PlayButton"
+                        Style="{StaticResource CompactActionButton}"
+                        Click="PlayButton_Click" />
+                <Button x:Name="FavoriteButton"
+                        Style="{StaticResource CompactActionButton}" />
+              </StackPanel>
             </StackPanel>
-          </StackPanel>
+          </Grid>
         </Grid>
       </Border>
 
-      <Grid MinHeight="500"
-            ColumnDefinitions="1.8*,1*"
+      <Grid MinHeight="520"
+            ColumnDefinitions="2.15*,1*"
             ColumnSpacing="16">
         <Border Style="{StaticResource SectionCardStyle}">
           <Grid RowDefinitions="Auto,*"
@@ -77,7 +115,7 @@
 
               <ComboBox x:Name="SeasonComboBox"
                         Grid.Column="1"
-                        Width="150"
+                        MinWidth="150"
                         controls:TransientComboBoxTheme.Apply="True"
                         DisplayMemberPath="Label"
                         SelectionChanged="SeasonComboBox_SelectionChanged" />
@@ -90,24 +128,33 @@
                       ItemClick="EpisodeList_ItemClick"
                       ItemContainerStyle="{StaticResource SourceListItemStyle}">
               <ListView.ItemTemplate>
-                <DataTemplate x:DataType="models:EpisodeItemModel">
-                  <Grid Height="82"
-                        ColumnDefinitions="86,48,*,100"
+                <DataTemplate x:DataType="models:EpisodeDisplayItemModel">
+                  <Grid Height="88"
+                        ColumnDefinitions="118,48,*,112"
                         ColumnSpacing="10">
-                    <Border CornerRadius="6"
+                    <Border CornerRadius="7"
                             Background="{ThemeResource EizoSelectionBrush}">
-                      <FontIcon Glyph="&#xE8B9;"
-                                FontSize="24"
-                                Opacity="0.25" />
+                      <Grid>
+                        <FontIcon Glyph="&#xE8B9;"
+                                  FontSize="24"
+                                  Opacity="0.22"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center" />
+                        <Image Source="{x:Bind Thumbnail}"
+                               Stretch="UniformToFill" />
+                      </Grid>
                     </Border>
+
                     <TextBlock Grid.Column="1"
                                Text="{x:Bind Number}"
                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                                FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center" />
+
                     <StackPanel Grid.Column="2"
                                 VerticalAlignment="Center"
-                                Spacing="3">
+                                Spacing="4">
                       <TextBlock Text="{x:Bind Title}"
                                  Style="{StaticResource CardTitleText}"
                                  TextTrimming="CharacterEllipsis" />
@@ -118,14 +165,17 @@
                                    Maximum="100"
                                    Height="3" />
                     </StackPanel>
+
                     <StackPanel Grid.Column="3"
-                                VerticalAlignment="Center">
+                                VerticalAlignment="Center"
+                                Spacing="3">
                       <TextBlock Text="{x:Bind Duration}"
                                  Style="{StaticResource MetadataText}"
                                  HorizontalAlignment="Right" />
                       <TextBlock Text="{x:Bind Status}"
                                  Style="{StaticResource MetadataText}"
-                                 HorizontalAlignment="Right" />
+                                 HorizontalAlignment="Right"
+                                 TextWrapping="Wrap" />
                     </StackPanel>
                   </Grid>
                 </DataTemplate>

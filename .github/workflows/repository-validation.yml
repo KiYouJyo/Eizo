@@ -50,6 +50,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-MetadataScanLifecycleContract.ps1
 
+      - name: Validate library aggregation visual UI contract
+        shell: pwsh
+        run: ./scripts/Test-LibraryAggregationUiContract.ps1
+
       - name: Validate player/source UI cleanup contract
         shell: pwsh
         run: ./scripts/Test-PlayerUiCleanupContract.ps1
