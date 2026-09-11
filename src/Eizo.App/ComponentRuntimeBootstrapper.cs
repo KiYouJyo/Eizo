@@ -153,6 +153,17 @@ internal static class ComponentRuntimeBootstrapper
         UpdatePendingStatus(definition, normalized);
     }
 
+    public static void MarkActivationFailed(ComponentDefinition definition, string error)
+    {
+        lock (Gate)
+        {
+            TryDelete(GetActiveStatePath(definition));
+            TryDelete(GetPendingStatePath(definition));
+            if (Statuses.TryGetValue(definition.Id, out var status))
+                Statuses[definition.Id] = status with { PendingVersion = null, LastActivationError = error };
+        }
+    }
+
     internal static bool IsHostContractCompatible(ComponentDefinition definition, ComponentHostContractDescriptor contract) =>
         contract.Supports(definition.HostContractName, definition.HostContractVersion);
 
@@ -329,6 +340,20 @@ internal static class ComponentRuntimeBootstrapper
     {
         var overrideRoot = Environment.GetEnvironmentVariable(RootOverrideEnvironmentVariable);
         if (!string.IsNullOrWhiteSpace(overrideRoot)) return Path.GetFullPath(overrideRoot);
+
+        try
+        {
+            // Packaged WinUI must use the physical per-package LocalState store.
+            // Environment.LocalApplicationData may be virtualized for packaged processes.
+            var localState = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
+            if (!string.IsNullOrWhiteSpace(localState))
+                return Path.Combine(localState, "Eizo", "Components");
+        }
+        catch
+        {
+            // Unpackaged/debug hosts fall back to classic LocalAppData.
+        }
+
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Eizo",
