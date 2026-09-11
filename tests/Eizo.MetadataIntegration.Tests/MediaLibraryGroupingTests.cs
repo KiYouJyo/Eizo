@@ -51,7 +51,7 @@ public sealed class MediaLibraryGroupingTests
             new(
                 "ep2",
                 Recognition("CLANNAD", 2007, 2),
-                metadata: null),
+                Metadata: null),
         ]);
 
         Assert.Equal(2, assignments.Count);
@@ -77,7 +77,7 @@ public sealed class MediaLibraryGroupingTests
             new(
                 "unresolved",
                 Recognition("Example", 2024, 3),
-                metadata: null),
+                Metadata: null),
         ]);
 
         Assert.Equal("metadata|bangumi|100", assignments[0].Identity!.Key);
@@ -99,7 +99,7 @@ public sealed class MediaLibraryGroupingTests
             new(
                 "remake",
                 Recognition("Example", 2025, 1),
-                metadata: null),
+                Metadata: null),
         ]);
 
         Assert.Equal("metadata|bangumi|100", assignments[0].Identity!.Key);
