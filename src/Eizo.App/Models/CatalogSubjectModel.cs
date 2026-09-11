@@ -177,18 +177,16 @@ internal static class CatalogSubjectAggregator
         IReadOnlyList<CatalogMediaItemModel> items)
     {
         var indexed = items
-            .Select((item, index) => new
-            {
-                Item = item,
-                Index = index,
-                Season = ResolveSeason(item),
-                Number = item.Recognition?.EpisodeNumber
-                         ?? item.Recognition?.SpecialNumber,
-                Special = string.Equals(
+            .Select((item, index) => new IndexedEpisode(
+                item,
+                index,
+                ResolveSeason(item),
+                item.Recognition?.EpisodeNumber
+                ?? item.Recognition?.SpecialNumber,
+                string.Equals(
                     item.Recognition?.MediaKind,
                     "Special",
-                    StringComparison.OrdinalIgnoreCase),
-            })
+                    StringComparison.OrdinalIgnoreCase)))
             .ToArray();
 
         return indexed
@@ -210,19 +208,18 @@ internal static class CatalogSubjectAggregator
     }
 
     private static CatalogEpisodeModel CreateEpisode(
-        IReadOnlyList<dynamic> values)
+        IReadOnlyList<IndexedEpisode> values)
     {
         var selected = values
             .OrderByDescending(static value =>
-                ((CatalogMediaItemModel)value.Item).Location?.Kind ==
-                MediaLocationKind.LocalFile)
+                value.Item.Location?.Kind == MediaLocationKind.LocalFile)
             .ThenByDescending(static value =>
-                ((CatalogMediaItemModel)value.Item).Metadata is { IsResolved: true })
+                value.Item.Metadata is { IsResolved: true })
             .ThenByDescending(static value =>
-                ((CatalogMediaItemModel)value.Item).Recognition?.Confidence ?? 0)
+                value.Item.Recognition?.Confidence ?? 0)
             .First();
 
-        CatalogMediaItemModel primary = selected.Item;
+        var primary = selected.Item;
         var metadata = primary.Metadata;
         var recognition = primary.Recognition;
 
@@ -257,10 +254,17 @@ internal static class CatalogSubjectAggregator
             nativeTitle ?? string.Empty,
             primary,
             values
-                .Where(value => !ReferenceEquals(value, selected))
-                .Select(value => (CatalogMediaItemModel)value.Item)
+                .Where(value => value.Index != selected.Index)
+                .Select(static value => value.Item)
                 .ToArray());
     }
+
+    private sealed record IndexedEpisode(
+        CatalogMediaItemModel Item,
+        int Index,
+        int Season,
+        decimal? Number,
+        bool Special);
 
     private static int ResolveSeason(CatalogMediaItemModel item)
     {
