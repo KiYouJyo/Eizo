@@ -201,7 +201,9 @@ public sealed class MediaScanCoordinator
 
             if (stageChanged ||
                 now - last >= ProgressNotificationIntervalMilliseconds ||
-                progress.MetadataProcessed == progress.MetadataTotal)
+                (progress.Stage == MediaScanStage.Metadata &&
+                 progress.MetadataTotal > 0 &&
+                 progress.MetadataProcessed == progress.MetadataTotal))
             {
                 _lastProgressNotifications[progress.SourceId] = now;
                 shouldNotify = true;
