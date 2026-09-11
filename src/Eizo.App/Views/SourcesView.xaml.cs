@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Eizo.Localization;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
@@ -24,11 +25,13 @@ public sealed partial class SourcesView : UserControl
     private readonly MediaScanCoordinator _scanCoordinator =
         MediaScanCoordinator.Default;
 
+    private readonly ObservableCollection<SourceItemModel> _sourceItems = [];
     private bool _isLoaded;
 
     public SourcesView()
     {
         InitializeComponent();
+        SourceList.ItemsSource = _sourceItems;
         ApplyText();
 
         Loaded += SourcesView_Loaded;
@@ -38,6 +41,14 @@ public sealed partial class SourcesView : UserControl
     }
 
     private string T(string key) => _localization.GetString(key);
+
+    private string L(string zhCn, string jaJp, string enUs) =>
+        _localization.CurrentLanguage switch
+        {
+            "ja-JP" => jaJp,
+            "en-US" => enUs,
+            _ => zhCn,
+        };
 
     private void ApplyText()
     {
@@ -84,12 +95,52 @@ public sealed partial class SourcesView : UserControl
         if (SourceList is null)
             return;
 
-        SourceList.ItemsSource = _sources
+        var desired = _sources
             .Snapshot()
             .Where(source => source.Enabled && !source.IsBuiltIn)
             .OrderBy(source => source.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .Select(CreateSourceItem)
             .ToArray();
+
+        var desiredIds = desired
+            .Select(static item => item.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        for (var i = _sourceItems.Count - 1; i >= 0; i--)
+        {
+            if (!desiredIds.Contains(_sourceItems[i].Id))
+                _sourceItems.RemoveAt(i);
+        }
+
+        for (var targetIndex = 0; targetIndex < desired.Length; targetIndex++)
+        {
+            var next = desired[targetIndex];
+            var currentIndex = -1;
+
+            for (var i = 0; i < _sourceItems.Count; i++)
+            {
+                if (string.Equals(
+                        _sourceItems[i].Id,
+                        next.Id,
+                        StringComparison.Ordinal))
+                {
+                    currentIndex = i;
+                    break;
+                }
+            }
+
+            if (currentIndex < 0)
+            {
+                _sourceItems.Insert(targetIndex, next);
+                continue;
+            }
+
+            var existing = _sourceItems[currentIndex];
+            existing.UpdateFrom(next);
+
+            if (currentIndex != targetIndex)
+                _sourceItems.Move(currentIndex, targetIndex);
+        }
     }
 
     private SourceItemModel CreateSourceItem(MediaSourceDefinition source)
@@ -100,7 +151,10 @@ public sealed partial class SourcesView : UserControl
             .Where(value => value > 0)
             .Sum();
         var scan = _scanCoordinator.SnapshotForSource(source.Id);
-        var isScanning = scan?.Status == MediaScanStatus.Running;
+        var isBusy = _scanCoordinator.IsScanning(source.Id);
+        var isScraping = isBusy &&
+            _scanCoordinator.IsScraping(source.Id);
+        var isScanning = isBusy && !isScraping;
 
         var summaryParts = new List<string>();
 
@@ -122,21 +176,48 @@ public sealed partial class SourcesView : UserControl
             }
         }
 
-        if (isScanning && scan is not null)
+        if (isScraping && scan is not null)
         {
-            var knownTotal = Math.Max(
-                scan.DirectoriesProcessed,
-                scan.KnownDirectoryTotal);
-            var folderProgress = knownTotal > 0
-                ? $"{scan.DirectoriesProcessed}/{knownTotal}"
-                : scan.DirectoriesProcessed.ToString();
+            var total = Math.Max(
+                scan.MetadataTotal,
+                scan.MetadataProcessed);
+            summaryParts.Add(
+                L(
+                    $"刮削媒体信息 {scan.MetadataProcessed}/{total}",
+                    $"メタデータ取得 {scan.MetadataProcessed}/{total}",
+                    $"Scraping metadata {scan.MetadataProcessed}/{total}"));
+            summaryParts.Add(
+                L(
+                    $"成功 {scan.MetadataResolved} · 未解决 {scan.MetadataUnresolved} · 错误 {scan.MetadataErrors}",
+                    $"成功 {scan.MetadataResolved} · 未解決 {scan.MetadataUnresolved} · エラー {scan.MetadataErrors}",
+                    $"{scan.MetadataResolved} resolved · {scan.MetadataUnresolved} unresolved · {scan.MetadataErrors} errors"));
+        }
+        else if (isScanning && scan is not null)
+        {
+            if (scan.Stage == MediaScanStage.Committing)
+            {
+                summaryParts.Add(
+                    L(
+                        "正在保存媒体库",
+                        "メディアライブラリを保存中",
+                        "Saving media library"));
+            }
+            else
+            {
+                var knownTotal = Math.Max(
+                    scan.DirectoriesProcessed,
+                    scan.KnownDirectoryTotal);
+                var folderProgress = knownTotal > 0
+                    ? $"{scan.DirectoriesProcessed}/{knownTotal}"
+                    : scan.DirectoriesProcessed.ToString();
 
-            summaryParts.Add(
-                $"{T("Sources_Scanning")} {folderProgress}");
-            summaryParts.Add(
-                string.Format(
-                    T("Sources_VideoCountFormat"),
-                    scan.VideosDiscovered));
+                summaryParts.Add(
+                    $"{T("Sources_Scanning")} {folderProgress}");
+                summaryParts.Add(
+                    string.Format(
+                        T("Sources_VideoCountFormat"),
+                        scan.VideosDiscovered));
+            }
         }
         else
         {
@@ -144,6 +225,19 @@ public sealed partial class SourcesView : UserControl
                 string.Format(
                     T("Sources_VideoCountFormat"),
                     items.Count));
+
+            if (scan is
+                {
+                    Status: MediaScanStatus.Completed,
+                    MetadataTotal: > 0
+                })
+            {
+                summaryParts.Add(
+                    L(
+                        $"最近刮削：成功 {scan.MetadataResolved} · 未解决 {scan.MetadataUnresolved} · 错误 {scan.MetadataErrors}",
+                        $"直近の取得：成功 {scan.MetadataResolved} · 未解決 {scan.MetadataUnresolved} · エラー {scan.MetadataErrors}",
+                        $"Last scrape: {scan.MetadataResolved} resolved · {scan.MetadataUnresolved} unresolved · {scan.MetadataErrors} errors"));
+            }
         }
 
         if (size > 0)
@@ -173,14 +267,21 @@ public sealed partial class SourcesView : UserControl
             name,
             string.Join(" · ", summaryParts),
             kindLabel,
-            Removable: !source.IsBuiltIn && !isScanning,
+            Removable: !source.IsBuiltIn && !isBusy,
             IsScanning: isScanning,
-            CanScan: !isScanning && !source.IsBuiltIn,
+            IsScraping: isScraping,
+            CanScan: !isBusy && !source.IsBuiltIn,
+            CanScrape: !isBusy && items.Count > 0,
             ScanText: isScanning
                 ? T("Sources_Scanning")
                 : T("Source_ScanNow"),
+            ScrapeText: isScraping
+                ? L("刮削中", "取得中", "Scraping")
+                : L("刮削", "取得", "Scrape"),
             ScanProgressSize: isScanning ? 16 : 0,
-            ScanSpacing: isScanning ? 8 : 0);
+            ScanSpacing: isScanning ? 8 : 0,
+            ScrapeProgressSize: isScraping ? 16 : 0,
+            ScrapeSpacing: isScraping ? 8 : 0);
     }
 
     private void SourceList_ContainerContentChanging(
@@ -199,7 +300,9 @@ public sealed partial class SourcesView : UserControl
 
         var flyout = new MenuFlyout();
 
-        if (source.Kind == MediaSourceKind.WebDav && !item.IsScanning)
+        if (source.Kind == MediaSourceKind.WebDav &&
+            !item.IsScanning &&
+            !item.IsScraping)
         {
             var editFolders = new MenuFlyoutItem
             {
@@ -238,7 +341,9 @@ public sealed partial class SourcesView : UserControl
         object sender,
         ItemClickEventArgs e)
     {
-        if (e.ClickedItem is not SourceItemModel item || item.IsScanning)
+        if (e.ClickedItem is not SourceItemModel item ||
+            item.IsScanning ||
+            item.IsScraping)
             return;
 
         var source = _sources.Find(item.Id);
@@ -256,6 +361,39 @@ public sealed partial class SourcesView : UserControl
             return;
 
         await ScanSourceAsync(sourceId);
+    }
+
+    private async void ScrapeSourceButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string sourceId })
+            return;
+
+        await ScrapeSourceAsync(sourceId);
+    }
+
+    private async Task ScrapeSourceAsync(
+        string sourceId)
+    {
+        var source = _sources.Find(sourceId);
+        if (source is null ||
+            _scanCoordinator.IsScanning(sourceId) ||
+            _catalog.SnapshotForSource(sourceId).Count == 0)
+        {
+            return;
+        }
+
+        var result =
+            await _scanCoordinator.StartMetadataAsync(source);
+
+        if (!_isLoaded || result.Status != MediaScanStatus.Failed)
+            return;
+
+        await ShowMessageAsync(
+            L("刮削失败", "メタデータ取得に失敗しました", "Metadata scrape failed"),
+            result.ErrorDetail ??
+            L("Metadata 刮削失败。", "メタデータ取得に失敗しました。", "Metadata scrape failed."));
     }
 
     private async Task ScanSourceAsync(

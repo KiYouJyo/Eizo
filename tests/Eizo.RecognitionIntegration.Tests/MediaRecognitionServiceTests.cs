@@ -93,6 +93,15 @@ public sealed class MediaRecognitionServiceTests
     }
 
     [Fact]
+    public void Snapshot_IsStampedWithActualRecognitionRuntimeVersion()
+    {
+        var result = _service.Recognize("Example.S01E01.mkv");
+
+        Assert.False(string.IsNullOrWhiteSpace(result.RuntimeVersion));
+        Assert.Equal(MediaRecognitionService.RuntimeVersion, result.RuntimeVersion);
+    }
+
+    [Fact]
     public void SameRequest_IsDeterministic()
     {
         const string path = "[DBD-Raws][死亡笔记][34][1080P][BDRip][HEVC-10bit][FLAC].mkv";

@@ -43,6 +43,12 @@ public sealed record MediaRecognitionSnapshot(
     List<RecognitionEvidenceSnapshot> Evidence,
     string? ErrorCode = null)
 {
+    /// <summary>
+    /// Recognition runtime that produced this snapshot. Null means the
+    /// snapshot predates per-item runtime provenance and must be refreshed.
+    /// </summary>
+    public string? RuntimeVersion { get; init; }
+
     [JsonIgnore]
     public bool ShouldApplyDisplayTitle =>
         Status == MediaRecognitionStatus.Recognized &&

@@ -1,17 +1,17 @@
 {
-    "schemaVersion": 1,
-    "product": {
-        "version": "0.3.4",
-        "packageVersion": "0.3.4.0",
-        "title": {
-            "zh-CN": "WebDAV 大目录扫描稳定性与进度持久化",
-            "ja-JP": "WebDAV 大規模スキャンの安定性と進捗保持",
-            "en-US": "WebDAV Large-Scan Resilience & Persistent Progress"
-        }
-    },
-    "channels": {
-        "github": {
-            "publish": true
-        }
+  "schemaVersion": 1,
+  "product": {
+    "version": "0.3.7",
+    "packageVersion": "0.3.7.0",
+    "title": {
+      "zh-CN": "Metadata 刮削独立化、诊断增强与组件更新",
+      "ja-JP": "Metadata 取得の独立化・診断強化・コンポーネント更新",
+      "en-US": "Independent Metadata Scraping, Diagnostics & Component Updates"
     }
+  },
+  "channels": {
+    "github": {
+      "publish": true
+    }
+  }
 }

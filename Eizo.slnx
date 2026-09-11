@@ -1,5 +1,7 @@
 <Solution>
   <Configurations><Platform Name="x64" /></Configurations>
   <Project Path="src/Eizo.RecognitionIntegration/Eizo.RecognitionIntegration.csproj" />
+  <Project Path="src/Eizo.MetadataIntegration/Eizo.MetadataIntegration.csproj" />
   <Project Path="src/Eizo.App/Eizo.App.csproj" />
+  <Project Path="tests/Eizo.MetadataIntegration.Tests/Eizo.MetadataIntegration.Tests.csproj" />
 </Solution>

@@ -86,45 +86,76 @@
 
       <ListView.ItemTemplate>
         <DataTemplate x:DataType="models:SourceItemModel">
-          <Grid MinHeight="52"
-                ColumnDefinitions="*,Auto,Auto"
-                ColumnSpacing="16">
+          <Grid Height="52"
+                ColumnDefinitions="*,260,116,116"
+                ColumnSpacing="10">
             <StackPanel VerticalAlignment="Center"
                         Spacing="4">
-              <TextBlock Text="{x:Bind Name}"
-                         Style="{StaticResource CardTitleText}" />
-              <TextBlock Text="{x:Bind Kind}"
+              <TextBlock Text="{x:Bind Name, Mode=OneWay}"
+                         Style="{StaticResource CardTitleText}"
+                         TextTrimming="CharacterEllipsis" />
+              <TextBlock Text="{x:Bind Kind, Mode=OneWay}"
                          Style="{StaticResource MetadataText}"
-                         Opacity="0.7" />
+                         Opacity="0.7"
+                         TextTrimming="CharacterEllipsis" />
             </StackPanel>
 
             <TextBlock Grid.Column="1"
-                       Text="{x:Bind Summary}"
+                       Width="260"
+                       Text="{x:Bind Summary, Mode=OneWay}"
                        VerticalAlignment="Center"
+                       HorizontalAlignment="Right"
                        TextAlignment="Right"
-                       TextWrapping="Wrap"
-                       MaxWidth="560"
+                       TextWrapping="NoWrap"
+                       TextTrimming="CharacterEllipsis"
                        Style="{StaticResource MetadataText}" />
 
             <Button Grid.Column="2"
-                    Tag="{x:Bind Id}"
-                    IsEnabled="{x:Bind CanScan}"
+                    Tag="{x:Bind Id, Mode=OneWay}"
+                    IsEnabled="{x:Bind CanScan, Mode=OneWay}"
                     VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
                     Height="32"
                     MinWidth="0"
+                    MaxWidth="124"
                     Padding="12,0"
                     CornerRadius="5"
                     HorizontalContentAlignment="Center"
                     VerticalContentAlignment="Center"
                     Click="ScanSourceButton_Click">
               <StackPanel Orientation="Horizontal"
-                          Spacing="{x:Bind ScanSpacing}"
+                          Spacing="{x:Bind ScanSpacing, Mode=OneWay}"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Center">
-                <ProgressRing Width="{x:Bind ScanProgressSize}"
-                              Height="{x:Bind ScanProgressSize}"
-                              IsActive="{x:Bind IsScanning}" />
-                <TextBlock Text="{x:Bind ScanText}"
+                <ProgressRing Width="{x:Bind ScanProgressSize, Mode=OneWay}"
+                              Height="{x:Bind ScanProgressSize, Mode=OneWay}"
+                              IsActive="{x:Bind IsScanning, Mode=OneWay}" />
+                <TextBlock Text="{x:Bind ScanText, Mode=OneWay}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
+            <Button Grid.Column="3"
+                    Tag="{x:Bind Id, Mode=OneWay}"
+                    IsEnabled="{x:Bind CanScrape, Mode=OneWay}"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
+                    Height="32"
+                    MinWidth="0"
+                    MaxWidth="112"
+                    Padding="12,0"
+                    CornerRadius="5"
+                    HorizontalContentAlignment="Center"
+                    VerticalContentAlignment="Center"
+                    Click="ScrapeSourceButton_Click">
+              <StackPanel Orientation="Horizontal"
+                          Spacing="{x:Bind ScrapeSpacing, Mode=OneWay}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center">
+                <ProgressRing Width="{x:Bind ScrapeProgressSize, Mode=OneWay}"
+                              Height="{x:Bind ScrapeProgressSize, Mode=OneWay}"
+                              IsActive="{x:Bind IsScraping, Mode=OneWay}" />
+                <TextBlock Text="{x:Bind ScrapeText, Mode=OneWay}"
                            VerticalAlignment="Center" />
               </StackPanel>
             </Button>
