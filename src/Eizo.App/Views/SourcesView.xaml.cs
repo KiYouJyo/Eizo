@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Eizo.Localization;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
@@ -24,11 +25,13 @@ public sealed partial class SourcesView : UserControl
     private readonly MediaScanCoordinator _scanCoordinator =
         MediaScanCoordinator.Default;
 
+    private readonly ObservableCollection<SourceItemModel> _sourceItems = [];
     private bool _isLoaded;
 
     public SourcesView()
     {
         InitializeComponent();
+        SourceList.ItemsSource = _sourceItems;
         ApplyText();
 
         Loaded += SourcesView_Loaded;
@@ -38,6 +41,14 @@ public sealed partial class SourcesView : UserControl
     }
 
     private string T(string key) => _localization.GetString(key);
+
+    private string L(string zhCn, string jaJp, string enUs) =>
+        _localization.CurrentLanguage switch
+        {
+            "ja-JP" => jaJp,
+            "en-US" => enUs,
+            _ => zhCn,
+        };
 
     private void ApplyText()
     {
@@ -84,12 +95,52 @@ public sealed partial class SourcesView : UserControl
         if (SourceList is null)
             return;
 
-        SourceList.ItemsSource = _sources
+        var desired = _sources
             .Snapshot()
             .Where(source => source.Enabled && !source.IsBuiltIn)
             .OrderBy(source => source.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .Select(CreateSourceItem)
             .ToArray();
+
+        var desiredIds = desired
+            .Select(static item => item.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        for (var i = _sourceItems.Count - 1; i >= 0; i--)
+        {
+            if (!desiredIds.Contains(_sourceItems[i].Id))
+                _sourceItems.RemoveAt(i);
+        }
+
+        for (var targetIndex = 0; targetIndex < desired.Length; targetIndex++)
+        {
+            var next = desired[targetIndex];
+            var currentIndex = -1;
+
+            for (var i = 0; i < _sourceItems.Count; i++)
+            {
+                if (string.Equals(
+                        _sourceItems[i].Id,
+                        next.Id,
+                        StringComparison.Ordinal))
+                {
+                    currentIndex = i;
+                    break;
+                }
+            }
+
+            if (currentIndex < 0)
+            {
+                _sourceItems.Insert(targetIndex, next);
+                continue;
+            }
+
+            var existing = _sourceItems[currentIndex];
+            existing.UpdateFrom(next);
+
+            if (currentIndex != targetIndex)
+                _sourceItems.Move(currentIndex, targetIndex);
+        }
     }
 
     private SourceItemModel CreateSourceItem(MediaSourceDefinition source)
@@ -124,19 +175,37 @@ public sealed partial class SourcesView : UserControl
 
         if (isScanning && scan is not null)
         {
-            var knownTotal = Math.Max(
-                scan.DirectoriesProcessed,
-                scan.KnownDirectoryTotal);
-            var folderProgress = knownTotal > 0
-                ? $"{scan.DirectoriesProcessed}/{knownTotal}"
-                : scan.DirectoriesProcessed.ToString();
+            if (scan.Stage == MediaScanStage.Metadata)
+            {
+                var total = Math.Max(scan.MetadataTotal, scan.MetadataProcessed);
+                summaryParts.Add(
+                    L(
+                        $"刮削媒体信息 {scan.MetadataProcessed}/{total}",
+                        $"メタデータ取得 {scan.MetadataProcessed}/{total}",
+                        $"Scraping metadata {scan.MetadataProcessed}/{total}"));
 
-            summaryParts.Add(
-                $"{T("Sources_Scanning")} {folderProgress}");
-            summaryParts.Add(
-                string.Format(
-                    T("Sources_VideoCountFormat"),
-                    scan.VideosDiscovered));
+                summaryParts.Add(
+                    L(
+                        $"成功 {scan.MetadataResolved} · 未解决 {scan.MetadataUnresolved} · 错误 {scan.MetadataErrors}",
+                        $"成功 {scan.MetadataResolved} · 未解決 {scan.MetadataUnresolved} · エラー {scan.MetadataErrors}",
+                        $"{scan.MetadataResolved} resolved · {scan.MetadataUnresolved} unresolved · {scan.MetadataErrors} errors"));
+            }
+            else
+            {
+                var knownTotal = Math.Max(
+                    scan.DirectoriesProcessed,
+                    scan.KnownDirectoryTotal);
+                var folderProgress = knownTotal > 0
+                    ? $"{scan.DirectoriesProcessed}/{knownTotal}"
+                    : scan.DirectoriesProcessed.ToString();
+
+                summaryParts.Add(
+                    $"{T("Sources_Scanning")} {folderProgress}");
+                summaryParts.Add(
+                    string.Format(
+                        T("Sources_VideoCountFormat"),
+                        scan.VideosDiscovered));
+            }
         }
         else
         {
