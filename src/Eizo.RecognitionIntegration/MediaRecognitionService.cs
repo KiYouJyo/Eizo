@@ -1,6 +1,12 @@
+using System.Diagnostics;
 using Eizo.Metadata.Recognition;
 
 namespace Eizo.Recognition;
+
+public sealed record MediaRecognitionRuntimeInfo(
+    string Version,
+    string AssemblyPath,
+    string ProbeStatus);
 
 public sealed class MediaRecognitionService
 {
@@ -14,6 +20,22 @@ public sealed class MediaRecognitionService
     internal MediaRecognitionService(IRecognitionEngine engine)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
+
+    public static string RuntimeVersion => GetRuntimeIdentity().Version;
+
+    public static string RuntimeAssemblyPath => GetRuntimeIdentity().AssemblyPath;
+
+    public static MediaRecognitionRuntimeInfo ProbeRuntime()
+    {
+        var service = new MediaRecognitionService();
+        var snapshot = service.Recognize("Eizo.Runtime.Probe.S01E01.mkv");
+        if (snapshot.Status == MediaRecognitionStatus.Error)
+            throw new InvalidOperationException(
+                $"Recognition runtime probe failed: {snapshot.ErrorCode ?? "Unknown"}");
+
+        var identity = GetRuntimeIdentity();
+        return new(identity.Version, identity.AssemblyPath, snapshot.Status.ToString());
     }
 
     public MediaRecognitionSnapshot Recognize(string logicalPath)
@@ -110,6 +132,23 @@ public sealed class MediaRecognitionService
         return value
             .Replace('\\', '/')
             .TrimStart('/');
+    }
+
+    private static (string Version, string AssemblyPath) GetRuntimeIdentity()
+    {
+        var assembly = typeof(RecognitionEngine).Assembly;
+        var path = assembly.Location;
+        Version? parsed = null;
+
+        if (!string.IsNullOrWhiteSpace(path))
+            Version.TryParse(FileVersionInfo.GetVersionInfo(path).FileVersion, out parsed);
+
+        parsed ??= assembly.GetName().Version;
+        var version = parsed is null
+            ? "unknown"
+            : $"{parsed.Major}.{Math.Max(0, parsed.Minor)}.{Math.Max(0, parsed.Build)}";
+
+        return (version, path);
     }
 
     private static MediaRecognitionStatus ResolveStatus(
