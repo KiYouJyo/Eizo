@@ -23,7 +23,7 @@ function Start-EizoAndAssertAlive($package, [int]$waitSeconds = 8) {
     $activation = "shell:AppsFolder\$($package.PackageFamilyName)!$appId"
     Start-Process explorer.exe -ArgumentList $activation
     Start-Sleep -Seconds $waitSeconds
-    $running = Get-EizoProcesses ([string]$package.InstallLocation)
+    $running = @(Get-EizoProcesses ([string]$package.InstallLocation))
     if ($running.Count -eq 0) { throw 'Eizo did not remain running after activation.' }
     return $running
 }
