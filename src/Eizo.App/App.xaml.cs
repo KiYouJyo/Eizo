@@ -10,6 +10,7 @@ public partial class App : Application
     private static readonly object ActivationGate = new();
     private static bool _redirectedActivationPending;
     private Window? _window;
+    private MetadataEnrichmentCoordinator? _metadataEnrichment;
 
     internal static MainWindow? MainWindow { get; private set; }
 
