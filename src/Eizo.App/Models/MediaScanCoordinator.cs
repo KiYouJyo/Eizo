@@ -171,6 +171,11 @@ public sealed class MediaScanCoordinator
             if (!_jobs.ContainsKey(progress.SourceId))
                 return;
 
+            var previousStage =
+                _snapshots.TryGetValue(progress.SourceId, out var previous)
+                    ? previous.Stage
+                    : MediaScanStage.Discovering;
+
             _snapshots[progress.SourceId] = started with
             {
                 Status = MediaScanStatus.Running,
@@ -192,10 +197,7 @@ public sealed class MediaScanCoordinator
             var last = _lastProgressNotifications.GetValueOrDefault(
                 progress.SourceId);
 
-            var stageChanged =
-                progress.Stage !=
-                (_snapshots.GetValueOrDefault(progress.SourceId)?.Stage
-                 ?? MediaScanStage.Discovering);
+            var stageChanged = progress.Stage != previousStage;
 
             if (stageChanged ||
                 now - last >= ProgressNotificationIntervalMilliseconds ||
