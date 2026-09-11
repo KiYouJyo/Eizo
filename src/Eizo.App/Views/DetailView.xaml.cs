@@ -29,7 +29,7 @@ public sealed partial class DetailView : UserControl
         EpisodeStatText.Text = L("2 集", "2 話", "2 episodes");
         SourceStatText.Text = L("示例", "サンプル", "Sample");
 
-        EpisodeList.ItemsSource = new EpisodeItemModel[]
+        EpisodeList.ItemsSource = new EpisodeDisplayItemModel[]
         {
             new(
                 "18",
@@ -247,7 +247,7 @@ public sealed partial class DetailView : UserControl
             $"{episodes.Length} / {_subject.EpisodeCount}");
     }
 
-    private EpisodeItemModel CreateEpisodeItem(
+    private EpisodeDisplayItemModel CreateEpisodeItem(
         CatalogEpisodeModel episode)
     {
         var number = episode.EpisodeNumber is { } value
@@ -268,7 +268,7 @@ public sealed partial class DetailView : UserControl
                 _ => string.Empty,
             };
 
-        return new EpisodeItemModel(
+        return new EpisodeDisplayItemModel(
             number,
             episode.Title,
             episode.NativeTitle,
@@ -290,7 +290,7 @@ public sealed partial class DetailView : UserControl
         object sender,
         ItemClickEventArgs e)
     {
-        if (e.ClickedItem is EpisodeItemModel
+        if (e.ClickedItem is EpisodeDisplayItemModel
             {
                 MediaItem: { } item
             })
