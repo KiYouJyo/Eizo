@@ -38,7 +38,8 @@ public sealed class MediaMetadataService
                 "MetadataCache")
             : Path.GetFullPath(options.CacheDirectory);
 
-        var cache = new Core.FileMetadataCache(cacheRoot);
+        var fileCache = new Core.FileMetadataCache(cacheRoot);
+        var memoryCache = new Core.MemoryMetadataCache();
         var providers = new List<Core.IMetadataProvider>();
 
         if (options.EnableBangumi)
@@ -48,9 +49,14 @@ public sealed class MediaMetadataService
                 new Provider.BangumiMetadataProviderOptions(
                     options.BangumiUserAgent));
 
-            providers.Add(new Core.CachedMetadataProvider(
+            var persistentBangumi = new Core.CachedMetadataProvider(
                 bangumi,
-                cache,
+                fileCache,
+                Core.MetadataCachePolicy.Default);
+
+            providers.Add(new Core.CachedMetadataProvider(
+                persistentBangumi,
+                memoryCache,
                 Core.MetadataCachePolicy.Default));
         }
 
@@ -62,9 +68,14 @@ public sealed class MediaMetadataService
                     options.TmdbReadAccessToken,
                     _preferredLanguage));
 
-            providers.Add(new Core.CachedMetadataProvider(
+            var persistentTmdb = new Core.CachedMetadataProvider(
                 tmdb,
-                cache,
+                fileCache,
+                Core.MetadataCachePolicy.Default);
+
+            providers.Add(new Core.CachedMetadataProvider(
+                persistentTmdb,
+                memoryCache,
                 Core.MetadataCachePolicy.Default));
         }
 
