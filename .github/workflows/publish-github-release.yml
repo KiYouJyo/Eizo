@@ -81,6 +81,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Restore-EizoPlayback.ps1
 
+      - name: Restore pinned Eizo.Metadata source
+        shell: pwsh
+        run: ./scripts/Restore-EizoMetadata.ps1
+
       - name: Validate signing configuration
         shell: pwsh
         env:
