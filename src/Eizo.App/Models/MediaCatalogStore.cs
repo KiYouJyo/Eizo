@@ -313,6 +313,55 @@ public sealed class MediaCatalogStore
         return discovered.Length;
     }
 
+    public async Task<int> ScrapeSourceMetadataAsync(
+        string sourceId,
+        MediaMetadataService? metadataService,
+        Action<MediaScanProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(sourceId))
+            return 0;
+
+        CatalogMediaItemModel[] current;
+        lock (_sync)
+        {
+            current = _items
+                .Where(item =>
+                    string.Equals(
+                        item.Location?.SourceId,
+                        sourceId,
+                        StringComparison.Ordinal))
+                .Where(IsAvailable)
+                .ToArray();
+        }
+
+        if (current.Length == 0)
+            return 0;
+
+        var processed = await EnrichMetadataAsync(
+            sourceId,
+            current,
+            metadataService,
+            progress,
+            cancellationToken,
+            forceRefresh: true);
+
+        progress?.Invoke(
+            new MediaScanProgress(
+                sourceId,
+                DirectoriesProcessed: 0,
+                DirectoriesPending: 0,
+                VideosDiscovered: current.Length,
+                CurrentPath: null,
+                Stage: MediaScanStage.Committing,
+                MetadataProcessed: processed,
+                MetadataTotal: processed));
+
+        CommitSourceScan(sourceId, current);
+        Changed?.Invoke(this, EventArgs.Empty);
+        return processed;
+    }
+
     private async Task<CatalogMediaItemModel[]> DiscoverRemoteSourceAsync(
         MediaSourceDefinition source,
         Action<MediaScanProgress>? progress,
@@ -489,19 +538,22 @@ public sealed class MediaCatalogStore
         }
     }
 
-    private static async Task EnrichMetadataAsync(
+    private static async Task<int> EnrichMetadataAsync(
         string sourceId,
         CatalogMediaItemModel[] discovered,
         MediaMetadataService? metadataService,
         Action<MediaScanProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool forceRefresh = false)
     {
         if (metadataService is null || !metadataService.IsAvailable)
-            return;
+            return 0;
 
         var pending = discovered
             .Select((item, index) => (Item: item, Index: index))
-            .Where(static entry => NeedsMetadataEnrichment(entry.Item))
+            .Where(entry => forceRefresh
+                ? CanAttemptMetadata(entry.Item)
+                : NeedsMetadataEnrichment(entry.Item))
             .ToArray();
 
         var processed = 0;
@@ -616,6 +668,8 @@ public sealed class MediaCatalogStore
                     MetadataResolved: resolved,
                     MetadataUnresolved: unresolved,
                     MetadataErrors: errors));
+
+        return processed;
     }
 
     private static MediaMetadataSnapshot CreateMetadataFailureSnapshot(
@@ -680,18 +734,22 @@ public sealed class MediaCatalogStore
                 "timed out",
                 StringComparison.OrdinalIgnoreCase));
 
+    private static bool CanAttemptMetadata(
+        CatalogMediaItemModel item) =>
+        item.Recognition is
+        {
+            Status: MediaRecognitionStatus.Recognized,
+            Title.Length: > 0,
+            ConfidenceLevel: "Medium" or "High",
+        };
+
     private static bool NeedsMetadataEnrichment(
         CatalogMediaItemModel item)
     {
-        if (item.Recognition is not
-            {
-                Status: MediaRecognitionStatus.Recognized,
-                Title.Length: > 0,
-                ConfidenceLevel: "Medium" or "High",
-            } recognition)
-        {
+        if (!CanAttemptMetadata(item))
             return false;
-        }
+
+        var recognition = item.Recognition!;
 
         if (item.Metadata is
             {
