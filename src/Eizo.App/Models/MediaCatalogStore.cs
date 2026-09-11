@@ -24,6 +24,7 @@ public sealed class MediaCatalogStore
     private static readonly MediaRecognitionService RecognitionService = new();
 
     private readonly object _sync = new();
+    private readonly SemaphoreSlim _recognitionRefreshGate = new(1, 1);
     private readonly List<CatalogMediaItemModel> _items;
 
     private MediaCatalogStore()
@@ -31,6 +32,8 @@ public sealed class MediaCatalogStore
         _items = LoadCore();
         if (PruneMissingLocalFilesCore())
             SaveCore(_items);
+
+        _ = Task.Run(RefreshRecognitionRuntimeInBackgroundAsync);
     }
 
     public static MediaCatalogStore Default { get; } = new();
@@ -58,6 +61,124 @@ public sealed class MediaCatalogStore
                         StringComparison.Ordinal))
                 .ToArray();
         }
+    }
+
+    public async Task<int> EnsureRecognitionRuntimeCurrentAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await _recognitionRefreshGate.WaitAsync(cancellationToken);
+        try
+        {
+            var currentRuntimeVersion = MediaRecognitionService.RuntimeVersion;
+            CatalogMediaItemModel[] stale;
+
+            lock (_sync)
+            {
+                stale = _items
+                    .Where(static item => item.Recognition is not null)
+                    .Where(item => !string.Equals(
+                        item.Recognition!.RuntimeVersion,
+                        currentRuntimeVersion,
+                        StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+            }
+
+            if (stale.Length == 0)
+                return 0;
+
+            var refreshed = await Task.Run(
+                () =>
+                {
+                    var result = new Dictionary<string, CatalogMediaItemModel>(
+                        stale.Length,
+                        StringComparer.Ordinal);
+
+                    foreach (var item in stale)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var logicalPath = item.Recognition!.LogicalPath;
+                        var recognition = RecognitionService.Recognize(logicalPath);
+                        result[RecognitionCacheKey(item)] = item with
+                        {
+                            ParsedTitle = recognition.ShouldApplyDisplayTitle
+                                ? recognition.Title
+                                : null,
+                            Meta = BuildRecognitionMeta(recognition),
+                            Recognition = recognition,
+                        };
+                    }
+
+                    return result;
+                },
+                cancellationToken);
+
+            var changed = 0;
+            lock (_sync)
+            {
+                for (var i = 0; i < _items.Count; i++)
+                {
+                    var item = _items[i];
+                    if (!refreshed.TryGetValue(
+                            RecognitionCacheKey(item),
+                            out var updated))
+                    {
+                        continue;
+                    }
+
+                    // A source rescan may have replaced this item while the
+                    // refresh was running. Never overwrite a newer snapshot.
+                    if (string.Equals(
+                        item.Recognition?.RuntimeVersion,
+                        currentRuntimeVersion,
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    _items[i] = updated;
+                    changed++;
+                }
+
+                if (changed > 0)
+                    SaveCore(_items);
+            }
+
+            if (changed > 0)
+                Changed?.Invoke(this, EventArgs.Empty);
+
+            return changed;
+        }
+        finally
+        {
+            _recognitionRefreshGate.Release();
+        }
+    }
+
+    private async Task RefreshRecognitionRuntimeInBackgroundAsync()
+    {
+        try
+        {
+            await EnsureRecognitionRuntimeCurrentAsync();
+        }
+        catch (Exception exception) when (
+            exception is not OperationCanceledException)
+        {
+            // Runtime refresh is opportunistic at startup. A later source scan
+            // or report export retries it and must not make startup fail.
+        }
+    }
+
+    private static string RecognitionCacheKey(CatalogMediaItemModel item)
+    {
+        var location = item.Location;
+        return location is null
+            ? item.Recognition?.LogicalPath ?? item.SourceTitle
+            : string.Join(
+                "\u001f",
+                location.SourceId,
+                ((int)location.Kind).ToString(CultureInfo.InvariantCulture),
+                location.Locator);
     }
 
     public bool RegisterLocalFile(string path)
