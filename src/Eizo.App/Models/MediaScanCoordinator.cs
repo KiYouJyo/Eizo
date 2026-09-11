@@ -1,8 +1,12 @@
+using Eizo.Localization;
+using Eizo.MetadataIntegration;
+using Windows.Storage;
+
 namespace Eizo.Models;
 
 public sealed class MediaScanCoordinator
 {
-    private const long ProgressNotificationIntervalMilliseconds = 100;
+    private const long ProgressNotificationIntervalMilliseconds = 150;
 
     private readonly object _sync = new();
     private readonly Dictionary<string, MediaScanSnapshot> _snapshots =
@@ -11,9 +15,13 @@ public sealed class MediaScanCoordinator
         new(StringComparer.Ordinal);
     private readonly Dictionary<string, long> _lastProgressNotifications =
         new(StringComparer.Ordinal);
+    private readonly Lazy<MediaMetadataService?> _metadataService;
 
     private MediaScanCoordinator()
     {
+        _metadataService = new Lazy<MediaMetadataService?>(
+            CreateMetadataService,
+            LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     public static MediaScanCoordinator Default { get; } = new();
@@ -59,7 +67,8 @@ public sealed class MediaScanCoordinator
                 CurrentPath: null,
                 ErrorCode: null,
                 ErrorDetail: null,
-                StartedUtc: DateTimeOffset.UtcNow);
+                StartedUtc: DateTimeOffset.UtcNow,
+                Stage: MediaScanStage.Discovering);
 
             _snapshots[source.Id] = started;
             _lastProgressNotifications[source.Id] = 0;
@@ -84,6 +93,7 @@ public sealed class MediaScanCoordinator
         {
             var count = await MediaCatalogStore.Default.ScanSourceAsync(
                 source,
+                _metadataService.Value,
                 progress => UpdateProgress(started, progress),
                 cancellationToken);
 
@@ -96,7 +106,8 @@ public sealed class MediaScanCoordinator
                 CurrentPath = null,
                 ErrorCode = null,
                 ErrorDetail = null,
-                FinishedUtc = DateTimeOffset.UtcNow
+                FinishedUtc = DateTimeOffset.UtcNow,
+                Stage = MediaScanStage.Committing
             };
         }
         catch (OperationCanceledException)
@@ -168,13 +179,27 @@ public sealed class MediaScanCoordinator
                 VideosDiscovered = progress.VideosDiscovered,
                 CurrentPath = progress.CurrentPath,
                 ErrorCode = null,
-                ErrorDetail = null
+                ErrorDetail = null,
+                Stage = progress.Stage,
+                MetadataProcessed = progress.MetadataProcessed,
+                MetadataTotal = progress.MetadataTotal,
+                MetadataResolved = progress.MetadataResolved,
+                MetadataUnresolved = progress.MetadataUnresolved,
+                MetadataErrors = progress.MetadataErrors
             };
 
             var now = Environment.TickCount64;
             var last = _lastProgressNotifications.GetValueOrDefault(
                 progress.SourceId);
-            if (now - last >= ProgressNotificationIntervalMilliseconds)
+
+            var stageChanged =
+                progress.Stage !=
+                (_snapshots.GetValueOrDefault(progress.SourceId)?.Stage
+                 ?? MediaScanStage.Discovering);
+
+            if (stageChanged ||
+                now - last >= ProgressNotificationIntervalMilliseconds ||
+                progress.MetadataProcessed == progress.MetadataTotal)
             {
                 _lastProgressNotifications[progress.SourceId] = now;
                 shouldNotify = true;
@@ -183,6 +208,33 @@ public sealed class MediaScanCoordinator
 
         if (shouldNotify)
             RaiseChanged();
+    }
+
+    private static MediaMetadataService? CreateMetadataService()
+    {
+        if (string.Equals(
+                Environment.GetEnvironmentVariable("EIZO_METADATA_DISABLE"),
+                "1",
+                StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var cacheDirectory = Path.Combine(
+            ApplicationData.Current.LocalCacheFolder.Path,
+            "Eizo",
+            "MetadataCache");
+
+        var options = new MediaMetadataServiceOptions(
+            EnableBangumi: true,
+            PreferredLanguage:
+                AppLocalizationService.Default.CurrentLanguage,
+            TmdbReadAccessToken:
+                Environment.GetEnvironmentVariable(
+                    "EIZO_TMDB_READ_ACCESS_TOKEN"),
+            CacheDirectory: cacheDirectory);
+
+        return new MediaMetadataService(options);
     }
 
     private void RaiseChanged() =>
