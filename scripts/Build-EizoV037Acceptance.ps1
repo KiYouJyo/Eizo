@@ -186,7 +186,7 @@ try {
     }
     $bundledRuntimeLine = @(Get-Content -LiteralPath $bundledRuntimeLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
     $bundledAssembly = Join-Path ([string]$pkg.InstallLocation) 'Components\Bundled\Recognition\Eizo.Metadata.Recognition.dll'
-    if ($bundledRuntimeLine -notmatch '\tversion=0\.2\.1\texternal=False\tprobe=' -or
+    if ($bundledRuntimeLine -notmatch '\tversion=0\.2\.3\texternal=False\tprobe=' -or
         $bundledRuntimeLine -notmatch ([regex]::Escape($bundledAssembly))) {
         throw "Bundled Recognition runtime was not actually invoked from the packaged fallback. Log:`n$bundledRuntimeLine"
     }
@@ -198,40 +198,40 @@ try {
     $bundledMetadataLine = @(Get-Content -LiteralPath $bundledMetadataLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
     $bundledCore = Join-Path ([string]$pkg.InstallLocation) 'Components\Bundled\Recognition\Eizo.Metadata.Core.dll'
     $bundledProviders = Join-Path ([string]$pkg.InstallLocation) 'Components\Bundled\Recognition\Eizo.Metadata.Providers.dll'
-    if ($bundledMetadataLine -notmatch '\tversion=0\.2\.1\texternal=False\tprobe=ok\t' -or
+    if ($bundledMetadataLine -notmatch '\tversion=0\.2\.3\texternal=False\tprobe=ok\t' -or
         $bundledMetadataLine -notmatch ([regex]::Escape($bundledCore)) -or
         $bundledMetadataLine -notmatch ([regex]::Escape($bundledProviders))) {
         throw "Bundled Metadata Core/Providers were not actually invoked from the packaged fallback. Log:`n$bundledMetadataLine"
     }
 
     $running | Stop-Process -Force -ErrorAction SilentlyContinue
-    Write-Host 'Bundled Metadata 0.2.1 fallback and real Recognition/Core/Providers calls PASS.'
+    Write-Host 'Bundled Metadata 0.2.3 fallback and real Recognition/Core/Providers calls PASS.'
 
-    Write-Host '== Stage published Metadata v0.2.2 and simulate restart =='
+    Write-Host '== Stage published Metadata v0.2.3 externally and simulate restart =='
     $metadataRoot = Join-Path $componentsRoot 'Recognition'
-    $metadataVersionRoot = Join-Path $metadataRoot 'versions\0.2.2'
+    $metadataVersionRoot = Join-Path $metadataRoot 'versions\0.2.3'
     Remove-Item -LiteralPath $metadataRoot -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $metadataVersionRoot | Out-Null
-    $metadataZip = Join-Path $runnerTemp 'Eizo.Recognition.Runtime-v0.2.2-x64.zip'
-    Invoke-WebRequest -Uri 'https://github.com/KiYouJyo/Eizo.Metadata/releases/download/v0.2.2/Eizo.Recognition.Runtime-v0.2.2-x64.zip' -OutFile $metadataZip -UseBasicParsing
-    $metadataExpected = '6b05b146c2d8a3db88028c1890387cdaa61ab989ac1853f9b9d22b2a9ef1b33d'
+    $metadataZip = Join-Path $runnerTemp 'Eizo.Recognition.Runtime-v0.2.3-x64.zip'
+    Invoke-WebRequest -Uri 'https://github.com/KiYouJyo/Eizo.Metadata/releases/download/v0.2.3/Eizo.Recognition.Runtime-v0.2.3-x64.zip' -OutFile $metadataZip -UseBasicParsing
+    $metadataExpected = '9645f633634e2f56dd22fef3fbd723f5b097da4076f2d5546ebb4d772d815007'
     $metadataActual = (Get-FileHash -LiteralPath $metadataZip -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($metadataActual -ne $metadataExpected) { throw "Published Metadata v0.2.2 digest mismatch: $metadataActual" }
+    if ($metadataActual -ne $metadataExpected) { throw "Published Metadata v0.2.3 digest mismatch: $metadataActual" }
     Expand-Archive -LiteralPath $metadataZip -DestinationPath $metadataVersionRoot -Force
     if (-not (Test-Path (Join-Path $metadataVersionRoot 'eizo-recognition-release.json'))) { throw 'Metadata manifest is missing.' }
     foreach ($name in $metadataAssemblies) {
         if (-not (Test-Path (Join-Path $metadataVersionRoot "bin\$name"))) {
-            throw "Metadata v0.2.2 module is missing: $name"
+            throw "Metadata v0.2.3 module is missing: $name"
         }
     }
-    '{"Version":"0.2.2"}' | Set-Content -LiteralPath (Join-Path $metadataRoot 'pending.json') -Encoding utf8NoBOM
+    '{"Version":"0.2.3"}' | Set-Content -LiteralPath (Join-Path $metadataRoot 'pending.json') -Encoding utf8NoBOM
 
     $running = Start-EizoAndAssertAlive $pkg
     $activePath = Join-Path $metadataRoot 'active.json'
     $pendingPath = Join-Path $metadataRoot 'pending.json'
     if (-not (Test-Path $activePath)) { throw 'Metadata active.json was not promoted on restart.' }
     $active = Get-Content -LiteralPath $activePath -Raw | ConvertFrom-Json
-    if ([string]$active.Version -ne '0.2.2') { throw "Unexpected active Metadata version: $($active.Version)" }
+    if ([string]$active.Version -ne '0.2.3') { throw "Unexpected active Metadata version: $($active.Version)" }
     if (Test-Path $pendingPath) { throw 'Metadata pending.json still exists after activation.' }
     $activationLog = Join-Path $componentsRoot 'activation.log'
     if (-not (Test-Path $activationLog)) { throw 'Component activation diagnostics log was not written.' }
@@ -240,8 +240,8 @@ try {
         Get-Content -LiteralPath $activationLog |
         Where-Object {
             $_ -match 'Metadata' -and
-            $_ -match 'current=0\.2\.2' -and
-            $_ -match 'bundled=0\.2\.1' -and
+            $_ -match 'current=0\.2\.3' -and
+            $_ -match 'bundled=0\.2\.3' -and
             $_ -match 'external=True'
         }
     ) | Select-Object -Last 1
@@ -253,9 +253,9 @@ try {
     if (-not (Test-Path $runtimeLog)) { throw 'Recognition runtime probe log was not written.' }
     $runtimeLine = @(Get-Content -LiteralPath $runtimeLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
     $externalAssembly = Join-Path $metadataVersionRoot 'bin\Eizo.Metadata.Recognition.dll'
-    if ($runtimeLine -notmatch '\tversion=0\.2\.2\texternal=True\tprobe=' -or
+    if ($runtimeLine -notmatch '\tversion=0\.2\.3\texternal=True\tprobe=' -or
         $runtimeLine -notmatch ([regex]::Escape($externalAssembly))) {
-        throw "Metadata v0.2.2 state was promoted but the external Recognition runtime was not actually invoked. Log:`n$runtimeLine"
+        throw "Metadata v0.2.3 state was promoted but the external Recognition runtime was not actually invoked. Log:`n$runtimeLine"
     }
 
     $metadataRuntimeLog = Join-Path $componentsRoot 'metadata-runtime.log'
@@ -265,14 +265,14 @@ try {
     $metadataRuntimeLine = @(Get-Content -LiteralPath $metadataRuntimeLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
     $externalCore = Join-Path $metadataVersionRoot 'bin\Eizo.Metadata.Core.dll'
     $externalProviders = Join-Path $metadataVersionRoot 'bin\Eizo.Metadata.Providers.dll'
-    if ($metadataRuntimeLine -notmatch '\tversion=0\.2\.2\texternal=True\tprobe=ok\t' -or
+    if ($metadataRuntimeLine -notmatch '\tversion=0\.2\.3\texternal=True\tprobe=ok\t' -or
         $metadataRuntimeLine -notmatch ([regex]::Escape($externalCore)) -or
         $metadataRuntimeLine -notmatch ([regex]::Escape($externalProviders))) {
-        throw "Metadata v0.2.2 state was promoted but external Core/Providers were not actually invoked. Log:`n$metadataRuntimeLine"
+        throw "Metadata v0.2.3 state was promoted but external Core/Providers were not actually invoked. Log:`n$metadataRuntimeLine"
     }
 
     $running | Stop-Process -Force -ErrorAction SilentlyContinue
-    Write-Host 'Metadata v0.2.2 restart activation and real Recognition/Core/Providers calls PASS.'
+    Write-Host 'Metadata v0.2.3 same-version external restart activation and real Recognition/Core/Providers calls PASS.'
 
     Write-Host '== Build one-click acceptance assets =='
     Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
