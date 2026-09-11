@@ -13,10 +13,15 @@ public sealed class SourceItemModel : INotifyPropertyChanged
     private string _kind;
     private bool _removable;
     private bool _isScanning;
+    private bool _isScraping;
     private bool _canScan;
+    private bool _canScrape;
     private string _scanText;
+    private string _scrapeText;
     private double _scanProgressSize;
     private double _scanSpacing;
+    private double _scrapeProgressSize;
+    private double _scrapeSpacing;
 
     public SourceItemModel(
         string id,
@@ -25,10 +30,15 @@ public sealed class SourceItemModel : INotifyPropertyChanged
         string kind,
         bool Removable = false,
         bool IsScanning = false,
+        bool IsScraping = false,
         bool CanScan = true,
+        bool CanScrape = false,
         string ScanText = "",
+        string ScrapeText = "",
         double ScanProgressSize = 0,
-        double ScanSpacing = 0)
+        double ScanSpacing = 0,
+        double ScrapeProgressSize = 0,
+        double ScrapeSpacing = 0)
     {
         Id = id;
         _name = name;
@@ -36,10 +46,15 @@ public sealed class SourceItemModel : INotifyPropertyChanged
         _kind = kind;
         _removable = Removable;
         _isScanning = IsScanning;
+        _isScraping = IsScraping;
         _canScan = CanScan;
+        _canScrape = CanScrape;
         _scanText = ScanText;
+        _scrapeText = ScrapeText;
         _scanProgressSize = ScanProgressSize;
         _scanSpacing = ScanSpacing;
+        _scrapeProgressSize = ScrapeProgressSize;
+        _scrapeSpacing = ScrapeSpacing;
     }
 
     public string Id { get; }
@@ -48,10 +63,15 @@ public sealed class SourceItemModel : INotifyPropertyChanged
     public string Kind { get => _kind; private set => Set(ref _kind, value); }
     public bool Removable { get => _removable; private set => Set(ref _removable, value); }
     public bool IsScanning { get => _isScanning; private set => Set(ref _isScanning, value); }
+    public bool IsScraping { get => _isScraping; private set => Set(ref _isScraping, value); }
     public bool CanScan { get => _canScan; private set => Set(ref _canScan, value); }
+    public bool CanScrape { get => _canScrape; private set => Set(ref _canScrape, value); }
     public string ScanText { get => _scanText; private set => Set(ref _scanText, value); }
+    public string ScrapeText { get => _scrapeText; private set => Set(ref _scrapeText, value); }
     public double ScanProgressSize { get => _scanProgressSize; private set => Set(ref _scanProgressSize, value); }
     public double ScanSpacing { get => _scanSpacing; private set => Set(ref _scanSpacing, value); }
+    public double ScrapeProgressSize { get => _scrapeProgressSize; private set => Set(ref _scrapeProgressSize, value); }
+    public double ScrapeSpacing { get => _scrapeSpacing; private set => Set(ref _scrapeSpacing, value); }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -66,10 +86,15 @@ public sealed class SourceItemModel : INotifyPropertyChanged
         Kind = value.Kind;
         Removable = value.Removable;
         IsScanning = value.IsScanning;
+        IsScraping = value.IsScraping;
         CanScan = value.CanScan;
+        CanScrape = value.CanScrape;
         ScanText = value.ScanText;
+        ScrapeText = value.ScrapeText;
         ScanProgressSize = value.ScanProgressSize;
         ScanSpacing = value.ScanSpacing;
+        ScrapeProgressSize = value.ScrapeProgressSize;
+        ScrapeSpacing = value.ScrapeSpacing;
     }
 
     private void Set<T>(
