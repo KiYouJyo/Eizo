@@ -330,49 +330,80 @@ public sealed class MediaCatalogStore
     public Task<int> ScanSourceAsync(
         MediaSourceDefinition source,
         CancellationToken cancellationToken = default) =>
-        ScanSourceAsync(source, progress: null, cancellationToken);
+        ScanSourceAsync(
+            source,
+            metadataService: null,
+            progress: null,
+            cancellationToken);
 
     public async Task<int> ScanSourceAsync(
         MediaSourceDefinition source,
+        MediaMetadataService? metadataService,
         Action<MediaScanProgress>? progress,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
+        CatalogMediaItemModel[] discovered;
         if (source.Kind == MediaSourceKind.Local)
         {
-            progress?.Invoke(
-                new MediaScanProgress(
-                    source.Id,
-                    DirectoriesProcessed: 0,
-                    DirectoriesPending: 1,
-                    VideosDiscovered: 0,
-                    source.RootLocation));
+            ReportDiscoveryProgress(
+                source.Id,
+                DirectoriesProcessed: 0,
+                DirectoriesPending: 1,
+                VideosDiscovered: 0,
+                source.RootLocation,
+                progress);
 
-            var count = await Task.Run(
-                () => ScanLocalSource(source),
+            discovered = await Task.Run(
+                () => DiscoverLocalSource(source),
                 cancellationToken);
 
-            progress?.Invoke(
-                new MediaScanProgress(
-                    source.Id,
-                    DirectoriesProcessed: 1,
-                    DirectoriesPending: 0,
-                    VideosDiscovered: count,
-                    source.RootLocation));
-
-            return count;
+            ReportDiscoveryProgress(
+                source.Id,
+                DirectoriesProcessed: 1,
+                DirectoriesPending: 0,
+                VideosDiscovered: discovered.Length,
+                source.RootLocation,
+                progress);
         }
-
-        return await Task.Run(
-            () => ScanRemoteSourceCoreAsync(
+        else
+        {
+            discovered = await DiscoverRemoteSourceAsync(
                 source,
                 progress,
-                cancellationToken),
+                cancellationToken);
+        }
+
+        ReuseResolvedMetadata(source.Id, discovered);
+
+        await EnrichMetadataAsync(
+            source.Id,
+            discovered,
+            metadataService,
+            progress,
             cancellationToken);
+
+        progress?.Invoke(
+            new MediaScanProgress(
+                source.Id,
+                DirectoriesProcessed: 0,
+                DirectoriesPending: 0,
+                VideosDiscovered: discovered.Length,
+                CurrentPath: null,
+                Stage: MediaScanStage.Committing));
+
+        CommitSourceScan(source.Id, discovered);
+
+        MediaSourceStore.Default.MarkScanned(
+            source.Id,
+            DateTimeOffset.UtcNow);
+
+        Changed?.Invoke(this, EventArgs.Empty);
+        return discovered.Length;
     }
 
-    private async Task<int> ScanRemoteSourceCoreAsync(
+    private async Task<CatalogMediaItemModel[]> DiscoverRemoteSourceAsync(
         MediaSourceDefinition source,
         Action<MediaScanProgress>? progress,
         CancellationToken cancellationToken)
@@ -399,7 +430,7 @@ public sealed class MediaCatalogStore
         foreach (var scanRoot in scanRoots)
             pending.Enqueue(scanRoot);
 
-        ReportProgress(
+        ReportDiscoveryProgress(
             source.Id,
             directoriesProcessed,
             pending.Count,
@@ -415,7 +446,7 @@ public sealed class MediaCatalogStore
             if (!visited.Add(relativePath))
                 continue;
 
-            ReportProgress(
+            ReportDiscoveryProgress(
                 source.Id,
                 directoriesProcessed,
                 pending.Count + 1,
@@ -452,7 +483,7 @@ public sealed class MediaCatalogStore
 
                 if (discovered.Count % 25 == 0)
                 {
-                    ReportProgress(
+                    ReportDiscoveryProgress(
                         source.Id,
                         directoriesProcessed,
                         pending.Count + 1,
@@ -463,7 +494,7 @@ public sealed class MediaCatalogStore
             }
 
             directoriesProcessed++;
-            ReportProgress(
+            ReportDiscoveryProgress(
                 source.Id,
                 directoriesProcessed,
                 pending.Count,
@@ -472,50 +503,10 @@ public sealed class MediaCatalogStore
                 progress);
         }
 
-        lock (_sync)
-        {
-            var previous = _items
-                .Where(item =>
-                    string.Equals(
-                        item.Location?.SourceId,
-                        source.Id,
-                        StringComparison.Ordinal))
-                .ToDictionary(
-                    ItemKey,
-                    StringComparer.Ordinal);
-
-            _items.RemoveAll(item =>
-                string.Equals(
-                    item.Location?.SourceId,
-                    source.Id,
-                    StringComparison.Ordinal));
-
-            foreach (var item in discovered)
-            {
-                if (previous.TryGetValue(ItemKey(item), out var existing) &&
-                    CanReuseMetadata(existing, item))
-                {
-                    _items.Add(item with { Metadata = existing.Metadata });
-                }
-                else
-                {
-                    _items.Add(item);
-                }
-            }
-
-            SaveCore(_items);
-        }
-
-        MediaSourceStore.Default.MarkScanned(
-            source.Id,
-            DateTimeOffset.UtcNow);
-
-        Changed?.Invoke(this, EventArgs.Empty);
-        MetadataEnrichmentRequested?.Invoke(this, EventArgs.Empty);
-        return discovered.Count;
+        return discovered.ToArray();
     }
 
-    private static void ReportProgress(
+    private static void ReportDiscoveryProgress(
         string sourceId,
         int directoriesProcessed,
         int directoriesPending,
@@ -529,10 +520,12 @@ public sealed class MediaCatalogStore
                 directoriesProcessed,
                 directoriesPending,
                 videosDiscovered,
-                currentPath));
+                currentPath,
+                Stage: MediaScanStage.Discovering));
     }
 
-    public int ScanLocalSource(MediaSourceDefinition source)
+    private static CatalogMediaItemModel[] DiscoverLocalSource(
+        MediaSourceDefinition source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -540,69 +533,188 @@ public sealed class MediaCatalogStore
             string.IsNullOrWhiteSpace(source.RootLocation) ||
             !Directory.Exists(source.RootLocation))
         {
-            return 0;
+            return [];
         }
 
         var root = Path.GetFullPath(source.RootLocation);
-        var discovered = EnumerateVideoFilesSafe(root)
+        return EnumerateVideoFilesSafe(root)
             .Select(path => new FileInfo(path))
-            .Where(info => info.Exists)
+            .Where(static info => info.Exists)
             .Select(info => CreateLocalItem(
                 source.Id,
                 info,
                 Path.GetRelativePath(root, info.FullName)))
             .ToArray();
+    }
 
-        var discoveredPaths = discovered
-            .Select(item => item.LocalPath)
-            .Where(static path => !string.IsNullOrWhiteSpace(path))
-            .Select(static path => Path.GetFullPath(path!))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
+    private void ReuseResolvedMetadata(
+        string sourceId,
+        CatalogMediaItemModel[] discovered)
+    {
+        Dictionary<string, CatalogMediaItemModel> previous;
         lock (_sync)
         {
-            var previous = _items
+            previous = _items
                 .Where(item =>
                     string.Equals(
                         item.Location?.SourceId,
-                        source.Id,
-                        StringComparison.Ordinal) ||
-                    (item.LocalPath is { Length: > 0 } localPath &&
-                     discoveredPaths.Contains(Path.GetFullPath(localPath))))
+                        sourceId,
+                        StringComparison.Ordinal))
                 .ToDictionary(
                     ItemKey,
                     StringComparer.Ordinal);
+        }
 
+        for (var i = 0; i < discovered.Length; i++)
+        {
+            var item = discovered[i];
+            if (previous.TryGetValue(ItemKey(item), out var existing) &&
+                CanReuseMetadata(existing, item))
+            {
+                discovered[i] = item with
+                {
+                    Metadata = existing.Metadata,
+                };
+            }
+        }
+    }
+
+    private static async Task EnrichMetadataAsync(
+        string sourceId,
+        CatalogMediaItemModel[] discovered,
+        MediaMetadataService? metadataService,
+        Action<MediaScanProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        if (metadataService is null || !metadataService.IsAvailable)
+            return;
+
+        var pending = discovered
+            .Select((item, index) => (Item: item, Index: index))
+            .Where(static entry => NeedsMetadataEnrichment(entry.Item))
+            .ToArray();
+
+        var processed = 0;
+        var resolved = 0;
+        var unresolved = 0;
+        var errors = 0;
+
+        ReportMetadataProgress();
+
+        foreach (var entry in pending)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var recognition = entry.Item.Recognition!;
+            var metadata = await metadataService
+                .EnrichAsync(
+                    recognition,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            if (metadata is not null)
+            {
+                discovered[entry.Index] = entry.Item with
+                {
+                    Metadata = metadata,
+                };
+
+                switch (metadata.Status)
+                {
+                    case MediaMetadataStatus.Resolved:
+                        resolved++;
+                        break;
+                    case MediaMetadataStatus.Error:
+                        errors++;
+                        break;
+                    default:
+                        unresolved++;
+                        break;
+                }
+            }
+            else
+            {
+                unresolved++;
+            }
+
+            processed++;
+            ReportMetadataProgress();
+        }
+
+        void ReportMetadataProgress() =>
+            progress?.Invoke(
+                new MediaScanProgress(
+                    sourceId,
+                    DirectoriesProcessed: 0,
+                    DirectoriesPending: 0,
+                    VideosDiscovered: discovered.Length,
+                    CurrentPath: null,
+                    Stage: MediaScanStage.Metadata,
+                    MetadataProcessed: processed,
+                    MetadataTotal: pending.Length,
+                    MetadataResolved: resolved,
+                    MetadataUnresolved: unresolved,
+                    MetadataErrors: errors));
+    }
+
+    private static bool NeedsMetadataEnrichment(
+        CatalogMediaItemModel item)
+    {
+        if (item.Recognition is not
+            {
+                Status: MediaRecognitionStatus.Recognized,
+                Title.Length: > 0,
+                ConfidenceLevel: "Medium" or "High",
+            } recognition)
+        {
+            return false;
+        }
+
+        if (item.Metadata is
+            {
+                IsResolved: true,
+            } metadata &&
+            string.Equals(
+                metadata.RuntimeVersion,
+                MediaMetadataService.RuntimeVersion,
+                StringComparison.OrdinalIgnoreCase) &&
+            metadata.MatchesRecognitionRuntime(
+                recognition.RuntimeVersion))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private void CommitSourceScan(
+        string sourceId,
+        IReadOnlyList<CatalogMediaItemModel> discovered)
+    {
+        lock (_sync)
+        {
             _items.RemoveAll(item =>
                 string.Equals(
                     item.Location?.SourceId,
-                    source.Id,
-                    StringComparison.Ordinal) ||
-                (item.LocalPath is { Length: > 0 } localPath &&
-                 discoveredPaths.Contains(Path.GetFullPath(localPath))));
+                    sourceId,
+                    StringComparison.Ordinal));
 
-            foreach (var item in discovered)
-            {
-                if (previous.TryGetValue(ItemKey(item), out var existing) &&
-                    CanReuseMetadata(existing, item))
-                {
-                    _items.Add(item with { Metadata = existing.Metadata });
-                }
-                else
-                {
-                    _items.Add(item);
-                }
-            }
-
+            _items.AddRange(discovered);
             SaveCore(_items);
         }
+    }
+
+    public int ScanLocalSource(MediaSourceDefinition source)
+    {
+        var discovered = DiscoverLocalSource(source);
+        ReuseResolvedMetadata(source.Id, discovered);
+        CommitSourceScan(source.Id, discovered);
 
         MediaSourceStore.Default.MarkScanned(
             source.Id,
             DateTimeOffset.UtcNow);
 
         Changed?.Invoke(this, EventArgs.Empty);
-        MetadataEnrichmentRequested?.Invoke(this, EventArgs.Empty);
         return discovered.Length;
     }
 
@@ -813,9 +925,18 @@ public sealed class MediaCatalogStore
         CatalogMediaItemModel existing,
         CatalogMediaItemModel discovered)
     {
-        if (existing.Metadata is null ||
+        if (existing.Metadata is not
+            {
+                IsResolved: true,
+            } metadata ||
             existing.Recognition is null ||
-            discovered.Recognition is null)
+            discovered.Recognition is null ||
+            !string.Equals(
+                metadata.RuntimeVersion,
+                MediaMetadataService.RuntimeVersion,
+                StringComparison.OrdinalIgnoreCase) ||
+            !metadata.MatchesRecognitionRuntime(
+                discovered.Recognition.RuntimeVersion))
         {
             return false;
         }
