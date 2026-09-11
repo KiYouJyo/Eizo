@@ -327,10 +327,10 @@ public sealed partial class CatalogView : UserControl
             flyout.Items.Add(detailsItem);
         }
 
-        var metadataOwner = viewModel.Item?.Metadata is { IsResolved: true }
+        var metadataOwner = viewModel.Item?.Metadata is not null
             ? viewModel.Item
             : viewModel.Subject?.Items.FirstOrDefault(static item =>
-                item.Metadata is { IsResolved: true });
+                item.Metadata is not null);
 
         if (metadataOwner is not null)
         {
@@ -394,7 +394,7 @@ public sealed partial class CatalogView : UserControl
             {
                 Tag: CatalogMediaItemModel
                 {
-                    Metadata: { IsResolved: true } metadata
+                    Metadata: { } metadata
                 }
             })
         {
@@ -468,7 +468,7 @@ public sealed partial class CatalogView : UserControl
             XamlRoot = XamlRoot,
             Title = L("识别报告已导出", "認識レポートを出力しました", "Recognition report exported"),
             Content = L(
-                "CSV 已同时包含 Recognition 与 Metadata 诊断：原始文件名、逻辑路径、识别证据、Metadata 状态、Provider、Subject ID、匹配置信度、外部 ID 和 Provider 错误。可直接筛选 MetadataStatus / MetadataErrors 后交给我分析。",
+                "CSV 已同时包含 Recognition 与 Metadata 诊断：除原始文件名、逻辑路径、识别证据外，还记录实际 Provider 搜索词、候选数量、前两名分数与分差、解析阈值、ResolutionReason、Top Candidates 及评分证据。可直接筛选 MetadataResolutionReason 定位未刮削原因。",
                 "CSV には Recognition と Metadata の診断情報を統合しています。元ファイル名、論理パス、認識根拠、Metadata 状態、Provider、Subject ID、信頼度、外部 ID、Provider エラーを確認できます。",
                 "The CSV combines Recognition and Metadata diagnostics, including source names, logical paths, recognition evidence, Metadata status, provider, subject ID, confidence, external IDs and provider errors."),
             CloseButtonText = L("关闭", "閉じる", "Close")
@@ -528,7 +528,7 @@ public sealed partial class CatalogView : UserControl
     {
         var builder = new StringBuilder();
         builder.AppendLine(
-            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
+            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataResolutionReason,MetadataSearchTitles,MetadataCandidateCount,MetadataAutoResolveThreshold,MetadataMinimumLead,MetadataBestScore,MetadataSecondScore,MetadataLead,MetadataTopCandidates,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
 
         foreach (var item in items)
         {
@@ -579,6 +579,15 @@ public sealed partial class CatalogView : UserControl
                         $"{error.Provider}|{error.ErrorType}|{error.Message}"));
             var metadataStatus = metadata?.Status.ToString()
                 ?? MetadataDiagnosticState(recognition);
+            var metadataSearchTitles = metadata is null
+                ? string.Empty
+                : string.Join(" || ", metadata.SearchTitles);
+            var metadataTopCandidates = metadata is null
+                ? string.Empty
+                : string.Join(
+                    " || ",
+                    metadata.TopCandidates.Select(static candidate =>
+                        $"{candidate.Provider}:{candidate.ProviderSubjectId}|{candidate.SubjectKind}|{candidate.Title}|year={candidate.Year?.ToString(CultureInfo.InvariantCulture) ?? "-"}|rank={candidate.ProviderRank}|score={candidate.Score:0.000}|evidence={string.Join(";", candidate.Evidence)}"));
 
             AppendCsvRow(
                 builder,
@@ -615,6 +624,15 @@ public sealed partial class CatalogView : UserControl
                     ? string.Empty
                     : metadata.MatchesRecognitionRuntime(recognition.RuntimeVersion).ToString(),
                 metadataStatus,
+                metadata?.ResolutionReason ?? string.Empty,
+                metadataSearchTitles,
+                metadata?.CandidateCount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.AutoResolveThreshold.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.MinimumLead.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.BestScore?.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.SecondScore?.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.Lead?.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadataTopCandidates,
                 metadata?.Provider ?? string.Empty,
                 metadata?.ProviderSubjectId ?? string.Empty,
                 metadata?.SubjectKind ?? string.Empty,
@@ -734,6 +752,13 @@ public sealed partial class CatalogView : UserControl
         builder.AppendLine($"Subject ID: {metadata.ProviderSubjectId ?? "-"}");
         builder.AppendLine($"Subject kind: {metadata.SubjectKind ?? "-"}");
         builder.AppendLine($"Confidence: {metadata.Confidence:0.000}");
+        builder.AppendLine($"Resolution reason: {metadata.ResolutionReason ?? "-"}");
+        builder.AppendLine($"Candidates: {metadata.CandidateCount}");
+        builder.AppendLine($"Threshold: {metadata.AutoResolveThreshold:0.000}");
+        builder.AppendLine($"Minimum lead: {metadata.MinimumLead:0.000}");
+        builder.AppendLine($"Best score: {metadata.BestScore?.ToString("0.000", CultureInfo.InvariantCulture) ?? "-"}");
+        builder.AppendLine($"Second score: {metadata.SecondScore?.ToString("0.000", CultureInfo.InvariantCulture) ?? "-"}");
+        builder.AppendLine($"Lead: {metadata.Lead?.ToString("0.000", CultureInfo.InvariantCulture) ?? "-"}");
         builder.AppendLine($"Canonical title: {metadata.CanonicalTitle ?? "-"}");
         builder.AppendLine($"Original title: {metadata.OriginalTitle ?? "-"}");
         builder.AppendLine($"Release date: {metadata.ReleaseDate ?? "-"}");
@@ -745,6 +770,27 @@ public sealed partial class CatalogView : UserControl
         builder.AppendLine($"Poster: {metadata.PosterUrl ?? "-"}");
         builder.AppendLine($"Backdrop: {metadata.BackdropUrl ?? "-"}");
         builder.AppendLine($"Updated: {metadata.UpdatedAtUtc:O}");
+
+        if (metadata.SearchTitles.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Provider search titles:");
+            foreach (var title in metadata.SearchTitles)
+                builder.AppendLine($"  - {title}");
+        }
+
+        if (metadata.TopCandidates.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Top metadata candidates:");
+            foreach (var candidate in metadata.TopCandidates)
+            {
+                builder.AppendLine(
+                    $"  - {candidate.Provider}:{candidate.ProviderSubjectId} | {candidate.Title} | score={candidate.Score:0.000} | year={candidate.Year?.ToString(CultureInfo.InvariantCulture) ?? "-"} | rank={candidate.ProviderRank}");
+                foreach (var evidence in candidate.Evidence)
+                    builder.AppendLine($"      {evidence}");
+            }
+        }
 
         if (metadata.ExternalIds.Count > 0)
         {
