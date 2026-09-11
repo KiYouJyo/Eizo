@@ -608,6 +608,9 @@ public sealed class MediaCatalogStore
         var resolved = 0;
         var unresolved = 0;
         var errors = 0;
+        var consecutiveTransportErrors = 0;
+        var providerSuspended = false;
+        string? providerSuspendedReason = null;
 
         ReportMetadataProgress();
 
@@ -616,11 +619,39 @@ public sealed class MediaCatalogStore
             cancellationToken.ThrowIfCancellationRequested();
 
             var recognition = entry.Item.Recognition!;
-            var metadata = await metadataService
-                .EnrichAsync(
+            MediaMetadataSnapshot? metadata;
+
+            if (providerSuspended)
+            {
+                metadata = CreateMetadataFailureSnapshot(
                     recognition,
-                    cancellationToken)
-                .ConfigureAwait(false);
+                    "ProviderSuspended",
+                    providerSuspendedReason ??
+                    "Metadata provider requests were suspended after repeated transport failures.");
+            }
+            else
+            {
+                try
+                {
+                    metadata = await metadataService
+                        .EnrichAsync(
+                            recognition,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                    when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    metadata = CreateMetadataFailureSnapshot(
+                        recognition,
+                        exception.GetType().Name,
+                        exception.Message);
+                }
+            }
 
             if (metadata is not null)
             {
@@ -641,10 +672,27 @@ public sealed class MediaCatalogStore
                         unresolved++;
                         break;
                 }
+
+                if (!providerSuspended &&
+                    IsTransportMetadataFailure(metadata))
+                {
+                    consecutiveTransportErrors++;
+                    if (consecutiveTransportErrors >= 3)
+                    {
+                        providerSuspended = true;
+                        providerSuspendedReason = metadata.Errors
+                            .FirstOrDefault()?.Message;
+                    }
+                }
+                else if (metadata.Status != MediaMetadataStatus.Error)
+                {
+                    consecutiveTransportErrors = 0;
+                }
             }
             else
             {
                 unresolved++;
+                consecutiveTransportErrors = 0;
             }
 
             processed++;
@@ -666,6 +714,69 @@ public sealed class MediaCatalogStore
                     MetadataUnresolved: unresolved,
                     MetadataErrors: errors));
     }
+
+    private static MediaMetadataSnapshot CreateMetadataFailureSnapshot(
+        MediaRecognitionSnapshot recognition,
+        string errorType,
+        string message) =>
+        new(
+            RuntimeVersion: MediaMetadataService.RuntimeVersion,
+            RecognitionRuntimeVersion: recognition.RuntimeVersion,
+            Status: MediaMetadataStatus.Error,
+            Provider: null,
+            ProviderSubjectId: null,
+            SubjectKind: null,
+            CanonicalTitle: null,
+            OriginalTitle: null,
+            LocalizedTitles: new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase),
+            Aliases: [],
+            Overview: null,
+            ReleaseDate: null,
+            EpisodeCount: null,
+            PosterUrl: null,
+            BackdropUrl: null,
+            ExternalIds: new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase),
+            EpisodeNumber:
+                recognition.EpisodeNumber ??
+                recognition.SpecialNumber,
+            EpisodeTitle: null,
+            EpisodeOriginalTitle: null,
+            EpisodeOverview: null,
+            EpisodeAirDate: null,
+            EpisodeThumbnailUrl: null,
+            Confidence: 0,
+            Errors:
+            [
+                new MetadataProviderErrorSnapshot(
+                    "metadata",
+                    errorType,
+                    message)
+            ],
+            UpdatedAtUtc: DateTimeOffset.UtcNow);
+
+    private static bool IsTransportMetadataFailure(
+        MediaMetadataSnapshot metadata) =>
+        metadata.Status == MediaMetadataStatus.Error &&
+        metadata.Errors.Any(static error =>
+            string.Equals(
+                error.ErrorType,
+                nameof(HttpRequestException),
+                StringComparison.Ordinal) ||
+            string.Equals(
+                error.ErrorType,
+                nameof(TaskCanceledException),
+                StringComparison.Ordinal) ||
+            error.Message.Contains(
+                "429",
+                StringComparison.OrdinalIgnoreCase) ||
+            error.Message.Contains(
+                "503",
+                StringComparison.OrdinalIgnoreCase) ||
+            error.Message.Contains(
+                "timed out",
+                StringComparison.OrdinalIgnoreCase));
 
     private static bool NeedsMetadataEnrichment(
         CatalogMediaItemModel item)
