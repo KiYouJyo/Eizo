@@ -275,9 +275,9 @@ public sealed class MediaCatalogStore
         {
             ReportDiscoveryProgress(
                 source.Id,
-                DirectoriesProcessed: 0,
-                DirectoriesPending: 1,
-                VideosDiscovered: 0,
+                directoriesProcessed: 0,
+                directoriesPending: 1,
+                videosDiscovered: 0,
                 source.RootLocation,
                 progress);
 
@@ -287,9 +287,9 @@ public sealed class MediaCatalogStore
 
             ReportDiscoveryProgress(
                 source.Id,
-                DirectoriesProcessed: 1,
-                DirectoriesPending: 0,
-                VideosDiscovered: discovered.Length,
+                directoriesProcessed: 1,
+                directoriesPending: 0,
+                videosDiscovered: discovered.Length,
                 source.RootLocation,
                 progress);
         }
@@ -313,9 +313,9 @@ public sealed class MediaCatalogStore
         progress?.Invoke(
             new MediaScanProgress(
                 source.Id,
-                DirectoriesProcessed: 0,
-                DirectoriesPending: 0,
-                VideosDiscovered: discovered.Length,
+                directoriesProcessed: 0,
+                directoriesPending: 0,
+                videosDiscovered: discovered.Length,
                 CurrentPath: null,
                 Stage: MediaScanStage.Committing));
 
@@ -619,9 +619,9 @@ public sealed class MediaCatalogStore
             progress?.Invoke(
                 new MediaScanProgress(
                     sourceId,
-                    DirectoriesProcessed: 0,
-                    DirectoriesPending: 0,
-                    VideosDiscovered: discovered.Length,
+                    directoriesProcessed: 0,
+                    directoriesPending: 0,
+                    videosDiscovered: discovered.Length,
                     CurrentPath: null,
                     Stage: MediaScanStage.Metadata,
                     MetadataProcessed: processed,
