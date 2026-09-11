@@ -26,7 +26,10 @@ foreach ($forbidden in @(
 foreach ($required in @(
     'MediaMetadataService',
     'ScanSourceAsync(',
+    'StartMetadataAsync(',
+    'ScrapeSourceMetadataAsync(',
     '_metadataService.Value',
+    'IsScraping(',
     'MediaScanStage.Metadata',
     'MetadataResolved',
     'MetadataUnresolved',
@@ -39,6 +42,8 @@ foreach ($required in @(
 
 foreach ($required in @(
     'EnrichMetadataAsync',
+    'ScrapeSourceMetadataAsync',
+    'forceRefresh: true',
     'ReuseResolvedMetadata',
     'CreateMetadataFailureSnapshot',
     'CommitSourceScan',
@@ -50,13 +55,23 @@ foreach ($required in @(
     }
 }
 
-$enrichIndex = $catalog.IndexOf('await EnrichMetadataAsync(')
-$commitIndex = $catalog.IndexOf('CommitSourceScan(source.Id, discovered)')
-$changedIndex = $catalog.IndexOf('Changed?.Invoke(this, EventArgs.Empty)', $commitIndex)
-if ($enrichIndex -lt 0 -or
-    $commitIndex -le $enrichIndex -or
-    $changedIndex -le $commitIndex) {
-    throw 'Metadata source-scan contract violation: enrichment must finish before catalog commit/notification.'
+$scanRunStart = $scanCoordinator.IndexOf('private async Task<MediaScanSnapshot> RunAsync(')
+$metadataRunStart = $scanCoordinator.IndexOf('private async Task<MediaScanSnapshot> RunMetadataAsync(')
+if ($scanRunStart -lt 0 -or $metadataRunStart -le $scanRunStart) {
+    throw 'Metadata source-operation contract violation: scan and scrape runners must be separate.'
+}
+
+$scanRun = $scanCoordinator.Substring(
+    $scanRunStart,
+    $metadataRunStart - $scanRunStart)
+if ($scanRun -match [regex]::Escape('_metadataService.Value')) {
+    throw 'Metadata source-operation contract violation: discovery scan must not invoke Metadata.'
+}
+
+$metadataRun = $scanCoordinator.Substring($metadataRunStart)
+if ($metadataRun -notmatch [regex]::Escape('ScrapeSourceMetadataAsync(') -or
+    $metadataRun -notmatch [regex]::Escape('_metadataService.Value')) {
+    throw 'Metadata source-operation contract violation: scrape runner must invoke the Metadata pipeline.'
 }
 
 if ($sourcesView -notmatch '_sourceItems' -or
@@ -67,8 +82,11 @@ if ($sourcesView -notmatch '_sourceItems' -or
 
 if ($uiModels -notmatch 'INotifyPropertyChanged' -or
     $sourcesXaml -notmatch 'Summary, Mode=OneWay' -or
-    $sourcesXaml -notmatch 'IsScanning, Mode=OneWay') {
-    throw 'Source-card contract violation: progress properties must support in-place one-way updates.'
+    $sourcesXaml -notmatch 'IsScanning, Mode=OneWay' -or
+    $sourcesXaml -notmatch 'IsScraping, Mode=OneWay' -or
+    $sourcesXaml -notmatch 'CanScrape, Mode=OneWay' -or
+    $sourcesXaml -notmatch 'ScrapeSourceButton_Click') {
+    throw 'Source-card contract violation: scan/scrape progress properties must support independent in-place actions.'
 }
 
 foreach ($column in @(
@@ -86,4 +104,4 @@ foreach ($column in @(
     }
 }
 
-Write-Host 'Eizo v0.3.7 Metadata scan lifecycle and unified diagnostics contract PASS.'
+Write-Host 'Eizo v0.3.7 independent scan/scrape lifecycle and unified diagnostics contract PASS.'
