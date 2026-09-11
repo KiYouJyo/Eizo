@@ -209,7 +209,16 @@ try {
     $activationLog = Join-Path $componentsRoot 'activation.log'
     if (-not (Test-Path $activationLog)) { throw 'Component activation diagnostics log was not written.' }
     $log = Get-Content -LiteralPath $activationLog -Raw
-    if ($log -notmatch 'Metadata\tcurrent=0\.1\.2\tbundled=0\.1\.0\texternal=True') {
+    $metadataActivationLine = @(
+        Get-Content -LiteralPath $activationLog |
+        Where-Object {
+            $_ -match 'Metadata' -and
+            $_ -match 'current=0\.1\.2' -and
+            $_ -match 'bundled=0\.1\.0' -and
+            $_ -match 'external=True'
+        }
+    ) | Select-Object -Last 1
+    if (-not $metadataActivationLine) {
         throw "Metadata external activation was not recorded. Log:`n$log"
     }
 
