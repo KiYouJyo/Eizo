@@ -286,6 +286,7 @@ public sealed partial class CatalogView : UserControl
         if (App.MainWindow is null)
             return;
 
+        await _catalog.EnsureRecognitionRuntimeCurrentAsync();
         var snapshot = _catalog.SnapshotForDisplay();
         if (snapshot.Count == 0)
             return;
@@ -384,7 +385,6 @@ public sealed partial class CatalogView : UserControl
         IReadOnlyDictionary<string, string> sourceLabels)
     {
         var builder = new StringBuilder();
-        var runtimeVersion = MediaRecognitionService.RuntimeVersion;
         builder.AppendLine(
             "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence");
 
@@ -416,7 +416,7 @@ public sealed partial class CatalogView : UserControl
                 needsReview ? "true" : "false",
                 reviewPriority,
                 ReviewReason(recognition),
-                runtimeVersion,
+                recognition?.RuntimeVersion ?? string.Empty,
                 source,
                 item.SourceTitle,
                 recognition?.LogicalPath ?? string.Empty,
@@ -514,6 +514,7 @@ public sealed partial class CatalogView : UserControl
     {
         var builder = new StringBuilder();
         builder.AppendLine($"Logical path: {recognition.LogicalPath}");
+        builder.AppendLine($"Runtime version: {recognition.RuntimeVersion ?? "legacy/unknown"}");
         builder.AppendLine($"Status: {recognition.Status}");
         builder.AppendLine($"MediaKind: {recognition.MediaKind}");
         builder.AppendLine($"SpecialKind: {recognition.SpecialKind}");
