@@ -41,13 +41,6 @@ public sealed class MediaCatalogStore
 
     public event EventHandler? Changed;
 
-    /// <summary>
-    /// Raised only when new or refreshed Recognition input should be considered
-    /// for online metadata enrichment. Metadata writes themselves do not raise
-    /// this event, preventing enrichment feedback loops.
-    /// </summary>
-    public event EventHandler? MetadataEnrichmentRequested;
-
     public IReadOnlyList<CatalogMediaItemModel> Snapshot()
     {
         lock (_sync)
@@ -69,81 +62,6 @@ public sealed class MediaCatalogStore
                         StringComparison.Ordinal))
                 .ToArray();
         }
-    }
-
-    internal CatalogMediaItemModel? FindByKey(string key)
-    {
-        lock (_sync)
-        {
-            return _items.FirstOrDefault(item =>
-                string.Equals(
-                    ItemKey(item),
-                    key,
-                    StringComparison.Ordinal));
-        }
-    }
-
-    internal bool ApplyMetadata(
-        string key,
-        MediaMetadataSnapshot metadata)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        ArgumentNullException.ThrowIfNull(metadata);
-
-        var changed = false;
-        lock (_sync)
-        {
-            var index = _items.FindIndex(item =>
-                string.Equals(
-                    ItemKey(item),
-                    key,
-                    StringComparison.Ordinal));
-            if (index < 0)
-            {
-                return false;
-            }
-
-            var current = _items[index];
-            if (current.Recognition is null ||
-                !metadata.MatchesRecognitionRuntime(
-                    current.Recognition.RuntimeVersion))
-            {
-                return false;
-            }
-
-            if (current.Metadata is { } existing &&
-                string.Equals(
-                    existing.RuntimeVersion,
-                    metadata.RuntimeVersion,
-                    StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(
-                    existing.Provider,
-                    metadata.Provider,
-                    StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(
-                    existing.ProviderSubjectId,
-                    metadata.ProviderSubjectId,
-                    StringComparison.Ordinal) &&
-                existing.EpisodeNumber == metadata.EpisodeNumber &&
-                string.Equals(
-                    existing.EpisodeTitle,
-                    metadata.EpisodeTitle,
-                    StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            _items[index] = current with { Metadata = metadata };
-            SaveCore(_items);
-            changed = true;
-        }
-
-        if (changed)
-        {
-            Changed?.Invoke(this, EventArgs.Empty);
-        }
-
-        return changed;
     }
 
     public async Task<int> EnsureRecognitionRuntimeCurrentAsync(
@@ -230,8 +148,7 @@ public sealed class MediaCatalogStore
             if (changed > 0)
             {
                 Changed?.Invoke(this, EventArgs.Empty);
-                MetadataEnrichmentRequested?.Invoke(this, EventArgs.Empty);
-            }
+                    }
 
             return changed;
         }
@@ -321,7 +238,6 @@ public sealed class MediaCatalogStore
         if (changed)
         {
             Changed?.Invoke(this, EventArgs.Empty);
-            MetadataEnrichmentRequested?.Invoke(this, EventArgs.Empty);
         }
 
         return true;
