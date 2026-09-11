@@ -336,6 +336,16 @@ public sealed class MediaCatalogStore
             progress: null,
             cancellationToken);
 
+    public Task<int> ScanSourceAsync(
+        MediaSourceDefinition source,
+        Action<MediaScanProgress>? progress,
+        CancellationToken cancellationToken = default) =>
+        ScanSourceAsync(
+            source,
+            metadataService: null,
+            progress,
+            cancellationToken);
+
     public async Task<int> ScanSourceAsync(
         MediaSourceDefinition source,
         MediaMetadataService? metadataService,
