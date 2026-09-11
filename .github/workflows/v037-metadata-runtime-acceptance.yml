@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "codex/eizo-0.3.7-metadata-enrichment"
+      - "codex/eizo-0.3.7-scrape-refresh-recognition"
   workflow_dispatch:
 
 permissions:
