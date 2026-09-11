@@ -209,7 +209,7 @@ try {
     $activationLog = Join-Path $componentsRoot 'activation.log'
     if (-not (Test-Path $activationLog)) { throw 'Component activation diagnostics log was not written.' }
     $log = Get-Content -LiteralPath $activationLog -Raw
-    if ($log -notmatch 'Metadata\tcurrent=0\.1\.1\tbundled=0\.1\.0\texternal=True') {
+    if ($log -notmatch 'Metadata\tcurrent=0\.1\.2\tbundled=0\.1\.0\texternal=True') {
         throw "Metadata external activation was not recorded. Log:`n$log"
     }
 
@@ -217,7 +217,7 @@ try {
     if (-not (Test-Path $runtimeLog)) { throw 'Recognition runtime probe log was not written.' }
     $runtimeLine = @(Get-Content -LiteralPath $runtimeLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
     $externalAssembly = Join-Path $metadataVersionRoot 'bin\Eizo.Metadata.Recognition.dll'
-    if ($runtimeLine -notmatch '\tversion=0\.1\.1\texternal=True\tprobe=' -or
+    if ($runtimeLine -notmatch '\tversion=0\.1\.2\texternal=True\tprobe=' -or
         $runtimeLine -notmatch ([regex]::Escape($externalAssembly))) {
         throw "Metadata v0.1.2 state was promoted but the external Recognition runtime was not actually invoked. Log:`n$runtimeLine"
     }
