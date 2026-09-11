@@ -468,9 +468,9 @@ public sealed partial class CatalogView : UserControl
             XamlRoot = XamlRoot,
             Title = L("识别报告已导出", "認識レポートを出力しました", "Recognition report exported"),
             Content = L(
-                "CSV 已包含原始文件名、逻辑路径、识别标题、状态、置信度、候选标题和证据。可直接按 NeedsReview 或 ReviewPriority 筛选后交给我分析。",
-                "CSV には元ファイル名、論理パス、認識タイトル、状態、信頼度、タイトル候補、根拠が含まれます。NeedsReview または ReviewPriority で絞り込めます。",
-                "The CSV includes original names, logical paths, recognized titles, status, confidence, title candidates and evidence. Filter NeedsReview or ReviewPriority before sharing it for analysis."),
+                "CSV 已同时包含 Recognition 与 Metadata 诊断：原始文件名、逻辑路径、识别证据、Metadata 状态、Provider、Subject ID、匹配置信度、外部 ID 和 Provider 错误。可直接筛选 MetadataStatus / MetadataErrors 后交给我分析。",
+                "CSV には Recognition と Metadata の診断情報を統合しています。元ファイル名、論理パス、認識根拠、Metadata 状態、Provider、Subject ID、信頼度、外部 ID、Provider エラーを確認できます。",
+                "The CSV combines Recognition and Metadata diagnostics, including source names, logical paths, recognition evidence, Metadata status, provider, subject ID, confidence, external IDs and provider errors."),
             CloseButtonText = L("关闭", "閉じる", "Close")
         };
         await dialog.ShowAsync();
@@ -528,7 +528,7 @@ public sealed partial class CatalogView : UserControl
     {
         var builder = new StringBuilder();
         builder.AppendLine(
-            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence");
+            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
 
         foreach (var item in items)
         {
@@ -552,6 +552,33 @@ public sealed partial class CatalogView : UserControl
                     " || ",
                     recognition.Evidence.Select(itemEvidence =>
                         $"{itemEvidence.Code}={itemEvidence.Value ?? "-"} [{itemEvidence.Weight:0.000}]"));
+
+            var metadata = item.Metadata;
+            var metadataLocalizedTitles = metadata is null
+                ? string.Empty
+                : string.Join(
+                    " || ",
+                    metadata.LocalizedTitles
+                        .OrderBy(static pair => pair.Key)
+                        .Select(static pair => $"{pair.Key}={pair.Value}"));
+            var metadataAliases = metadata is null
+                ? string.Empty
+                : string.Join(" || ", metadata.Aliases);
+            var metadataExternalIds = metadata is null
+                ? string.Empty
+                : string.Join(
+                    " || ",
+                    metadata.ExternalIds
+                        .OrderBy(static pair => pair.Key)
+                        .Select(static pair => $"{pair.Key}={pair.Value}"));
+            var metadataErrors = metadata is null
+                ? string.Empty
+                : string.Join(
+                    " || ",
+                    metadata.Errors.Select(static error =>
+                        $"{error.Provider}|{error.ErrorType}|{error.Message}"));
+            var metadataStatus = metadata?.Status.ToString()
+                ?? MetadataDiagnosticState(recognition);
 
             AppendCsvRow(
                 builder,
@@ -581,10 +608,56 @@ public sealed partial class CatalogView : UserControl
                 recognition?.Year?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
                 recognition?.ErrorCode ?? string.Empty,
                 titleCandidates,
-                evidence);
+                evidence,
+                metadata?.RuntimeVersion ?? string.Empty,
+                metadata?.RecognitionRuntimeVersion ?? string.Empty,
+                metadata is null || recognition is null
+                    ? string.Empty
+                    : metadata.MatchesRecognitionRuntime(recognition.RuntimeVersion).ToString(),
+                metadataStatus,
+                metadata?.Provider ?? string.Empty,
+                metadata?.ProviderSubjectId ?? string.Empty,
+                metadata?.SubjectKind ?? string.Empty,
+                metadata?.Confidence.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.CanonicalTitle ?? string.Empty,
+                metadata?.OriginalTitle ?? string.Empty,
+                metadataLocalizedTitles,
+                metadataAliases,
+                metadata?.ReleaseDate ?? string.Empty,
+                metadata?.EpisodeCount?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata is null ? string.Empty : FormatNullableNumber(metadata.EpisodeNumber),
+                metadata?.EpisodeTitle ?? string.Empty,
+                metadata?.EpisodeOriginalTitle ?? string.Empty,
+                metadata?.EpisodeAirDate ?? string.Empty,
+                metadata?.PosterUrl ?? string.Empty,
+                metadata?.BackdropUrl ?? string.Empty,
+                metadataExternalIds,
+                metadataErrors,
+                metadata?.UpdatedAtUtc.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty);
         }
 
         return builder.ToString();
+    }
+
+    private static string MetadataDiagnosticState(
+        MediaRecognitionSnapshot? recognition)
+    {
+        if (recognition is null)
+            return "NotAttempted:MissingRecognition";
+
+        if (recognition.Status != MediaRecognitionStatus.Recognized ||
+            recognition.IsAmbiguous)
+        {
+            return $"NotAttempted:{recognition.Status}";
+        }
+
+        if (recognition.ConfidenceLevel is not ("Medium" or "High"))
+            return $"NotAttempted:{recognition.ConfidenceLevel}Confidence";
+
+        if (string.IsNullOrWhiteSpace(recognition.Title))
+            return "NotAttempted:MissingTitle";
+
+        return "MissingAfterScan";
     }
 
     private static void AppendCsvRow(
