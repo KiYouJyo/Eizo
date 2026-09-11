@@ -190,6 +190,14 @@ public sealed partial class SourcesView : UserControl
                         $"成功 {scan.MetadataResolved} · 未解決 {scan.MetadataUnresolved} · エラー {scan.MetadataErrors}",
                         $"{scan.MetadataResolved} resolved · {scan.MetadataUnresolved} unresolved · {scan.MetadataErrors} errors"));
             }
+            else if (scan.Stage == MediaScanStage.Committing)
+            {
+                summaryParts.Add(
+                    L(
+                        "正在保存媒体库",
+                        "メディアライブラリを保存中",
+                        "Saving media library"));
+            }
             else
             {
                 var knownTotal = Math.Max(
