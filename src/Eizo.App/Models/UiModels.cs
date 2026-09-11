@@ -1,4 +1,3 @@
-using Microsoft.UI.Xaml.Media;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -120,6 +119,5 @@ public sealed record EpisodeItemModel(
     string Duration,
     string Status,
     double Progress = 0,
-    CatalogMediaItemModel? MediaItem = null,
-    ImageSource? Thumbnail = null);
+    CatalogMediaItemModel? MediaItem = null);
 public sealed record CacheItemModel(string Title, string Source, string Size, string LastAccessed);
