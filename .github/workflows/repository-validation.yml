@@ -74,6 +74,9 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Prepare local package source for subtitle tests
+        run: mkdir -p .packages/Eizo.Playback
+
       - name: Run subtitle parser tests
         run: dotnet test tests/Eizo.Subtitle.Tests/Eizo.Subtitle.Tests.csproj --configuration Release
 
