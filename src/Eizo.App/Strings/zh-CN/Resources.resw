@@ -244,6 +244,12 @@
   <data name="Playback_SecondarySubtitlePosition" xml:space="preserve">
     <value>第二字幕位置</value>
   </data>
+  <data name="Playback_PrimarySubtitleOpacity" xml:space="preserve">
+    <value>第一字幕背景不透明度</value>
+  </data>
+  <data name="Playback_SecondarySubtitleOpacity" xml:space="preserve">
+    <value>第二字幕背景不透明度</value>
+  </data>
   <data name="Playback_Speed" xml:space="preserve">
     <value>播放速度</value>
   </data>
