@@ -15,6 +15,9 @@ $queueModel = Get-Content -LiteralPath 'src/Eizo.App/Models/PlaybackQueueItemMod
 
 foreach ($required in @(
     'SelectionChanged="QueueList_SelectionChanged"',
+    'x:Name="SubtitleOverlayStack"',
+    'x:Name="PrimarySubtitleOverlay"',
+    'x:Name="PrimarySubtitleText"',
     'x:Name="SecondarySubtitleOverlay"',
     'x:Name="SecondarySubtitleCombo"',
     'SelectionChanged="SecondarySubtitleCombo_SelectionChanged"')) {
@@ -28,8 +31,9 @@ foreach ($required in @(
     'RefreshQueueStatus',
     'DiscoverAndAttachExternalSubtitlesAsync',
     'ExternalSubtitleService.DiscoverAsync',
-    'AddExternalSubtitleAsync',
+    'UpdatePrimarySubtitle',
     'UpdateSecondarySubtitle',
+    'FormatExternalSubtitleCandidate',
     'PlaybackState.Ended',
     '_queueIndex + 1',
     'Playback_PreviousEpisode',
@@ -124,6 +128,22 @@ foreach ($required in @(
     if ($subtitleParser -notmatch [regex]::Escape($required)) {
         throw "v0.4.0 secondary subtitle parser contract missing: $required"
     }
+}
+
+foreach ($required in @(
+    '_primarySubtitleDocument',
+    '_primarySubtitleUri',
+    'ExternalSubtitleCandidate candidate',
+    'ExternalSubtitleService.LoadDocumentAsync',
+    'candidate.Uri != _primarySubtitleUri',
+    'SelectSubtitleTrackAsync')) {
+    if ($playerCode -notmatch [regex]::Escape($required)) {
+        throw "v0.4.0 WinUI primary subtitle contract missing: $required"
+    }
+}
+
+if ($playerCode -match [regex]::Escape('AddExternalSubtitleAsync')) {
+    throw 'v0.4.0 external primary subtitles must not be rendered by LibVLC.'
 }
 
 if ($queueModel -notmatch 'class PlaybackQueueItemModel' -or
