@@ -108,7 +108,7 @@ public sealed class MediaMetadataServiceTests
     }
 
     [Fact]
-    public async Task EnrichAsync_ReusesSubjectAndEpisodeCachesAcrossEpisodes()
+    public async Task EnrichAsync_ReusesRuntimeScopedPersistentCacheAcrossServiceInstances()
     {
         using var cache = new TempDirectory();
         var searchCalls = 0;
@@ -169,14 +169,27 @@ public sealed class MediaMetadataServiceTests
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         });
 
-        var service = new MediaMetadataService(
+        var firstService = new MediaMetadataService(
             new MediaMetadataServiceOptions(CacheDirectory: cache.Path),
             new HttpClient(handler));
 
-        _ = await service.EnrichAsync(
+        _ = await firstService.EnrichAsync(
             Recognition("攻殻機動隊 STAND ALONE COMPLEX", 2002, 1),
             TestContext.Current.CancellationToken);
-        _ = await service.EnrichAsync(
+
+        var runtimeCacheRoot = Path.Combine(
+            cache.Path,
+            $"runtime-{MediaMetadataService.RuntimeVersion}");
+        Assert.True(Directory.Exists(runtimeCacheRoot));
+
+        // A new service instance has a fresh memory cache. If the second call
+        // does not hit the network, reuse is coming from the runtime-scoped
+        // persistent cache rather than process-local state.
+        var secondService = new MediaMetadataService(
+            new MediaMetadataServiceOptions(CacheDirectory: cache.Path),
+            new HttpClient(handler));
+
+        _ = await secondService.EnrichAsync(
             Recognition("攻殻機動隊 STAND ALONE COMPLEX", 2002, 2),
             TestContext.Current.CancellationToken);
 
