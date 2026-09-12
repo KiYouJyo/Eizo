@@ -109,6 +109,55 @@ public sealed class MediaLibraryGroupingTests
     }
 
     [Fact]
+    public void NumberedAnimeMoviesCollapseIntoOneFamilyCard()
+    {
+        var first = Recognition(
+            "剧场版 空之境界 第一章 俯瞰风景",
+            2007,
+            null) with
+        {
+            MediaKind = "Movie",
+        };
+        var second = Recognition(
+            "剧场版 空之境界 第二章 杀人考察（前）",
+            2007,
+            null) with
+        {
+            MediaKind = "Movie",
+        };
+        var epilogue = Recognition(
+            "剧场版 空之境界 未来福音",
+            2013,
+            null) with
+        {
+            MediaKind = "Movie",
+        };
+
+        var assignments = MediaLibraryGrouping.AssignSubjectIdentities(
+        [
+            new("movie-1", first, Metadata: null),
+            new("movie-2", second, Metadata: null),
+            new("movie-extra", epilogue, Metadata: null),
+        ]);
+
+        Assert.Equal(3, assignments.Count);
+        Assert.All(
+            assignments,
+            static assignment =>
+            {
+                Assert.NotNull(assignment.Identity);
+                Assert.Equal(
+                    "recognition-movie-family",
+                    assignment.Identity!.Basis);
+                Assert.Equal("空之境界", assignment.Identity.TitleHint);
+            });
+        Assert.Single(
+            assignments
+                .Select(static assignment => assignment.Identity!.Key)
+                .Distinct(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void AmbiguousItemsRemainStandalone()
     {
         var recognition = Recognition("Conflicting Show", 2020, 1) with
