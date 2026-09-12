@@ -200,7 +200,8 @@ public sealed class MediaMetadataService
                     DateTimeOffset.UtcNow),
                 providerRequest,
                 result.Resolution,
-                result.Subject);
+                result.Subject,
+                result);
         }
 
         var subject = result.Subject;
@@ -238,7 +239,8 @@ public sealed class MediaMetadataService
                 DateTimeOffset.UtcNow),
             providerRequest,
             result.Resolution,
-            subject);
+            subject,
+            result);
     }
 
     public static MetadataRuntimeIdentity ProbeRuntime()
@@ -304,7 +306,8 @@ public sealed class MediaMetadataService
         MediaMetadataSnapshot snapshot,
         Core.MetadataSearchRequest providerRequest,
         Core.MetadataResolution resolution,
-        Core.MetadataSubject? subject)
+        Core.MetadataSubject? subject,
+        Core.MetadataEnrichmentResult enrichment)
     {
         var best = resolution.Candidates.FirstOrDefault();
         var second = resolution.Candidates.Skip(1).FirstOrDefault();
@@ -314,9 +317,16 @@ public sealed class MediaMetadataService
                 ? 1.0
                 : best.Score - second.Score;
 
+        var failureStage = ReadDiagnosticName(enrichment, "FailureStage") ??
+                           ReadDiagnosticName(resolution, "FailureStage");
+        var failureReason = ReadDiagnosticName(enrichment, "FailureReason") ??
+                            ReadDiagnosticName(resolution, "FailureReason");
+
         return snapshot with
         {
             ResolutionReason = ResolutionReason(resolution, subject),
+            FailureStage = NormalizeDiagnosticName(failureStage),
+            FailureReason = NormalizeDiagnosticName(failureReason),
             SearchTitles = providerRequest.Titles.ToList(),
             CandidateCount = resolution.Candidates.Count,
             AutoResolveThreshold = AutoResolveThreshold,
@@ -339,6 +349,28 @@ public sealed class MediaMetadataService
                 .ToList(),
         };
     }
+
+    private static string? ReadDiagnosticName(
+        object source,
+        string propertyName)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        var property = source.GetType().GetProperty(propertyName);
+        if (property is null)
+        {
+            return null;
+        }
+
+        var value = property.GetValue(source);
+        return value?.ToString();
+    }
+
+    private static string? NormalizeDiagnosticName(string? value) =>
+        string.IsNullOrWhiteSpace(value) ||
+        string.Equals(value, "None", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : value;
 
     private static string ResolutionReason(
         Core.MetadataResolution resolution,
