@@ -184,11 +184,18 @@ public sealed partial class CatalogView : UserControl
             metaParts.Add(recognitionYear.ToString(CultureInfo.InvariantCulture));
         }
 
-        metaParts.Add(
-            L(
-                $"{subject.EpisodeCount} 集",
-                $"{subject.EpisodeCount} 話",
-                $"{subject.EpisodeCount} episodes"));
+        if (subject.IsMovieSubject)
+        {
+            metaParts.Add(L("电影", "映画", "Movie"));
+        }
+        else
+        {
+            metaParts.Add(
+                L(
+                    $"{subject.EpisodeCount} 集",
+                    $"{subject.EpisodeCount} 話",
+                    $"{subject.EpisodeCount} episodes"));
+        }
 
         var sourceIds = subject.Items
             .Select(static item => item.Location?.SourceId)
@@ -222,6 +229,7 @@ public sealed partial class CatalogView : UserControl
             {
                 MediaCategoryKind.Anime => "\uE8B2",
                 MediaCategoryKind.Series => "\uE8FD",
+                MediaCategoryKind.Movies => "\uE714",
                 _ => "\uE8FD",
             },
             CreateArtwork(metadata?.PosterUrl, 360),
@@ -229,10 +237,12 @@ public sealed partial class CatalogView : UserControl
             subtitle,
             string.Join(" · ", metaParts),
             sourceLabel,
-            L(
-                $"{subject.EpisodeCount} 集",
-                $"{subject.EpisodeCount} 話",
-                $"{subject.EpisodeCount} eps"));
+            subject.IsMovieSubject
+                ? L("电影", "映画", "Movie")
+                : L(
+                    $"{subject.EpisodeCount} 集",
+                    $"{subject.EpisodeCount} 話",
+                    $"{subject.EpisodeCount} eps"));
     }
 
     private CatalogListItemViewModel CreateListItem(
