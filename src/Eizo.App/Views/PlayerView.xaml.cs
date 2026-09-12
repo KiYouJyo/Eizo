@@ -630,12 +630,37 @@ public sealed partial class PlayerView : UserControl
         if (_engine is not { } engine)
             return;
 
+        if (engine.Navigation.Chapters.Count == 0)
+        {
+            if (_queueIndex > 0)
+            {
+                await SwitchQueueItemAsync(
+                    _queueIndex - 1,
+                    autoplay: true);
+            }
+
+            return;
+        }
+
         try
         {
-            await RunOperationAsync(engine, "chapter", async token => { await engine.Navigation.PreviousChapterAsync(token); });
+            await RunOperationAsync(
+                engine,
+                "chapter",
+                async token =>
+                {
+                    await engine.Navigation.PreviousChapterAsync(
+                        token);
+                });
         }
         catch (Exception exception)
-        { PlaybackTrace.Write("view", "control", "error", exception.GetType().Name); }
+        {
+            PlaybackTrace.Write(
+                "view",
+                "control",
+                "error",
+                exception.GetType().Name);
+        }
     }
 
     private async void NextChapterButton_Click(object sender, RoutedEventArgs e)
@@ -643,12 +668,38 @@ public sealed partial class PlayerView : UserControl
         if (_engine is not { } engine)
             return;
 
+        if (engine.Navigation.Chapters.Count == 0)
+        {
+            if (_queueIndex >= 0 &&
+                _queueIndex < _queueItems.Count - 1)
+            {
+                await SwitchQueueItemAsync(
+                    _queueIndex + 1,
+                    autoplay: true);
+            }
+
+            return;
+        }
+
         try
         {
-            await RunOperationAsync(engine, "chapter", async token => { await engine.Navigation.NextChapterAsync(token); });
+            await RunOperationAsync(
+                engine,
+                "chapter",
+                async token =>
+                {
+                    await engine.Navigation.NextChapterAsync(
+                        token);
+                });
         }
         catch (Exception exception)
-        { PlaybackTrace.Write("view", "control", "error", exception.GetType().Name); }
+        {
+            PlaybackTrace.Write(
+                "view",
+                "control",
+                "error",
+                exception.GetType().Name);
+        }
     }
 
     private async void PlaybackSlider_ValueChanged(
@@ -1130,17 +1181,41 @@ public sealed partial class PlayerView : UserControl
     private void UpdateNavigationAvailability()
     {
         var navigation = _engine?.Navigation;
-
-        PreviousChapterButton.IsEnabled =
+        var hasChapters =
             navigation is not null &&
-            navigation.Chapters.Count > 0 &&
-            navigation.SelectedChapterIndex is > 0;
+            navigation.Chapters.Count > 0;
 
-        NextChapterButton.IsEnabled =
-            navigation is not null &&
-            navigation.Chapters.Count > 0 &&
-            navigation.SelectedChapterIndex is int selected &&
-            selected < navigation.Chapters.Count - 1;
+        PreviousChapterButton.IsEnabled = hasChapters
+            ? navigation!.SelectedChapterIndex is > 0
+            : _engine is not null &&
+              _queueIndex > 0;
+
+        NextChapterButton.IsEnabled = hasChapters
+            ? navigation!.SelectedChapterIndex is int selected &&
+              selected < navigation.Chapters.Count - 1
+            : _engine is not null &&
+              _queueIndex >= 0 &&
+              _queueIndex < _queueItems.Count - 1;
+
+        var previousLabel = hasChapters
+            ? T("Playback_PreviousChapter")
+            : T("Playback_PreviousEpisode");
+        var nextLabel = hasChapters
+            ? T("Playback_NextChapter")
+            : T("Playback_NextEpisode");
+
+        ToolTipService.SetToolTip(
+            PreviousChapterButton,
+            previousLabel);
+        ToolTipService.SetToolTip(
+            NextChapterButton,
+            nextLabel);
+        AutomationProperties.SetName(
+            PreviousChapterButton,
+            previousLabel);
+        AutomationProperties.SetName(
+            NextChapterButton,
+            nextLabel);
     }
 
     private void UpdateDiagnosticsUi(PlaybackDiagnosticsSnapshot snapshot)
@@ -1979,7 +2054,14 @@ public sealed partial class PlayerView : UserControl
         }
 
         if (CurrentQueueItem is { } current)
+        {
             QueueSubtitle.Text = current.Title;
+
+            if (QueueList.IsLoaded)
+                QueueList.ScrollIntoView(current);
+        }
+
+        UpdateNavigationAvailability();
     }
 
     private void PlayerSectionList_SelectionChanged(
