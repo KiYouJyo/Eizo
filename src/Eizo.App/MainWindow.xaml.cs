@@ -568,6 +568,12 @@ public sealed partial class MainWindow : Window
         var initialQueueIndex = FindQueueIndex(
             queue,
             item);
+        PlaybackSelectionTrace.Write(
+            "open-request",
+            item.SourceTitle,
+            location.Locator,
+            initialQueueIndex,
+            queue.Count);
         var playerTitle =
             subject?.Title ??
             item.DisplayTitle;
