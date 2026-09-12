@@ -5,6 +5,7 @@ $playerXaml = Get-Content -LiteralPath 'src/Eizo.App/Views/PlayerView.xaml' -Raw
 $playerCode = Get-Content -LiteralPath 'src/Eizo.App/Views/PlayerView.xaml.cs' -Raw
 $mainWindow = Get-Content -LiteralPath 'src/Eizo.App/MainWindow.xaml.cs' -Raw
 $subtitleService = Get-Content -LiteralPath 'src/Eizo.App/Playback/ExternalSubtitleService.cs' -Raw
+$subtitleMatcher = Get-Content -LiteralPath 'src/Eizo.App/Playback/ExternalSubtitleNameMatcher.cs' -Raw
 $subtitleParser = Get-Content -LiteralPath 'src/Eizo.App/Playback/SubtitleTextParser.cs' -Raw
 $queueModel = Get-Content -LiteralPath 'src/Eizo.App/Models/PlaybackQueueItemModel.cs' -Raw
 
@@ -46,16 +47,27 @@ foreach ($required in @(
 }
 
 foreach ($required in @(
+    'DiscoverLocal',
+    'MaterializeRemoteAsync',
+    'DownloadFileAsync',
+    'SubtitleCache',
+    'external-subtitles.log',
+    'ExternalSubtitleNameMatcher.IsMatch')) {
+    if ($subtitleService -notmatch [regex]::Escape($required)) {
+        throw "v0.4.0 external subtitle service contract missing: $required"
+    }
+}
+
+foreach ($required in @(
     '".srt"',
     '".vtt"',
     '".ass"',
     '".ssa"',
-    'DiscoverLocal',
-    'MaterializeRemoteAsync',
-    'DownloadFileAsync',
-    'SubtitleCache')) {
-    if ($subtitleService -notmatch [regex]::Escape($required)) {
-        throw "v0.4.0 external subtitle service contract missing: $required"
+    'NormalizationForm.FormKC',
+    '\u200B',
+    '\uFEFF')) {
+    if ($subtitleMatcher -notmatch [regex]::Escape($required)) {
+        throw "v0.4.0 external subtitle matcher contract missing: $required"
     }
 }
 
