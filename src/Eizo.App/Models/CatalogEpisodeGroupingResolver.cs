@@ -32,6 +32,7 @@ internal static class CatalogEpisodeGroupingResolver
     {
         var explicitSpecial = TryParseExplicitSpecial(
             sourceTitle,
+            out _,
             out var explicitSpecialNumber);
 
         var recognitionSpecial =
@@ -72,10 +73,46 @@ internal static class CatalogEpisodeGroupingResolver
             IsSpecial: false);
     }
 
+    internal static bool IsExplicitSpecialSource(
+        string? sourceTitle) =>
+        TryParseExplicitSpecial(
+            sourceTitle,
+            out _,
+            out _);
+
+    internal static string? ResolveExplicitSpecialLabel(
+        string? sourceTitle,
+        decimal? fallbackNumber)
+    {
+        if (!TryParseExplicitSpecial(
+                sourceTitle,
+                out var kind,
+                out var parsedNumber))
+        {
+            return null;
+        }
+
+        var number = parsedNumber ?? fallbackNumber;
+        if (number is null)
+            return kind;
+
+        var formatted =
+            number == decimal.Truncate(number.Value)
+                ? decimal.Truncate(number.Value)
+                    .ToString(CultureInfo.InvariantCulture)
+                : number.Value.ToString(
+                    "0.##",
+                    CultureInfo.InvariantCulture);
+
+        return $"{kind} {formatted}";
+    }
+
     private static bool TryParseExplicitSpecial(
         string? sourceTitle,
+        out string kind,
         out decimal? number)
     {
+        kind = string.Empty;
         number = null;
 
         if (string.IsNullOrWhiteSpace(sourceTitle))
@@ -88,6 +125,9 @@ internal static class CatalogEpisodeGroupingResolver
         var match = ExplicitSpecialRegex.Match(normalized);
         if (!match.Success)
             return false;
+
+        kind = match.Groups["kind"].Value
+            .ToUpperInvariant();
 
         var value = match.Groups["number"].Value;
         if (!string.IsNullOrWhiteSpace(value) &&
