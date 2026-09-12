@@ -6,6 +6,7 @@ $playerCode = Get-Content -LiteralPath 'src/Eizo.App/Views/PlayerView.xaml.cs' -
 $mainWindow = Get-Content -LiteralPath 'src/Eizo.App/MainWindow.xaml.cs' -Raw
 $detailView = Get-Content -LiteralPath 'src/Eizo.App/Views/DetailView.xaml.cs' -Raw
 $episodeGrouping = Get-Content -LiteralPath 'src/Eizo.App/Models/CatalogEpisodeGroupingResolver.cs' -Raw
+$catalogSubject = Get-Content -LiteralPath 'src/Eizo.App/Models/CatalogSubjectModel.cs' -Raw
 $selectionTrace = Get-Content -LiteralPath 'src/Eizo.App/Models/PlaybackSelectionTrace.cs' -Raw
 $subtitleService = Get-Content -LiteralPath 'src/Eizo.App/Playback/ExternalSubtitleService.cs' -Raw
 $subtitleMatcher = Get-Content -LiteralPath 'src/Eizo.App/Playback/ExternalSubtitleNameMatcher.cs' -Raw
@@ -67,6 +68,17 @@ foreach ($required in @(
     'IsSpecial: true')) {
     if ($episodeGrouping -notmatch [regex]::Escape($required)) {
         throw "v0.4.0 stale-special grouping contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'IsExplicitSpecialSource',
+    'isSpecialGroup',
+    'ResolveExplicitSpecialLabel',
+    'Metadata currently carries EpisodeNumber/EpisodeTitle but no',
+    'nativeTitle = string.Empty')) {
+    if ($catalogSubject -notmatch [regex]::Escape($required)) {
+        throw "v0.4.0 special primary/title isolation contract missing: $required"
     }
 }
 
