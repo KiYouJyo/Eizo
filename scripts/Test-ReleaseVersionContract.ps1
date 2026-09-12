@@ -18,10 +18,7 @@ $release = Get-Content -LiteralPath $releasePath -Raw | ConvertFrom-Json
 $version = [string]$release.product.version
 $packageVersion = [string]$release.product.packageVersion
 
-if ($version -notmatch '^\d+\.\d+\.\d+$' -or
-    $packageVersion -notmatch ('^' + [regex]::Escape($version) + '\.\d+$')) {
-    throw "Invalid release version contract: version=$version packageVersion=$packageVersion"
-}
+if ($version -notmatch '^\d+\.\d+\.\d+
 
 [xml]$project = Read-Text 'src/Eizo.App/Eizo.App.csproj'
 [xml]$manifest = Read-Text 'src/Eizo.App/Package.appxmanifest'
@@ -105,7 +102,7 @@ foreach ($relativePath in @($currentAcceptanceScript, $currentAcceptanceWorkflow
 Write-Host "Release version contract PASS: Eizo $version / $packageVersion"
 Write-Host 'About-page version source: installed Package / Assembly (no hard-coded product version).'
  -or
-    $packageVersion -notmatch ('^' + [regex]::Escape($version) + '\\.\\d+
+    $packageVersion -notmatch ('^' + [regex]::Escape($version) + '\.\d+
 
 [xml]$project = Read-Text 'src/Eizo.App/Eizo.App.csproj'
 [xml]$manifest = Read-Text 'src/Eizo.App/Package.appxmanifest'
