@@ -8,7 +8,7 @@ namespace Eizo.MetadataIntegration;
 
 public sealed record MediaMetadataServiceOptions(
     bool EnableBangumi = true,
-    string BangumiUserAgent = "KiYouJyo/Eizo/0.3.7 (https://github.com/KiYouJyo/Eizo)",
+    string BangumiUserAgent = "KiYouJyo/Eizo/0.3.9 (https://github.com/KiYouJyo/Eizo)",
     string PreferredLanguage = "zh-CN",
     string? TmdbReadAccessToken = null,
     string? CacheDirectory = null);
