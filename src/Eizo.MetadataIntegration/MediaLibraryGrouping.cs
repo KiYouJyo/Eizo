@@ -1,11 +1,15 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using Eizo.Recognition;
 
 namespace Eizo.MetadataIntegration;
 
 public sealed record MediaSubjectGroupingIdentity(
     string Key,
-    string Basis);
+    string Basis)
+{
+    public string? TitleHint { get; init; }
+}
 
 public enum MediaLibraryCategoryHint
 {
@@ -47,6 +51,7 @@ public static class MediaLibraryGrouping
             StringComparer.Ordinal);
         var metadataOwnersByRecognitionKey = new Dictionary<string, HashSet<string>>(
             StringComparer.Ordinal);
+        var movieFamilyIdentities = BuildMovieFamilyIdentities(items);
 
         foreach (var item in items)
         {
@@ -98,6 +103,16 @@ public static class MediaLibraryGrouping
 
         foreach (var item in items)
         {
+            if (movieFamilyIdentities.TryGetValue(
+                    item.ItemKey,
+                    out var movieFamilyIdentity))
+            {
+                result.Add(new MediaLibraryGroupingAssignment(
+                    item.ItemKey,
+                    movieFamilyIdentity));
+                continue;
+            }
+
             if (metadataIdentities.TryGetValue(item.ItemKey, out var metadataIdentity))
             {
                 result.Add(new MediaLibraryGroupingAssignment(
@@ -140,6 +155,143 @@ public static class MediaLibraryGrouping
 
         return result;
     }
+
+    private static readonly Regex LeadingMovieMarkerRegex = new(
+        @"^\s*(?:(?:劇場版|剧场版|映画版|映画)|(?:THE\s+)?MOVIE)\s*[:：._\-–—]?\s*",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(50));
+
+    private static readonly Regex MovieInstallmentRegex = new(
+        @"^(?<family>.+?)(?:\s+|[-_:：])(?:(?:第\s*[一二三四五六七八九十两兩〇零壹贰貳叁參肆伍陆陸柒捌玖拾\d]{1,3}\s*(?:章|部|篇|幕|話|话|夜))|(?:(?:CHAPTER|BORDER)\s*[-_:：]?\s*\d{1,2}))",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(50));
+
+    private static IReadOnlyDictionary<string, MediaSubjectGroupingIdentity>
+        BuildMovieFamilyIdentities(
+            IReadOnlyList<MediaLibraryGroupingInput> items)
+    {
+        var candidates = items
+            .Where(static item =>
+                item.Recognition is
+                {
+                    Status: MediaRecognitionStatus.Recognized,
+                    IsAmbiguous: false,
+                    ConfidenceLevel: "High" or "Medium",
+                    Title.Length: > 0,
+                    MediaKind: "Movie",
+                })
+            .Where(item =>
+                Classify(item.Recognition, item.Metadata) ==
+                MediaLibraryCategoryHint.Anime)
+            .Select(item =>
+            {
+                var title = CleanMovieTitle(item.Recognition!.Title!);
+                return new MovieFamilyCandidate(
+                    item.ItemKey,
+                    title,
+                    NormalizeTitle(title),
+                    TryExtractMovieFamilyTitle(title));
+            })
+            .Where(static item => item.NormalizedTitle.Length >= 3)
+            .ToArray();
+
+        var seeds = candidates
+            .Where(static item => !string.IsNullOrWhiteSpace(item.FamilyTitle))
+            .GroupBy(
+                static item => NormalizeTitle(item.FamilyTitle!),
+                StringComparer.Ordinal)
+            .Where(static group =>
+                group.Key.Length >= 3 &&
+                group.Select(static item => item.NormalizedTitle)
+                    .Distinct(StringComparer.Ordinal)
+                    .Count() >= 2)
+            .Select(static group => new MovieFamilySeed(
+                group.Key,
+                group.Select(static item => item.FamilyTitle!)
+                    .OrderBy(static value => value.Length)
+                    .First()))
+            .OrderByDescending(static seed => seed.NormalizedTitle.Length)
+            .ToArray();
+
+        if (seeds.Length == 0)
+        {
+            return new Dictionary<string, MediaSubjectGroupingIdentity>(
+                StringComparer.Ordinal);
+        }
+
+        var result = new Dictionary<string, MediaSubjectGroupingIdentity>(
+            StringComparer.Ordinal);
+
+        foreach (var candidate in candidates)
+        {
+            var seed = seeds.FirstOrDefault(value =>
+                candidate.NormalizedTitle.StartsWith(
+                    value.NormalizedTitle,
+                    StringComparison.Ordinal));
+            if (seed is null)
+            {
+                continue;
+            }
+
+            result[candidate.ItemKey] = new MediaSubjectGroupingIdentity(
+                $"recognition-movie-family|{seed.NormalizedTitle}",
+                "recognition-movie-family")
+            {
+                TitleHint = seed.DisplayTitle,
+            };
+        }
+
+        return result;
+    }
+
+    private static string CleanMovieTitle(string value)
+    {
+        var normalized = value
+            .Normalize(NormalizationForm.FormKC)
+            .Trim();
+
+        try
+        {
+            normalized = LeadingMovieMarkerRegex.Replace(
+                normalized,
+                string.Empty);
+        }
+        catch (RegexMatchTimeoutException)
+        {
+        }
+
+        return normalized.Trim();
+    }
+
+    private static string? TryExtractMovieFamilyTitle(string value)
+    {
+        try
+        {
+            var match = MovieInstallmentRegex.Match(value);
+            if (!match.Success)
+            {
+                return null;
+            }
+
+            var family = match.Groups["family"].Value
+                .Trim(' ', '-', '–', '—', '_', '.', ':', '：');
+            return family.Length >= 2 ? family : null;
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return null;
+        }
+    }
+
+    private sealed record MovieFamilyCandidate(
+        string ItemKey,
+        string DisplayTitle,
+        string NormalizedTitle,
+        string? FamilyTitle);
+
+    private sealed record MovieFamilySeed(
+        string NormalizedTitle,
+        string DisplayTitle);
 
     public static MediaSubjectGroupingIdentity? TryGetMetadataSubjectIdentity(
         MediaRecognitionSnapshot recognition,
