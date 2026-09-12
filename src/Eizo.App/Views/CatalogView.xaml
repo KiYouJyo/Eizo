@@ -69,8 +69,8 @@
       <GridView.ItemsPanel>
         <ItemsPanelTemplate>
           <ItemsWrapGrid Orientation="Horizontal"
-                         ItemWidth="188"
-                         ItemHeight="318" />
+                         ItemWidth="204"
+                         ItemHeight="408" />
         </ItemsPanelTemplate>
       </GridView.ItemsPanel>
 
@@ -89,25 +89,26 @@
 
       <GridView.ItemContainerStyle>
         <Style TargetType="GridViewItem">
-          <Setter Property="Width" Value="188" />
-          <Setter Property="Height" Value="318" />
+          <Setter Property="Width" Value="192" />
+          <Setter Property="Height" Value="396" />
           <Setter Property="Padding" Value="0" />
-          <Setter Property="Margin" Value="0,0,12,14" />
+          <Setter Property="Margin" Value="0,0,12,12" />
           <Setter Property="HorizontalContentAlignment" Value="Stretch" />
           <Setter Property="VerticalContentAlignment" Value="Stretch" />
+          <Setter Property="CornerRadius" Value="10" />
+          <Setter Property="Background" Value="Transparent" />
         </Style>
       </GridView.ItemContainerStyle>
 
       <GridView.ItemTemplate>
         <DataTemplate>
-          <Border Width="180"
-                  Height="306"
-                  Margin="4,4,4,8"
-                  CornerRadius="10"
+          <Border CornerRadius="10"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch"
                   Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                   BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                   BorderThickness="1">
-            <Grid RowDefinitions="220,*">
+            <Grid RowDefinitions="272,124">
               <Border CornerRadius="9,9,0,0"
                       Background="{ThemeResource EizoSelectionBrush}">
                 <Grid>
@@ -132,8 +133,8 @@
               </Border>
 
               <StackPanel Grid.Row="1"
-                          Padding="10,8,10,10"
-                          Spacing="3">
+                          Padding="11,9,11,10"
+                          Spacing="4">
                 <TextBlock Text="{Binding Title}"
                            FontSize="14"
                            FontWeight="SemiBold"
