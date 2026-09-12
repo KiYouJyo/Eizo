@@ -348,19 +348,19 @@ public sealed partial class MainWindow : Window
             }
             case "anime":
             {
-                var view = new CategoryView(MediaCategoryKind.Anime);
+                var view = new CatalogView(MediaCategoryKind.Anime);
                 WireWorkspaceMediaView(view);
                 return view;
             }
             case "movies":
             {
-                var view = new CategoryView(MediaCategoryKind.Movies);
+                var view = new CatalogView(MediaCategoryKind.Movies);
                 WireWorkspaceMediaView(view);
                 return view;
             }
             case "series":
             {
-                var view = new CategoryView(MediaCategoryKind.Series);
+                var view = new CatalogView(MediaCategoryKind.Series);
                 WireWorkspaceMediaView(view);
                 return view;
             }
