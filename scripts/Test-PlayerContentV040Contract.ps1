@@ -12,11 +12,16 @@ $subtitleService = Get-Content -LiteralPath 'src/Eizo.App/Playback/ExternalSubti
 $subtitleMatcher = Get-Content -LiteralPath 'src/Eizo.App/Playback/ExternalSubtitleNameMatcher.cs' -Raw
 $subtitleParser = Get-Content -LiteralPath 'src/Eizo.App/Playback/SubtitleTextParser.cs' -Raw
 $queueModel = Get-Content -LiteralPath 'src/Eizo.App/Models/PlaybackQueueItemModel.cs' -Raw
+$appSettings = Get-Content -LiteralPath 'src/Eizo.App/AppSettingsStore.cs' -Raw
 
 foreach ($required in @(
     'SelectionChanged="QueueList_SelectionChanged"',
-    'x:Name="SubtitleOverlayStack"',
     'x:Name="PrimarySubtitleOverlay"',
+    'HorizontalAlignment="Stretch"',
+    'x:Name="PrimarySubtitlePositionSlider"',
+    'ValueChanged="PrimarySubtitlePositionSlider_ValueChanged"',
+    'x:Name="SecondarySubtitlePositionSlider"',
+    'ValueChanged="SecondarySubtitlePositionSlider_ValueChanged"',
     'x:Name="PrimarySubtitleText"',
     'x:Name="SecondarySubtitleOverlay"',
     'x:Name="SecondarySubtitleCombo"',
@@ -144,6 +149,28 @@ foreach ($required in @(
 
 if ($playerCode -match [regex]::Escape('AddExternalSubtitleAsync')) {
     throw 'v0.4.0 external primary subtitles must not be rendered by LibVLC.'
+}
+
+foreach ($required in @(
+    'InitializeSubtitlePositionControls',
+    'ApplySubtitlePositions',
+    'PrimarySubtitlePositionSlider_ValueChanged',
+    'SecondarySubtitlePositionSlider_ValueChanged',
+    '_primarySubtitleVerticalPosition',
+    '_secondarySubtitleVerticalPosition',
+    'surfaceHeight *',
+    'Math.Clamp(percentage, 0d, 90d)')) {
+    if ($playerCode -notmatch [regex]::Escape($required)) {
+        throw "v0.4.0 independent subtitle position contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'PrimarySubtitleVerticalPosition = 12d',
+    'SecondarySubtitleVerticalPosition = 24d')) {
+    if ($appSettings -notmatch [regex]::Escape($required)) {
+        throw "v0.4.0 subtitle position persistence contract missing: $required"
+    }
 }
 
 if ($queueModel -notmatch 'class PlaybackQueueItemModel' -or
