@@ -1,3 +1,5 @@
+English | [简体中文](RELEASE-NOTES-v0.4.0.md) | [日本語](RELEASE-NOTES-v0.4.0.ja.md)
+
 # Eizo v0.4.0
 
 ## Playback queue, external subtitles and dual subtitles
