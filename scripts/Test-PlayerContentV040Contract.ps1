@@ -2,6 +2,8 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $playerXaml = Get-Content -LiteralPath 'src/Eizo.App/Views/PlayerView.xaml' -Raw
+$aboutXaml = Get-Content -LiteralPath 'src/Eizo.App/Views/AboutView.xaml' -Raw
+$aboutCode = Get-Content -LiteralPath 'src/Eizo.App/Views/AboutView.xaml.cs' -Raw
 $playerCode = Get-Content -LiteralPath 'src/Eizo.App/Views/PlayerView.xaml.cs' -Raw
 $mainWindow = Get-Content -LiteralPath 'src/Eizo.App/MainWindow.xaml.cs' -Raw
 $detailView = Get-Content -LiteralPath 'src/Eizo.App/Views/DetailView.xaml.cs' -Raw
@@ -154,6 +156,38 @@ foreach ($required in @(
 
 if ($playerCode -match [regex]::Escape('AddExternalSubtitleAsync')) {
     throw 'v0.4.0 external primary subtitles must not be rendered by LibVLC.'
+}
+
+foreach ($forbidden in @(
+    'Text="Playback"',
+    'PlaybackDescriptionText',
+    'PlaybackCurrentVersionText',
+    'PlaybackAvailableVersionText',
+    'PlaybackUpdateStatusText',
+    'CheckPlaybackUpdateButton',
+    'PlaybackUpdateProgressBar')) {
+    if ($aboutXaml -match [regex]::Escape($forbidden)) {
+        throw "v0.4.0 About update UI still exposes Playback runtime: $forbidden"
+    }
+}
+
+foreach ($forbidden in @(
+    '_playbackProgress',
+    'CheckPlaybackUpdateButton_Click',
+    'PlaybackDescriptionText',
+    'CheckPlaybackUpdateButton.Content')) {
+    if ($aboutCode -match [regex]::Escape($forbidden)) {
+        throw "v0.4.0 About code still exposes Playback update row: $forbidden"
+    }
+}
+
+foreach ($required in @(
+    'Text="Metadata"',
+    'RecognitionCurrentVersionText',
+    'CheckRecognitionUpdateButton')) {
+    if ($aboutXaml -notmatch [regex]::Escape($required)) {
+        throw "v0.4.0 About Metadata update row contract missing: $required"
+    }
 }
 
 foreach ($required in @(
