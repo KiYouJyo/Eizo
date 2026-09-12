@@ -134,7 +134,12 @@ internal static class CatalogSubjectAggregator
                 .Select(static item => item.Metadata)
                 .FirstOrDefault(static value => value is { IsResolved: true });
 
-        var title = metadata?.CanonicalTitle;
+        var title = string.Equals(
+                identity.Basis,
+                "recognition-movie-family",
+                StringComparison.Ordinal)
+            ? identity.TitleHint
+            : metadata?.CanonicalTitle;
         if (string.IsNullOrWhiteSpace(title))
         {
             title = representative.Recognition?.Title;
@@ -219,13 +224,16 @@ internal static class CatalogSubjectAggregator
                 string.Equals(
                     item.Recognition?.MediaKind,
                     "Special",
-                    StringComparison.OrdinalIgnoreCase)))
+                    StringComparison.OrdinalIgnoreCase),
+                ResolveMovieIdentity(item)))
             .ToArray();
 
         return indexed
             .GroupBy(value =>
                 value.Number is null
-                    ? $"file|{value.Index}"
+                    ? value.MovieIdentity is { Length: > 0 } movieIdentity
+                        ? $"movie|{movieIdentity}"
+                        : $"file|{value.Index}"
                     : string.Create(
                         CultureInfo.InvariantCulture,
                         $"{value.Season}|{value.Number}|{value.Special}"),
@@ -256,10 +264,19 @@ internal static class CatalogSubjectAggregator
         var metadata = primary.Metadata;
         var recognition = primary.Recognition;
 
-        var title = metadata?.EpisodeTitle;
+        var isMovie = string.Equals(
+            recognition?.MediaKind,
+            "Movie",
+            StringComparison.OrdinalIgnoreCase);
+
+        var title = isMovie
+            ? metadata?.CanonicalTitle
+            : metadata?.EpisodeTitle;
         if (string.IsNullOrWhiteSpace(title))
         {
-            title = recognition?.EpisodeTitle;
+            title = isMovie
+                ? recognition?.Title
+                : recognition?.EpisodeTitle;
         }
 
         if (string.IsNullOrWhiteSpace(title))
@@ -269,7 +286,9 @@ internal static class CatalogSubjectAggregator
                 : primary.SourceTitle;
         }
 
-        var nativeTitle = metadata?.EpisodeOriginalTitle;
+        var nativeTitle = isMovie
+            ? metadata?.OriginalTitle
+            : metadata?.EpisodeOriginalTitle;
         if (string.IsNullOrWhiteSpace(nativeTitle) ||
             string.Equals(
                 nativeTitle,
@@ -297,7 +316,52 @@ internal static class CatalogSubjectAggregator
         int Index,
         int Season,
         decimal? Number,
-        bool Special);
+        bool Special,
+        string? MovieIdentity);
+
+    private static string? ResolveMovieIdentity(
+        CatalogMediaItemModel item)
+    {
+        if (!string.Equals(
+                item.Recognition?.MediaKind,
+                "Movie",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (item.Metadata is
+            {
+                IsResolved: true,
+                Provider.Length: > 0,
+                ProviderSubjectId.Length: > 0
+            } metadata)
+        {
+            return $"{metadata.Provider!.Trim().ToLowerInvariant()}|{metadata.ProviderSubjectId}";
+        }
+
+        var title = item.Recognition?.Title;
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return null;
+        }
+
+        var normalized = title
+            .Normalize(NormalizationForm.FormKC)
+            .ToUpperInvariant();
+        var builder = new System.Text.StringBuilder(normalized.Length);
+        foreach (var character in normalized)
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(character);
+            }
+        }
+
+        return builder.Length == 0
+            ? null
+            : $"{builder}|{item.Recognition?.Year?.ToString(CultureInfo.InvariantCulture) ?? "-"}";
+    }
 
     private static int ResolveSeason(CatalogMediaItemModel item)
     {
