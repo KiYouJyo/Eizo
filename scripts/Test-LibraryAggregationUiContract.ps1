@@ -13,12 +13,25 @@ $aggregation = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Model
 foreach ($required in @(
     '<GridView x:Name="ResultsList"',
     '<ItemsWrapGrid',
+    'ItemWidth="204"',
+    'ItemHeight="408"',
+    '<Setter Property="Width" Value="192" />',
+    '<Setter Property="Height" Value="396" />',
+    '<Grid RowDefinitions="272,124">',
     'Source="{Binding Artwork}"',
     'Text="{Binding MetaLine}"',
     'Text="{Binding SourceLabel}"')) {
     if ($catalogXaml -notmatch [regex]::Escape($required)) {
         throw "Library visual-card contract missing from CatalogView.xaml: $required"
     }
+}
+
+if ($catalogXaml -match '<Border\s+Width="180"\s+Height="306"') {
+    throw 'Library card must not reintroduce an inner fixed-size border smaller than the GridViewItem highlight bounds.'
+}
+
+if ($catalogXaml -match '<Border[^>]+Margin="4,4,4,8"') {
+    throw 'Library card must not reintroduce the old inner margin that desynchronizes pointer highlight and card bounds.'
 }
 
 foreach ($required in @(

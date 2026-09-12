@@ -109,6 +109,55 @@ public sealed class MediaLibraryGroupingTests
     }
 
     [Fact]
+    public void NumberedAnimeMoviesCollapseIntoOneFamilyCard()
+    {
+        var first = Recognition(
+            "剧场版 空之境界 第一章 俯瞰风景",
+            2007,
+            null) with
+        {
+            MediaKind = "Movie",
+        };
+        var second = Recognition(
+            "剧场版 空之境界 第二章 杀人考察（前）",
+            2007,
+            null) with
+        {
+            MediaKind = "Movie",
+        };
+        var epilogue = Recognition(
+            "剧场版 空之境界 未来福音",
+            2013,
+            null) with
+        {
+            MediaKind = "Movie",
+        };
+
+        var assignments = MediaLibraryGrouping.AssignSubjectIdentities(
+        [
+            new("movie-1", first, Metadata: null),
+            new("movie-2", second, Metadata: null),
+            new("movie-extra", epilogue, Metadata: null),
+        ]);
+
+        Assert.Equal(3, assignments.Count);
+        Assert.All(
+            assignments,
+            static assignment =>
+            {
+                Assert.NotNull(assignment.Identity);
+                Assert.Equal(
+                    "recognition-movie-family",
+                    assignment.Identity!.Basis);
+                Assert.Equal("空之境界", assignment.Identity.TitleHint);
+            });
+        Assert.Single(
+            assignments
+                .Select(static assignment => assignment.Identity!.Key)
+                .Distinct(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void AmbiguousItemsRemainStandalone()
     {
         var recognition = Recognition("Conflicting Show", 2020, 1) with
@@ -123,19 +172,99 @@ public sealed class MediaLibraryGroupingTests
     }
 
     [Fact]
-    public void MoviesRemainStandalone()
+    public void ResolvedMoviesGroupByMetadataSubject()
     {
         var recognition = Recognition("Movie", 2024, null) with
         {
             MediaKind = "Movie",
         };
 
-        Assert.Null(MediaLibraryGrouping.TryGetSubjectIdentity(
+        var identity = MediaLibraryGrouping.TryGetSubjectIdentity(
             recognition,
             Metadata("tmdb", "42", "Movie") with
             {
                 SubjectKind = "Movie",
-            }));
+                ContentKind = "LiveAction",
+            });
+
+        Assert.NotNull(identity);
+        Assert.Equal("metadata|tmdb|42", identity.Key);
+        Assert.Equal("metadata-movie-subject", identity.Basis);
+    }
+
+    [Fact]
+    public void AnimationContentHintClassifiesSeriesAndMoviesAsAnime()
+    {
+        var series = Recognition("葬送的芙莉莲", 2023, 1);
+        var movie = Recognition("剧场版 空之境界 第一章 俯瞰风景", 2007, null) with
+        {
+            MediaKind = "Movie",
+        };
+
+        Assert.Equal(
+            MediaLibraryCategoryHint.Anime,
+            MediaLibraryGrouping.Classify(
+                series,
+                Metadata("bangumi", "400", "葬送的芙莉莲") with
+                {
+                    ContentKind = "Animation",
+                }));
+        Assert.Equal(
+            MediaLibraryCategoryHint.Anime,
+            MediaLibraryGrouping.Classify(
+                movie,
+                Metadata("bangumi", "500", "空之境界 第一章 俯瞰风景") with
+                {
+                    SubjectKind = "Movie",
+                    ContentKind = "Animation",
+                }));
+    }
+
+    [Fact]
+    public void LiveActionContentHintSeparatesSeriesAndMovies()
+    {
+        Assert.Equal(
+            MediaLibraryCategoryHint.Series,
+            MediaLibraryGrouping.Classify(
+                Recognition("ドラゴン桜", 2005, 1),
+                Metadata("bangumi", "600", "龙樱") with
+                {
+                    ContentKind = "LiveAction",
+                }));
+
+        Assert.Equal(
+            MediaLibraryCategoryHint.Movies,
+            MediaLibraryGrouping.Classify(
+                Recognition("飞驰人生2", 2024, null) with
+                {
+                    MediaKind = "Movie",
+                },
+                Metadata("tmdb", "700", "飞驰人生2") with
+                {
+                    SubjectKind = "Movie",
+                    ContentKind = "LiveAction",
+                }));
+    }
+
+    [Fact]
+    public void UnresolvedTheatricalAnimeUsesRecognitionFallback()
+    {
+        var recognition = Recognition(
+            "剧场版 空之境界 第二章 杀人考察（前）",
+            2007,
+            null) with
+        {
+            MediaKind = "Movie",
+        };
+
+        Assert.Equal(
+            MediaLibraryCategoryHint.Anime,
+            MediaLibraryGrouping.Classify(recognition, metadata: null));
+
+        var identity = MediaLibraryGrouping.TryGetRecognitionSubjectIdentity(
+            recognition);
+        Assert.NotNull(identity);
+        Assert.Equal("recognition-movie-title-year", identity.Basis);
     }
 
     private static MediaRecognitionSnapshot Recognition(

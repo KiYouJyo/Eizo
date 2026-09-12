@@ -317,6 +317,11 @@ public sealed class MediaMetadataService
         return snapshot with
         {
             ResolutionReason = ResolutionReason(resolution, subject),
+            ContentKind =
+                ReadOptionalPropertyName(subject, "ContentKind") ??
+                ReadOptionalPropertyName(
+                    resolution.Best?.Candidate,
+                    "ContentKind"),
             SearchTitles = providerRequest.Titles.ToList(),
             CandidateCount = resolution.Candidates.Count,
             AutoResolveThreshold = AutoResolveThreshold,
@@ -338,6 +343,28 @@ public sealed class MediaMetadataService
                         candidate.Evidence.ToList()))
                 .ToList(),
         };
+    }
+
+    private static string? ReadOptionalPropertyName(
+        object? source,
+        string propertyName)
+    {
+        if (source is null)
+        {
+            return null;
+        }
+
+        var property = source.GetType().GetProperty(propertyName);
+        if (property is null)
+        {
+            return null;
+        }
+
+        var value = property.GetValue(source)?.ToString();
+        return string.IsNullOrWhiteSpace(value) ||
+               string.Equals(value, "Unknown", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : value;
     }
 
     private static string ResolutionReason(

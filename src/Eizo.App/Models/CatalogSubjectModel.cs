@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Eizo.MetadataIntegration;
 
 namespace Eizo.Models;
@@ -31,6 +32,18 @@ public sealed record CatalogSubjectModel(
             .FirstOrDefault(static metadata => metadata is { IsResolved: true });
 
     public int EpisodeCount => Episodes.Count;
+
+    public bool IsMovieSubject =>
+        Metadata?.SubjectKind == "Movie" ||
+        GroupingBasis.Contains(
+            "movie",
+            StringComparison.OrdinalIgnoreCase) ||
+        Items.Count > 0 &&
+        Items.All(static item =>
+            string.Equals(
+                item.Recognition?.MediaKind,
+                "Movie",
+                StringComparison.OrdinalIgnoreCase));
 
     public IReadOnlyList<int> SeasonNumbers =>
         Episodes
@@ -122,7 +135,12 @@ internal static class CatalogSubjectAggregator
                 .Select(static item => item.Metadata)
                 .FirstOrDefault(static value => value is { IsResolved: true });
 
-        var title = metadata?.CanonicalTitle;
+        var title = string.Equals(
+                identity.Basis,
+                "recognition-movie-family",
+                StringComparison.Ordinal)
+            ? identity.TitleHint
+            : metadata?.CanonicalTitle;
         if (string.IsNullOrWhiteSpace(title))
         {
             title = representative.Recognition?.Title;
@@ -143,10 +161,9 @@ internal static class CatalogSubjectAggregator
             nativeTitle = representative.SecondaryTitle;
         }
 
-        var category = items
-            .Select(static item => item.Category)
-            .FirstOrDefault(static value => value is not null)
-            ?? MediaCategoryKind.Series;
+        var category = CatalogCategoryClassifier.ResolveSubject(
+            identity,
+            items);
 
         var episodes = BuildEpisodes(items);
         var year = metadata?.ReleaseDate is { Length: > 0 } releaseDate &&
@@ -160,10 +177,24 @@ internal static class CatalogSubjectAggregator
             metaParts.Add(year.Value.ToString(CultureInfo.InvariantCulture));
         }
 
-        metaParts.Add(
-            string.Create(
-                CultureInfo.InvariantCulture,
-                $"{episodes.Count} episodes"));
+        var isMovieSubject =
+            identity.Basis.Contains(
+                "movie",
+                StringComparison.OrdinalIgnoreCase) ||
+            metadata?.SubjectKind == "Movie" ||
+            items.All(static item =>
+                string.Equals(
+                    item.Recognition?.MediaKind,
+                    "Movie",
+                    StringComparison.OrdinalIgnoreCase));
+
+        if (!isMovieSubject)
+        {
+            metaParts.Add(
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"{episodes.Count} episodes"));
+        }
 
         if (metadata is { IsResolved: true, Provider.Length: > 0 })
         {
@@ -194,13 +225,16 @@ internal static class CatalogSubjectAggregator
                 string.Equals(
                     item.Recognition?.MediaKind,
                     "Special",
-                    StringComparison.OrdinalIgnoreCase)))
+                    StringComparison.OrdinalIgnoreCase),
+                ResolveMovieIdentity(item)))
             .ToArray();
 
         return indexed
             .GroupBy(value =>
                 value.Number is null
-                    ? $"file|{value.Index}"
+                    ? value.MovieIdentity is { Length: > 0 } movieIdentity
+                        ? $"movie|{movieIdentity}"
+                        : $"file|{value.Index}"
                     : string.Create(
                         CultureInfo.InvariantCulture,
                         $"{value.Season}|{value.Number}|{value.Special}"),
@@ -231,10 +265,19 @@ internal static class CatalogSubjectAggregator
         var metadata = primary.Metadata;
         var recognition = primary.Recognition;
 
-        var title = metadata?.EpisodeTitle;
+        var isMovie = string.Equals(
+            recognition?.MediaKind,
+            "Movie",
+            StringComparison.OrdinalIgnoreCase);
+
+        var title = isMovie
+            ? metadata?.CanonicalTitle
+            : metadata?.EpisodeTitle;
         if (string.IsNullOrWhiteSpace(title))
         {
-            title = recognition?.EpisodeTitle;
+            title = isMovie
+                ? recognition?.Title
+                : recognition?.EpisodeTitle;
         }
 
         if (string.IsNullOrWhiteSpace(title))
@@ -244,7 +287,9 @@ internal static class CatalogSubjectAggregator
                 : primary.SourceTitle;
         }
 
-        var nativeTitle = metadata?.EpisodeOriginalTitle;
+        var nativeTitle = isMovie
+            ? metadata?.OriginalTitle
+            : metadata?.EpisodeOriginalTitle;
         if (string.IsNullOrWhiteSpace(nativeTitle) ||
             string.Equals(
                 nativeTitle,
@@ -272,7 +317,52 @@ internal static class CatalogSubjectAggregator
         int Index,
         int Season,
         decimal? Number,
-        bool Special);
+        bool Special,
+        string? MovieIdentity);
+
+    private static string? ResolveMovieIdentity(
+        CatalogMediaItemModel item)
+    {
+        if (!string.Equals(
+                item.Recognition?.MediaKind,
+                "Movie",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (item.Metadata is
+            {
+                IsResolved: true,
+                Provider.Length: > 0,
+                ProviderSubjectId.Length: > 0
+            } metadata)
+        {
+            return $"{metadata.Provider!.Trim().ToLowerInvariant()}|{metadata.ProviderSubjectId}";
+        }
+
+        var title = item.Recognition?.Title;
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return null;
+        }
+
+        var normalized = title
+            .Normalize(NormalizationForm.FormKC)
+            .ToUpperInvariant();
+        var builder = new System.Text.StringBuilder(normalized.Length);
+        foreach (var character in normalized)
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(character);
+            }
+        }
+
+        return builder.Length == 0
+            ? null
+            : $"{builder}|{item.Recognition?.Year?.ToString(CultureInfo.InvariantCulture) ?? "-"}";
+    }
 
     private static int ResolveSeason(CatalogMediaItemModel item)
     {
@@ -291,4 +381,66 @@ internal static class CatalogSubjectAggregator
         value == decimal.Truncate(value)
             ? decimal.Truncate(value).ToString(CultureInfo.InvariantCulture)
             : value.ToString("0.##", CultureInfo.InvariantCulture);
+}
+
+internal static class CatalogCategoryClassifier
+{
+    public static MediaCategoryKind? Resolve(CatalogMediaItemModel item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        if (item.Category is { } explicitCategory)
+        {
+            return explicitCategory;
+        }
+
+        return Map(MediaLibraryGrouping.Classify(
+            item.Recognition,
+            item.Metadata));
+    }
+
+    public static MediaCategoryKind ResolveSubject(
+        MediaSubjectGroupingIdentity identity,
+        IReadOnlyList<CatalogMediaItemModel> items)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+        ArgumentNullException.ThrowIfNull(items);
+
+        var categories = items
+            .Select(Resolve)
+            .Where(static value => value is not null)
+            .Select(static value => value!.Value)
+            .ToArray();
+
+        if (categories.Contains(MediaCategoryKind.Anime))
+        {
+            return MediaCategoryKind.Anime;
+        }
+
+        if (categories.Contains(MediaCategoryKind.Movies))
+        {
+            return MediaCategoryKind.Movies;
+        }
+
+        if (categories.Contains(MediaCategoryKind.Series))
+        {
+            return MediaCategoryKind.Series;
+        }
+
+        return identity.Basis.Contains(
+                "movie",
+                StringComparison.OrdinalIgnoreCase)
+            ? MediaCategoryKind.Movies
+            : MediaCategoryKind.Series;
+    }
+
+    private static MediaCategoryKind? Map(
+        MediaLibraryCategoryHint hint) =>
+        hint switch
+        {
+            MediaLibraryCategoryHint.Anime => MediaCategoryKind.Anime,
+            MediaLibraryCategoryHint.Series => MediaCategoryKind.Series,
+            MediaLibraryCategoryHint.Movies => MediaCategoryKind.Movies,
+            _ => null,
+        };
 }

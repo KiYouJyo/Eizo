@@ -51,6 +51,8 @@ public sealed record MediaMetadataSnapshot(
 {
     public string? ResolutionReason { get; init; }
 
+    public string? ContentKind { get; init; }
+
     public List<string> SearchTitles { get; init; } = [];
 
     public int CandidateCount { get; init; }

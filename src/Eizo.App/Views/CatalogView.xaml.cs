@@ -184,11 +184,18 @@ public sealed partial class CatalogView : UserControl
             metaParts.Add(recognitionYear.ToString(CultureInfo.InvariantCulture));
         }
 
-        metaParts.Add(
-            L(
-                $"{subject.EpisodeCount} 集",
-                $"{subject.EpisodeCount} 話",
-                $"{subject.EpisodeCount} episodes"));
+        if (subject.IsMovieSubject)
+        {
+            metaParts.Add(L("电影", "映画", "Movie"));
+        }
+        else
+        {
+            metaParts.Add(
+                L(
+                    $"{subject.EpisodeCount} 集",
+                    $"{subject.EpisodeCount} 話",
+                    $"{subject.EpisodeCount} episodes"));
+        }
 
         var sourceIds = subject.Items
             .Select(static item => item.Location?.SourceId)
@@ -222,6 +229,7 @@ public sealed partial class CatalogView : UserControl
             {
                 MediaCategoryKind.Anime => "\uE8B2",
                 MediaCategoryKind.Series => "\uE8FD",
+                MediaCategoryKind.Movies => "\uE714",
                 _ => "\uE8FD",
             },
             CreateArtwork(metadata?.PosterUrl, 360),
@@ -229,16 +237,20 @@ public sealed partial class CatalogView : UserControl
             subtitle,
             string.Join(" · ", metaParts),
             sourceLabel,
-            L(
-                $"{subject.EpisodeCount} 集",
-                $"{subject.EpisodeCount} 話",
-                $"{subject.EpisodeCount} eps"));
+            subject.IsMovieSubject
+                ? L("电影", "映画", "Movie")
+                : L(
+                    $"{subject.EpisodeCount} 集",
+                    $"{subject.EpisodeCount} 話",
+                    $"{subject.EpisodeCount} eps"));
     }
 
     private CatalogListItemViewModel CreateListItem(
         CatalogMediaItemModel item,
         IReadOnlyDictionary<string, string> sourceLabels)
     {
+        var category = CatalogCategoryClassifier.Resolve(item);
+
         var subtitle = item.IsParsed &&
                        !string.IsNullOrWhiteSpace(item.SecondaryTitle) &&
                        !string.Equals(
@@ -301,8 +313,8 @@ public sealed partial class CatalogView : UserControl
         return new CatalogListItemViewModel(
             null,
             item,
-            item.Category,
-            item.Category switch
+            category,
+            category switch
             {
                 MediaCategoryKind.Anime => "\uE8B2",
                 MediaCategoryKind.Series => "\uE8FD",
@@ -314,7 +326,7 @@ public sealed partial class CatalogView : UserControl
             subtitle,
             string.Join(" · ", metaParts),
             sourceLabel,
-            RecognitionLabel(item) ?? CategoryLabel(item.Category));
+            RecognitionLabel(item) ?? CategoryLabel(category));
     }
 
     private static BitmapImage? CreateArtwork(
@@ -587,7 +599,7 @@ public sealed partial class CatalogView : UserControl
     {
         var builder = new StringBuilder();
         builder.AppendLine(
-            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataResolutionReason,MetadataSearchTitles,MetadataCandidateCount,MetadataAutoResolveThreshold,MetadataMinimumLead,MetadataBestScore,MetadataSecondScore,MetadataLead,MetadataTopCandidates,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
+            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataResolutionReason,MetadataSearchTitles,MetadataCandidateCount,MetadataAutoResolveThreshold,MetadataMinimumLead,MetadataBestScore,MetadataSecondScore,MetadataLead,MetadataTopCandidates,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataContentKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
 
         foreach (var item in items)
         {
@@ -695,6 +707,7 @@ public sealed partial class CatalogView : UserControl
                 metadata?.Provider ?? string.Empty,
                 metadata?.ProviderSubjectId ?? string.Empty,
                 metadata?.SubjectKind ?? string.Empty,
+                metadata?.ContentKind ?? string.Empty,
                 metadata?.Confidence.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
                 metadata?.CanonicalTitle ?? string.Empty,
                 metadata?.OriginalTitle ?? string.Empty,
@@ -810,6 +823,7 @@ public sealed partial class CatalogView : UserControl
         builder.AppendLine($"Provider: {metadata.Provider ?? "-"}");
         builder.AppendLine($"Subject ID: {metadata.ProviderSubjectId ?? "-"}");
         builder.AppendLine($"Subject kind: {metadata.SubjectKind ?? "-"}");
+        builder.AppendLine($"Content kind: {metadata.ContentKind ?? "-"}");
         builder.AppendLine($"Confidence: {metadata.Confidence:0.000}");
         builder.AppendLine($"Resolution reason: {metadata.ResolutionReason ?? "-"}");
         builder.AppendLine($"Candidates: {metadata.CandidateCount}");
@@ -1082,7 +1096,7 @@ public sealed partial class CatalogView : UserControl
             new(
                 null,
                 item,
-                item.Category,
+                CatalogCategoryClassifier.Resolve(item),
                 item.DisplayTitle);
     }
 

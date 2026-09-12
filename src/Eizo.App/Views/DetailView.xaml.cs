@@ -79,7 +79,9 @@ public sealed partial class DetailView : UserControl
     {
         PlayButton.Content = T("Common_Continue");
         FavoriteButton.Content = T("Common_Favorite");
-        EpisodesTitle.Text = T("Media_Episodes");
+        EpisodesTitle.Text = _subject?.IsMovieSubject == true
+            ? L("影片", "作品", "Films")
+            : T("Media_Episodes");
         InfoTitle.Text = L("作品信息", "作品情報", "Title information");
         ExternalIdsTitle.Text = L("外部 ID", "外部 ID", "External IDs");
     }
@@ -137,10 +139,15 @@ public sealed partial class DetailView : UserControl
                 .ToString() ?? "-";
 
         ReleaseStatText.Text = releaseYear;
-        EpisodeStatText.Text = L(
-            $"{_subject.EpisodeCount} 集",
-            $"{_subject.EpisodeCount} 話",
-            $"{_subject.EpisodeCount} episodes");
+        EpisodeStatText.Text = _subject.IsMovieSubject
+            ? L(
+                $"{_subject.EpisodeCount} 部",
+                $"{_subject.EpisodeCount} 作品",
+                $"{_subject.EpisodeCount} films")
+            : L(
+                $"{_subject.EpisodeCount} 集",
+                $"{_subject.EpisodeCount} 話",
+                $"{_subject.EpisodeCount} episodes");
         SourceStatText.Text = sourceCount > 0
             ? L(
                 $"{sourceKind} · {sourceCount}",
@@ -154,7 +161,9 @@ public sealed partial class DetailView : UserControl
                 $"{L("数据来源", "データ提供元", "Provider")}: {provider}",
                 $"{L("作品 ID", "作品 ID", "Subject ID")}: {subjectId}",
                 $"{L("发布日期", "公開日", "Release date")}: {release}",
-                $"{L("本地集数", "ローカル話数", "Local episodes")}: {_subject.EpisodeCount}",
+                _subject.IsMovieSubject
+                    ? $"{L("本地影片", "ローカル作品", "Local films")}: {_subject.EpisodeCount}"
+                    : $"{L("本地集数", "ローカル話数", "Local episodes")}: {_subject.EpisodeCount}",
                 $"{L("媒体来源", "メディアソース", "Media sources")}: {sourceCount}",
                 $"{L("聚合依据", "グループ基準", "Grouping basis")}: {_subject.GroupingBasis}",
             ]);
@@ -167,16 +176,26 @@ public sealed partial class DetailView : UserControl
                     .Select(static pair => $"{pair.Key}: {pair.Value}"))
             : "-";
 
-        var seasons = _subject.SeasonNumbers
-            .Select(season => new SeasonOption(
-                season,
-                season == 0
-                    ? L("特别篇", "スペシャル", "Specials")
-                    : $"Season {season}"))
-            .ToArray();
+        if (_subject.IsMovieSubject)
+        {
+            SeasonComboBox.ItemsSource = Array.Empty<SeasonOption>();
+            SeasonComboBox.SelectedIndex = -1;
+            SeasonComboBox.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            var seasons = _subject.SeasonNumbers
+                .Select(season => new SeasonOption(
+                    season,
+                    season == 0
+                        ? L("特别篇", "スペシャル", "Specials")
+                        : $"Season {season}"))
+                .ToArray();
 
-        SeasonComboBox.ItemsSource = seasons;
-        SeasonComboBox.SelectedIndex = seasons.Length > 0 ? 0 : -1;
+            SeasonComboBox.ItemsSource = seasons;
+            SeasonComboBox.SelectedIndex = seasons.Length > 0 ? 0 : -1;
+            SeasonComboBox.Visibility = Visibility.Visible;
+        }
 
         RebuildEpisodeList();
     }
@@ -235,9 +254,10 @@ public sealed partial class DetailView : UserControl
                 ? option.Number
                 : _subject.SeasonNumbers.FirstOrDefault();
 
-        var episodes = _subject.Episodes
-            .Where(episode =>
-                (episode.SeasonNumber ?? 1) == selectedSeason)
+        var episodes = (_subject.IsMovieSubject
+                ? _subject.Episodes
+                : _subject.Episodes.Where(episode =>
+                    (episode.SeasonNumber ?? 1) == selectedSeason))
             .Select(CreateEpisodeItem)
             .ToArray();
 
