@@ -18,7 +18,10 @@ $release = Get-Content -LiteralPath $releasePath -Raw | ConvertFrom-Json
 $version = [string]$release.product.version
 $packageVersion = [string]$release.product.packageVersion
 
-if ($version -notmatch '^\d+\.\d+\.\d+
+if ($version -notmatch '^\d+\.\d+\.\d+$' -or
+    $packageVersion -notmatch ('^' + [regex]::Escape($version) + '\.\d+$')) {
+    throw "Invalid release version contract: version=$version packageVersion=$packageVersion"
+}
 
 [xml]$project = Read-Text 'src/Eizo.App/Eizo.App.csproj'
 [xml]$manifest = Read-Text 'src/Eizo.App/Package.appxmanifest'
