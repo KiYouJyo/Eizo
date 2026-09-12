@@ -4,19 +4,33 @@ namespace Eizo;
 
 internal static class AppVersionProvider
 {
-    public const string Version = "0.3.1";
-    public const string DisplayVersion = "v0.3.1";
+    public static string Version
+    {
+        get
+        {
+            var version = GetCurrentVersion();
+            return $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        }
+    }
+
+    public static string DisplayVersion => $"v{Version}";
 
     public static Version GetCurrentVersion()
     {
         try
         {
             var version = Package.Current.Id.Version;
-            return new Version((int)version.Major, (int)version.Minor, (int)version.Build, (int)version.Revision);
+            return new Version(
+                (int)version.Major,
+                (int)version.Minor,
+                (int)version.Build,
+                (int)version.Revision);
         }
         catch (Exception) when (OperatingSystem.IsWindows())
         {
-            var assemblyVersion = typeof(AppVersionProvider).Assembly.GetName().Version ?? new Version(0, 3, 1, 0);
+            var assemblyVersion =
+                typeof(AppVersionProvider).Assembly.GetName().Version ??
+                new Version(0, 0, 0, 0);
             return new Version(
                 assemblyVersion.Major,
                 assemblyVersion.Minor,
