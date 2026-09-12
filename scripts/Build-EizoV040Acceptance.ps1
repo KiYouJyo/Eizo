@@ -95,7 +95,7 @@ try {
     Assert-LastExitCode 'MSIX build failed'
     $producedBundle = @(Get-ChildItem $appPackages -Recurse -Filter '*.msixbundle' -File) | Select-Object -First 1
     if (-not $producedBundle) { throw 'MSIX bundle was not produced.' }
-    $bundlePath = Join-Path $assets 'Eizo_0.4.0.1_x64.msixbundle'
+    $bundlePath = Join-Path $assets 'Eizo_0.4.0.2_x64.msixbundle'
     Copy-Item -LiteralPath $producedBundle.FullName -Destination $bundlePath -Force
 
     Write-Host '== Verify packaged component probing contract =='
@@ -177,7 +177,7 @@ try {
 
     Add-AppxPackage -Path $bundlePath -ForceApplicationShutdown
     $pkg = Get-AppxPackage -Name Eizo
-    if (-not $pkg -or [string]$pkg.Version -ne '0.4.0.1') {
+    if (-not $pkg -or [string]$pkg.Version -ne '0.4.0.2') {
         throw "Installed package version mismatch: $($pkg.Version)"
     }
 
@@ -216,7 +216,7 @@ try {
     Write-Host '== Build one-click acceptance assets =='
     Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $componentsRoot -Recurse -Force -ErrorAction SilentlyContinue
-    & ./packaging/New-GitHubOneClickInstallerPackage.ps1 -SignedBundlePath $bundlePath -PublicCertificatePath $cer -OutputDirectory $oneClickStaging -DisplayVersion '0.4.0' -PackageVersion '0.4.0.1'
+    & ./packaging/New-GitHubOneClickInstallerPackage.ps1 -SignedBundlePath $bundlePath -PublicCertificatePath $cer -OutputDirectory $oneClickStaging -DisplayVersion '0.4.0' -PackageVersion '0.4.0.2'
     $packageRoot = Join-Path $oneClickStaging 'Eizo-v0.4.0-x64-one-click'
     & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $packageRoot
     $oneClickZip = Join-Path $assets 'Eizo-v0.4.0-x64-one-click.zip'
