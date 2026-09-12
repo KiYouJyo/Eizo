@@ -73,4 +73,28 @@ public sealed class CatalogEpisodeGroupingResolverTests
         Assert.Equal(0, identity.SeasonNumber);
         Assert.Equal((decimal)expectedNumber, identity.EpisodeNumber);
     }
+
+    [Fact]
+    public void ExplicitOvaSourceBuildsStableSpecialLabel()
+    {
+        var label =
+            CatalogEpisodeGroupingResolver.ResolveExplicitSpecialLabel(
+                "[4K_NW] 黑礁 OVA 01【Bilibili_AYWDXNH】",
+                fallbackNumber: null);
+
+        Assert.Equal("OVA 1", label);
+    }
+
+    [Fact]
+    public void ExplicitSpecialSourceDetectionRejectsRegularEpisode()
+    {
+        Assert.True(
+            CatalogEpisodeGroupingResolver.IsExplicitSpecialSource(
+                "[4K_NW] 黑礁 OVA 01【Bilibili_AYWDXNH】"));
+
+        Assert.False(
+            CatalogEpisodeGroupingResolver.IsExplicitSpecialSource(
+                "[4K_NW] 黑礁 01【Bilibili_AYWDXNH】"));
+    }
+
 }
