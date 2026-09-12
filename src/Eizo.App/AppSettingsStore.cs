@@ -14,7 +14,9 @@ internal sealed record AppSettings(
     AppLanguagePreference Language = AppLanguagePreference.System,
     int? LastNormalWindowWidth = null,
     int? LastNormalWindowHeight = null,
-    bool WasWindowMaximized = false);
+    bool WasWindowMaximized = false,
+    double PrimarySubtitleVerticalPosition = 12d,
+    double SecondarySubtitleVerticalPosition = 24d);
 
 internal static class AppSettingsStore
 {
