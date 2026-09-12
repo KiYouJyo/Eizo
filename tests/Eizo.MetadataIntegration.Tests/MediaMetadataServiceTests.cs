@@ -277,7 +277,7 @@ public sealed class MediaMetadataServiceTests
                     .Last();
                 return Json($"""
                 {
-                  "id": {{id}},
+                  "id": {id},
                   "type": 2,
                   "name": "Example Anime",
                   "name_cn": "示例动画",
