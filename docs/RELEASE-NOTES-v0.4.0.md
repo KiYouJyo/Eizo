@@ -1,3 +1,5 @@
+简体中文 | [日本語](RELEASE-NOTES-v0.4.0.ja.md) | [English](RELEASE-NOTES-v0.4.0.en.md)
+
 # Eizo v0.4.0
 
 ## 播放队列、外挂字幕与双字幕
