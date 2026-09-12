@@ -22,6 +22,7 @@ public sealed class MediaMetadataServiceTests
                   "data": [
                     {
                       "id": 253,
+                      "type": 2,
                       "name": "攻殻機動隊 STAND ALONE COMPLEX",
                       "name_cn": "攻壳机动队 STAND ALONE COMPLEX",
                       "date": "2002-10-01",
@@ -41,6 +42,7 @@ public sealed class MediaMetadataServiceTests
                 return Json("""
                 {
                   "id": 253,
+                  "type": 2,
                   "name": "攻殻機動隊 STAND ALONE COMPLEX",
                   "name_cn": "攻壳机动队 STAND ALONE COMPLEX",
                   "date": "2002-10-01",
@@ -98,6 +100,7 @@ public sealed class MediaMetadataServiceTests
         Assert.Equal("公安九课", result.EpisodeTitle);
         Assert.Equal(1m, result.EpisodeNumber);
         Assert.Equal("Resolved", result.ResolutionReason);
+        Assert.Equal("Animation", result.ContentKind);
         Assert.Equal(1, result.CandidateCount);
         Assert.NotNull(result.BestScore);
         Assert.True(result.BestScore >= result.AutoResolveThreshold);
@@ -223,6 +226,88 @@ public sealed class MediaMetadataServiceTests
             result.SearchTitles);
         Assert.Equal(0.82, result.AutoResolveThreshold, precision: 3);
         Assert.Equal(0.06, result.MinimumLead, precision: 3);
+    }
+
+    [Fact]
+    public async Task EnrichAsync_UsesBestCandidateContentKindWhenResolutionIsAmbiguous()
+    {
+        using var cache = new TempDirectory();
+        var handler = new RecordingHandler(request =>
+        {
+            if (request.Method == HttpMethod.Post &&
+                request.RequestUri!.AbsolutePath.EndsWith(
+                    "/v0/search/subjects",
+                    StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "data": [
+                    {
+                      "id": 100,
+                      "type": 2,
+                      "name": "Example Anime",
+                      "name_cn": "示例动画",
+                      "date": "2024-01-01",
+                      "platform": "TV"
+                    },
+                    {
+                      "id": 101,
+                      "type": 2,
+                      "name": "Example Anime",
+                      "name_cn": "示例动画",
+                      "date": "2024-01-01",
+                      "platform": "TV"
+                    }
+                  ],
+                  "total": 2
+                }
+                """);
+            }
+
+            if (request.Method == HttpMethod.Get &&
+                request.RequestUri!.AbsolutePath.Contains(
+                    "/v0/subjects/",
+                    StringComparison.Ordinal) &&
+                !request.RequestUri.AbsolutePath.EndsWith(
+                    "/subjects",
+                    StringComparison.Ordinal))
+            {
+                var id = request.RequestUri.AbsolutePath
+                    .Split('/', StringSplitOptions.RemoveEmptyEntries)
+                    .Last();
+                return Json($"""
+                {
+                  "id": {{id}},
+                  "type": 2,
+                  "name": "Example Anime",
+                  "name_cn": "示例动画",
+                  "date": "2024-01-01",
+                  "platform": "TV",
+                  "eps": 12
+                }
+                """);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var service = new MediaMetadataService(
+            new MediaMetadataServiceOptions(
+                CacheDirectory: cache.Path),
+            new HttpClient(handler));
+
+        var result = await service.EnrichAsync(
+            Recognition(
+                "示例动画",
+                year: 2024,
+                episode: 1),
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(MediaMetadataStatus.Unresolved, result.Status);
+        Assert.Equal("InsufficientLead", result.ResolutionReason);
+        Assert.Equal("Animation", result.ContentKind);
+        Assert.True(result.CandidateCount >= 2);
     }
 
     [Fact]
