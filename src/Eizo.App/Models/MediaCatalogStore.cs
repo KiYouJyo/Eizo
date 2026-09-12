@@ -775,6 +775,7 @@ public sealed class MediaCatalogStore
 
     private static bool IsTransportMetadataFailure(
         MediaMetadataSnapshot metadata) =>
+        metadata.Status != MediaMetadataStatus.Resolved &&
         metadata.Errors.Any(static error =>
             string.Equals(
                 error.ErrorType,
