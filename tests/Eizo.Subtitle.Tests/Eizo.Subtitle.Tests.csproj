@@ -11,5 +11,7 @@
     <PackageReference Include="xunit.v3" Version="4.0.0" />
     <Compile Include="../../src/Eizo.App/Playback/SubtitleTextParser.cs"
              Link="SubtitleTextParser.cs" />
+    <Compile Include="../../src/Eizo.App/Playback/ExternalSubtitleNameMatcher.cs"
+             Link="ExternalSubtitleNameMatcher.cs" />
   </ItemGroup>
 </Project>
