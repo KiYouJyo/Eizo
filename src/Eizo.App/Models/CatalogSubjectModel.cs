@@ -32,6 +32,18 @@ public sealed record CatalogSubjectModel(
 
     public int EpisodeCount => Episodes.Count;
 
+    public bool IsMovieSubject =>
+        Metadata?.SubjectKind == "Movie" ||
+        GroupingBasis.Contains(
+            "movie",
+            StringComparison.OrdinalIgnoreCase) ||
+        Items.Count > 0 &&
+        Items.All(static item =>
+            string.Equals(
+                item.Recognition?.MediaKind,
+                "Movie",
+                StringComparison.OrdinalIgnoreCase));
+
     public IReadOnlyList<int> SeasonNumbers =>
         Episodes
             .Select(static episode => episode.SeasonNumber ?? 1)
@@ -159,10 +171,24 @@ internal static class CatalogSubjectAggregator
             metaParts.Add(year.Value.ToString(CultureInfo.InvariantCulture));
         }
 
-        metaParts.Add(
-            string.Create(
-                CultureInfo.InvariantCulture,
-                $"{episodes.Count} episodes"));
+        var isMovieSubject =
+            identity.Basis.Contains(
+                "movie",
+                StringComparison.OrdinalIgnoreCase) ||
+            metadata?.SubjectKind == "Movie" ||
+            items.All(static item =>
+                string.Equals(
+                    item.Recognition?.MediaKind,
+                    "Movie",
+                    StringComparison.OrdinalIgnoreCase));
+
+        if (!isMovieSubject)
+        {
+            metaParts.Add(
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"{episodes.Count} episodes"));
+        }
 
         if (metadata is { IsResolved: true, Provider.Length: > 0 })
         {
