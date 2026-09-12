@@ -42,6 +42,9 @@ public sealed partial class PlayerView : UserControl
     private Point _lastPointerPosition;
     private double _volume = 1d;
     private bool _isUpdatingVolume;
+    private bool _isUpdatingSubtitlePositions;
+    private double _primarySubtitleVerticalPosition = 12d;
+    private double _secondarySubtitleVerticalPosition = 24d;
     private bool _pointerWheelHooked;
     private bool _isPreparingForDetach;
     private int _fullscreenGeneration;
@@ -73,6 +76,7 @@ public sealed partial class PlayerView : UserControl
         int initialQueueIndex = 0)
     {
         InitializeComponent();
+        InitializeSubtitlePositionControls();
 
         _queueItems = queue?
             .OrderBy(static item => item.Index)
@@ -183,7 +187,11 @@ public sealed partial class PlayerView : UserControl
         QueueTitle.Text = T("Playback_Queue");
         QueueSubtitle.Text = NowPlayingEpisode.Text;
         SubtitleTrackLabel.Text = T("Playback_SubtitleTrack");
+        PrimarySubtitlePositionLabel.Text =
+            T("Playback_PrimarySubtitlePosition");
         SecondarySubtitleTrackLabel.Text = T("Playback_SecondarySubtitle");
+        SecondarySubtitlePositionLabel.Text =
+            T("Playback_SecondarySubtitlePosition");
         AudioTrackLabel.Text = T("Playback_AudioTrack");
         PlaybackRateFlyoutTitle.Text = T("Playback_Rate");
         VolumeFlyoutTitle.Text = T("Playback_Volume");
@@ -1600,6 +1608,146 @@ public sealed partial class PlayerView : UserControl
         }
     }
 
+    private void InitializeSubtitlePositionControls()
+    {
+        var settings = AppSettingsStore.Current;
+
+        _primarySubtitleVerticalPosition =
+            Math.Clamp(
+                settings.PrimarySubtitleVerticalPosition,
+                0d,
+                90d);
+        _secondarySubtitleVerticalPosition =
+            Math.Clamp(
+                settings.SecondarySubtitleVerticalPosition,
+                0d,
+                90d);
+
+        _isUpdatingSubtitlePositions = true;
+        try
+        {
+            PrimarySubtitlePositionSlider.Value =
+                _primarySubtitleVerticalPosition;
+            SecondarySubtitlePositionSlider.Value =
+                _secondarySubtitleVerticalPosition;
+            UpdateSubtitlePositionValueText();
+        }
+        finally
+        {
+            _isUpdatingSubtitlePositions = false;
+        }
+    }
+
+    private void PrimarySubtitlePositionSlider_ValueChanged(
+        object sender,
+        RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingSubtitlePositions)
+            return;
+
+        _primarySubtitleVerticalPosition =
+            Math.Clamp(e.NewValue, 0d, 90d);
+        UpdateSubtitlePositionValueText();
+        ApplySubtitlePositions();
+
+        AppSettingsStore.Update(settings =>
+            settings with
+            {
+                PrimarySubtitleVerticalPosition =
+                    _primarySubtitleVerticalPosition
+            });
+    }
+
+    private void SecondarySubtitlePositionSlider_ValueChanged(
+        object sender,
+        RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingSubtitlePositions)
+            return;
+
+        _secondarySubtitleVerticalPosition =
+            Math.Clamp(e.NewValue, 0d, 90d);
+        UpdateSubtitlePositionValueText();
+        ApplySubtitlePositions();
+
+        AppSettingsStore.Update(settings =>
+            settings with
+            {
+                SecondarySubtitleVerticalPosition =
+                    _secondarySubtitleVerticalPosition
+            });
+    }
+
+    private void UpdateSubtitlePositionValueText()
+    {
+        if (PrimarySubtitlePositionValueText is not null)
+        {
+            PrimarySubtitlePositionValueText.Text =
+                $"{Math.Round(_primarySubtitleVerticalPosition):0}%";
+        }
+
+        if (SecondarySubtitlePositionValueText is not null)
+        {
+            SecondarySubtitlePositionValueText.Text =
+                $"{Math.Round(_secondarySubtitleVerticalPosition):0}%";
+        }
+    }
+
+    private void ApplySubtitlePositions()
+    {
+        if (PlaybackSurfaceHost is null ||
+            PrimarySubtitleOverlay is null ||
+            SecondarySubtitleOverlay is null)
+        {
+            return;
+        }
+
+        var height = PlaybackSurfaceHost.ActualHeight;
+        if (height <= 0d)
+            return;
+
+        ApplySubtitlePosition(
+            PrimarySubtitleOverlay,
+            _primarySubtitleVerticalPosition,
+            height);
+
+        ApplySubtitlePosition(
+            SecondarySubtitleOverlay,
+            _secondarySubtitleVerticalPosition,
+            height);
+    }
+
+    private static void ApplySubtitlePosition(
+        FrameworkElement overlay,
+        double percentage,
+        double surfaceHeight)
+    {
+        var horizontalMargin = 36d;
+        var safeBottom = 12d;
+        var desiredBottom =
+            surfaceHeight *
+            Math.Clamp(percentage, 0d, 90d) /
+            100d;
+
+        var maxBottom = Math.Max(
+            safeBottom,
+            surfaceHeight -
+            Math.Max(overlay.ActualHeight, 48d) -
+            safeBottom);
+
+        var bottom = Math.Clamp(
+            desiredBottom,
+            safeBottom,
+            maxBottom);
+
+        overlay.Margin =
+            new Thickness(
+                horizontalMargin,
+                0d,
+                horizontalMargin,
+                bottom);
+    }
+
     private void PlayerRoot_PointerWheelChanged(
         object sender,
         PointerRoutedEventArgs e)
@@ -1633,6 +1781,7 @@ public sealed partial class PlayerView : UserControl
         }
 
         UpdateSidebarVisibility();
+        ApplySubtitlePositions();
     }
 
     private void PlayerView_Unloaded(object sender, RoutedEventArgs e)
@@ -1650,8 +1799,18 @@ public sealed partial class PlayerView : UserControl
         }
     }
 
-    private void PlayerRoot_SizeChanged(object sender, SizeChangedEventArgs e) =>
+    private void PlayerRoot_SizeChanged(
+        object sender,
+        SizeChangedEventArgs e)
+    {
         UpdateSidebarVisibility();
+        ApplySubtitlePositions();
+    }
+
+    private void PlaybackSurfaceHost_SizeChanged(
+        object sender,
+        SizeChangedEventArgs e) =>
+        ApplySubtitlePositions();
 
     private void PlayerRoot_PointerMoved(object sender, PointerRoutedEventArgs e)
     {
