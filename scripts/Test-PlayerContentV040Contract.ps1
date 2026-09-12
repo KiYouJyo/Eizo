@@ -5,6 +5,8 @@ $playerXaml = Get-Content -LiteralPath 'src/Eizo.App/Views/PlayerView.xaml' -Raw
 $playerCode = Get-Content -LiteralPath 'src/Eizo.App/Views/PlayerView.xaml.cs' -Raw
 $mainWindow = Get-Content -LiteralPath 'src/Eizo.App/MainWindow.xaml.cs' -Raw
 $detailView = Get-Content -LiteralPath 'src/Eizo.App/Views/DetailView.xaml.cs' -Raw
+$episodeGrouping = Get-Content -LiteralPath 'src/Eizo.App/Models/CatalogEpisodeGroupingResolver.cs' -Raw
+$selectionTrace = Get-Content -LiteralPath 'src/Eizo.App/Models/PlaybackSelectionTrace.cs' -Raw
 $subtitleService = Get-Content -LiteralPath 'src/Eizo.App/Playback/ExternalSubtitleService.cs' -Raw
 $subtitleMatcher = Get-Content -LiteralPath 'src/Eizo.App/Playback/ExternalSubtitleNameMatcher.cs' -Raw
 $subtitleParser = Get-Content -LiteralPath 'src/Eizo.App/Playback/SubtitleTextParser.cs' -Raw
@@ -54,6 +56,26 @@ foreach ($required in @(
     'item ??= _subject.FirstPlayableItem')) {
     if ($detailView -notmatch [regex]::Escape($required)) {
         throw "v0.4.0 selected-season playback contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'ExplicitSpecialRegex',
+    'OVA|OAD|ONA|SP|SPECIALS?',
+    'explicitSpecial',
+    'resolvedSeason = explicitSpecial',
+    'IsSpecial: true')) {
+    if ($episodeGrouping -notmatch [regex]::Escape($required)) {
+        throw "v0.4.0 stale-special grouping contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'playback-selection.log',
+    'queueIndex',
+    'queueCount')) {
+    if ($selectionTrace -notmatch [regex]::Escape($required)) {
+        throw "v0.4.0 playback source trace contract missing: $required"
     }
 }
 
