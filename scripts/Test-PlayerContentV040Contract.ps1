@@ -22,6 +22,11 @@ foreach ($required in @(
     'ValueChanged="PrimarySubtitlePositionSlider_ValueChanged"',
     'x:Name="SecondarySubtitlePositionSlider"',
     'ValueChanged="SecondarySubtitlePositionSlider_ValueChanged"',
+    'x:Name="PrimarySubtitleOpacitySlider"',
+    'Maximum="100"',
+    'ValueChanged="PrimarySubtitleOpacitySlider_ValueChanged"',
+    'x:Name="SecondarySubtitleOpacitySlider"',
+    'ValueChanged="SecondarySubtitleOpacitySlider_ValueChanged"',
     'x:Name="PrimarySubtitleText"',
     'x:Name="SecondarySubtitleOverlay"',
     'x:Name="SecondarySubtitleCombo"',
@@ -166,10 +171,49 @@ foreach ($required in @(
 }
 
 foreach ($required in @(
+    'PrimarySubtitleOpacitySlider_ValueChanged',
+    'SecondarySubtitleOpacitySlider_ValueChanged',
+    '_primarySubtitleBackgroundOpacity',
+    '_secondarySubtitleBackgroundOpacity',
+    'UpdateSubtitleOpacityValueText',
+    'ApplySubtitleBackgroundOpacity',
+    'PrimarySubtitleBackgroundBrush.Opacity',
+    'SecondarySubtitleBackgroundBrush.Opacity')) {
+    if ($playerCode -notmatch [regex]::Escape($required)) {
+        throw "v0.4.0 independent subtitle opacity contract missing: $required"
+    }
+}
+
+foreach ($required in @(
     'PrimarySubtitleVerticalPosition = 12d',
-    'SecondarySubtitleVerticalPosition = 24d')) {
+    'SecondarySubtitleVerticalPosition = 24d',
+    'PrimarySubtitleBackgroundOpacity = 70d',
+    'SecondarySubtitleBackgroundOpacity = 70d')) {
     if ($appSettings -notmatch [regex]::Escape($required)) {
         throw "v0.4.0 subtitle position persistence contract missing: $required"
+    }
+}
+
+$resetMatch = [regex]::Match(
+    $playerCode,
+    'private void ResetSecondarySubtitleState\(\)[\s\S]*?private void RebuildAudioCombo',
+    [System.Text.RegularExpressions.RegexOptions]::Singleline)
+
+if (-not $resetMatch.Success) {
+    throw 'v0.4.0 subtitle reset-state contract could not be located.'
+}
+
+foreach ($forbidden in @(
+    '_primarySubtitleVerticalPosition =',
+    '_secondarySubtitleVerticalPosition =',
+    '_primarySubtitleBackgroundOpacity =',
+    '_secondarySubtitleBackgroundOpacity =',
+    'PrimarySubtitlePositionSlider.Value =',
+    'SecondarySubtitlePositionSlider.Value =',
+    'PrimarySubtitleOpacitySlider.Value =',
+    'SecondarySubtitleOpacitySlider.Value =')) {
+    if ($resetMatch.Value -match [regex]::Escape($forbidden)) {
+        throw "v0.4.0 episode switch must preserve subtitle appearance setting: $forbidden"
     }
 }
 
