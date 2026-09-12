@@ -181,7 +181,10 @@ public sealed class MediaMetadataServiceTests
             TestContext.Current.CancellationToken);
 
         Assert.Equal(1, searchCalls);
-        Assert.Equal(1, subjectCalls);
+        // Metadata 0.2.20 enriches the leading Bangumi search candidate with
+        // one subject-detail request before the resolver fetches the selected
+        // subject. The second episode must still reuse both cached results.
+        Assert.Equal(2, subjectCalls);
         Assert.Equal(1, episodeCalls);
     }
 
