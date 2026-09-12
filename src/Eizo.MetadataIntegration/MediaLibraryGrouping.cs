@@ -447,27 +447,44 @@ public static class MediaLibraryGrouping
             recognition.Title ?? string.Empty,
             recognition.LogicalPath);
 
-        string[] markers =
+        string[] releaseMarkers =
         [
             "VCB-STUDIO",
             "DBD-RAWS",
             "ANIME",
-            "BDRIP",
             "NCOP",
             "NCED",
             "OVA",
             "OAD",
-            "劇場版",
-            "剧场版",
-            "映画",
-            "ANIPLEX",
         ];
 
         var normalized = value
             .Normalize(NormalizationForm.FormKC)
             .ToUpperInvariant();
 
-        return markers.Any(marker =>
+        if (releaseMarkers.Any(marker =>
+                normalized.Contains(
+                    marker,
+                    StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (!string.Equals(
+                recognition.MediaKind,
+                "Movie",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string[] theatricalMarkers =
+        [
+            "劇場版",
+            "剧场版",
+        ];
+
+        return theatricalMarkers.Any(marker =>
             normalized.Contains(
                 marker,
                 StringComparison.OrdinalIgnoreCase));
