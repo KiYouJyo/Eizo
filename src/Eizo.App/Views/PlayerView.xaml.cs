@@ -57,6 +57,9 @@ public sealed partial class PlayerView : UserControl
     private bool _isUpdatingQueueSelection;
     private IReadOnlyList<ExternalSubtitleCandidate> _externalSubtitles =
         Array.Empty<ExternalSubtitleCandidate>();
+    private SubtitleDocument? _primarySubtitleDocument;
+    private Uri? _primarySubtitleUri;
+    private int _primarySubtitleGeneration;
     private SubtitleDocument? _secondarySubtitleDocument;
     private Uri? _secondarySubtitleUri;
     private bool _isUpdatingSecondarySubtitleSelection;
@@ -348,6 +351,7 @@ public sealed partial class PlayerView : UserControl
             if (_seekDebounce is not null) return;
             _lastKnownPosition = e.Position;
             CurrentTimeText.Text = FormatTime(e.Position);
+            UpdatePrimarySubtitle(e.Position);
             UpdateSecondarySubtitle(e.Position);
             if (_duration <= TimeSpan.Zero) return;
             _isUpdatingTimeline = true;
@@ -504,14 +508,23 @@ public sealed partial class PlayerView : UserControl
 
         token.ThrowIfCancellationRequested();
 
-        foreach (var candidate in candidates)
+        SubtitleDocument? automaticPrimaryDocument = null;
+        ExternalSubtitleCandidate? automaticPrimaryCandidate = null;
+
+        // External subtitles are rendered by Eizo's WinUI overlay rather than
+        // registered with LibVLC. This keeps ASS/SRT/VTT/SSA typography
+        // consistent with the second-subtitle renderer.
+        if (engine.Tracks.SelectedSubtitleTrackId is null &&
+            candidates.Count > 0)
         {
+            automaticPrimaryCandidate = candidates[0];
+
             try
             {
-                await engine.Tracks.AddExternalSubtitleAsync(
-                    candidate.Uri,
-                    select: false,
-                    token);
+                automaticPrimaryDocument =
+                    await ExternalSubtitleService.LoadDocumentAsync(
+                        automaticPrimaryCandidate,
+                        token);
             }
             catch (OperationCanceledException)
             {
@@ -521,8 +534,8 @@ public sealed partial class PlayerView : UserControl
             {
                 PlaybackTrace.Write(
                     "view",
-                    "external-subtitles",
-                    "attach-error",
+                    "primary-subtitle",
+                    "auto-load-error",
                     exception.GetType().Name);
             }
         }
@@ -538,7 +551,19 @@ public sealed partial class PlayerView : UserControl
             }
 
             _externalSubtitles = candidates;
+
+            if (_primarySubtitleUri is null &&
+                automaticPrimaryCandidate is not null &&
+                automaticPrimaryDocument is not null)
+            {
+                _primarySubtitleUri = automaticPrimaryCandidate.Uri;
+                _primarySubtitleDocument = automaticPrimaryDocument;
+                UpdatePrimarySubtitle(_lastKnownPosition);
+            }
+
             RebuildSecondarySubtitleCombo();
+            _subtitleTrackListKey = string.Empty;
+            QueueTrackUiUpdate();
             UpdateControlAvailability();
             PlaybackTrace.Write(
                 "view",
@@ -728,6 +753,7 @@ public sealed partial class PlayerView : UserControl
 
         _lastKnownPosition = target;
         CurrentTimeText.Text = FormatTime(target);
+        UpdatePrimarySubtitle(target);
         UpdateSecondarySubtitle(target);
 
         try
@@ -758,11 +784,82 @@ public sealed partial class PlayerView : UserControl
             return;
         }
 
+        var generation = ++_primarySubtitleGeneration;
+
+        if (item.Tag is ExternalSubtitleCandidate candidate)
+        {
+            _primarySubtitleUri = candidate.Uri;
+            _primarySubtitleDocument = null;
+
+            if (_secondarySubtitleUri == candidate.Uri)
+            {
+                _secondarySubtitleGeneration++;
+                _secondarySubtitleUri = null;
+                _secondarySubtitleDocument = null;
+                UpdateSecondarySubtitle(_lastKnownPosition);
+            }
+
+            RebuildSecondarySubtitleCombo();
+
+            try
+            {
+                await RunOperationAsync(
+                    engine,
+                    "subtitle",
+                    async token =>
+                        await engine.Tracks.SelectSubtitleTrackAsync(
+                            null,
+                            token),
+                    latest: true);
+
+                var session = _session;
+                var document =
+                    await ExternalSubtitleService.LoadDocumentAsync(
+                        candidate,
+                        session.Token);
+
+                if (generation != _primarySubtitleGeneration ||
+                    !ReferenceEquals(session, _session) ||
+                    session.Token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                _primarySubtitleDocument = document;
+                UpdatePrimarySubtitle(_lastKnownPosition);
+                QueueTrackUiUpdate();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                PlaybackTrace.Write(
+                    "view",
+                    "primary-subtitle",
+                    "error",
+                    exception.GetType().Name);
+            }
+
+            return;
+        }
+
+        _primarySubtitleUri = null;
+        _primarySubtitleDocument = null;
+        UpdatePrimarySubtitle(_lastKnownPosition);
+        RebuildSecondarySubtitleCombo();
+
         try
         {
             var selected = item.Tag is int id ? id : (int?)null;
-            await RunOperationAsync(engine, "subtitle", async token =>
-                await engine.Tracks.SelectSubtitleTrackAsync(selected, token), latest: true);
+            await RunOperationAsync(
+                engine,
+                "subtitle",
+                async token =>
+                    await engine.Tracks.SelectSubtitleTrackAsync(
+                        selected,
+                        token),
+                latest: true);
         }
         catch
         {
@@ -875,7 +972,14 @@ public sealed partial class PlayerView : UserControl
             return;
 
         var tracks = engine.Tracks;
-        var subtitleKey = BuildTrackListKey(tracks.SubtitleTracks.Select(static track => track.Id));
+        var subtitleKey =
+            BuildTrackListKey(
+                tracks.SubtitleTracks.Select(static track => track.Id)) +
+            "|ext:" +
+            string.Join(
+                "|",
+                _externalSubtitles.Select(
+                    static candidate => candidate.Uri.AbsoluteUri));
         var audioKey = BuildTrackListKey(tracks.AudioTracks.Select(static track => track.Id));
 
         _isUpdatingTrackSelections = true;
@@ -927,6 +1031,7 @@ public sealed partial class PlayerView : UserControl
         SubtitleTrackCombo.Items.Add(_subtitleOffItem);
 
         ComboBoxItem? selected = _subtitleOffItem;
+
         foreach (var track in tracks.SubtitleTracks)
         {
             var item = new ComboBoxItem
@@ -936,7 +1041,25 @@ public sealed partial class PlayerView : UserControl
             };
 
             SubtitleTrackCombo.Items.Add(item);
-            if (tracks.SelectedSubtitleTrackId == track.Id)
+
+            if (_primarySubtitleUri is null &&
+                tracks.SelectedSubtitleTrackId == track.Id)
+            {
+                selected = item;
+            }
+        }
+
+        foreach (var candidate in _externalSubtitles)
+        {
+            var item = new ComboBoxItem
+            {
+                Content = FormatExternalSubtitleCandidate(candidate),
+                Tag = candidate
+            };
+
+            SubtitleTrackCombo.Items.Add(item);
+
+            if (_primarySubtitleUri == candidate.Uri)
                 selected = item;
         }
 
@@ -965,13 +1088,11 @@ public sealed partial class PlayerView : UserControl
 
             foreach (var candidate in _externalSubtitles)
             {
-                var label = string.IsNullOrWhiteSpace(candidate.Language)
-                    ? candidate.DisplayName
-                    : candidate.DisplayName + " · " + candidate.Language;
-
+                if (_primarySubtitleUri == candidate.Uri)
+                    continue;
                 var item = new ComboBoxItem
                 {
-                    Content = label,
+                    Content = FormatExternalSubtitleCandidate(candidate),
                     Tag = candidate
                 };
 
@@ -990,6 +1111,29 @@ public sealed partial class PlayerView : UserControl
         {
             _isUpdatingSecondarySubtitleSelection = false;
         }
+    }
+
+    private static string FormatExternalSubtitleCandidate(
+        ExternalSubtitleCandidate candidate) =>
+        string.IsNullOrWhiteSpace(candidate.Language)
+            ? candidate.DisplayName
+            : candidate.DisplayName + " · " + candidate.Language;
+
+    private void UpdatePrimarySubtitle(TimeSpan position)
+    {
+        var text = _primarySubtitleDocument?.GetText(position);
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            PrimarySubtitleText.Text = string.Empty;
+            PrimarySubtitleOverlay.Visibility =
+                Visibility.Collapsed;
+            return;
+        }
+
+        PrimarySubtitleText.Text = text;
+        PrimarySubtitleOverlay.Visibility =
+            Visibility.Visible;
     }
 
     private void UpdateSecondarySubtitle(TimeSpan position)
@@ -1011,11 +1155,21 @@ public sealed partial class PlayerView : UserControl
 
     private void ResetSecondarySubtitleState()
     {
+        _primarySubtitleGeneration++;
+        _primarySubtitleDocument = null;
+        _primarySubtitleUri = null;
         _secondarySubtitleGeneration++;
         _secondarySubtitleDocument = null;
         _secondarySubtitleUri = null;
         _externalSubtitles =
             Array.Empty<ExternalSubtitleCandidate>();
+
+        if (PrimarySubtitleText is not null)
+            PrimarySubtitleText.Text = string.Empty;
+
+        if (PrimarySubtitleOverlay is not null)
+            PrimarySubtitleOverlay.Visibility =
+                Visibility.Collapsed;
 
         if (SecondarySubtitleText is not null)
             SecondarySubtitleText.Text = string.Empty;
@@ -1024,6 +1178,7 @@ public sealed partial class PlayerView : UserControl
             SecondarySubtitleOverlay.Visibility =
                 Visibility.Collapsed;
 
+        _subtitleTrackListKey = string.Empty;
         RebuildSecondarySubtitleCombo();
     }
 
@@ -1067,14 +1222,34 @@ public sealed partial class PlayerView : UserControl
         if (SubtitleTrackCombo.IsDropDownOpen)
             return;
 
-        var target = tracks.SelectedSubtitleTrackId is int id
-            ? SubtitleTrackCombo.Items
-                .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => item.Tag is int tag && tag == id)
-            : _subtitleOffItem;
+        ComboBoxItem? target;
 
-        if (target is not null && !ReferenceEquals(SubtitleTrackCombo.SelectedItem, target))
+        if (_primarySubtitleUri is not null)
+        {
+            target = SubtitleTrackCombo.Items
+                .OfType<ComboBoxItem>()
+                .FirstOrDefault(item =>
+                    item.Tag is ExternalSubtitleCandidate candidate &&
+                    candidate.Uri == _primarySubtitleUri);
+        }
+        else
+        {
+            target = tracks.SelectedSubtitleTrackId is int id
+                ? SubtitleTrackCombo.Items
+                    .OfType<ComboBoxItem>()
+                    .FirstOrDefault(item =>
+                        item.Tag is int tag &&
+                        tag == id)
+                : _subtitleOffItem;
+        }
+
+        if (target is not null &&
+            !ReferenceEquals(
+                SubtitleTrackCombo.SelectedItem,
+                target))
+        {
             SubtitleTrackCombo.SelectedItem = target;
+        }
     }
 
     private void SyncAudioSelection(IPlaybackTrackController tracks)
@@ -1299,7 +1474,8 @@ public sealed partial class PlayerView : UserControl
         SubtitleTrackCombo.IsEnabled = hasEngineAndSource;
         SecondarySubtitleCombo.IsEnabled =
             hasEngineAndSource &&
-            _externalSubtitles.Count > 0;
+            _externalSubtitles.Any(candidate =>
+                candidate.Uri != _primarySubtitleUri);
         AudioTrackCombo.IsEnabled = hasEngineAndSource;
 
         UpdateNavigationAvailability();
