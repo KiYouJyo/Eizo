@@ -317,7 +317,11 @@ public sealed class MediaMetadataService
         return snapshot with
         {
             ResolutionReason = ResolutionReason(resolution, subject),
-            ContentKind = ReadOptionalPropertyName(subject, "ContentKind"),
+            ContentKind =
+                ReadOptionalPropertyName(subject, "ContentKind") ??
+                ReadOptionalPropertyName(
+                    resolution.Best?.Candidate,
+                    "ContentKind"),
             SearchTitles = providerRequest.Titles.ToList(),
             CandidateCount = resolution.Candidates.Count,
             AutoResolveThreshold = AutoResolveThreshold,
