@@ -244,6 +244,12 @@
   <data name="Playback_SecondarySubtitlePosition" xml:space="preserve">
     <value>Secondary subtitle position</value>
   </data>
+  <data name="Playback_PrimarySubtitleOpacity" xml:space="preserve">
+    <value>Primary subtitle background opacity</value>
+  </data>
+  <data name="Playback_SecondarySubtitleOpacity" xml:space="preserve">
+    <value>Secondary subtitle background opacity</value>
+  </data>
   <data name="Playback_Speed" xml:space="preserve">
     <value>Playback speed</value>
   </data>
