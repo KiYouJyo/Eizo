@@ -263,6 +263,46 @@ public sealed class WebDavMediaSourceProvider(
         }
     }
 
+    public async Task<byte[]> DownloadFileAsync(
+        MediaSourceDefinition source,
+        Uri fileUri,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(fileUri);
+        ValidateSource(source);
+
+        var rootUri = new Uri(
+            source.RootLocation!,
+            UriKind.Absolute);
+
+        if (!fileUri.IsAbsoluteUri ||
+            !IsUriWithinRoot(rootUri, fileUri))
+        {
+            throw new MediaSourceException(
+                "RemoteUriOutsideSource",
+                "The requested WebDAV file is outside the configured media source.");
+        }
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            fileUri);
+        using var response = await GetSharedClient(source).SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new MediaSourceException(
+                MapStatusCode(response.StatusCode),
+                $"WebDAV GET failed with {(int)response.StatusCode} {response.ReasonPhrase}.");
+        }
+
+        return await response.Content.ReadAsByteArrayAsync(
+            cancellationToken);
+    }
+
     private async Task<string> ReadDirectoryXmlWithRetryAsync(
         MediaSourceDefinition source,
         Uri requestUri,
