@@ -272,12 +272,9 @@ public sealed class MediaMetadataServiceTests
                     "/subjects",
                     StringComparison.Ordinal))
             {
-                var id = request.RequestUri.AbsolutePath
-                    .Split('/', StringSplitOptions.RemoveEmptyEntries)
-                    .Last();
-                return Json($"""
+                return Json("""
                 {
-                  "id": {id},
+                  "id": 100,
                   "type": 2,
                   "name": "Example Anime",
                   "name_cn": "示例动画",
