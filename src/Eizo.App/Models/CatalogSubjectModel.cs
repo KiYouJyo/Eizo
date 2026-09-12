@@ -143,10 +143,9 @@ internal static class CatalogSubjectAggregator
             nativeTitle = representative.SecondaryTitle;
         }
 
-        var category = items
-            .Select(static item => item.Category)
-            .FirstOrDefault(static value => value is not null)
-            ?? MediaCategoryKind.Series;
+        var category = CatalogCategoryClassifier.ResolveSubject(
+            identity,
+            items);
 
         var episodes = BuildEpisodes(items);
         var year = metadata?.ReleaseDate is { Length: > 0 } releaseDate &&
@@ -291,4 +290,66 @@ internal static class CatalogSubjectAggregator
         value == decimal.Truncate(value)
             ? decimal.Truncate(value).ToString(CultureInfo.InvariantCulture)
             : value.ToString("0.##", CultureInfo.InvariantCulture);
+}
+
+internal static class CatalogCategoryClassifier
+{
+    public static MediaCategoryKind? Resolve(CatalogMediaItemModel item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        if (item.Category is { } explicitCategory)
+        {
+            return explicitCategory;
+        }
+
+        return Map(MediaLibraryGrouping.Classify(
+            item.Recognition,
+            item.Metadata));
+    }
+
+    public static MediaCategoryKind ResolveSubject(
+        MediaSubjectGroupingIdentity identity,
+        IReadOnlyList<CatalogMediaItemModel> items)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+        ArgumentNullException.ThrowIfNull(items);
+
+        var categories = items
+            .Select(Resolve)
+            .Where(static value => value is not null)
+            .Select(static value => value!.Value)
+            .ToArray();
+
+        if (categories.Contains(MediaCategoryKind.Anime))
+        {
+            return MediaCategoryKind.Anime;
+        }
+
+        if (categories.Contains(MediaCategoryKind.Movies))
+        {
+            return MediaCategoryKind.Movies;
+        }
+
+        if (categories.Contains(MediaCategoryKind.Series))
+        {
+            return MediaCategoryKind.Series;
+        }
+
+        return identity.Basis.Contains(
+                "movie",
+                StringComparison.OrdinalIgnoreCase)
+            ? MediaCategoryKind.Movies
+            : MediaCategoryKind.Series;
+    }
+
+    private static MediaCategoryKind? Map(
+        MediaLibraryCategoryHint hint) =>
+        hint switch
+        {
+            MediaLibraryCategoryHint.Anime => MediaCategoryKind.Anime,
+            MediaLibraryCategoryHint.Series => MediaCategoryKind.Series,
+            MediaLibraryCategoryHint.Movies => MediaCategoryKind.Movies,
+            _ => null,
+        };
 }
