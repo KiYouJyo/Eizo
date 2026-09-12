@@ -16,7 +16,9 @@ internal sealed record AppSettings(
     int? LastNormalWindowHeight = null,
     bool WasWindowMaximized = false,
     double PrimarySubtitleVerticalPosition = 12d,
-    double SecondarySubtitleVerticalPosition = 24d);
+    double SecondarySubtitleVerticalPosition = 24d,
+    double PrimarySubtitleBackgroundOpacity = 70d,
+    double SecondarySubtitleBackgroundOpacity = 70d);
 
 internal static class AppSettingsStore
 {
