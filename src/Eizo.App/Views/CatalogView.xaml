@@ -95,21 +95,62 @@
           <Setter Property="Margin" Value="0,0,12,12" />
           <Setter Property="HorizontalContentAlignment" Value="Stretch" />
           <Setter Property="VerticalContentAlignment" Value="Stretch" />
-          <Setter Property="CornerRadius" Value="10" />
           <Setter Property="Background" Value="Transparent" />
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="GridViewItem">
+                <Grid x:Name="InteractionRoot">
+                  <VisualStateManager.VisualStateGroups>
+                    <VisualStateGroup x:Name="CommonStates">
+                      <VisualState x:Name="Normal" />
+                      <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                          <Setter Target="InteractionOverlay.Background"
+                                  Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                        </VisualState.Setters>
+                      </VisualState>
+                      <VisualState x:Name="Pressed">
+                        <VisualState.Setters>
+                          <Setter Target="InteractionOverlay.Background"
+                                  Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                        </VisualState.Setters>
+                      </VisualState>
+                      <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                          <Setter Target="InteractionRoot.Opacity"
+                                  Value="0.55" />
+                        </VisualState.Setters>
+                      </VisualState>
+                    </VisualStateGroup>
+                  </VisualStateManager.VisualStateGroups>
+
+                  <ContentPresenter Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    ContentTransitions="{TemplateBinding ContentTransitions}"
+                                    HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+
+                  <Border x:Name="InteractionOverlay"
+                          CornerRadius="12"
+                          Background="Transparent"
+                          IsHitTestVisible="False" />
+                </Grid>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
         </Style>
       </GridView.ItemContainerStyle>
 
       <GridView.ItemTemplate>
         <DataTemplate>
-          <Border CornerRadius="10"
+          <Border CornerRadius="12"
                   HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch"
                   Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                   BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                   BorderThickness="1">
             <Grid RowDefinitions="272,124">
-              <Border CornerRadius="9,9,0,0"
+              <Border CornerRadius="11,11,0,0"
                       Background="{ThemeResource EizoSelectionBrush}">
                 <Grid>
                   <FontIcon Glyph="{Binding IconGlyph}"
