@@ -235,6 +235,9 @@
   <data name="Playback_SubtitleTrack" xml:space="preserve">
     <value>字幕</value>
   </data>
+  <data name="Playback_SecondarySubtitle" xml:space="preserve">
+    <value>第2字幕</value>
+  </data>
   <data name="Playback_Speed" xml:space="preserve">
     <value>再生速度</value>
   </data>
