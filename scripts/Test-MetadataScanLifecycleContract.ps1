@@ -46,6 +46,10 @@ foreach ($required in @(
     'forceRefresh: true',
     'ReuseResolvedMetadata',
     'CreateMetadataFailureSnapshot',
+    'EnrichMetadataWithTransportRetryAsync',
+    'MetadataTransportRetryDelays',
+    'MetadataTransportCooldown(',
+    'MetadataTransportFailuresBeforeCooldown',
     'CommitSourceScan',
     'Changed?.Invoke(this, EventArgs.Empty)',
     'MediaMetadataStatus.Unresolved',
@@ -53,6 +57,16 @@ foreach ($required in @(
     if ($catalog -notmatch [regex]::Escape($required)) {
         throw "Metadata source-scan contract missing: $required"
     }
+}
+
+if ($catalog -match 'providerSuspended' -or
+    $catalog -match '"ProviderSuspended"') {
+    throw 'Metadata transport-resilience contract violation: transient failures must not suspend the provider for the remainder of a library scrape.'
+}
+
+if ($catalog -notmatch 'Task\.Delay\(' -or
+    $catalog -notmatch 'IsTransportMetadataFailure') {
+    throw 'Metadata transport-resilience contract violation: retry/cooldown logic must be driven by transport-failure classification.'
 }
 
 $scrapeStart = $catalog.IndexOf('public async Task<int> ScrapeSourceMetadataAsync(')
