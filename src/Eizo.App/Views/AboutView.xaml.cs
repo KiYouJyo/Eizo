@@ -14,7 +14,6 @@ public sealed partial class AboutView : UserControl
     private static readonly Uri PrivacyUri = new("https://github.com/KiYouJyo/Eizo/blob/main/PRIVACY.md");
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
     private readonly AboutUpdateSessionState _updates = AboutUpdateSessionState.Default;
-    private double? _playbackProgress;
     private double? _recognitionProgress;
 
     public AboutView()
@@ -85,13 +84,6 @@ public sealed partial class AboutView : UserControl
 
         await _updates.CheckProductUpdateAsync();
     }
-
-    private async void CheckPlaybackUpdateButton_Click(object sender, RoutedEventArgs e) =>
-        await HandleComponentUpdateAsync(
-            _updates.PlaybackUpdateService,
-            () => _updates.PlaybackResult,
-            value => _updates.PlaybackResult = value,
-            value => _playbackProgress = value);
 
     private async void CheckRecognitionUpdateButton_Click(object sender, RoutedEventArgs e) =>
         await HandleComponentUpdateAsync(
@@ -253,15 +245,6 @@ public sealed partial class AboutView : UserControl
     private void RenderComponentUpdates()
     {
         RenderComponentUpdate(
-            _updates.PlaybackResult,
-            _playbackProgress,
-            PlaybackCurrentVersionText,
-            PlaybackAvailableVersionText,
-            PlaybackUpdateStatusText,
-            CheckPlaybackUpdateButton,
-            PlaybackUpdateProgressBar);
-
-        RenderComponentUpdate(
             _updates.RecognitionResult,
             _recognitionProgress,
             RecognitionCurrentVersionText,
@@ -415,12 +398,10 @@ public sealed partial class AboutView : UserControl
         CheckUpdateButton.Content = T("About_CheckUpdates");
 
         ComponentsTitle.Text = L("可独立更新组件", "個別更新可能なコンポーネント", "Independently updateable components");
-        PlaybackDescriptionText.Text = L("播放内核", "再生コア", "Playback runtime");
         RecognitionDescriptionText.Text = L(
             "识别与元数据内核",
             "認識・メタデータコア",
             "Recognition & metadata runtime");
-        CheckPlaybackUpdateButton.Content = T("About_CheckUpdates");
         CheckRecognitionUpdateButton.Content = T("About_CheckUpdates");
 
         ProjectTitle.Text = T("About_ProjectOpenSource");

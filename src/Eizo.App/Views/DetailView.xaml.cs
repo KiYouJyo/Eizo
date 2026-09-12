@@ -323,10 +323,28 @@ public sealed partial class DetailView : UserControl
         object sender,
         RoutedEventArgs e)
     {
-        if (_subject?.FirstPlayableItem is { } item)
+        if (_subject is not null)
         {
-            MediaPlayRequested?.Invoke(this, item);
-            return;
+            var selectedSeason =
+                SeasonComboBox.SelectedItem is SeasonOption option
+                    ? option.Number
+                    : _subject.SeasonNumbers.FirstOrDefault();
+
+            var item = (_subject.IsMovieSubject
+                    ? _subject.Episodes
+                    : _subject.Episodes.Where(episode =>
+                        (episode.SeasonNumber ?? 1) == selectedSeason))
+                .Select(static episode => episode.PrimaryItem)
+                .FirstOrDefault(static media =>
+                    media.Location is not null);
+
+            item ??= _subject.FirstPlayableItem;
+
+            if (item is not null)
+            {
+                MediaPlayRequested?.Invoke(this, item);
+                return;
+            }
         }
 
         PlayRequested?.Invoke(this, "第18话");

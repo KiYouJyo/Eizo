@@ -213,17 +213,25 @@ internal static class CatalogSubjectAggregator
         IReadOnlyList<CatalogMediaItemModel> items)
     {
         var indexed = items
-            .Select((item, index) => new IndexedEpisode(
-                item,
-                index,
-                ResolveSeason(item),
-                item.Recognition?.EpisodeNumber
-                ?? item.Recognition?.SpecialNumber,
-                string.Equals(
-                    item.Recognition?.MediaKind,
-                    "Special",
-                    StringComparison.OrdinalIgnoreCase),
-                ResolveMovieIdentity(item)))
+            .Select((item, index) =>
+            {
+                var grouping =
+                    CatalogEpisodeGroupingResolver.Resolve(
+                        item.SourceTitle,
+                        item.Recognition?.MediaKind,
+                        item.Recognition?.SpecialKind,
+                        item.Recognition?.SeasonNumber,
+                        item.Recognition?.EpisodeNumber,
+                        item.Recognition?.SpecialNumber);
+
+                return new IndexedEpisode(
+                    item,
+                    index,
+                    grouping.SeasonNumber,
+                    grouping.EpisodeNumber,
+                    grouping.IsSpecial,
+                    ResolveMovieIdentity(item));
+            })
             .ToArray();
 
         return indexed
@@ -249,8 +257,15 @@ internal static class CatalogSubjectAggregator
     private static CatalogEpisodeModel CreateEpisode(
         IReadOnlyList<IndexedEpisode> values)
     {
+        var isSpecialGroup =
+            values.Any(static value => value.Special);
+
         var selected = values
-            .OrderByDescending(static value =>
+            .OrderByDescending(value =>
+                isSpecialGroup &&
+                CatalogEpisodeGroupingResolver.IsExplicitSpecialSource(
+                    value.Item.SourceTitle))
+            .ThenByDescending(static value =>
                 value.Item.Location?.Kind == MediaLocationKind.LocalFile)
             .ThenByDescending(static value =>
                 value.Item.Metadata is { IsResolved: true })
@@ -267,26 +282,59 @@ internal static class CatalogSubjectAggregator
             "Movie",
             StringComparison.OrdinalIgnoreCase);
 
-        var title = isMovie
-            ? metadata?.CanonicalTitle
-            : metadata?.EpisodeTitle;
-        if (string.IsNullOrWhiteSpace(title))
+        string? title;
+        string? nativeTitle;
+
+        if (isMovie)
         {
-            title = isMovie
-                ? recognition?.Title
-                : recognition?.EpisodeTitle;
+            title = metadata?.CanonicalTitle;
+            if (string.IsNullOrWhiteSpace(title))
+                title = recognition?.Title;
+
+            nativeTitle = metadata?.OriginalTitle;
+        }
+        else if (selected.Special)
+        {
+            // Metadata currently carries EpisodeNumber/EpisodeTitle but no
+            // season/special identity. Never let a resolved S01E01 title
+            // overwrite an explicit OVA/OAD/ONA/SP source.
+            title = recognition?.EpisodeTitle;
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                title =
+                    CatalogEpisodeGroupingResolver.ResolveExplicitSpecialLabel(
+                        primary.SourceTitle,
+                        selected.Number);
+            }
+
+            if (string.IsNullOrWhiteSpace(title) &&
+                !CatalogEpisodeGroupingResolver.IsExplicitSpecialSource(
+                    primary.SourceTitle))
+            {
+                title = metadata?.EpisodeTitle;
+            }
+
+            nativeTitle = string.Empty;
+        }
+        else
+        {
+            title = metadata?.EpisodeTitle;
+            if (string.IsNullOrWhiteSpace(title))
+                title = recognition?.EpisodeTitle;
+
+            nativeTitle = metadata?.EpisodeOriginalTitle;
         }
 
         if (string.IsNullOrWhiteSpace(title))
         {
             title = selected.Number is not null
-                ? $"Episode {FormatEpisodeNumber((decimal)selected.Number)}"
+                ? selected.Special
+                    ? $"Special {FormatEpisodeNumber((decimal)selected.Number)}"
+                    : $"Episode {FormatEpisodeNumber((decimal)selected.Number)}"
                 : primary.SourceTitle;
         }
 
-        var nativeTitle = isMovie
-            ? metadata?.OriginalTitle
-            : metadata?.EpisodeOriginalTitle;
         if (string.IsNullOrWhiteSpace(nativeTitle) ||
             string.Equals(
                 nativeTitle,
@@ -359,19 +407,6 @@ internal static class CatalogSubjectAggregator
         return builder.Length == 0
             ? null
             : $"{builder}|{item.Recognition?.Year?.ToString(CultureInfo.InvariantCulture) ?? "-"}";
-    }
-
-    private static int ResolveSeason(CatalogMediaItemModel item)
-    {
-        if (string.Equals(
-                item.Recognition?.MediaKind,
-                "Special",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return item.Recognition?.SeasonNumber ?? 0;
-        }
-
-        return item.Recognition?.SeasonNumber ?? 1;
     }
 
     private static string FormatEpisodeNumber(decimal value) =>

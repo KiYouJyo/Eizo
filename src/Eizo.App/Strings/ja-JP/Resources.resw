@@ -235,6 +235,21 @@
   <data name="Playback_SubtitleTrack" xml:space="preserve">
     <value>字幕</value>
   </data>
+  <data name="Playback_SecondarySubtitle" xml:space="preserve">
+    <value>第2字幕</value>
+  </data>
+  <data name="Playback_PrimarySubtitlePosition" xml:space="preserve">
+    <value>第1字幕の位置</value>
+  </data>
+  <data name="Playback_SecondarySubtitlePosition" xml:space="preserve">
+    <value>第2字幕の位置</value>
+  </data>
+  <data name="Playback_PrimarySubtitleOpacity" xml:space="preserve">
+    <value>第1字幕の背景不透明度</value>
+  </data>
+  <data name="Playback_SecondarySubtitleOpacity" xml:space="preserve">
+    <value>第2字幕の背景不透明度</value>
+  </data>
   <data name="Playback_Speed" xml:space="preserve">
     <value>再生速度</value>
   </data>

@@ -117,24 +117,6 @@
                   <Grid MinHeight="54" Padding="14,0"
                         ColumnDefinitions="2*,110,32,110,190,150,Auto" ColumnSpacing="10">
                     <StackPanel VerticalAlignment="Center">
-                      <TextBlock Text="Playback" FontWeight="SemiBold" />
-                      <TextBlock x:Name="PlaybackDescriptionText" Style="{StaticResource MetadataText}" />
-                    </StackPanel>
-                    <TextBlock x:Name="PlaybackCurrentVersionText" Grid.Column="1" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="2" Text="→" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Name="PlaybackAvailableVersionText" Grid.Column="3" VerticalAlignment="Center" Text="—" />
-                    <TextBlock Grid.Column="4" Text="Eizo.Playback" VerticalAlignment="Center" />
-                    <TextBlock x:Name="PlaybackUpdateStatusText" Grid.Column="5" VerticalAlignment="Center" TextWrapping="Wrap" />
-                    <Button x:Name="CheckPlaybackUpdateButton" Grid.Column="6" MinWidth="108"
-                            VerticalAlignment="Center" Click="CheckPlaybackUpdateButton_Click" />
-                  </Grid>
-                  <ProgressBar x:Name="PlaybackUpdateProgressBar" Height="4" Opacity="0"
-                               IsIndeterminate="True" />
-                  <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-                  <Grid MinHeight="54" Padding="14,0"
-                        ColumnDefinitions="2*,110,32,110,190,150,Auto" ColumnSpacing="10">
-                    <StackPanel VerticalAlignment="Center">
                       <TextBlock Text="Metadata" FontWeight="SemiBold" />
                       <TextBlock x:Name="RecognitionDescriptionText" Style="{StaticResource MetadataText}" />
                     </StackPanel>

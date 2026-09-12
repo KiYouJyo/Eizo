@@ -39,10 +39,55 @@
 
       <Grid x:Name="PlaybackSurfaceHost"
             Grid.Row="1"
-            Background="#080D0E">
+            Background="#080D0E"
+            SizeChanged="PlaybackSurfaceHost_SizeChanged">
         <playback:PlaybackView x:Name="PlaybackSurface"
                                HorizontalAlignment="Stretch"
                                VerticalAlignment="Stretch" />
+
+        <Border x:Name="SecondarySubtitleOverlay"
+                Margin="36,0,36,0"
+                Padding="14,7"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Bottom"
+                CornerRadius="6"
+                IsHitTestVisible="False"
+                Visibility="Collapsed"
+                SizeChanged="SubtitleOverlay_SizeChanged">
+          <Border.Background>
+            <SolidColorBrush x:Name="SecondarySubtitleBackgroundBrush"
+                             Color="Black"
+                             Opacity="0.7" />
+          </Border.Background>
+          <TextBlock x:Name="SecondarySubtitleText"
+                     Foreground="White"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap" />
+        </Border>
+
+        <Border x:Name="PrimarySubtitleOverlay"
+                Margin="36,0,36,0"
+                Padding="14,7"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Bottom"
+                CornerRadius="6"
+                IsHitTestVisible="False"
+                Visibility="Collapsed"
+                SizeChanged="SubtitleOverlay_SizeChanged">
+          <Border.Background>
+            <SolidColorBrush x:Name="PrimarySubtitleBackgroundBrush"
+                             Color="Black"
+                             Opacity="0.7" />
+          </Border.Background>
+          <TextBlock x:Name="PrimarySubtitleText"
+                     Foreground="White"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap" />
+        </Border>
 
         <Border x:Name="PlaybackStatusPanel"
                 MinWidth="210"
@@ -315,10 +360,11 @@
         <ListView x:Name="QueueList"
                   Grid.Row="2"
                   SelectionMode="Single"
-                  SelectedIndex="0"
+                  SelectedIndex="-1"
+                  SelectionChanged="QueueList_SelectionChanged"
                   ItemContainerStyle="{StaticResource SourceListItemStyle}">
           <ListView.ItemTemplate>
-            <DataTemplate x:DataType="models:EpisodeItemModel">
+            <DataTemplate x:DataType="models:PlaybackQueueItemModel">
               <Grid Height="58" ColumnDefinitions="44,*">
                 <TextBlock Text="{x:Bind Number}"
                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
@@ -344,6 +390,75 @@
                     HorizontalAlignment="Stretch"
                     controls:TransientComboBoxTheme.Apply="True"
                     SelectionChanged="SubtitleTrackCombo_SelectionChanged" />
+          <Grid Margin="0,2,0,0"
+                ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="PrimarySubtitlePositionLabel"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+            <TextBlock x:Name="PrimarySubtitlePositionValueText"
+                       Grid.Column="1"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+          </Grid>
+          <Slider x:Name="PrimarySubtitlePositionSlider"
+                  Minimum="0"
+                  Maximum="90"
+                  StepFrequency="1"
+                  ValueChanged="PrimarySubtitlePositionSlider_ValueChanged" />
+          <Grid Margin="0,2,0,0"
+                ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="PrimarySubtitleOpacityLabel"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+            <TextBlock x:Name="PrimarySubtitleOpacityValueText"
+                       Grid.Column="1"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+          </Grid>
+          <Slider x:Name="PrimarySubtitleOpacitySlider"
+                  Minimum="0"
+                  Maximum="100"
+                  StepFrequency="1"
+                  ValueChanged="PrimarySubtitleOpacitySlider_ValueChanged" />
+
+          <TextBlock x:Name="SecondarySubtitleTrackLabel"
+                     Margin="0,6,0,0"
+                     Style="{StaticResource CardTitleText}" />
+          <ComboBox x:Name="SecondarySubtitleCombo"
+                    HorizontalAlignment="Stretch"
+                    controls:TransientComboBoxTheme.Apply="True"
+                    SelectionChanged="SecondarySubtitleCombo_SelectionChanged" />
+          <Grid Margin="0,2,0,0"
+                ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="SecondarySubtitlePositionLabel"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+            <TextBlock x:Name="SecondarySubtitlePositionValueText"
+                       Grid.Column="1"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+          </Grid>
+          <Slider x:Name="SecondarySubtitlePositionSlider"
+                  Minimum="0"
+                  Maximum="90"
+                  StepFrequency="1"
+                  ValueChanged="SecondarySubtitlePositionSlider_ValueChanged" />
+          <Grid Margin="0,2,0,0"
+                ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="SecondarySubtitleOpacityLabel"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+            <TextBlock x:Name="SecondarySubtitleOpacityValueText"
+                       Grid.Column="1"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+          </Grid>
+          <Slider x:Name="SecondarySubtitleOpacitySlider"
+                  Minimum="0"
+                  Maximum="100"
+                  StepFrequency="1"
+                  ValueChanged="SecondarySubtitleOpacitySlider_ValueChanged" />
+
           <TextBlock x:Name="AudioTrackLabel"
                      Margin="0,6,0,0"
                      Style="{StaticResource CardTitleText}" />

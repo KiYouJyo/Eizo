@@ -3,10 +3,12 @@ using Eizo.Localization;
 using Eizo.Models;
 using Eizo.Playback;
 using Eizo.Playback.WinUI;
+using Eizo.PlaybackSupport;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
@@ -41,6 +43,11 @@ public sealed partial class PlayerView : UserControl
     private Point _lastPointerPosition;
     private double _volume = 1d;
     private bool _isUpdatingVolume;
+    private bool _isUpdatingSubtitlePositions;
+    private double _primarySubtitleVerticalPosition = 12d;
+    private double _secondarySubtitleVerticalPosition = 24d;
+    private double _primarySubtitleBackgroundOpacity = 70d;
+    private double _secondarySubtitleBackgroundOpacity = 70d;
     private bool _pointerWheelHooked;
     private bool _isPreparingForDetach;
     private int _fullscreenGeneration;
@@ -51,28 +58,71 @@ public sealed partial class PlayerView : UserControl
     private bool _isLoadingStatusVisible;
     private long? _lastLoadingReadBytes;
     private DateTimeOffset? _lastLoadingSampleAt;
+    private readonly List<PlaybackQueueItemModel> _queueItems;
+    private int _queueIndex = -1;
+    private bool _isUpdatingQueueSelection;
+    private IReadOnlyList<ExternalSubtitleCandidate> _externalSubtitles =
+        Array.Empty<ExternalSubtitleCandidate>();
+    private SubtitleDocument? _primarySubtitleDocument;
+    private Uri? _primarySubtitleUri;
+    private int _primarySubtitleGeneration;
+    private SubtitleDocument? _secondarySubtitleDocument;
+    private Uri? _secondarySubtitleUri;
+    private bool _isUpdatingSecondarySubtitleSelection;
+    private int _secondarySubtitleGeneration;
 
     public PlayerView(
         string title,
         string episode,
-        PlaybackSource? initialSource = null)
+        PlaybackSource? initialSource = null,
+        IReadOnlyList<PlaybackQueueItemModel>? queue = null,
+        int initialQueueIndex = 0)
     {
         InitializeComponent();
+        InitializeSubtitlePositionControls();
 
-        NowPlayingTitle.Text = initialSource is null
-            ? title + " · " + episode
-            : title;
-        NowPlayingEpisode.Text = episode;
+        _queueItems = queue?
+            .OrderBy(static item => item.Index)
+            .ToList() ?? [];
 
-        QueueList.ItemsSource = initialSource is null
-            ? new[]
-            {
-                new EpisodeItemModel("18", "一级魔法使考试", "一級魔法使試験", "23:41", T("Playback_Playing")),
-                new EpisodeItemModel("19", "周密的计划", "入念な計画", "24:03", T("Category_Unwatched")),
-                new EpisodeItemModel("20", "必要的杀戮", "必要な殺し", "23:58", T("Category_Unwatched")),
-                new EpisodeItemModel("21", "魔法的世界", "魔法の世界", "24:11", T("Category_Unwatched"))
-            }
-            : Array.Empty<EpisodeItemModel>();
+        if (_queueItems.Count == 0 && initialSource is not null)
+        {
+            _queueItems.Add(
+                new PlaybackQueueItemModel(
+                    0,
+                    "1",
+                    title,
+                    string.Empty,
+                    episode,
+                    initialSource));
+        }
+
+        if (_queueItems.Count > 0)
+        {
+            _queueIndex = Math.Clamp(
+                initialQueueIndex,
+                0,
+                _queueItems.Count - 1);
+            _currentSource = _queueItems[_queueIndex].Source;
+        }
+        else
+        {
+            _currentSource = initialSource;
+        }
+
+        PlaybackSelectionTrace.Write(
+            "view-init",
+            CurrentQueueItem?.CatalogItem?.SourceTitle ?? episode,
+            _currentSource?.Uri.ToString(),
+            _queueIndex,
+            _queueItems.Count);
+
+        NowPlayingTitle.Text = title;
+        NowPlayingEpisode.Text =
+            CurrentQueueItem?.Title ??
+            episode;
+
+        QueueList.ItemsSource = _queueItems;
 
         PlaybackSurface.EngineChanged += PlaybackSurface_EngineChanged;
         PlaybackSurface.InitializationFailed += PlaybackSurface_InitializationFailed;
@@ -111,10 +161,11 @@ public sealed partial class PlayerView : UserControl
 
         ApplyText();
         ResetTimeline();
+        RebuildSecondarySubtitleCombo();
+        RefreshQueueStatus();
 
-        if (initialSource is not null)
+        if (_currentSource is not null)
         {
-            _currentSource = initialSource;
             _playIntent = true;
             ShowLoadingStatus();
         }
@@ -126,6 +177,12 @@ public sealed partial class PlayerView : UserControl
         UpdateControlAvailability();
     }
 
+    private PlaybackQueueItemModel? CurrentQueueItem =>
+        _queueIndex >= 0 &&
+        _queueIndex < _queueItems.Count
+            ? _queueItems[_queueIndex]
+            : null;
+
     private string T(string key) => _localization.GetString(key);
 
     private void ApplyText()
@@ -133,6 +190,15 @@ public sealed partial class PlayerView : UserControl
         QueueTitle.Text = T("Playback_Queue");
         QueueSubtitle.Text = NowPlayingEpisode.Text;
         SubtitleTrackLabel.Text = T("Playback_SubtitleTrack");
+        PrimarySubtitlePositionLabel.Text =
+            T("Playback_PrimarySubtitlePosition");
+        PrimarySubtitleOpacityLabel.Text =
+            T("Playback_PrimarySubtitleOpacity");
+        SecondarySubtitleTrackLabel.Text = T("Playback_SecondarySubtitle");
+        SecondarySubtitlePositionLabel.Text =
+            T("Playback_SecondarySubtitlePosition");
+        SecondarySubtitleOpacityLabel.Text =
+            T("Playback_SecondarySubtitleOpacity");
         AudioTrackLabel.Text = T("Playback_AudioTrack");
         PlaybackRateFlyoutTitle.Text = T("Playback_Rate");
         VolumeFlyoutTitle.Text = T("Playback_Volume");
@@ -267,7 +333,20 @@ public sealed partial class PlayerView : UserControl
     private void Engine_StateChanged(object? sender, PlaybackStateChangedEventArgs e) =>
         DispatchEngine(sender, () =>
         {
-            if (e.CurrentState == PlaybackState.Ended) _playIntent = false;
+            if (e.CurrentState == PlaybackState.Ended)
+            {
+                if (_queueIndex >= 0 &&
+                    _queueIndex < _queueItems.Count - 1)
+                {
+                    _ = SwitchQueueItemAsync(
+                        _queueIndex + 1,
+                        autoplay: true);
+                    return;
+                }
+
+                _playIntent = false;
+            }
+
             UpdateStateUi(e.CurrentState);
         });
 
@@ -287,6 +366,8 @@ public sealed partial class PlayerView : UserControl
             if (_seekDebounce is not null) return;
             _lastKnownPosition = e.Position;
             CurrentTimeText.Text = FormatTime(e.Position);
+            UpdatePrimarySubtitle(e.Position);
+            UpdateSecondarySubtitle(e.Position);
             if (_duration <= TimeSpan.Zero) return;
             _isUpdatingTimeline = true;
             try { PlaybackSlider.Value = Math.Clamp(e.Position.TotalSeconds, PlaybackSlider.Minimum, PlaybackSlider.Maximum); }
@@ -364,23 +445,146 @@ public sealed partial class PlayerView : UserControl
         }
     }
 
-    private Task OpenSourceOnEngineAsync(IPlaybackEngine engine, bool restorePosition)
+    private Task OpenSourceOnEngineAsync(
+        IPlaybackEngine engine,
+        bool restorePosition,
+        bool latest = false)
     {
         var source = _currentSource;
-        var resumePosition = restorePosition ? _lastKnownPosition : TimeSpan.Zero;
-        if (source is null) return Task.CompletedTask;
-        return RunOperationAsync(engine, "open", async token =>
+        var queueItem = CurrentQueueItem;
+        var catalogItem = queueItem?.CatalogItem;
+        var resumePosition = restorePosition
+            ? _lastKnownPosition
+            : TimeSpan.Zero;
+
+        if (source is null)
+            return Task.CompletedTask;
+
+        return RunOperationAsync(
+            engine,
+            "open",
+            async token =>
+            {
+                await engine.OpenAsync(source, token);
+                token.ThrowIfCancellationRequested();
+
+                await engine.PlayAsync(token);
+                if (resumePosition > TimeSpan.FromMilliseconds(250))
+                    await TryRestorePositionAsync(
+                        engine,
+                        resumePosition,
+                        token);
+
+                token.ThrowIfCancellationRequested();
+                if (!_playIntent)
+                    await engine.PauseAsync(token);
+
+                await DiscoverAndAttachExternalSubtitlesAsync(
+                    engine,
+                    source,
+                    catalogItem,
+                    token);
+
+                await engine.Tracks.RefreshAsync(token);
+                await engine.Navigation.RefreshAsync(token);
+                await engine.Diagnostics.RefreshAsync(token);
+            },
+            latest: latest);
+    }
+
+    private async Task DiscoverAndAttachExternalSubtitlesAsync(
+        IPlaybackEngine engine,
+        PlaybackSource source,
+        CatalogMediaItemModel? catalogItem,
+        CancellationToken token)
+    {
+        IReadOnlyList<ExternalSubtitleCandidate> candidates;
+
+        try
         {
-            await engine.OpenAsync(source, token);
-            token.ThrowIfCancellationRequested();
-            await engine.PlayAsync(token);
-            if (resumePosition > TimeSpan.FromMilliseconds(250))
-                await TryRestorePositionAsync(engine, resumePosition, token);
-            token.ThrowIfCancellationRequested();
-            if (!_playIntent) await engine.PauseAsync(token);
-            await engine.Tracks.RefreshAsync(token);
-            await engine.Navigation.RefreshAsync(token);
-            await engine.Diagnostics.RefreshAsync(token);
+            candidates = await ExternalSubtitleService.DiscoverAsync(
+                source,
+                catalogItem,
+                token);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            PlaybackTrace.Write(
+                "view",
+                "external-subtitles",
+                "discover-error",
+                exception.GetType().Name);
+            candidates = Array.Empty<ExternalSubtitleCandidate>();
+        }
+
+        token.ThrowIfCancellationRequested();
+
+        SubtitleDocument? automaticPrimaryDocument = null;
+        ExternalSubtitleCandidate? automaticPrimaryCandidate = null;
+
+        // External subtitles are rendered by Eizo's WinUI overlay rather than
+        // registered with LibVLC. This keeps ASS/SRT/VTT/SSA typography
+        // consistent with the second-subtitle renderer.
+        if (engine.Tracks.SelectedSubtitleTrackId is null &&
+            candidates.Count > 0)
+        {
+            automaticPrimaryCandidate = candidates[0];
+
+            try
+            {
+                automaticPrimaryDocument =
+                    await ExternalSubtitleService.LoadDocumentAsync(
+                        automaticPrimaryCandidate,
+                        token);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                PlaybackTrace.Write(
+                    "view",
+                    "primary-subtitle",
+                    "auto-load-error",
+                    exception.GetType().Name);
+            }
+        }
+
+        token.ThrowIfCancellationRequested();
+
+        Dispatch(() =>
+        {
+            if (_currentSource is null ||
+                _currentSource.Uri != source.Uri)
+            {
+                return;
+            }
+
+            _externalSubtitles = candidates;
+
+            if (_primarySubtitleUri is null &&
+                automaticPrimaryCandidate is not null &&
+                automaticPrimaryDocument is not null)
+            {
+                _primarySubtitleUri = automaticPrimaryCandidate.Uri;
+                _primarySubtitleDocument = automaticPrimaryDocument;
+                UpdatePrimarySubtitle(_lastKnownPosition);
+            }
+
+            RebuildSecondarySubtitleCombo();
+            _subtitleTrackListKey = string.Empty;
+            QueueTrackUiUpdate();
+            UpdateControlAvailability();
+            PlaybackTrace.Write(
+                "view",
+                "external-subtitles",
+                "complete",
+                candidates.Count.ToString());
         });
     }
 
@@ -473,12 +677,37 @@ public sealed partial class PlayerView : UserControl
         if (_engine is not { } engine)
             return;
 
+        if (engine.Navigation.Chapters.Count == 0)
+        {
+            if (_queueIndex > 0)
+            {
+                await SwitchQueueItemAsync(
+                    _queueIndex - 1,
+                    autoplay: true);
+            }
+
+            return;
+        }
+
         try
         {
-            await RunOperationAsync(engine, "chapter", async token => { await engine.Navigation.PreviousChapterAsync(token); });
+            await RunOperationAsync(
+                engine,
+                "chapter",
+                async token =>
+                {
+                    await engine.Navigation.PreviousChapterAsync(
+                        token);
+                });
         }
         catch (Exception exception)
-        { PlaybackTrace.Write("view", "control", "error", exception.GetType().Name); }
+        {
+            PlaybackTrace.Write(
+                "view",
+                "control",
+                "error",
+                exception.GetType().Name);
+        }
     }
 
     private async void NextChapterButton_Click(object sender, RoutedEventArgs e)
@@ -486,12 +715,38 @@ public sealed partial class PlayerView : UserControl
         if (_engine is not { } engine)
             return;
 
+        if (engine.Navigation.Chapters.Count == 0)
+        {
+            if (_queueIndex >= 0 &&
+                _queueIndex < _queueItems.Count - 1)
+            {
+                await SwitchQueueItemAsync(
+                    _queueIndex + 1,
+                    autoplay: true);
+            }
+
+            return;
+        }
+
         try
         {
-            await RunOperationAsync(engine, "chapter", async token => { await engine.Navigation.NextChapterAsync(token); });
+            await RunOperationAsync(
+                engine,
+                "chapter",
+                async token =>
+                {
+                    await engine.Navigation.NextChapterAsync(
+                        token);
+                });
         }
         catch (Exception exception)
-        { PlaybackTrace.Write("view", "control", "error", exception.GetType().Name); }
+        {
+            PlaybackTrace.Write(
+                "view",
+                "control",
+                "error",
+                exception.GetType().Name);
+        }
     }
 
     private async void PlaybackSlider_ValueChanged(
@@ -513,6 +768,8 @@ public sealed partial class PlayerView : UserControl
 
         _lastKnownPosition = target;
         CurrentTimeText.Text = FormatTime(target);
+        UpdatePrimarySubtitle(target);
+        UpdateSecondarySubtitle(target);
 
         try
         {
@@ -542,15 +799,139 @@ public sealed partial class PlayerView : UserControl
             return;
         }
 
+        var generation = ++_primarySubtitleGeneration;
+
+        if (item.Tag is ExternalSubtitleCandidate candidate)
+        {
+            _primarySubtitleUri = candidate.Uri;
+            _primarySubtitleDocument = null;
+
+            if (_secondarySubtitleUri == candidate.Uri)
+            {
+                _secondarySubtitleGeneration++;
+                _secondarySubtitleUri = null;
+                _secondarySubtitleDocument = null;
+                UpdateSecondarySubtitle(_lastKnownPosition);
+            }
+
+            RebuildSecondarySubtitleCombo();
+
+            try
+            {
+                await RunOperationAsync(
+                    engine,
+                    "subtitle",
+                    async token =>
+                        await engine.Tracks.SelectSubtitleTrackAsync(
+                            null,
+                            token),
+                    latest: true);
+
+                var session = _session;
+                var document =
+                    await ExternalSubtitleService.LoadDocumentAsync(
+                        candidate,
+                        session.Token);
+
+                if (generation != _primarySubtitleGeneration ||
+                    !ReferenceEquals(session, _session) ||
+                    session.Token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                _primarySubtitleDocument = document;
+                UpdatePrimarySubtitle(_lastKnownPosition);
+                QueueTrackUiUpdate();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                PlaybackTrace.Write(
+                    "view",
+                    "primary-subtitle",
+                    "error",
+                    exception.GetType().Name);
+            }
+
+            return;
+        }
+
+        _primarySubtitleUri = null;
+        _primarySubtitleDocument = null;
+        UpdatePrimarySubtitle(_lastKnownPosition);
+        RebuildSecondarySubtitleCombo();
+
         try
         {
             var selected = item.Tag is int id ? id : (int?)null;
-            await RunOperationAsync(engine, "subtitle", async token =>
-                await engine.Tracks.SelectSubtitleTrackAsync(selected, token), latest: true);
+            await RunOperationAsync(
+                engine,
+                "subtitle",
+                async token =>
+                    await engine.Tracks.SelectSubtitleTrackAsync(
+                        selected,
+                        token),
+                latest: true);
         }
         catch
         {
             ShowStatus(T("Status_Error"));
+        }
+    }
+
+    private async void SecondarySubtitleCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_isUpdatingSecondarySubtitleSelection)
+            return;
+
+        var generation = ++_secondarySubtitleGeneration;
+
+        if (SecondarySubtitleCombo.SelectedItem is not ComboBoxItem
+            {
+                Tag: ExternalSubtitleCandidate candidate
+            })
+        {
+            _secondarySubtitleDocument = null;
+            _secondarySubtitleUri = null;
+            UpdateSecondarySubtitle(_lastKnownPosition);
+            return;
+        }
+
+        var session = _session;
+
+        try
+        {
+            var document =
+                await ExternalSubtitleService.LoadDocumentAsync(
+                    candidate,
+                    session.Token);
+
+            if (generation != _secondarySubtitleGeneration ||
+                !ReferenceEquals(session, _session) ||
+                session.Token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _secondarySubtitleDocument = document;
+            _secondarySubtitleUri = candidate.Uri;
+            UpdateSecondarySubtitle(_lastKnownPosition);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            PlaybackTrace.Write(
+                "view",
+                "secondary-subtitle",
+                "error",
+                exception.GetType().Name);
         }
     }
 
@@ -606,7 +987,14 @@ public sealed partial class PlayerView : UserControl
             return;
 
         var tracks = engine.Tracks;
-        var subtitleKey = BuildTrackListKey(tracks.SubtitleTracks.Select(static track => track.Id));
+        var subtitleKey =
+            BuildTrackListKey(
+                tracks.SubtitleTracks.Select(static track => track.Id)) +
+            "|ext:" +
+            string.Join(
+                "|",
+                _externalSubtitles.Select(
+                    static candidate => candidate.Uri.AbsoluteUri));
         var audioKey = BuildTrackListKey(tracks.AudioTracks.Select(static track => track.Id));
 
         _isUpdatingTrackSelections = true;
@@ -658,6 +1046,7 @@ public sealed partial class PlayerView : UserControl
         SubtitleTrackCombo.Items.Add(_subtitleOffItem);
 
         ComboBoxItem? selected = _subtitleOffItem;
+
         foreach (var track in tracks.SubtitleTracks)
         {
             var item = new ComboBoxItem
@@ -667,11 +1056,145 @@ public sealed partial class PlayerView : UserControl
             };
 
             SubtitleTrackCombo.Items.Add(item);
-            if (tracks.SelectedSubtitleTrackId == track.Id)
+
+            if (_primarySubtitleUri is null &&
+                tracks.SelectedSubtitleTrackId == track.Id)
+            {
+                selected = item;
+            }
+        }
+
+        foreach (var candidate in _externalSubtitles)
+        {
+            var item = new ComboBoxItem
+            {
+                Content = FormatExternalSubtitleCandidate(candidate),
+                Tag = candidate
+            };
+
+            SubtitleTrackCombo.Items.Add(item);
+
+            if (_primarySubtitleUri == candidate.Uri)
                 selected = item;
         }
 
         SubtitleTrackCombo.SelectedItem = selected;
+    }
+
+    private void RebuildSecondarySubtitleCombo()
+    {
+        if (SecondarySubtitleCombo is null)
+            return;
+
+        _isUpdatingSecondarySubtitleSelection = true;
+
+        try
+        {
+            SecondarySubtitleCombo.Items.Clear();
+
+            var off = new ComboBoxItem
+            {
+                Content = T("Playback_NoSubtitle"),
+                Tag = null
+            };
+            SecondarySubtitleCombo.Items.Add(off);
+
+            ComboBoxItem? selected = off;
+
+            foreach (var candidate in _externalSubtitles)
+            {
+                if (_primarySubtitleUri == candidate.Uri)
+                    continue;
+                var item = new ComboBoxItem
+                {
+                    Content = FormatExternalSubtitleCandidate(candidate),
+                    Tag = candidate
+                };
+
+                SecondarySubtitleCombo.Items.Add(item);
+
+                if (_secondarySubtitleUri is not null &&
+                    candidate.Uri == _secondarySubtitleUri)
+                {
+                    selected = item;
+                }
+            }
+
+            SecondarySubtitleCombo.SelectedItem = selected;
+        }
+        finally
+        {
+            _isUpdatingSecondarySubtitleSelection = false;
+        }
+    }
+
+    private static string FormatExternalSubtitleCandidate(
+        ExternalSubtitleCandidate candidate) =>
+        string.IsNullOrWhiteSpace(candidate.Language)
+            ? candidate.DisplayName
+            : candidate.DisplayName + " · " + candidate.Language;
+
+    private void UpdatePrimarySubtitle(TimeSpan position)
+    {
+        var text = _primarySubtitleDocument?.GetText(position);
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            PrimarySubtitleText.Text = string.Empty;
+            PrimarySubtitleOverlay.Visibility =
+                Visibility.Collapsed;
+            return;
+        }
+
+        PrimarySubtitleText.Text = text;
+        PrimarySubtitleOverlay.Visibility =
+            Visibility.Visible;
+    }
+
+    private void UpdateSecondarySubtitle(TimeSpan position)
+    {
+        var text = _secondarySubtitleDocument?.GetText(position);
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            SecondarySubtitleText.Text = string.Empty;
+            SecondarySubtitleOverlay.Visibility =
+                Visibility.Collapsed;
+            return;
+        }
+
+        SecondarySubtitleText.Text = text;
+        SecondarySubtitleOverlay.Visibility =
+            Visibility.Visible;
+    }
+
+    private void ResetSecondarySubtitleState()
+    {
+        _primarySubtitleGeneration++;
+        _primarySubtitleDocument = null;
+        _primarySubtitleUri = null;
+        _secondarySubtitleGeneration++;
+        _secondarySubtitleDocument = null;
+        _secondarySubtitleUri = null;
+        _externalSubtitles =
+            Array.Empty<ExternalSubtitleCandidate>();
+
+        if (PrimarySubtitleText is not null)
+            PrimarySubtitleText.Text = string.Empty;
+
+        if (PrimarySubtitleOverlay is not null)
+            PrimarySubtitleOverlay.Visibility =
+                Visibility.Collapsed;
+
+        if (SecondarySubtitleText is not null)
+            SecondarySubtitleText.Text = string.Empty;
+
+        if (SecondarySubtitleOverlay is not null)
+            SecondarySubtitleOverlay.Visibility =
+                Visibility.Collapsed;
+
+        _subtitleTrackListKey = string.Empty;
+        RebuildSecondarySubtitleCombo();
     }
 
     private void RebuildAudioCombo(IPlaybackTrackController tracks)
@@ -714,14 +1237,34 @@ public sealed partial class PlayerView : UserControl
         if (SubtitleTrackCombo.IsDropDownOpen)
             return;
 
-        var target = tracks.SelectedSubtitleTrackId is int id
-            ? SubtitleTrackCombo.Items
-                .OfType<ComboBoxItem>()
-                .FirstOrDefault(item => item.Tag is int tag && tag == id)
-            : _subtitleOffItem;
+        ComboBoxItem? target;
 
-        if (target is not null && !ReferenceEquals(SubtitleTrackCombo.SelectedItem, target))
+        if (_primarySubtitleUri is not null)
+        {
+            target = SubtitleTrackCombo.Items
+                .OfType<ComboBoxItem>()
+                .FirstOrDefault(item =>
+                    item.Tag is ExternalSubtitleCandidate candidate &&
+                    candidate.Uri == _primarySubtitleUri);
+        }
+        else
+        {
+            target = tracks.SelectedSubtitleTrackId is int id
+                ? SubtitleTrackCombo.Items
+                    .OfType<ComboBoxItem>()
+                    .FirstOrDefault(item =>
+                        item.Tag is int tag &&
+                        tag == id)
+                : _subtitleOffItem;
+        }
+
+        if (target is not null &&
+            !ReferenceEquals(
+                SubtitleTrackCombo.SelectedItem,
+                target))
+        {
             SubtitleTrackCombo.SelectedItem = target;
+        }
     }
 
     private void SyncAudioSelection(IPlaybackTrackController tracks)
@@ -835,17 +1378,41 @@ public sealed partial class PlayerView : UserControl
     private void UpdateNavigationAvailability()
     {
         var navigation = _engine?.Navigation;
-
-        PreviousChapterButton.IsEnabled =
+        var hasChapters =
             navigation is not null &&
-            navigation.Chapters.Count > 0 &&
-            navigation.SelectedChapterIndex is > 0;
+            navigation.Chapters.Count > 0;
 
-        NextChapterButton.IsEnabled =
-            navigation is not null &&
-            navigation.Chapters.Count > 0 &&
-            navigation.SelectedChapterIndex is int selected &&
-            selected < navigation.Chapters.Count - 1;
+        PreviousChapterButton.IsEnabled = hasChapters
+            ? navigation!.SelectedChapterIndex is > 0
+            : _engine is not null &&
+              _queueIndex > 0;
+
+        NextChapterButton.IsEnabled = hasChapters
+            ? navigation!.SelectedChapterIndex is int selected &&
+              selected < navigation.Chapters.Count - 1
+            : _engine is not null &&
+              _queueIndex >= 0 &&
+              _queueIndex < _queueItems.Count - 1;
+
+        var previousLabel = hasChapters
+            ? T("Playback_PreviousChapter")
+            : T("Playback_PreviousEpisode");
+        var nextLabel = hasChapters
+            ? T("Playback_NextChapter")
+            : T("Playback_NextEpisode");
+
+        ToolTipService.SetToolTip(
+            PreviousChapterButton,
+            previousLabel);
+        ToolTipService.SetToolTip(
+            NextChapterButton,
+            nextLabel);
+        AutomationProperties.SetName(
+            PreviousChapterButton,
+            previousLabel);
+        AutomationProperties.SetName(
+            NextChapterButton,
+            nextLabel);
     }
 
     private void UpdateDiagnosticsUi(PlaybackDiagnosticsSnapshot snapshot)
@@ -920,6 +1487,10 @@ public sealed partial class PlayerView : UserControl
         VolumeButton.IsEnabled = hasEngineAndSource;
 
         SubtitleTrackCombo.IsEnabled = hasEngineAndSource;
+        SecondarySubtitleCombo.IsEnabled =
+            hasEngineAndSource &&
+            _externalSubtitles.Any(candidate =>
+                candidate.Uri != _primarySubtitleUri);
         AudioTrackCombo.IsEnabled = hasEngineAndSource;
 
         UpdateNavigationAvailability();
@@ -1044,6 +1615,238 @@ public sealed partial class PlayerView : UserControl
         }
     }
 
+    private void InitializeSubtitlePositionControls()
+    {
+        var settings = AppSettingsStore.Current;
+
+        _primarySubtitleVerticalPosition =
+            Math.Clamp(
+                settings.PrimarySubtitleVerticalPosition,
+                0d,
+                90d);
+        _secondarySubtitleVerticalPosition =
+            Math.Clamp(
+                settings.SecondarySubtitleVerticalPosition,
+                0d,
+                90d);
+        _primarySubtitleBackgroundOpacity =
+            Math.Clamp(
+                settings.PrimarySubtitleBackgroundOpacity,
+                0d,
+                100d);
+        _secondarySubtitleBackgroundOpacity =
+            Math.Clamp(
+                settings.SecondarySubtitleBackgroundOpacity,
+                0d,
+                100d);
+
+        _isUpdatingSubtitlePositions = true;
+        try
+        {
+            PrimarySubtitlePositionSlider.Value =
+                _primarySubtitleVerticalPosition;
+            SecondarySubtitlePositionSlider.Value =
+                _secondarySubtitleVerticalPosition;
+            PrimarySubtitleOpacitySlider.Value =
+                _primarySubtitleBackgroundOpacity;
+            SecondarySubtitleOpacitySlider.Value =
+                _secondarySubtitleBackgroundOpacity;
+            UpdateSubtitlePositionValueText();
+            UpdateSubtitleOpacityValueText();
+            ApplySubtitleBackgroundOpacity();
+        }
+        finally
+        {
+            _isUpdatingSubtitlePositions = false;
+        }
+    }
+
+    private void PrimarySubtitlePositionSlider_ValueChanged(
+        object sender,
+        RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingSubtitlePositions)
+            return;
+
+        _primarySubtitleVerticalPosition =
+            Math.Clamp(e.NewValue, 0d, 90d);
+        UpdateSubtitlePositionValueText();
+        ApplySubtitlePositions();
+
+        AppSettingsStore.Update(settings =>
+            settings with
+            {
+                PrimarySubtitleVerticalPosition =
+                    _primarySubtitleVerticalPosition
+            });
+    }
+
+    private void SecondarySubtitlePositionSlider_ValueChanged(
+        object sender,
+        RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingSubtitlePositions)
+            return;
+
+        _secondarySubtitleVerticalPosition =
+            Math.Clamp(e.NewValue, 0d, 90d);
+        UpdateSubtitlePositionValueText();
+        ApplySubtitlePositions();
+
+        AppSettingsStore.Update(settings =>
+            settings with
+            {
+                SecondarySubtitleVerticalPosition =
+                    _secondarySubtitleVerticalPosition
+            });
+    }
+
+    private void PrimarySubtitleOpacitySlider_ValueChanged(
+        object sender,
+        RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingSubtitlePositions)
+            return;
+
+        _primarySubtitleBackgroundOpacity =
+            Math.Clamp(e.NewValue, 0d, 100d);
+        UpdateSubtitleOpacityValueText();
+        ApplySubtitleBackgroundOpacity();
+
+        AppSettingsStore.Update(settings =>
+            settings with
+            {
+                PrimarySubtitleBackgroundOpacity =
+                    _primarySubtitleBackgroundOpacity
+            });
+    }
+
+    private void SecondarySubtitleOpacitySlider_ValueChanged(
+        object sender,
+        RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingSubtitlePositions)
+            return;
+
+        _secondarySubtitleBackgroundOpacity =
+            Math.Clamp(e.NewValue, 0d, 100d);
+        UpdateSubtitleOpacityValueText();
+        ApplySubtitleBackgroundOpacity();
+
+        AppSettingsStore.Update(settings =>
+            settings with
+            {
+                SecondarySubtitleBackgroundOpacity =
+                    _secondarySubtitleBackgroundOpacity
+            });
+    }
+
+    private void UpdateSubtitleOpacityValueText()
+    {
+        if (PrimarySubtitleOpacityValueText is not null)
+        {
+            PrimarySubtitleOpacityValueText.Text =
+                $"{Math.Round(_primarySubtitleBackgroundOpacity):0}%";
+        }
+
+        if (SecondarySubtitleOpacityValueText is not null)
+        {
+            SecondarySubtitleOpacityValueText.Text =
+                $"{Math.Round(_secondarySubtitleBackgroundOpacity):0}%";
+        }
+    }
+
+    private void ApplySubtitleBackgroundOpacity()
+    {
+        if (PrimarySubtitleBackgroundBrush is not null)
+        {
+            PrimarySubtitleBackgroundBrush.Opacity =
+                Math.Clamp(
+                    _primarySubtitleBackgroundOpacity / 100d,
+                    0d,
+                    1d);
+        }
+
+        if (SecondarySubtitleBackgroundBrush is not null)
+        {
+            SecondarySubtitleBackgroundBrush.Opacity =
+                Math.Clamp(
+                    _secondarySubtitleBackgroundOpacity / 100d,
+                    0d,
+                    1d);
+        }
+    }
+
+    private void UpdateSubtitlePositionValueText()
+    {
+        if (PrimarySubtitlePositionValueText is not null)
+        {
+            PrimarySubtitlePositionValueText.Text =
+                $"{Math.Round(_primarySubtitleVerticalPosition):0}%";
+        }
+
+        if (SecondarySubtitlePositionValueText is not null)
+        {
+            SecondarySubtitlePositionValueText.Text =
+                $"{Math.Round(_secondarySubtitleVerticalPosition):0}%";
+        }
+    }
+
+    private void ApplySubtitlePositions()
+    {
+        if (PlaybackSurfaceHost is null ||
+            PrimarySubtitleOverlay is null ||
+            SecondarySubtitleOverlay is null)
+        {
+            return;
+        }
+
+        var height = PlaybackSurfaceHost.ActualHeight;
+        if (height <= 0d)
+            return;
+
+        ApplySubtitlePosition(
+            PrimarySubtitleOverlay,
+            _primarySubtitleVerticalPosition,
+            height);
+
+        ApplySubtitlePosition(
+            SecondarySubtitleOverlay,
+            _secondarySubtitleVerticalPosition,
+            height);
+    }
+
+    private static void ApplySubtitlePosition(
+        FrameworkElement overlay,
+        double percentage,
+        double surfaceHeight)
+    {
+        var horizontalMargin = 36d;
+        var safeBottom = 12d;
+        var desiredBottom =
+            surfaceHeight *
+            Math.Clamp(percentage, 0d, 90d) /
+            100d;
+
+        var maxBottom = Math.Max(
+            safeBottom,
+            surfaceHeight -
+            Math.Max(overlay.ActualHeight, 48d) -
+            safeBottom);
+
+        var bottom = Math.Clamp(
+            desiredBottom,
+            safeBottom,
+            maxBottom);
+
+        overlay.Margin =
+            new Thickness(
+                horizontalMargin,
+                0d,
+                horizontalMargin,
+                bottom);
+    }
+
     private void PlayerRoot_PointerWheelChanged(
         object sender,
         PointerRoutedEventArgs e)
@@ -1077,6 +1880,7 @@ public sealed partial class PlayerView : UserControl
         }
 
         UpdateSidebarVisibility();
+        ApplySubtitlePositions();
     }
 
     private void PlayerView_Unloaded(object sender, RoutedEventArgs e)
@@ -1094,8 +1898,23 @@ public sealed partial class PlayerView : UserControl
         }
     }
 
-    private void PlayerRoot_SizeChanged(object sender, SizeChangedEventArgs e) =>
+    private void PlayerRoot_SizeChanged(
+        object sender,
+        SizeChangedEventArgs e)
+    {
         UpdateSidebarVisibility();
+        ApplySubtitlePositions();
+    }
+
+    private void PlaybackSurfaceHost_SizeChanged(
+        object sender,
+        SizeChangedEventArgs e) =>
+        ApplySubtitlePositions();
+
+    private void SubtitleOverlay_SizeChanged(
+        object sender,
+        SizeChangedEventArgs e) =>
+        ApplySubtitlePositions();
 
     private void PlayerRoot_PointerMoved(object sender, PointerRoutedEventArgs e)
     {
@@ -1462,6 +2281,7 @@ public sealed partial class PlayerView : UserControl
             PlaybackSlider.Value = 0;
             CurrentTimeText.Text = FormatTime(TimeSpan.Zero);
             DurationText.Text = FormatTime(TimeSpan.Zero);
+            UpdateSecondarySubtitle(TimeSpan.Zero);
         }
         finally
         {
@@ -1597,6 +2417,103 @@ public sealed partial class PlayerView : UserControl
             PlaybackLoadingMetricsText.Text =
                 progressText;
         }
+    }
+
+    private async void QueueList_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_isUpdatingQueueSelection ||
+            QueueList.SelectedIndex < 0 ||
+            QueueList.SelectedIndex == _queueIndex)
+        {
+            return;
+        }
+
+        await SwitchQueueItemAsync(
+            QueueList.SelectedIndex,
+            autoplay: true);
+    }
+
+    private async Task SwitchQueueItemAsync(
+        int index,
+        bool autoplay)
+    {
+        if (index < 0 ||
+            index >= _queueItems.Count ||
+            index == _queueIndex &&
+            _currentSource == _queueItems[index].Source)
+        {
+            return;
+        }
+
+        var item = _queueItems[index];
+
+        _queueIndex = index;
+        _currentSource = item.Source;
+        PlaybackSelectionTrace.Write(
+            "queue-switch",
+            item.CatalogItem?.SourceTitle ?? item.Title,
+            item.Source.Uri.ToString(),
+            _queueIndex,
+            _queueItems.Count);
+        _lastKnownPosition = TimeSpan.Zero;
+        _duration = TimeSpan.Zero;
+        _playIntent = autoplay;
+
+        NowPlayingEpisode.Text = item.Title;
+        QueueSubtitle.Text = item.Title;
+
+        ResetTimeline();
+        ResetSecondarySubtitleState();
+        RefreshQueueStatus();
+        UpdateControlAvailability();
+
+        if (_engine is not { } engine)
+            return;
+
+        ShowLoadingStatus();
+        await OpenSourceOnEngineAsync(
+            engine,
+            restorePosition: false,
+            latest: true);
+    }
+
+    private void RefreshQueueStatus()
+    {
+        for (var index = 0; index < _queueItems.Count; index++)
+        {
+            var item = _queueItems[index];
+            item.Status = index == _queueIndex
+                ? string.IsNullOrWhiteSpace(item.SourceLabel)
+                    ? T("Playback_Playing")
+                    : T("Playback_Playing") + " · " + item.SourceLabel
+                : item.SourceLabel;
+        }
+
+        _isUpdatingQueueSelection = true;
+        try
+        {
+            QueueList.SelectedIndex =
+                _queueIndex >= 0 &&
+                _queueIndex < _queueItems.Count
+                    ? _queueIndex
+                    : -1;
+        }
+        finally
+        {
+            _isUpdatingQueueSelection = false;
+        }
+
+        if (CurrentQueueItem is { } current)
+        {
+            QueueSubtitle.Text = current.Title;
+
+            if (QueueList.IsLoaded)
+                QueueList.ScrollIntoView(current);
+        }
+
+        UpdateNavigationAvailability();
     }
 
     private void PlayerSectionList_SelectionChanged(

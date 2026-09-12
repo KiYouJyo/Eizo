@@ -2,6 +2,7 @@ using Eizo.Localization;
 using Eizo.Models;
 using Eizo.Playback;
 using Eizo.Views;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
@@ -454,7 +455,9 @@ public sealed partial class MainWindow : Window
     {
         var view = new DetailView(subject);
         view.MediaPlayRequested += async (_, item) =>
-            await OpenCatalogMediaAsync(item);
+            await OpenCatalogMediaAsync(
+                item,
+                subject);
 
         state.MediaTitle = subject.Title;
         state.Episode = null;
@@ -464,8 +467,15 @@ public sealed partial class MainWindow : Window
         UpdateTabIdentity(state);
     }
 
+    private Task OpenCatalogMediaAsync(
+        CatalogMediaItemModel item) =>
+        OpenCatalogMediaAsync(
+            item,
+            subject: null);
+
     private async Task OpenCatalogMediaAsync(
-        CatalogMediaItemModel item)
+        CatalogMediaItemModel item,
+        CatalogSubjectModel? subject)
     {
         if (item.Location is not { } location)
             return;
@@ -550,23 +560,272 @@ public sealed partial class MainWindow : Window
                 ? T("Source_Local")
                 : sourceDefinition.DisplayName;
 
+        var queue = BuildPlaybackQueue(
+            subject,
+            item,
+            playbackSource,
+            sourceLabel);
+        var initialQueueIndex = FindQueueIndex(
+            queue,
+            item);
+        PlaybackSelectionTrace.Write(
+            "open-request",
+            item.SourceTitle,
+            location.Locator,
+            initialQueueIndex,
+            queue.Count);
+        var playerTitle =
+            subject?.Title ??
+            item.DisplayTitle;
+        var episodeTitle =
+            ResolveQueueEpisodeTitle(
+                subject,
+                item) ??
+            item.DisplayTitle;
+
         var state = new ShellTabState(
             key,
             ShellTabKind.Detail,
             pageKey: null,
-            item.DisplayTitle,
+            playerTitle,
             "\uE768",
             new PlayerView(
-                item.DisplayTitle,
-                sourceLabel,
-                playbackSource),
+                playerTitle,
+                episodeTitle,
+                playbackSource,
+                queue,
+                initialQueueIndex),
             navItem: null,
             PreferredTabWidth)
         {
-            MediaTitle = item.DisplayTitle
+            MediaTitle = playerTitle,
+            Episode = episodeTitle
         };
 
         AddTab(state, select: true);
+    }
+
+    private IReadOnlyList<PlaybackQueueItemModel> BuildPlaybackQueue(
+        CatalogSubjectModel? subject,
+        CatalogMediaItemModel selectedItem,
+        PlaybackSource selectedSource,
+        string selectedSourceLabel)
+    {
+        if (subject is null)
+        {
+            return
+            [
+                new PlaybackQueueItemModel(
+                    0,
+                    "1",
+                    selectedItem.DisplayTitle,
+                    selectedItem.SecondaryTitle,
+                    selectedSourceLabel,
+                    selectedSource,
+                    selectedItem)
+            ];
+        }
+
+        var queue = new List<PlaybackQueueItemModel>();
+
+        foreach (var episode in subject.Episodes)
+        {
+            var item = episode.PrimaryItem;
+            var isSelected = SameCatalogLocation(
+                item,
+                selectedItem);
+
+            var source = isSelected
+                ? selectedSource
+                : TryCreatePlaybackSource(item);
+
+            if (source is null)
+                continue;
+
+            var sourceLabel = isSelected
+                ? selectedSourceLabel
+                : ResolveSourceLabel(item);
+
+            var number = FormatQueueNumber(
+                episode,
+                subject.SeasonNumbers.Count > 1,
+                queue.Count + 1);
+
+            queue.Add(
+                new PlaybackQueueItemModel(
+                    queue.Count,
+                    number,
+                    episode.Title,
+                    episode.NativeTitle,
+                    sourceLabel,
+                    source,
+                    item));
+        }
+
+        if (queue.Any(queueItem =>
+                SameCatalogLocation(
+                    queueItem.CatalogItem,
+                    selectedItem)))
+        {
+            return queue;
+        }
+
+        queue.Add(
+            new PlaybackQueueItemModel(
+                queue.Count,
+                (queue.Count + 1).ToString(
+                    CultureInfo.CurrentCulture),
+                selectedItem.DisplayTitle,
+                selectedItem.SecondaryTitle,
+                selectedSourceLabel,
+                selectedSource,
+                selectedItem));
+
+        return queue;
+    }
+
+    private PlaybackSource? TryCreatePlaybackSource(
+        CatalogMediaItemModel item)
+    {
+        if (item.Location is not { } location)
+            return null;
+
+        if (location.Kind == MediaLocationKind.LocalFile)
+        {
+            if (!File.Exists(location.Locator))
+                return null;
+
+            return PlaybackSource.FromFile(
+                location.Locator,
+                item.DisplayTitle);
+        }
+
+        if (location.Kind != MediaLocationKind.RemoteUri ||
+            !Uri.TryCreate(
+                location.Locator,
+                UriKind.Absolute,
+                out var remoteUri))
+        {
+            return null;
+        }
+
+        var sourceDefinition =
+            MediaSourceStore.Default.Find(
+                location.SourceId);
+
+        if (sourceDefinition is not
+            {
+                Kind: MediaSourceKind.WebDav
+            } webDavSource)
+        {
+            return null;
+        }
+
+        var credential =
+            MediaCredentialStore.Default.GetWebDav(
+                webDavSource);
+        var access = credential is null
+            ? null
+            : new PlaybackNetworkAccess(
+                credential.UserName,
+                credential.Password);
+
+        return PlaybackSource.FromUri(
+            remoteUri,
+            item.DisplayTitle,
+            access);
+    }
+
+    private string ResolveSourceLabel(
+        CatalogMediaItemModel item)
+    {
+        var sourceDefinition = item.Location is { } location
+            ? MediaSourceStore.Default.Find(
+                location.SourceId)
+            : null;
+
+        return sourceDefinition is null ||
+               sourceDefinition.IsBuiltIn
+            ? T("Source_Local")
+            : sourceDefinition.DisplayName;
+    }
+
+    private static int FindQueueIndex(
+        IReadOnlyList<PlaybackQueueItemModel> queue,
+        CatalogMediaItemModel item)
+    {
+        for (var index = 0; index < queue.Count; index++)
+        {
+            if (SameCatalogLocation(
+                    queue[index].CatalogItem,
+                    item))
+            {
+                return index;
+            }
+        }
+
+        return 0;
+    }
+
+    private static string? ResolveQueueEpisodeTitle(
+        CatalogSubjectModel? subject,
+        CatalogMediaItemModel item) =>
+        subject?.Episodes
+            .FirstOrDefault(episode =>
+                SameCatalogLocation(
+                    episode.PrimaryItem,
+                    item))
+            ?.Title;
+
+    private static bool SameCatalogLocation(
+        CatalogMediaItemModel? left,
+        CatalogMediaItemModel? right)
+    {
+        if (left?.Location is not { } leftLocation ||
+            right?.Location is not { } rightLocation)
+        {
+            return false;
+        }
+
+        return string.Equals(
+                   leftLocation.SourceId,
+                   rightLocation.SourceId,
+                   StringComparison.Ordinal) &&
+               string.Equals(
+                   leftLocation.Locator,
+                   rightLocation.Locator,
+                   StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FormatQueueNumber(
+        CatalogEpisodeModel episode,
+        bool includeSeason,
+        int fallback)
+    {
+        if (episode.EpisodeNumber is not { } number)
+        {
+            return fallback.ToString(
+                CultureInfo.CurrentCulture);
+        }
+
+        var episodeNumber =
+            number == decimal.Truncate(number)
+                ? decimal.Truncate(number)
+                    .ToString(
+                        CultureInfo.CurrentCulture)
+                : number.ToString(
+                    "0.##",
+                    CultureInfo.CurrentCulture);
+
+        if (!includeSeason)
+            return episodeNumber;
+
+        var season = episode.SeasonNumber ?? 1;
+        return season == 0
+            ? "SP " + episodeNumber
+            : string.Create(
+                CultureInfo.CurrentCulture,
+                $"S{season} E{episodeNumber}");
     }
 
     private async Task ShowCatalogMediaErrorAsync(

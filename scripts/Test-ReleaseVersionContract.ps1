@@ -18,8 +18,14 @@ $release = Get-Content -LiteralPath $releasePath -Raw | ConvertFrom-Json
 $version = [string]$release.product.version
 $packageVersion = [string]$release.product.packageVersion
 
+$parsedProductVersion = [Version]::Parse("$version.0")
+$parsedPackageVersion = [Version]::Parse($packageVersion)
+
 if ($version -notmatch '^\d+\.\d+\.\d+$' -or
-    $packageVersion -ne "$version.0") {
+    $parsedPackageVersion.Major -ne $parsedProductVersion.Major -or
+    $parsedPackageVersion.Minor -ne $parsedProductVersion.Minor -or
+    $parsedPackageVersion.Build -ne $parsedProductVersion.Build -or
+    $parsedPackageVersion.Revision -lt 0) {
     throw "Invalid release version contract: version=$version packageVersion=$packageVersion"
 }
 
