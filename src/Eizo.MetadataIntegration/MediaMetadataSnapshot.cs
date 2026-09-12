@@ -51,6 +51,16 @@ public sealed record MediaMetadataSnapshot(
 {
     public string? ResolutionReason { get; init; }
 
+    public string? FailureStage { get; init; }
+
+    public string? FailureReason { get; init; }
+
+    public bool NeedsReview =>
+        Status != MediaMetadataStatus.Resolved ||
+        Errors.Count > 0 ||
+        (!string.IsNullOrWhiteSpace(FailureReason) &&
+         !string.Equals(FailureReason, "None", StringComparison.OrdinalIgnoreCase));
+
     public List<string> SearchTitles { get; init; } = [];
 
     public int CandidateCount { get; init; }

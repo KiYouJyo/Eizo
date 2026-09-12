@@ -98,6 +98,7 @@ public sealed class MediaMetadataServiceTests
         Assert.Equal("公安九课", result.EpisodeTitle);
         Assert.Equal(1m, result.EpisodeNumber);
         Assert.Equal("Resolved", result.ResolutionReason);
+        Assert.False(result.NeedsReview);
         Assert.Equal(1, result.CandidateCount);
         Assert.NotNull(result.BestScore);
         Assert.True(result.BestScore >= result.AutoResolveThreshold);
@@ -213,6 +214,7 @@ public sealed class MediaMetadataServiceTests
         Assert.NotNull(result);
         Assert.Equal(MediaMetadataStatus.Unresolved, result.Status);
         Assert.Equal("NoCandidates", result.ResolutionReason);
+        Assert.True(result.NeedsReview);
         Assert.Equal(0, result.CandidateCount);
         Assert.Null(result.BestScore);
         Assert.Contains(
