@@ -213,17 +213,25 @@ internal static class CatalogSubjectAggregator
         IReadOnlyList<CatalogMediaItemModel> items)
     {
         var indexed = items
-            .Select((item, index) => new IndexedEpisode(
-                item,
-                index,
-                ResolveSeason(item),
-                item.Recognition?.EpisodeNumber
-                ?? item.Recognition?.SpecialNumber,
-                string.Equals(
-                    item.Recognition?.MediaKind,
-                    "Special",
-                    StringComparison.OrdinalIgnoreCase),
-                ResolveMovieIdentity(item)))
+            .Select((item, index) =>
+            {
+                var grouping =
+                    CatalogEpisodeGroupingResolver.Resolve(
+                        item.SourceTitle,
+                        item.Recognition?.MediaKind,
+                        item.Recognition?.SpecialKind,
+                        item.Recognition?.SeasonNumber,
+                        item.Recognition?.EpisodeNumber,
+                        item.Recognition?.SpecialNumber);
+
+                return new IndexedEpisode(
+                    item,
+                    index,
+                    grouping.SeasonNumber,
+                    grouping.EpisodeNumber,
+                    grouping.IsSpecial,
+                    ResolveMovieIdentity(item));
+            })
             .ToArray();
 
         return indexed
@@ -359,19 +367,6 @@ internal static class CatalogSubjectAggregator
         return builder.Length == 0
             ? null
             : $"{builder}|{item.Recognition?.Year?.ToString(CultureInfo.InvariantCulture) ?? "-"}";
-    }
-
-    private static int ResolveSeason(CatalogMediaItemModel item)
-    {
-        if (string.Equals(
-                item.Recognition?.MediaKind,
-                "Special",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return item.Recognition?.SeasonNumber ?? 0;
-        }
-
-        return item.Recognition?.SeasonNumber ?? 1;
     }
 
     private static string FormatEpisodeNumber(decimal value) =>
