@@ -1,3 +1,5 @@
+日本語 | [简体中文](RELEASE-NOTES-v0.4.0.md) | [English](RELEASE-NOTES-v0.4.0.en.md)
+
 # Eizo v0.4.0
 
 ## 再生キュー、外部字幕、デュアル字幕
