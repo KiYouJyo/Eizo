@@ -100,6 +100,13 @@ public sealed partial class PlayerView : UserControl
             _currentSource = initialSource;
         }
 
+        PlaybackSelectionTrace.Write(
+            "view-init",
+            CurrentQueueItem?.CatalogItem?.SourceTitle ?? episode,
+            _currentSource?.Uri.ToString(),
+            _queueIndex,
+            _queueItems.Count);
+
         NowPlayingTitle.Text = title;
         NowPlayingEpisode.Text =
             CurrentQueueItem?.Title ??
@@ -2005,6 +2012,12 @@ public sealed partial class PlayerView : UserControl
 
         _queueIndex = index;
         _currentSource = item.Source;
+        PlaybackSelectionTrace.Write(
+            "queue-switch",
+            item.CatalogItem?.SourceTitle ?? item.Title,
+            item.Source.Uri.ToString(),
+            _queueIndex,
+            _queueItems.Count);
         _lastKnownPosition = TimeSpan.Zero;
         _duration = TimeSpan.Zero;
         _playIntent = autoplay;
