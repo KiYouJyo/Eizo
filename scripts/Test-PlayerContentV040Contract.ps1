@@ -4,6 +4,7 @@ Set-StrictMode -Version Latest
 $playerXaml = Get-Content -LiteralPath 'src/Eizo.App/Views/PlayerView.xaml' -Raw
 $playerCode = Get-Content -LiteralPath 'src/Eizo.App/Views/PlayerView.xaml.cs' -Raw
 $mainWindow = Get-Content -LiteralPath 'src/Eizo.App/MainWindow.xaml.cs' -Raw
+$detailView = Get-Content -LiteralPath 'src/Eizo.App/Views/DetailView.xaml.cs' -Raw
 $subtitleService = Get-Content -LiteralPath 'src/Eizo.App/Playback/ExternalSubtitleService.cs' -Raw
 $subtitleMatcher = Get-Content -LiteralPath 'src/Eizo.App/Playback/ExternalSubtitleNameMatcher.cs' -Raw
 $subtitleParser = Get-Content -LiteralPath 'src/Eizo.App/Playback/SubtitleTextParser.cs' -Raw
@@ -43,6 +44,16 @@ foreach ($required in @(
     'TryCreatePlaybackSource')) {
     if ($mainWindow -notmatch [regex]::Escape($required)) {
         throw "v0.4.0 aggregated queue contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'SeasonComboBox.SelectedItem is SeasonOption option',
+    '(episode.SeasonNumber ?? 1) == selectedSeason',
+    '.Select(static episode => episode.PrimaryItem)',
+    'item ??= _subject.FirstPlayableItem')) {
+    if ($detailView -notmatch [regex]::Escape($required)) {
+        throw "v0.4.0 selected-season playback contract missing: $required"
     }
 }
 
