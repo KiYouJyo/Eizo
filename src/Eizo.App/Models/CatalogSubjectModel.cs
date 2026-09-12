@@ -135,10 +135,7 @@ internal static class CatalogSubjectAggregator
                 .Select(static item => item.Metadata)
                 .FirstOrDefault(static value => value is { IsResolved: true });
 
-        var title = string.Equals(
-                identity.Basis,
-                "recognition-movie-family",
-                StringComparison.Ordinal)
+        var title = !string.IsNullOrWhiteSpace(identity.TitleHint)
             ? identity.TitleHint
             : metadata?.CanonicalTitle;
         if (string.IsNullOrWhiteSpace(title))
