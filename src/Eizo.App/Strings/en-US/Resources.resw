@@ -238,6 +238,12 @@
   <data name="Playback_SecondarySubtitle" xml:space="preserve">
     <value>Secondary subtitle</value>
   </data>
+  <data name="Playback_PrimarySubtitlePosition" xml:space="preserve">
+    <value>Primary subtitle position</value>
+  </data>
+  <data name="Playback_SecondarySubtitlePosition" xml:space="preserve">
+    <value>Secondary subtitle position</value>
+  </data>
   <data name="Playback_Speed" xml:space="preserve">
     <value>Playback speed</value>
   </data>
