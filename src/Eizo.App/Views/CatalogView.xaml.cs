@@ -239,6 +239,8 @@ public sealed partial class CatalogView : UserControl
         CatalogMediaItemModel item,
         IReadOnlyDictionary<string, string> sourceLabels)
     {
+        var category = CatalogCategoryClassifier.Resolve(item);
+
         var subtitle = item.IsParsed &&
                        !string.IsNullOrWhiteSpace(item.SecondaryTitle) &&
                        !string.Equals(
@@ -301,8 +303,8 @@ public sealed partial class CatalogView : UserControl
         return new CatalogListItemViewModel(
             null,
             item,
-            item.Category,
-            item.Category switch
+            category,
+            category switch
             {
                 MediaCategoryKind.Anime => "\uE8B2",
                 MediaCategoryKind.Series => "\uE8FD",
@@ -314,7 +316,7 @@ public sealed partial class CatalogView : UserControl
             subtitle,
             string.Join(" · ", metaParts),
             sourceLabel,
-            RecognitionLabel(item) ?? CategoryLabel(item.Category));
+            RecognitionLabel(item) ?? CategoryLabel(category));
     }
 
     private static BitmapImage? CreateArtwork(
@@ -1082,7 +1084,7 @@ public sealed partial class CatalogView : UserControl
             new(
                 null,
                 item,
-                item.Category,
+                CatalogCategoryClassifier.Resolve(item),
                 item.DisplayTitle);
     }
 
