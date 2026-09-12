@@ -13,20 +13,18 @@ internal sealed record ExternalSubtitleCandidate(
 
 internal static class ExternalSubtitleService
 {
-    private static readonly HashSet<string> SupportedExtensions =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ".srt",
-            ".vtt",
-            ".ass",
-            ".ssa",
-        };
-
     private static readonly string CacheDirectory = Path.Combine(
         Environment.GetFolderPath(
             Environment.SpecialFolder.LocalApplicationData),
         "Eizo",
         "SubtitleCache");
+
+    private static readonly string TracePath = Path.Combine(
+        Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData),
+        "Eizo",
+        "Logs",
+        "external-subtitles.log");
 
     internal static async Task<IReadOnlyList<ExternalSubtitleCandidate>> DiscoverAsync(
         PlaybackSource source,
@@ -80,6 +78,8 @@ internal static class ExternalSubtitleService
             ? relative[..(separator + 1)]
             : string.Empty;
 
+        Trace("scan-start", mediaName, $"parent={parent}");
+
         var discovered = new List<ExternalSubtitleCandidate>();
 
         try
@@ -92,15 +92,30 @@ internal static class ExternalSubtitleService
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (entry.IsDirectory ||
-                    !IsMatchingSubtitle(
+                    !ExternalSubtitleNameMatcher.IsSupported(entry.Name))
+                {
+                    continue;
+                }
+
+                Trace("enumerated", entry.Name, null);
+
+                if (!ExternalSubtitleNameMatcher.IsMatch(
                         entry.Name,
-                        mediaName) ||
-                    string.IsNullOrWhiteSpace(entry.Locator) ||
+                        mediaName))
+                {
+                    Trace("skip", entry.Name, "reason=filename-mismatch");
+                    continue;
+                }
+
+                Trace("matched", entry.Name, null);
+
+                if (string.IsNullOrWhiteSpace(entry.Locator) ||
                     !Uri.TryCreate(
                         entry.Locator,
                         UriKind.Absolute,
                         out var subtitleUri))
                 {
+                    Trace("skip", entry.Name, "reason=invalid-locator");
                     continue;
                 }
 
@@ -113,11 +128,15 @@ internal static class ExternalSubtitleService
                         cancellationToken);
 
                     if (cachedUri is null)
+                    {
+                        Trace("skip", entry.Name, "reason=unsupported-extension");
                         continue;
+                    }
 
                     discovered.Add(CreateCandidate(
                         cachedUri,
                         entry.Name));
+                    Trace("cached", entry.Name, Path.GetFileName(cachedUri.LocalPath));
                 }
                 catch (Exception exception)
                     when (exception is
@@ -126,6 +145,10 @@ internal static class ExternalSubtitleService
                         HttpRequestException or
                         MediaSourceException)
                 {
+                    Trace(
+                        "materialize-failed",
+                        entry.Name,
+                        $"type={exception.GetType().Name};message={Sanitize(exception.Message)}");
                     // A missing optional subtitle must never block media playback.
                 }
             }
@@ -137,10 +160,16 @@ internal static class ExternalSubtitleService
                 HttpRequestException or
                 MediaSourceException)
         {
+            Trace(
+                "scan-failed",
+                mediaName,
+                $"type={exception.GetType().Name};message={Sanitize(exception.Message)}");
             return [];
         }
 
-        return OrderCandidates(discovered, mediaName);
+        var ordered = OrderCandidates(discovered, mediaName);
+        Trace("scan-complete", mediaName, $"count={ordered.Count}");
+        return ordered;
     }
 
     internal static async Task<SubtitleDocument> LoadDocumentAsync(
@@ -197,7 +226,7 @@ internal static class ExternalSubtitleService
                     directory,
                     "*",
                     SearchOption.TopDirectoryOnly)
-                .Where(path => IsMatchingSubtitle(
+                .Where(path => ExternalSubtitleNameMatcher.IsMatch(
                     Path.GetFileName(path),
                     mediaName))
                 .Select(path => CreateCandidate(
@@ -250,44 +279,6 @@ internal static class ExternalSubtitleService
             .ToArray();
     }
 
-    private static bool IsMatchingSubtitle(
-        string subtitleName,
-        string mediaName)
-    {
-        var extension = Path.GetExtension(subtitleName);
-        if (!SupportedExtensions.Contains(extension))
-            return false;
-
-        var subtitleStem = Path.GetFileNameWithoutExtension(subtitleName);
-        var mediaStem = Path.GetFileNameWithoutExtension(mediaName);
-
-        if (string.IsNullOrWhiteSpace(subtitleStem) ||
-            string.IsNullOrWhiteSpace(mediaStem))
-        {
-            return false;
-        }
-
-        if (string.Equals(
-                subtitleStem,
-                mediaStem,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        foreach (var separator in new[] { ".", " ", "_", "-" })
-        {
-            if (subtitleStem.StartsWith(
-                    mediaStem + separator,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private static async Task<Uri?> MaterializeRemoteAsync(
         WebDavMediaSourceProvider provider,
         MediaSourceDefinition source,
@@ -297,7 +288,7 @@ internal static class ExternalSubtitleService
         var extension = Path.GetExtension(
             Uri.UnescapeDataString(subtitleUri.AbsolutePath));
 
-        if (!SupportedExtensions.Contains(extension))
+        if (!ExternalSubtitleNameMatcher.IsSupported(subtitleUri.AbsolutePath))
             return null;
 
         Directory.CreateDirectory(CacheDirectory);
@@ -346,6 +337,42 @@ internal static class ExternalSubtitleService
 
         return new Uri(Path.GetFullPath(path));
     }
+
+    private static void Trace(
+        string stage,
+        string fileName,
+        string? detail)
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(TracePath);
+            if (!string.IsNullOrWhiteSpace(directory))
+                Directory.CreateDirectory(directory);
+
+            var line =
+                DateTimeOffset.UtcNow.ToString("O") +
+                "\tstage=" + Sanitize(stage) +
+                "\tfile=" + Sanitize(fileName);
+
+            if (!string.IsNullOrWhiteSpace(detail))
+                line += "\t" + detail;
+
+            File.AppendAllText(
+                TracePath,
+                line + Environment.NewLine,
+                Encoding.UTF8);
+        }
+        catch
+        {
+            // Subtitle diagnostics must never affect playback.
+        }
+    }
+
+    private static string Sanitize(string value) =>
+        value
+            .Replace("\r", " ", StringComparison.Ordinal)
+            .Replace("\n", " ", StringComparison.Ordinal)
+            .Replace("\t", " ", StringComparison.Ordinal);
 
     private static string? InferLanguage(string fileName)
     {
