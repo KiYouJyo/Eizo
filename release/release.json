@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.4.0",
-    "packageVersion": "0.4.0.7",
+    "version": "0.4.1",
+    "packageVersion": "0.4.1.0",
     "title": {
-      "zh-CN": "播放队列、WinUI 外挂字幕与双字幕",
-      "ja-JP": "再生キュー、WinUI 外部字幕、デュアル字幕",
-      "en-US": "Playback Queue, WinUI External Subtitles & Dual Subtitles"
+      "zh-CN": "媒体库分库实际接入与刮削内容优先展示",
+      "ja-JP": "ライブラリ分類ページ実装と取得済みメタデータ優先表示",
+      "en-US": "Real Library Category Pages & Scraped-Media Priority"
     }
   },
   "channels": {

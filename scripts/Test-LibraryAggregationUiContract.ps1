@@ -39,7 +39,12 @@ foreach ($required in @(
     'CreateArtwork(metadata?.PosterUrl',
     'CreateArtwork(item.Metadata?.PosterUrl',
     'MediaLocationKind.RemoteUri',
-    'MediaLocationKind.LocalFile')) {
+    'MediaLocationKind.LocalFile',
+    'private readonly MediaCategoryKind? _categoryFilter',
+    'entry.Category == _categoryFilter',
+    '.ThenBy(PreferredMetadataOrder)',
+    'HasPreferredMetadata(CatalogMediaItemModel item)',
+    '!string.IsNullOrWhiteSpace(metadata.PosterUrl)')) {
     if ($catalogCode -notmatch [regex]::Escape($required)) {
         throw "Library visual-card code contract missing: $required"
     }
@@ -74,4 +79,14 @@ if ($aggregation -notmatch [regex]::Escape('AssignSubjectIdentities(groupingInpu
     throw 'Catalog aggregation is not using reconciled Metadata/Recognition subject identities.'
 }
 
-Write-Host 'Eizo v0.3.8 library aggregation visual UI contract PASS.'
+foreach ($required in @(
+    'OrderByDescending(static metadata =>',
+    '!string.IsNullOrWhiteSpace(metadata.PosterUrl)',
+    'OrderByDescending(static item =>',
+    '!string.IsNullOrWhiteSpace(value.PosterUrl)')) {
+    if ($aggregation -notmatch [regex]::Escape($required)) {
+        throw "Poster-backed aggregated metadata preference contract missing: $required"
+    }
+}
+
+Write-Host 'Eizo v0.4.1 library aggregation and ordering UI contract PASS.'

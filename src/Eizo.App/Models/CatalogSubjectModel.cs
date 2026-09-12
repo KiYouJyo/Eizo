@@ -29,7 +29,15 @@ public sealed record CatalogSubjectModel(
     public MediaMetadataSnapshot? Metadata =>
         Items
             .Select(static item => item.Metadata)
-            .FirstOrDefault(static metadata => metadata is { IsResolved: true });
+            .OfType<MediaMetadataSnapshot>()
+            .Where(static metadata => metadata.IsResolved)
+            .OrderByDescending(static metadata =>
+                !string.IsNullOrWhiteSpace(metadata.PosterUrl))
+            .ThenByDescending(static metadata =>
+                !string.IsNullOrWhiteSpace(metadata.CanonicalTitle) ||
+                !string.IsNullOrWhiteSpace(metadata.OriginalTitle) ||
+                !string.IsNullOrWhiteSpace(metadata.ReleaseDate))
+            .FirstOrDefault();
 
     public int EpisodeCount => Episodes.Count;
 
@@ -125,15 +133,24 @@ internal static class CatalogSubjectAggregator
         IReadOnlyList<CatalogMediaItemModel> items)
     {
         var representative = items
-            .OrderByDescending(static item => item.Metadata is { IsResolved: true })
+            .OrderByDescending(static item =>
+                item.Metadata is { IsResolved: true } metadata &&
+                !string.IsNullOrWhiteSpace(metadata.PosterUrl))
+            .ThenByDescending(static item => item.Metadata is { IsResolved: true })
             .ThenByDescending(static item => item.Recognition?.Confidence ?? 0)
             .First();
 
-        var metadata = representative.Metadata is { IsResolved: true }
-            ? representative.Metadata
-            : items
-                .Select(static item => item.Metadata)
-                .FirstOrDefault(static value => value is { IsResolved: true });
+        var metadata = items
+            .Select(static item => item.Metadata)
+            .OfType<MediaMetadataSnapshot>()
+            .Where(static value => value.IsResolved)
+            .OrderByDescending(static value =>
+                !string.IsNullOrWhiteSpace(value.PosterUrl))
+            .ThenByDescending(static value =>
+                !string.IsNullOrWhiteSpace(value.CanonicalTitle) ||
+                !string.IsNullOrWhiteSpace(value.OriginalTitle) ||
+                !string.IsNullOrWhiteSpace(value.ReleaseDate))
+            .FirstOrDefault();
 
         var title = !string.IsNullOrWhiteSpace(identity.TitleHint)
             ? identity.TitleHint
