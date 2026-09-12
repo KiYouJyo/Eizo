@@ -12,10 +12,10 @@
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <AppxBundleAutoResourcePackageQualifiers>Scale|DXFeatureLevel</AppxBundleAutoResourcePackageQualifiers>
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
-    <Version>0.3.6</Version>
-    <AssemblyVersion>0.3.6.0</AssemblyVersion>
-    <FileVersion>0.3.6.0</FileVersion>
-    <InformationalVersion>0.3.6</InformationalVersion>
+    <Version>0.3.9</Version>
+    <AssemblyVersion>0.3.9.0</AssemblyVersion>
+    <FileVersion>0.3.9.0</FileVersion>
+    <InformationalVersion>0.3.9</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260710003" />
@@ -23,6 +23,7 @@
     <PackageReference Include="Eizo.Playback.LibVLC.WinUI" Version="0.2.1-eizo.1" Condition="'$(EizoPlaybackUseSource)' != 'true'" />
     <ProjectReference Include="../../.deps/Eizo.Playback/src/Eizo.Playback.LibVLC.WinUI/Eizo.Playback.LibVLC.WinUI.csproj" Condition="'$(EizoPlaybackUseSource)' == 'true'" />
     <ProjectReference Include="../Eizo.RecognitionIntegration/Eizo.RecognitionIntegration.csproj" />
+    <ProjectReference Include="../Eizo.MetadataIntegration/Eizo.MetadataIntegration.csproj" />
     <!-- The final Windows host owns the native LibVLC runtime deployment.
          Playback runtime updates replace only Eizo.Playback managed assemblies;
          VideoLAN native compatibility remains governed by the host contract. -->
@@ -30,8 +31,8 @@
   </ItemGroup>
 
   <!--
-    Playback and Recognition are independently updateable from Eizo 0.3.6 onward.
-    In Release builds their bundled implementations must not remain beside Eizo.exe:
+    Playback and Metadata are independently updateable from Eizo 0.3.6 onward.
+    In Release builds their bundled runtime implementations must not remain beside Eizo.exe:
     the default .deps.json probing path would win before AssemblyLoadContext.Resolving
     and silently bind the old bundled implementation after a component update.
 
@@ -48,6 +49,8 @@
       <_PlaybackComponentAssembly Include="$(OutDir)Eizo.Playback.LibVLC.dll" />
       <_PlaybackComponentAssembly Include="$(OutDir)Eizo.Playback.LibVLC.WinUI.dll" />
       <_RecognitionComponentAssembly Include="$(OutDir)Eizo.Metadata.Recognition.dll" />
+      <_RecognitionComponentAssembly Include="$(OutDir)Eizo.Metadata.Core.dll" />
+      <_RecognitionComponentAssembly Include="$(OutDir)Eizo.Metadata.Providers.dll" />
     </ItemGroup>
 
     <Error Condition="!Exists('%(_PlaybackComponentAssembly.Identity)')"
@@ -66,7 +69,7 @@
     <Delete Files="@(_PlaybackComponentAssembly)" />
     <Delete Files="@(_RecognitionComponentAssembly)" />
     <Message Importance="high"
-             Text="Relocated bundled Playback and Recognition implementations for independent runtime resolution." />
+             Text="Relocated bundled Playback and Metadata implementations for independent runtime resolution." />
   </Target>
 
   <!-- MSIX packaging reconstructs PackageLayout from resolved package/project inputs after
@@ -85,6 +88,8 @@
       <_PackagedPlaybackComponentAssembly Include="$(_EizoPackageLayoutRoot)\Eizo.Playback.LibVLC.dll" />
       <_PackagedPlaybackComponentAssembly Include="$(_EizoPackageLayoutRoot)\Eizo.Playback.LibVLC.WinUI.dll" />
       <_PackagedRecognitionComponentAssembly Include="$(_EizoPackageLayoutRoot)\Eizo.Metadata.Recognition.dll" />
+      <_PackagedRecognitionComponentAssembly Include="$(_EizoPackageLayoutRoot)\Eizo.Metadata.Core.dll" />
+      <_PackagedRecognitionComponentAssembly Include="$(_EizoPackageLayoutRoot)\Eizo.Metadata.Providers.dll" />
     </ItemGroup>
 
     <Error Condition="!Exists('%(_PackagedPlaybackComponentAssembly.Identity)')"
@@ -103,7 +108,7 @@
     <Delete Files="@(_PackagedPlaybackComponentAssembly)" />
     <Delete Files="@(_PackagedRecognitionComponentAssembly)" />
     <Message Importance="high"
-             Text="Relocated packaged Playback and Recognition runtimes out of the MSIX default probing root." />
+             Text="Relocated packaged Playback and Metadata runtimes out of the MSIX default probing root." />
   </Target>
 
 </Project>

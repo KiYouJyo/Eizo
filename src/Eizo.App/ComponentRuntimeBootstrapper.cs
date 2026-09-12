@@ -79,7 +79,7 @@ internal static class EizoComponents
 
     public static readonly ComponentDefinition Recognition = new(
         Id: "Eizo.Recognition",
-        DisplayName: "Recognition",
+        DisplayName: "Metadata",
         FolderName: "Recognition",
         Repository: "KiYouJyo/Eizo.Metadata",
         ArchivePrefix: "Eizo.Recognition.Runtime",
@@ -87,7 +87,12 @@ internal static class EizoComponents
         HostContractName: "Eizo.Recognition.Host",
         HostContractVersion: new Version(1, 0, 0),
         AnchorAssemblyName: "Eizo.Metadata.Recognition",
-        RequiredAssemblyNames: ["Eizo.Metadata.Recognition"]);
+        RequiredAssemblyNames:
+        [
+            "Eizo.Metadata.Recognition",
+            "Eizo.Metadata.Core",
+            "Eizo.Metadata.Providers"
+        ]);
 
     public static IReadOnlyList<ComponentDefinition> All { get; } = [Playback, Recognition];
 }
@@ -204,7 +209,7 @@ internal static class ComponentRuntimeBootstrapper
         PromotePendingUpdate(definition, bundledVersion);
 
         var active = ReadState(GetActiveStatePath(definition));
-        if (active is not null && TryGetVersion(active.Version, out var activeVersion) && activeVersion > bundledVersion)
+        if (active is not null && TryGetVersion(active.Version, out var activeVersion) && activeVersion >= bundledVersion)
         {
             var directory = GetVersionDirectory(definition, activeVersion);
             if (ComponentPackageValidator.TryValidate(definition, directory, out var package, out var validationError) && package is not null)
@@ -254,7 +259,7 @@ internal static class ComponentRuntimeBootstrapper
         var pendingPath = GetPendingStatePath(definition);
         var pending = ReadState(pendingPath);
         if (pending is null) return;
-        if (!TryGetVersion(pending.Version, out var version) || version <= bundledVersion)
+        if (!TryGetVersion(pending.Version, out var version) || version < bundledVersion)
         {
             TryDelete(pendingPath);
             return;

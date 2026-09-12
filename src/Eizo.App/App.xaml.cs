@@ -59,6 +59,7 @@ public partial class App : Application
         try
         {
             _window = MainWindow = new MainWindow();
+
             ActivatePendingRedirectedWindow();
             _window.Activate();
         }

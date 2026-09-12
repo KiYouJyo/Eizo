@@ -416,7 +416,10 @@ public sealed partial class AboutView : UserControl
 
         ComponentsTitle.Text = L("可独立更新组件", "個別更新可能なコンポーネント", "Independently updateable components");
         PlaybackDescriptionText.Text = L("播放内核", "再生コア", "Playback runtime");
-        RecognitionDescriptionText.Text = L("文件名识别内核", "ファイル名認識コア", "Filename recognition runtime");
+        RecognitionDescriptionText.Text = L(
+            "识别与元数据内核",
+            "認識・メタデータコア",
+            "Recognition & metadata runtime");
         CheckPlaybackUpdateButton.Content = T("About_CheckUpdates");
         CheckRecognitionUpdateButton.Content = T("About_CheckUpdates");
 

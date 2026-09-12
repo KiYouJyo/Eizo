@@ -1,0 +1,52 @@
+name: Eizo v0.3.8 library aggregation acceptance
+
+on:
+  push:
+    branches:
+      - "codex/eizo-0.3.8-library-visual-cards"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eizo-v038-library-aggregation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    name: Build, sign, install and validate x64 aggregated library
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build and validate acceptance assets
+        shell: pwsh
+        env:
+          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
+          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
+          EIZO_METADATA_DISABLE: "1"
+        run: ./scripts/Build-EizoV038Acceptance.ps1
+
+      - name: Upload acceptance assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: Eizo-v0.3.8-library-aggregation-acceptance-assets
+          path: |
+            ${{ runner.temp }}/Eizo-v0.3.8-acceptance/Eizo_0.3.8.0_x64.msixbundle
+            ${{ runner.temp }}/Eizo-v0.3.8-acceptance/Eizo-v0.3.8-x64-one-click.zip
+            ${{ runner.temp }}/Eizo-v0.3.8-acceptance/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

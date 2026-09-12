@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
@@ -37,6 +38,7 @@ public sealed partial class CatalogView : UserControl
     }
 
     public event EventHandler<CatalogMediaItemModel>? MediaRequested;
+    public event EventHandler<CatalogSubjectModel>? SubjectRequested;
 
     private string T(string key) => _localization.GetString(key);
 
@@ -107,15 +109,20 @@ public sealed partial class CatalogView : UserControl
 
         var query = SearchBox?.Text?.Trim() ?? string.Empty;
         var snapshot = _catalog.SnapshotForDisplay();
-        UpdateRecognitionSummary(snapshot);
-
-        var filtered = snapshot
-            .Where(item => Matches(item, query))
-            .OrderBy(item => CategoryOrder(item.Category))
-            .ThenBy(item => item.DisplayTitle, StringComparer.CurrentCultureIgnoreCase)
+        var aggregation = CatalogSubjectAggregator.Build(snapshot);
+        UpdateRecognitionSummary(snapshot, aggregation);
+        var displayEntries = aggregation.Subjects
+            .Select(static subject =>
+                CatalogDisplayEntry.FromSubject(subject))
+            .Concat(
+                aggregation.StandaloneItems.Select(static item =>
+                    CatalogDisplayEntry.FromItem(item)))
+            .Where(entry => Matches(entry, query))
+            .OrderBy(entry => CategoryOrder(entry.Category))
+            .ThenBy(entry => entry.Title, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
 
-        if (filtered.Length == 0)
+        if (displayEntries.Length == 0)
         {
             ((CollectionViewSource)Resources["GroupedCatalogItems"]).Source =
                 Array.Empty<CatalogGroup>();
@@ -136,12 +143,15 @@ public sealed partial class CatalogView : UserControl
                     : source.DisplayName,
                 StringComparer.Ordinal);
 
-        var groups = filtered
-            .GroupBy(item => item.Category, CatalogCategoryComparer.Default)
+        var groups = displayEntries
+            .GroupBy(entry => entry.Category, CatalogCategoryComparer.Default)
             .Select(group =>
                 new CatalogGroup(
                     CategoryLabel(group.Key),
-                    group.Select(item => CreateListItem(item, sourceLabels))))
+                    group.Select(entry =>
+                        entry.Subject is { } subject
+                            ? CreateSubjectListItem(subject)
+                            : CreateListItem(entry.Item!, sourceLabels))))
             .ToArray();
 
         ((CollectionViewSource)Resources["GroupedCatalogItems"]).Source = groups;
@@ -149,28 +159,108 @@ public sealed partial class CatalogView : UserControl
         ResultsList.Visibility = Visibility.Visible;
     }
 
+    private CatalogListItemViewModel CreateSubjectListItem(
+        CatalogSubjectModel subject)
+    {
+        var metadata = subject.Metadata;
+        var subtitle = !string.IsNullOrWhiteSpace(subject.NativeTitle) &&
+                       !string.Equals(
+                           subject.NativeTitle,
+                           subject.Title,
+                           StringComparison.CurrentCultureIgnoreCase)
+            ? subject.NativeTitle
+            : string.Empty;
+
+        var metaParts = new List<string>();
+        if (metadata?.ReleaseDate is { Length: > 0 } release &&
+            DateOnly.TryParse(release, out var releaseDate))
+        {
+            metaParts.Add(releaseDate.Year.ToString(CultureInfo.InvariantCulture));
+        }
+        else if (subject.Items
+                 .Select(static item => item.Recognition?.Year)
+                 .FirstOrDefault(static value => value is not null) is { } recognitionYear)
+        {
+            metaParts.Add(recognitionYear.ToString(CultureInfo.InvariantCulture));
+        }
+
+        metaParts.Add(
+            L(
+                $"{subject.EpisodeCount} 集",
+                $"{subject.EpisodeCount} 話",
+                $"{subject.EpisodeCount} episodes"));
+
+        var sourceIds = subject.Items
+            .Select(static item => item.Location?.SourceId)
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+        var hasLocal = subject.Items.Any(static item =>
+            item.Location?.Kind == MediaLocationKind.LocalFile);
+        var hasRemote = subject.Items.Any(static item =>
+            item.Location?.Kind == MediaLocationKind.RemoteUri);
+        var sourceKind = (hasLocal, hasRemote) switch
+        {
+            (true, true) => L("本地 + 网盘", "ローカル + リモート", "Local + remote"),
+            (true, false) => L("本地", "ローカル", "Local"),
+            (false, true) => L("网盘", "リモート", "Remote"),
+            _ => L("未知来源", "不明なソース", "Unknown source"),
+        };
+
+        var sourceLabel = sourceIds > 0
+            ? L(
+                $"{sourceKind} · {sourceIds} 个来源",
+                $"{sourceKind} · {sourceIds} ソース",
+                $"{sourceKind} · {sourceIds} sources")
+            : sourceKind;
+
+        return new CatalogListItemViewModel(
+            subject,
+            null,
+            subject.Category,
+            subject.Category switch
+            {
+                MediaCategoryKind.Anime => "\uE8B2",
+                MediaCategoryKind.Series => "\uE8FD",
+                _ => "\uE8FD",
+            },
+            CreateArtwork(metadata?.PosterUrl, 360),
+            subject.Title,
+            subtitle,
+            string.Join(" · ", metaParts),
+            sourceLabel,
+            L(
+                $"{subject.EpisodeCount} 集",
+                $"{subject.EpisodeCount} 話",
+                $"{subject.EpisodeCount} eps"));
+    }
+
     private CatalogListItemViewModel CreateListItem(
         CatalogMediaItemModel item,
         IReadOnlyDictionary<string, string> sourceLabels)
     {
-        var secondaryParts = new List<string>();
+        var subtitle = item.IsParsed &&
+                       !string.IsNullOrWhiteSpace(item.SecondaryTitle) &&
+                       !string.Equals(
+                           item.SecondaryTitle,
+                           item.DisplayTitle,
+                           StringComparison.CurrentCultureIgnoreCase)
+            ? item.SecondaryTitle
+            : string.Empty;
 
-        if (item.IsParsed &&
-            !string.IsNullOrWhiteSpace(item.SecondaryTitle) &&
-            !string.Equals(
-                item.SecondaryTitle,
-                item.DisplayTitle,
-                StringComparison.CurrentCultureIgnoreCase))
+        var metaParts = new List<string>();
+        if (item.Metadata is { IsResolved: true } metadata &&
+            DateOnly.TryParse(metadata.ReleaseDate, out var releaseDate))
         {
-            secondaryParts.Add(item.SecondaryTitle);
+            metaParts.Add(releaseDate.Year.ToString(CultureInfo.InvariantCulture));
         }
 
         if (!string.IsNullOrWhiteSpace(item.Meta))
-            secondaryParts.Add(item.Meta);
+        {
+            metaParts.Add(item.Meta);
+        }
 
-        if (!item.IsParsed)
-            secondaryParts.Add(T("Catalog_Unparsed"));
-
+        var sourceLabel = string.Empty;
         if (item.Location is { } location)
         {
             var extensionSource = location.Locator;
@@ -180,22 +270,38 @@ public sealed partial class CatalogView : UserControl
                 extensionSource = Uri.UnescapeDataString(remoteUri.AbsolutePath);
             }
 
+            var locationParts = new List<string>();
             var extension = Path.GetExtension(extensionSource)
                 .TrimStart('.')
                 .ToUpperInvariant();
 
             if (!string.IsNullOrWhiteSpace(extension))
-                secondaryParts.Add(extension);
+            {
+                locationParts.Add(extension);
+            }
 
             if (location.SizeBytes is > 0)
-                secondaryParts.Add(FormatBytes(location.SizeBytes.Value));
+            {
+                locationParts.Add(FormatBytes(location.SizeBytes.Value));
+            }
 
-            if (sourceLabels.TryGetValue(location.SourceId, out var sourceLabel))
-                secondaryParts.Add(sourceLabel);
+            if (sourceLabels.TryGetValue(location.SourceId, out var label))
+            {
+                locationParts.Add(label);
+            }
+
+            sourceLabel = string.Join(" · ", locationParts);
+        }
+
+        if (!item.IsParsed && metaParts.Count == 0)
+        {
+            metaParts.Add(T("Catalog_Unparsed"));
         }
 
         return new CatalogListItemViewModel(
+            null,
             item,
+            item.Category,
             item.Category switch
             {
                 MediaCategoryKind.Anime => "\uE8B2",
@@ -203,43 +309,102 @@ public sealed partial class CatalogView : UserControl
                 MediaCategoryKind.Movies => "\uE714",
                 _ => "\uE8A5"
             },
+            CreateArtwork(item.Metadata?.PosterUrl, 360),
             item.DisplayTitle,
-            string.Join(" · ", secondaryParts),
+            subtitle,
+            string.Join(" · ", metaParts),
+            sourceLabel,
             RecognitionLabel(item) ?? CategoryLabel(item.Category));
+    }
+
+    private static BitmapImage? CreateArtwork(
+        string? url,
+        int decodePixelWidth)
+    {
+        if (string.IsNullOrWhiteSpace(url) ||
+            !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+             !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
+        {
+            return null;
+        }
+
+        try
+        {
+            return new BitmapImage
+            {
+                UriSource = uri,
+                DecodePixelWidth = decodePixelWidth,
+            };
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void ResultsList_ItemClick(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is CatalogListItemViewModel viewModel)
-            MediaRequested?.Invoke(this, viewModel.Item);
+        if (e.ClickedItem is not CatalogListItemViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.Subject is { } subject)
+        {
+            SubjectRequested?.Invoke(this, subject);
+            return;
+        }
+
+        if (viewModel.Item is { } item)
+        {
+            MediaRequested?.Invoke(this, item);
+        }
     }
 
     private void ResultsList_ContainerContentChanging(
         ListViewBase sender,
         ContainerContentChangingEventArgs args)
     {
-        if (args.ItemContainer is not ListViewItem container ||
+        if (args.ItemContainer is not GridViewItem container ||
             args.Item is not CatalogListItemViewModel viewModel)
         {
             return;
         }
 
-        if (viewModel.Item.Recognition is null)
+        var flyout = new MenuFlyout();
+
+        if (viewModel.Item is { Recognition: { } } item)
         {
-            container.ContextFlyout = null;
-            return;
+            var detailsItem = new MenuFlyoutItem
+            {
+                Text = "Recognition details",
+                Tag = item
+            };
+            detailsItem.Click += RecognitionDetails_Click;
+            flyout.Items.Add(detailsItem);
         }
 
-        var detailsItem = new MenuFlyoutItem
-        {
-            Text = "Recognition details",
-            Tag = viewModel.Item
-        };
-        detailsItem.Click += RecognitionDetails_Click;
+        var metadataOwner = viewModel.Item?.Metadata is not null
+            ? viewModel.Item
+            : viewModel.Subject?.Items.FirstOrDefault(static item =>
+                item.Metadata is not null);
 
-        var flyout = new MenuFlyout();
-        flyout.Items.Add(detailsItem);
-        container.ContextFlyout = flyout;
+        if (metadataOwner is not null)
+        {
+            var metadataItem = new MenuFlyoutItem
+            {
+                Text = "Metadata details",
+                Tag = metadataOwner
+            };
+            metadataItem.Click += MetadataDetails_Click;
+            flyout.Items.Add(metadataItem);
+        }
+
+        container.ContextFlyout =
+            flyout.Items.Count > 0
+                ? flyout
+                : null;
     }
 
     private async void RecognitionDetails_Click(
@@ -277,6 +442,41 @@ public sealed partial class CatalogView : UserControl
         };
 
         await dialog.ShowAsync();
+    }
+
+    private async void MetadataDetails_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem
+            {
+                Tag: CatalogMediaItemModel
+                {
+                    Metadata: { } metadata
+                }
+            })
+        {
+            return;
+        }
+
+        var details = new TextBox
+        {
+            Text = BuildMetadataDetails(metadata),
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = new FontFamily("Cascadia Mono"),
+            Height = 420,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+
+        await new ContentDialog
+        {
+            Title = "Metadata details",
+            Content = details,
+            CloseButtonText = "Close",
+            XamlRoot = XamlRoot
+        }.ShowAsync();
     }
 
     private async void ExportRecognitionButton_Click(
@@ -326,16 +526,17 @@ public sealed partial class CatalogView : UserControl
             XamlRoot = XamlRoot,
             Title = L("识别报告已导出", "認識レポートを出力しました", "Recognition report exported"),
             Content = L(
-                "CSV 已包含原始文件名、逻辑路径、识别标题、状态、置信度、候选标题和证据。可直接按 NeedsReview 或 ReviewPriority 筛选后交给我分析。",
-                "CSV には元ファイル名、論理パス、認識タイトル、状態、信頼度、タイトル候補、根拠が含まれます。NeedsReview または ReviewPriority で絞り込めます。",
-                "The CSV includes original names, logical paths, recognized titles, status, confidence, title candidates and evidence. Filter NeedsReview or ReviewPriority before sharing it for analysis."),
+                "CSV 已同时包含 Recognition 与 Metadata 诊断：除原始文件名、逻辑路径、识别证据外，还记录实际 Provider 搜索词、候选数量、前两名分数与分差、解析阈值、ResolutionReason、Top Candidates 及评分证据。可直接筛选 MetadataResolutionReason 定位未刮削原因。",
+                "CSV には Recognition と Metadata の診断情報を統合しています。元ファイル名、論理パス、認識根拠、Metadata 状態、Provider、Subject ID、信頼度、外部 ID、Provider エラーを確認できます。",
+                "The CSV combines Recognition and Metadata diagnostics, including source names, logical paths, recognition evidence, Metadata status, provider, subject ID, confidence, external IDs and provider errors."),
             CloseButtonText = L("关闭", "閉じる", "Close")
         };
         await dialog.ShowAsync();
     }
 
     private void UpdateRecognitionSummary(
-        IReadOnlyList<CatalogMediaItemModel> items)
+        IReadOnlyList<CatalogMediaItemModel> items,
+        CatalogLibraryAggregation aggregation)
     {
         var recognized = 0;
         var ambiguous = 0;
@@ -375,9 +576,9 @@ public sealed partial class CatalogView : UserControl
         }
 
         RecognitionSummary.Text = L(
-            $"识别报告：共 {items.Count} · 已识别 {recognized} · 歧义 {ambiguous} · 未解决 {unresolved} · 错误 {errors} · 无快照 {missing} · 建议复核 {review}",
-            $"認識レポート：合計 {items.Count} · 認識済み {recognized} · 曖昧 {ambiguous} · 未解決 {unresolved} · エラー {errors} · スナップショットなし {missing} · 要確認 {review}",
-            $"Recognition report: {items.Count} total · {recognized} recognized · {ambiguous} ambiguous · {unresolved} unresolved · {errors} errors · {missing} missing snapshots · {review} review candidates");
+            $"媒体库：作品 {aggregation.Subjects.Count} · 独立媒体 {aggregation.StandaloneItems.Count} · 文件 {items.Count} ｜ 识别：已识别 {recognized} · 歧义 {ambiguous} · 未解决 {unresolved} · 错误 {errors} · 无快照 {missing} · 建议复核 {review}",
+            $"メディアライブラリ：作品 {aggregation.Subjects.Count} · 単独メディア {aggregation.StandaloneItems.Count} · ファイル {items.Count} ｜ 認識：認識済み {recognized} · 曖昧 {ambiguous} · 未解決 {unresolved} · エラー {errors} · スナップショットなし {missing} · 要確認 {review}",
+            $"Library: {aggregation.Subjects.Count} titles · {aggregation.StandaloneItems.Count} standalone media · {items.Count} files | Recognition: {recognized} recognized · {ambiguous} ambiguous · {unresolved} unresolved · {errors} errors · {missing} missing snapshots · {review} review candidates");
     }
 
     private static string BuildRecognitionCsv(
@@ -386,7 +587,7 @@ public sealed partial class CatalogView : UserControl
     {
         var builder = new StringBuilder();
         builder.AppendLine(
-            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence");
+            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataResolutionReason,MetadataSearchTitles,MetadataCandidateCount,MetadataAutoResolveThreshold,MetadataMinimumLead,MetadataBestScore,MetadataSecondScore,MetadataLead,MetadataTopCandidates,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
 
         foreach (var item in items)
         {
@@ -410,6 +611,42 @@ public sealed partial class CatalogView : UserControl
                     " || ",
                     recognition.Evidence.Select(itemEvidence =>
                         $"{itemEvidence.Code}={itemEvidence.Value ?? "-"} [{itemEvidence.Weight:0.000}]"));
+
+            var metadata = item.Metadata;
+            var metadataLocalizedTitles = metadata is null
+                ? string.Empty
+                : string.Join(
+                    " || ",
+                    metadata.LocalizedTitles
+                        .OrderBy(static pair => pair.Key)
+                        .Select(static pair => $"{pair.Key}={pair.Value}"));
+            var metadataAliases = metadata is null
+                ? string.Empty
+                : string.Join(" || ", metadata.Aliases);
+            var metadataExternalIds = metadata is null
+                ? string.Empty
+                : string.Join(
+                    " || ",
+                    metadata.ExternalIds
+                        .OrderBy(static pair => pair.Key)
+                        .Select(static pair => $"{pair.Key}={pair.Value}"));
+            var metadataErrors = metadata is null
+                ? string.Empty
+                : string.Join(
+                    " || ",
+                    metadata.Errors.Select(static error =>
+                        $"{error.Provider}|{error.ErrorType}|{error.Message}"));
+            var metadataStatus = metadata?.Status.ToString()
+                ?? MetadataDiagnosticState(recognition);
+            var metadataSearchTitles = metadata is null
+                ? string.Empty
+                : string.Join(" || ", metadata.SearchTitles);
+            var metadataTopCandidates = metadata is null
+                ? string.Empty
+                : string.Join(
+                    " || ",
+                    metadata.TopCandidates.Select(static candidate =>
+                        $"{candidate.Provider}:{candidate.ProviderSubjectId}|{candidate.SubjectKind}|{candidate.Title}|year={candidate.Year?.ToString(CultureInfo.InvariantCulture) ?? "-"}|rank={candidate.ProviderRank}|score={candidate.Score:0.000}|evidence={string.Join(";", candidate.Evidence)}"));
 
             AppendCsvRow(
                 builder,
@@ -439,10 +676,65 @@ public sealed partial class CatalogView : UserControl
                 recognition?.Year?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
                 recognition?.ErrorCode ?? string.Empty,
                 titleCandidates,
-                evidence);
+                evidence,
+                metadata?.RuntimeVersion ?? string.Empty,
+                metadata?.RecognitionRuntimeVersion ?? string.Empty,
+                metadata is null || recognition is null
+                    ? string.Empty
+                    : metadata.MatchesRecognitionRuntime(recognition.RuntimeVersion).ToString(),
+                metadataStatus,
+                metadata?.ResolutionReason ?? string.Empty,
+                metadataSearchTitles,
+                metadata?.CandidateCount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.AutoResolveThreshold.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.MinimumLead.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.BestScore?.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.SecondScore?.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.Lead?.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadataTopCandidates,
+                metadata?.Provider ?? string.Empty,
+                metadata?.ProviderSubjectId ?? string.Empty,
+                metadata?.SubjectKind ?? string.Empty,
+                metadata?.Confidence.ToString("0.000", CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.CanonicalTitle ?? string.Empty,
+                metadata?.OriginalTitle ?? string.Empty,
+                metadataLocalizedTitles,
+                metadataAliases,
+                metadata?.ReleaseDate ?? string.Empty,
+                metadata?.EpisodeCount?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata is null ? string.Empty : FormatNullableNumber(metadata.EpisodeNumber),
+                metadata?.EpisodeTitle ?? string.Empty,
+                metadata?.EpisodeOriginalTitle ?? string.Empty,
+                metadata?.EpisodeAirDate ?? string.Empty,
+                metadata?.PosterUrl ?? string.Empty,
+                metadata?.BackdropUrl ?? string.Empty,
+                metadataExternalIds,
+                metadataErrors,
+                metadata?.UpdatedAtUtc.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty);
         }
 
         return builder.ToString();
+    }
+
+    private static string MetadataDiagnosticState(
+        MediaRecognitionSnapshot? recognition)
+    {
+        if (recognition is null)
+            return "NotAttempted:MissingRecognition";
+
+        if (recognition.Status != MediaRecognitionStatus.Recognized ||
+            recognition.IsAmbiguous)
+        {
+            return $"NotAttempted:{recognition.Status}";
+        }
+
+        if (recognition.ConfidenceLevel is not ("Medium" or "High"))
+            return $"NotAttempted:{recognition.ConfidenceLevel}Confidence";
+
+        if (string.IsNullOrWhiteSpace(recognition.Title))
+            return "NotAttempted:MissingTitle";
+
+        return "MissingAfterScan";
     }
 
     private static void AppendCsvRow(
@@ -507,6 +799,75 @@ public sealed partial class CatalogView : UserControl
         if (string.Equals(recognition.ConfidenceLevel, "Medium", StringComparison.OrdinalIgnoreCase))
             return "MediumConfidence";
         return string.Empty;
+    }
+
+    private static string BuildMetadataDetails(
+        Eizo.MetadataIntegration.MediaMetadataSnapshot metadata)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine($"Runtime version: {metadata.RuntimeVersion}");
+        builder.AppendLine($"Recognition runtime: {metadata.RecognitionRuntimeVersion ?? "-"}");
+        builder.AppendLine($"Provider: {metadata.Provider ?? "-"}");
+        builder.AppendLine($"Subject ID: {metadata.ProviderSubjectId ?? "-"}");
+        builder.AppendLine($"Subject kind: {metadata.SubjectKind ?? "-"}");
+        builder.AppendLine($"Confidence: {metadata.Confidence:0.000}");
+        builder.AppendLine($"Resolution reason: {metadata.ResolutionReason ?? "-"}");
+        builder.AppendLine($"Candidates: {metadata.CandidateCount}");
+        builder.AppendLine($"Threshold: {metadata.AutoResolveThreshold:0.000}");
+        builder.AppendLine($"Minimum lead: {metadata.MinimumLead:0.000}");
+        builder.AppendLine($"Best score: {metadata.BestScore?.ToString("0.000", CultureInfo.InvariantCulture) ?? "-"}");
+        builder.AppendLine($"Second score: {metadata.SecondScore?.ToString("0.000", CultureInfo.InvariantCulture) ?? "-"}");
+        builder.AppendLine($"Lead: {metadata.Lead?.ToString("0.000", CultureInfo.InvariantCulture) ?? "-"}");
+        builder.AppendLine($"Canonical title: {metadata.CanonicalTitle ?? "-"}");
+        builder.AppendLine($"Original title: {metadata.OriginalTitle ?? "-"}");
+        builder.AppendLine($"Release date: {metadata.ReleaseDate ?? "-"}");
+        builder.AppendLine($"Episode count: {metadata.EpisodeCount?.ToString(CultureInfo.InvariantCulture) ?? "-"}");
+        builder.AppendLine($"Episode: {FormatNullableNumber(metadata.EpisodeNumber)}");
+        builder.AppendLine($"Episode title: {metadata.EpisodeTitle ?? "-"}");
+        builder.AppendLine($"Episode original title: {metadata.EpisodeOriginalTitle ?? "-"}");
+        builder.AppendLine($"Episode air date: {metadata.EpisodeAirDate ?? "-"}");
+        builder.AppendLine($"Poster: {metadata.PosterUrl ?? "-"}");
+        builder.AppendLine($"Backdrop: {metadata.BackdropUrl ?? "-"}");
+        builder.AppendLine($"Updated: {metadata.UpdatedAtUtc:O}");
+
+        if (metadata.SearchTitles.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Provider search titles:");
+            foreach (var title in metadata.SearchTitles)
+                builder.AppendLine($"  - {title}");
+        }
+
+        if (metadata.TopCandidates.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Top metadata candidates:");
+            foreach (var candidate in metadata.TopCandidates)
+            {
+                builder.AppendLine(
+                    $"  - {candidate.Provider}:{candidate.ProviderSubjectId} | {candidate.Title} | score={candidate.Score:0.000} | year={candidate.Year?.ToString(CultureInfo.InvariantCulture) ?? "-"} | rank={candidate.ProviderRank}");
+                foreach (var evidence in candidate.Evidence)
+                    builder.AppendLine($"      {evidence}");
+            }
+        }
+
+        if (metadata.ExternalIds.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("External IDs:");
+            foreach (var pair in metadata.ExternalIds.OrderBy(static item => item.Key))
+                builder.AppendLine($"  - {pair.Key}: {pair.Value}");
+        }
+
+        if (metadata.Errors.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Provider warnings:");
+            foreach (var error in metadata.Errors)
+                builder.AppendLine($"  - {error.Provider} | {error.ErrorType} | {error.Message}");
+        }
+
+        return builder.ToString().TrimEnd();
     }
 
     private static string BuildRecognitionDetails(
@@ -581,6 +942,62 @@ public sealed partial class CatalogView : UserControl
             _ => null
         };
 
+    private static bool Matches(
+        CatalogDisplayEntry entry,
+        string query)
+    {
+        if (entry.Subject is { } subject)
+        {
+            return Matches(subject, query);
+        }
+
+        return entry.Item is { } item && Matches(item, query);
+    }
+
+    private static bool Matches(
+        CatalogSubjectModel subject,
+        string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        if (subject.Title.Contains(
+                query,
+                StringComparison.CurrentCultureIgnoreCase) ||
+            subject.NativeTitle.Contains(
+                query,
+                StringComparison.CurrentCultureIgnoreCase) ||
+            subject.Meta.Contains(
+                query,
+                StringComparison.CurrentCultureIgnoreCase))
+        {
+            return true;
+        }
+
+        if (subject.Metadata is { } metadata &&
+            (metadata.LocalizedTitles.Values.Any(title =>
+                 title.Contains(
+                     query,
+                     StringComparison.CurrentCultureIgnoreCase)) ||
+             metadata.Aliases.Any(title =>
+                 title.Contains(
+                     query,
+                     StringComparison.CurrentCultureIgnoreCase))))
+        {
+            return true;
+        }
+
+        return subject.Episodes.Any(episode =>
+            episode.Title.Contains(
+                query,
+                StringComparison.CurrentCultureIgnoreCase) ||
+            episode.NativeTitle.Contains(
+                query,
+                StringComparison.CurrentCultureIgnoreCase));
+    }
+
     private static bool Matches(CatalogMediaItemModel item, string query)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -591,6 +1008,17 @@ public sealed partial class CatalogView : UserControl
                (!string.IsNullOrWhiteSpace(item.NativeTitle) &&
                 item.NativeTitle.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
                item.Meta.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+               (item.Metadata is { } metadata &&
+                ((!string.IsNullOrWhiteSpace(metadata.CanonicalTitle) &&
+                  metadata.CanonicalTitle.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
+                 (!string.IsNullOrWhiteSpace(metadata.OriginalTitle) &&
+                  metadata.OriginalTitle.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
+                 metadata.LocalizedTitles.Values.Any(title =>
+                    title.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
+                 metadata.Aliases.Any(title =>
+                    title.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
+                 (!string.IsNullOrWhiteSpace(metadata.EpisodeTitle) &&
+                  metadata.EpisodeTitle.Contains(query, StringComparison.CurrentCultureIgnoreCase)))) ||
                (item.Recognition is { } recognition &&
                 ((!string.IsNullOrWhiteSpace(recognition.Title) &&
                   recognition.Title.Contains(query, StringComparison.CurrentCultureIgnoreCase)) ||
@@ -635,11 +1063,39 @@ public sealed partial class CatalogView : UserControl
             : $"{value:0.#} {units[unit]}";
     }
 
+    private sealed record CatalogDisplayEntry(
+        CatalogSubjectModel? Subject,
+        CatalogMediaItemModel? Item,
+        MediaCategoryKind? Category,
+        string Title)
+    {
+        public static CatalogDisplayEntry FromSubject(
+            CatalogSubjectModel subject) =>
+            new(
+                subject,
+                null,
+                subject.Category,
+                subject.Title);
+
+        public static CatalogDisplayEntry FromItem(
+            CatalogMediaItemModel item) =>
+            new(
+                null,
+                item,
+                item.Category,
+                item.DisplayTitle);
+    }
+
     private sealed record CatalogListItemViewModel(
-        CatalogMediaItemModel Item,
+        CatalogSubjectModel? Subject,
+        CatalogMediaItemModel? Item,
+        MediaCategoryKind? Category,
         string IconGlyph,
+        BitmapImage? Artwork,
         string Title,
-        string Secondary,
+        string Subtitle,
+        string MetaLine,
+        string SourceLabel,
         string TypeLabel);
 
     private sealed class CatalogGroup : ObservableCollection<CatalogListItemViewModel>
