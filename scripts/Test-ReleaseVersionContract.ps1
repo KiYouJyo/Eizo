@@ -83,7 +83,7 @@ foreach ($relativePath in @(
     "docs/RELEASE-NOTES-v$version.en.md")) {
     $text = Read-Text $relativePath
     if ($text -notmatch "(?m)^# Eizo v$([regex]::Escape($version))\s*$") {
-        throw "Release Notes header does not match v$version: $relativePath"
+        throw "Release Notes header does not match v${version}: $relativePath"
     }
 }
 
@@ -95,7 +95,7 @@ $currentAcceptanceWorkflow = ".github/workflows/v0$($version.Split('.')[1])$($ve
 foreach ($relativePath in @($currentAcceptanceScript, $currentAcceptanceWorkflow)) {
     $text = Read-Text $relativePath
     if (-not $text.Contains($version) -or -not $text.Contains($packageVersion)) {
-        throw "Current acceptance asset is not pinned to $version/$packageVersion: $relativePath"
+        throw "Current acceptance asset is not pinned to ${version}/${packageVersion}: $relativePath"
     }
     if ($text -match '(?<!\d)0\.3\.(?:1|7|8|9|10)(?!\d)') {
         throw "Current acceptance asset contains a stale product version: $relativePath"
