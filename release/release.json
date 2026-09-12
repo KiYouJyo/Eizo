@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.3.7",
-    "packageVersion": "0.3.7.0",
+    "version": "0.3.11",
+    "packageVersion": "0.3.11.0",
     "title": {
-      "zh-CN": "Metadata 刮削独立化、诊断增强与组件更新",
-      "ja-JP": "Metadata 取得の独立化・診断強化・コンポーネント更新",
-      "en-US": "Independent Metadata Scraping, Diagnostics & Component Updates"
+      "zh-CN": "媒体库聚合、卡片交互与 Metadata 运行时链修正",
+      "ja-JP": "ライブラリ集約、カード操作表示、Metadata Runtime 経路の修正",
+      "en-US": "Library Aggregation, Card Interaction & Metadata Runtime Pipeline Fixes"
     }
   },
   "channels": {
