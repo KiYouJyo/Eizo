@@ -20,6 +20,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate release and About-page version contract
+        shell: pwsh
+        run: ./scripts/Test-ReleaseVersionContract.ps1
+
       - name: Validate RESW key parity
         shell: pwsh
         run: ./scripts/Test-Localization.ps1
@@ -49,6 +53,10 @@ jobs:
       - name: Validate Metadata scan lifecycle and diagnostics contract
         shell: pwsh
         run: ./scripts/Test-MetadataScanLifecycleContract.ps1
+
+      - name: Validate library aggregation visual UI contract
+        shell: pwsh
+        run: ./scripts/Test-LibraryAggregationUiContract.ps1
 
       - name: Validate player/source UI cleanup contract
         shell: pwsh

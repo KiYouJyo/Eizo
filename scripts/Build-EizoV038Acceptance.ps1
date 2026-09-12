@@ -1,0 +1,300 @@
+param()
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+function Assert-LastExitCode([string]$message) {
+    if ($LASTEXITCODE -ne 0) { throw "$message ($LASTEXITCODE)" }
+}
+
+function Get-EizoProcesses([string]$installRoot) {
+    $root = [IO.Path]::GetFullPath($installRoot)
+    return @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+        try {
+            $_.Path -and ([IO.Path]::GetFullPath($_.Path)).StartsWith($root, [StringComparison]::OrdinalIgnoreCase)
+        }
+        catch { $false }
+    })
+}
+
+function Start-EizoAndAssertAlive($package, [int]$waitSeconds = 8) {
+    $manifest = Get-AppxPackageManifest -Package $package
+    $appId = [string]$manifest.Package.Applications.Application.Id
+    $activation = "shell:AppsFolder\$($package.PackageFamilyName)!$appId"
+    Start-Process explorer.exe -ArgumentList $activation
+    Start-Sleep -Seconds $waitSeconds
+    $running = @(Get-EizoProcesses ([string]$package.InstallLocation))
+    if ($running.Count -eq 0) { throw 'Eizo did not remain running after activation.' }
+    return $running
+}
+
+if ([string]::IsNullOrWhiteSpace($env:RELEASE_CERTIFICATE_BASE64) -or
+    [string]::IsNullOrWhiteSpace($env:RELEASE_CERTIFICATE_PASSWORD)) {
+    throw 'GitHub release signing secrets are not configured.'
+}
+
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+Push-Location $repoRoot
+try {
+    $runnerTemp = if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) { [IO.Path]::GetTempPath() } else { $env:RUNNER_TEMP }
+    $assets = Join-Path $runnerTemp 'Eizo-v0.3.8-acceptance'
+    $appPackages = Join-Path $runnerTemp 'Eizo-AppPackages-v038'
+    $bundleExtract = Join-Path $runnerTemp 'Eizo-bundle-extract-v038'
+    $oneClickStaging = Join-Path $runnerTemp 'Eizo-one-click-v038'
+    foreach ($path in @($assets, $appPackages, $bundleExtract, $oneClickStaging)) {
+        if (Test-Path $path) { Remove-Item -LiteralPath $path -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path $path | Out-Null
+    }
+
+    Write-Host '== Restore pinned dependencies =='
+    & ./scripts/Restore-EizoPlayback.ps1
+    & ./scripts/Restore-EizoMetadata.ps1
+
+    Write-Host '== Validate v0.3.8 library aggregation UI =='
+    & ./scripts/Test-LibraryAggregationUiContract.ps1
+
+    Write-Host '== Compile Release =='
+    msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:AppxPackageSigningEnabled=false /p:GenerateAppxPackageOnBuild=false
+    Assert-LastExitCode 'Release build failed'
+
+    $releaseOut = (Resolve-Path 'src\Eizo.App\bin\x64\Release\net10.0-windows10.0.19041.0\win-x64').Path
+    $playbackAssemblies = @(
+        'Eizo.Playback.Abstractions.dll',
+        'Eizo.Playback.Core.dll',
+        'Eizo.Playback.LibVLC.dll',
+        'Eizo.Playback.LibVLC.WinUI.dll'
+    )
+    $metadataAssemblies = @(
+        'Eizo.Metadata.Recognition.dll',
+        'Eizo.Metadata.Core.dll',
+        'Eizo.Metadata.Providers.dll'
+    )
+    $updateableAssemblies = @($playbackAssemblies + $metadataAssemblies)
+    foreach ($name in $updateableAssemblies) {
+        if (Test-Path (Join-Path $releaseOut $name)) {
+            throw "Updateable implementation remains in the default probing root: $name"
+        }
+    }
+    foreach ($name in $playbackAssemblies) {
+        if (-not (Test-Path (Join-Path $releaseOut "Components\Bundled\Playback\$name"))) {
+            throw "Bundled Playback fallback is missing: $name"
+        }
+    }
+    foreach ($name in $metadataAssemblies) {
+        if (-not (Test-Path (Join-Path $releaseOut "Components\Bundled\Recognition\$name"))) {
+            throw "Bundled Metadata fallback is missing: $name"
+        }
+    }
+    Write-Host 'Relocatable component output contract PASS.'
+
+    Write-Host '== Build MSIX bundle =='
+    msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Always /p:AppxBundlePlatforms=x64 /p:UapAppxPackageBuildMode=SideloadOnly "/p:AppxPackageDir=$appPackages\"
+    Assert-LastExitCode 'MSIX build failed'
+    $producedBundle = @(Get-ChildItem $appPackages -Recurse -Filter '*.msixbundle' -File) | Select-Object -First 1
+    if (-not $producedBundle) { throw 'MSIX bundle was not produced.' }
+    $bundlePath = Join-Path $assets 'Eizo_0.3.8.0_x64.msixbundle'
+    Copy-Item -LiteralPath $producedBundle.FullName -Destination $bundlePath -Force
+
+    Write-Host '== Verify packaged component probing contract =='
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($bundlePath, $bundleExtract)
+    $inner = @(Get-ChildItem $bundleExtract -Recurse -Filter '*.msix' -File) | Select-Object -First 1
+    if (-not $inner) { throw 'Bundle contains no inner MSIX.' }
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($inner.FullName)
+    try {
+        $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
+        foreach ($name in @('libvlc.dll', 'libvlccore.dll')) {
+            if (-not ($entries | Where-Object { $_ -match "(^|/)$([regex]::Escape($name))$" })) {
+                throw "MSIX does not contain $name"
+            }
+        }
+        $plugins = @($entries | Where-Object { $_ -match '(^|/)plugins/.+\.dll$' })
+        if ($plugins.Count -eq 0) { throw 'MSIX contains no LibVLC plugins.' }
+        foreach ($name in $updateableAssemblies) {
+            if ($entries -contains $name) { throw "MSIX root still contains updateable implementation: $name" }
+        }
+        foreach ($name in $playbackAssemblies) {
+            if ($entries -notcontains "Components/Bundled/Playback/$name") {
+                throw "MSIX bundled Playback fallback is missing: $name"
+            }
+        }
+        foreach ($name in $metadataAssemblies) {
+            if ($entries -notcontains "Components/Bundled/Recognition/$name") {
+                throw "MSIX bundled Metadata fallback is missing: $name"
+            }
+        }
+        Write-Host "Component bundle contract PASS. LibVLC plugins=$($plugins.Count)"
+    }
+    finally { $archive.Dispose() }
+
+    Write-Host '== Sign bundle =='
+    $pfx = Join-Path $runnerTemp 'eizo-v038-release-signing.pfx'
+    [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:RELEASE_CERTIFICATE_BASE64))
+    $password = ConvertTo-SecureString $env:RELEASE_CERTIFICATE_PASSWORD -AsPlainText -Force
+    $certificate = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+    if ($certificate.Subject -cne 'CN=AppPublisher' -or
+        $certificate.Thumbprint -cne 'BD85AD77A651C86CA01A480C8E9BC64952993F98' -or
+        -not $certificate.HasPrivateKey) {
+        throw "Unexpected signing certificate: Subject=$($certificate.Subject); Thumbprint=$($certificate.Thumbprint)"
+    }
+    $cer = Join-Path $assets 'Eizo-v0.3.8-AppPublisher.cer'
+    Export-Certificate -Cert $certificate -FilePath $cer | Out-Null
+    $kitsRoot = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
+    $signtool = Get-ChildItem (Join-Path $kitsRoot 'Windows Kits\10\bin') -Recurse -Filter signtool.exe |
+        Where-Object FullName -match '\\x64\\signtool.exe$' |
+        Sort-Object FullName -Descending |
+        Select-Object -First 1
+    if (-not $signtool) { throw 'x64 signtool.exe was not found.' }
+    & $signtool.FullName sign /fd SHA256 /sha1 $certificate.Thumbprint /tr http://timestamp.digicert.com /td SHA256 $bundlePath
+    Assert-LastExitCode 'signtool sign failed'
+    $signature = Get-AuthenticodeSignature -FilePath $bundlePath
+    if (-not $signature.SignerCertificate -or $signature.SignerCertificate.Thumbprint -cne $certificate.Thumbprint) {
+        throw 'Signed bundle signer mismatch.'
+    }
+    Remove-Item -LiteralPath $pfx -Force
+
+    Write-Host '== Install and launch bundled fallback =='
+    if (-not (Get-ChildItem Cert:\LocalMachine\TrustedPeople -ErrorAction SilentlyContinue |
+        Where-Object Thumbprint -eq $certificate.Thumbprint | Select-Object -First 1)) {
+        Import-Certificate -FilePath $cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+    }
+    Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
+    $legacyComponentsRoot = Join-Path $env:LOCALAPPDATA 'Eizo\Components'
+    Remove-Item -LiteralPath $legacyComponentsRoot -Recurse -Force -ErrorAction SilentlyContinue
+
+    $runtimeInstaller = Join-Path $runnerTemp 'WindowsAppRuntimeInstall-x64.exe'
+    Invoke-WebRequest -Uri 'https://aka.ms/windowsappsdk/1.8/1.8.260710003/windowsappruntimeinstall-x64.exe' -OutFile $runtimeInstaller -UseBasicParsing
+    $runtimeSignature = Get-AuthenticodeSignature -FilePath $runtimeInstaller
+    if (-not $runtimeSignature.SignerCertificate -or $runtimeSignature.Status -ne 'Valid' -or
+        $runtimeSignature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
+        throw 'Windows App Runtime installer signature validation failed.'
+    }
+    & $runtimeInstaller --quiet
+    Assert-LastExitCode 'Windows App Runtime installer failed'
+
+    Add-AppxPackage -Path $bundlePath -ForceApplicationShutdown
+    $pkg = Get-AppxPackage -Name Eizo
+    if (-not $pkg -or [string]$pkg.Version -ne '0.3.8.0') {
+        throw "Installed package version mismatch: $($pkg.Version)"
+    }
+
+    $packageLocalState = Join-Path $env:LOCALAPPDATA "Packages\$($pkg.PackageFamilyName)\LocalState"
+    $componentsRoot = Join-Path $packageLocalState 'Eizo\Components'
+    Remove-Item -LiteralPath $componentsRoot -Recurse -Force -ErrorAction SilentlyContinue
+
+    $running = Start-EizoAndAssertAlive $pkg
+    $bundledRuntimeLog = Join-Path $componentsRoot 'recognition-runtime.log'
+    if (-not (Test-Path $bundledRuntimeLog)) {
+        throw "Bundled Recognition runtime probe log was not written at $bundledRuntimeLog"
+    }
+    $bundledRuntimeLine = @(Get-Content -LiteralPath $bundledRuntimeLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
+    $bundledAssembly = Join-Path ([string]$pkg.InstallLocation) 'Components\Bundled\Recognition\Eizo.Metadata.Recognition.dll'
+    if ($bundledRuntimeLine -notmatch '\tversion=0\.2\.3\texternal=False\tprobe=' -or
+        $bundledRuntimeLine -notmatch ([regex]::Escape($bundledAssembly))) {
+        throw "Bundled Recognition runtime was not actually invoked from the packaged fallback. Log:`n$bundledRuntimeLine"
+    }
+
+    $bundledMetadataLog = Join-Path $componentsRoot 'metadata-runtime.log'
+    if (-not (Test-Path $bundledMetadataLog)) {
+        throw "Bundled Metadata runtime probe log was not written at $bundledMetadataLog"
+    }
+    $bundledMetadataLine = @(Get-Content -LiteralPath $bundledMetadataLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
+    $bundledCore = Join-Path ([string]$pkg.InstallLocation) 'Components\Bundled\Recognition\Eizo.Metadata.Core.dll'
+    $bundledProviders = Join-Path ([string]$pkg.InstallLocation) 'Components\Bundled\Recognition\Eizo.Metadata.Providers.dll'
+    if ($bundledMetadataLine -notmatch '\tversion=0\.2\.3\texternal=False\tprobe=ok\t' -or
+        $bundledMetadataLine -notmatch ([regex]::Escape($bundledCore)) -or
+        $bundledMetadataLine -notmatch ([regex]::Escape($bundledProviders))) {
+        throw "Bundled Metadata Core/Providers were not actually invoked from the packaged fallback. Log:`n$bundledMetadataLine"
+    }
+
+    $running | Stop-Process -Force -ErrorAction SilentlyContinue
+    Write-Host 'Bundled Metadata 0.2.3 fallback and real Recognition/Core/Providers calls PASS.'
+
+    Write-Host '== Stage published Metadata v0.2.8 externally and simulate restart =='
+    $metadataRoot = Join-Path $componentsRoot 'Recognition'
+    $metadataVersionRoot = Join-Path $metadataRoot 'versions\0.2.8'
+    Remove-Item -LiteralPath $metadataRoot -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path $metadataVersionRoot | Out-Null
+    $metadataZip = Join-Path $runnerTemp 'Eizo.Recognition.Runtime-v0.2.8-x64.zip'
+    Invoke-WebRequest -Uri 'https://github.com/KiYouJyo/Eizo.Metadata/releases/download/v0.2.8/Eizo.Recognition.Runtime-v0.2.8-x64.zip' -OutFile $metadataZip -UseBasicParsing
+    $metadataExpected = '829534cc8444fc74061aaa87e44f129e72f91857a801341a59d3eb8dc696d0c9'
+    $metadataActual = (Get-FileHash -LiteralPath $metadataZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($metadataActual -ne $metadataExpected) { throw "Published Metadata v0.2.8 digest mismatch: $metadataActual" }
+    Expand-Archive -LiteralPath $metadataZip -DestinationPath $metadataVersionRoot -Force
+    if (-not (Test-Path (Join-Path $metadataVersionRoot 'eizo-recognition-release.json'))) { throw 'Metadata manifest is missing.' }
+    foreach ($name in $metadataAssemblies) {
+        if (-not (Test-Path (Join-Path $metadataVersionRoot "bin\$name"))) {
+            throw "Metadata v0.2.8 module is missing: $name"
+        }
+    }
+    '{"Version":"0.2.8"}' | Set-Content -LiteralPath (Join-Path $metadataRoot 'pending.json') -Encoding utf8NoBOM
+
+    $running = Start-EizoAndAssertAlive $pkg
+    $activePath = Join-Path $metadataRoot 'active.json'
+    $pendingPath = Join-Path $metadataRoot 'pending.json'
+    if (-not (Test-Path $activePath)) { throw 'Metadata active.json was not promoted on restart.' }
+    $active = Get-Content -LiteralPath $activePath -Raw | ConvertFrom-Json
+    if ([string]$active.Version -ne '0.2.8') { throw "Unexpected active Metadata version: $($active.Version)" }
+    if (Test-Path $pendingPath) { throw 'Metadata pending.json still exists after activation.' }
+    $activationLog = Join-Path $componentsRoot 'activation.log'
+    if (-not (Test-Path $activationLog)) { throw 'Component activation diagnostics log was not written.' }
+    $log = Get-Content -LiteralPath $activationLog -Raw
+    $metadataActivationLine = @(
+        Get-Content -LiteralPath $activationLog |
+        Where-Object {
+            $_ -match 'Metadata' -and
+            $_ -match 'current=0\.2\.8' -and
+            $_ -match 'bundled=0\.2\.3' -and
+            $_ -match 'external=True'
+        }
+    ) | Select-Object -Last 1
+    if (-not $metadataActivationLine) {
+        throw "Metadata external activation was not recorded. Log:`n$log"
+    }
+
+    $runtimeLog = Join-Path $componentsRoot 'recognition-runtime.log'
+    if (-not (Test-Path $runtimeLog)) { throw 'Recognition runtime probe log was not written.' }
+    $runtimeLine = @(Get-Content -LiteralPath $runtimeLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
+    $externalAssembly = Join-Path $metadataVersionRoot 'bin\Eizo.Metadata.Recognition.dll'
+    if ($runtimeLine -notmatch '\tversion=0\.2\.8\texternal=True\tprobe=' -or
+        $runtimeLine -notmatch ([regex]::Escape($externalAssembly))) {
+        throw "Metadata v0.2.8 state was promoted but the external Recognition runtime was not actually invoked. Log:`n$runtimeLine"
+    }
+
+    $metadataRuntimeLog = Join-Path $componentsRoot 'metadata-runtime.log'
+    if (-not (Test-Path $metadataRuntimeLog)) {
+        throw 'Metadata Core/Providers runtime probe log was not written.'
+    }
+    $metadataRuntimeLine = @(Get-Content -LiteralPath $metadataRuntimeLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
+    $externalCore = Join-Path $metadataVersionRoot 'bin\Eizo.Metadata.Core.dll'
+    $externalProviders = Join-Path $metadataVersionRoot 'bin\Eizo.Metadata.Providers.dll'
+    if ($metadataRuntimeLine -notmatch '\tversion=0\.2\.8\texternal=True\tprobe=ok\t' -or
+        $metadataRuntimeLine -notmatch ([regex]::Escape($externalCore)) -or
+        $metadataRuntimeLine -notmatch ([regex]::Escape($externalProviders))) {
+        throw "Metadata v0.2.8 state was promoted but external Core/Providers were not actually invoked. Log:`n$metadataRuntimeLine"
+    }
+
+    $running | Stop-Process -Force -ErrorAction SilentlyContinue
+    Write-Host 'Metadata v0.2.8 external restart activation and real Recognition/Core/Providers calls PASS.'
+
+    Write-Host '== Build one-click acceptance assets =='
+    Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $componentsRoot -Recurse -Force -ErrorAction SilentlyContinue
+    & ./packaging/New-GitHubOneClickInstallerPackage.ps1 -SignedBundlePath $bundlePath -PublicCertificatePath $cer -OutputDirectory $oneClickStaging -DisplayVersion '0.3.8' -PackageVersion '0.3.8.0'
+    $packageRoot = Join-Path $oneClickStaging 'Eizo-v0.3.8-x64-one-click'
+    & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $packageRoot
+    $oneClickZip = Join-Path $assets 'Eizo-v0.3.8-x64-one-click.zip'
+    Compress-Archive -LiteralPath $packageRoot -DestinationPath $oneClickZip -CompressionLevel Optimal
+
+    $sumLines = foreach ($file in @($bundlePath, $oneClickZip)) {
+        $item = Get-Item -LiteralPath $file
+        "{0}  {1}" -f (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant(), $item.Name
+    }
+    $sumPath = Join-Path $assets 'SHA256SUMS.txt'
+    Set-Content -LiteralPath $sumPath -Value $sumLines -Encoding ascii
+    Get-Content -LiteralPath $sumPath
+    Write-Host "Eizo 0.3.8 acceptance PASS. Assets=$assets"
+}
+finally {
+    Pop-Location
+}

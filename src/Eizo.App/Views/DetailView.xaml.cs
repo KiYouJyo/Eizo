@@ -25,8 +25,11 @@ public sealed partial class DetailView : UserControl
         NativeTitleText.Text = title;
         MetaText.Text = string.Empty;
         OverviewText.Text = T("Detail_Overview");
+        ReleaseStatText.Text = "-";
+        EpisodeStatText.Text = L("2 集", "2 話", "2 episodes");
+        SourceStatText.Text = L("示例", "サンプル", "Sample");
 
-        EpisodeList.ItemsSource = new EpisodeItemModel[]
+        EpisodeList.ItemsSource = new EpisodeDisplayItemModel[]
         {
             new(
                 "18",
@@ -76,7 +79,9 @@ public sealed partial class DetailView : UserControl
     {
         PlayButton.Content = T("Common_Continue");
         FavoriteButton.Content = T("Common_Favorite");
-        EpisodesTitle.Text = T("Media_Episodes");
+        EpisodesTitle.Text = _subject?.IsMovieSubject == true
+            ? L("影片", "作品", "Films")
+            : T("Media_Episodes");
         InfoTitle.Text = L("作品信息", "作品情報", "Title information");
         ExternalIdsTitle.Text = L("外部 ID", "外部 ID", "External IDs");
     }
@@ -103,6 +108,7 @@ public sealed partial class DetailView : UserControl
             : metadata!.Overview;
 
         ApplyPoster(metadata?.PosterUrl);
+        ApplyBackdrop(metadata?.BackdropUrl);
 
         var provider = metadata?.Provider ?? "-";
         var subjectId = metadata?.ProviderSubjectId ?? "-";
@@ -112,6 +118,42 @@ public sealed partial class DetailView : UserControl
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.Ordinal)
             .Count();
+        var hasLocal = _subject.Items.Any(static item =>
+            item.Location?.Kind == MediaLocationKind.LocalFile);
+        var hasRemote = _subject.Items.Any(static item =>
+            item.Location?.Kind == MediaLocationKind.RemoteUri);
+        var sourceKind = (hasLocal, hasRemote) switch
+        {
+            (true, true) => L("本地 + 网盘", "ローカル + リモート", "Local + remote"),
+            (true, false) => L("本地", "ローカル", "Local"),
+            (false, true) => L("网盘", "リモート", "Remote"),
+            _ => L("未知来源", "不明なソース", "Unknown source"),
+        };
+
+        var releaseYear = metadata?.ReleaseDate is { Length: > 0 } releaseText &&
+                          DateOnly.TryParse(releaseText, out var releaseDate)
+            ? releaseDate.Year.ToString(CultureInfo.CurrentCulture)
+            : _subject.Items
+                .Select(static item => item.Recognition?.Year)
+                .FirstOrDefault(static year => year is not null)?
+                .ToString() ?? "-";
+
+        ReleaseStatText.Text = releaseYear;
+        EpisodeStatText.Text = _subject.IsMovieSubject
+            ? L(
+                $"{_subject.EpisodeCount} 部",
+                $"{_subject.EpisodeCount} 作品",
+                $"{_subject.EpisodeCount} films")
+            : L(
+                $"{_subject.EpisodeCount} 集",
+                $"{_subject.EpisodeCount} 話",
+                $"{_subject.EpisodeCount} episodes");
+        SourceStatText.Text = sourceCount > 0
+            ? L(
+                $"{sourceKind} · {sourceCount}",
+                $"{sourceKind} · {sourceCount}",
+                $"{sourceKind} · {sourceCount}")
+            : sourceKind;
 
         InfoText.Text = string.Join(
             Environment.NewLine,
@@ -119,7 +161,9 @@ public sealed partial class DetailView : UserControl
                 $"{L("数据来源", "データ提供元", "Provider")}: {provider}",
                 $"{L("作品 ID", "作品 ID", "Subject ID")}: {subjectId}",
                 $"{L("发布日期", "公開日", "Release date")}: {release}",
-                $"{L("本地集数", "ローカル話数", "Local episodes")}: {_subject.EpisodeCount}",
+                _subject.IsMovieSubject
+                    ? $"{L("本地影片", "ローカル作品", "Local films")}: {_subject.EpisodeCount}"
+                    : $"{L("本地集数", "ローカル話数", "Local episodes")}: {_subject.EpisodeCount}",
                 $"{L("媒体来源", "メディアソース", "Media sources")}: {sourceCount}",
                 $"{L("聚合依据", "グループ基準", "Grouping basis")}: {_subject.GroupingBasis}",
             ]);
@@ -132,40 +176,64 @@ public sealed partial class DetailView : UserControl
                     .Select(static pair => $"{pair.Key}: {pair.Value}"))
             : "-";
 
-        var seasons = _subject.SeasonNumbers
-            .Select(season => new SeasonOption(
-                season,
-                season == 0
-                    ? L("特别篇", "スペシャル", "Specials")
-                    : $"Season {season}"))
-            .ToArray();
+        if (_subject.IsMovieSubject)
+        {
+            SeasonComboBox.ItemsSource = Array.Empty<SeasonOption>();
+            SeasonComboBox.SelectedIndex = -1;
+            SeasonComboBox.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            var seasons = _subject.SeasonNumbers
+                .Select(season => new SeasonOption(
+                    season,
+                    season == 0
+                        ? L("特别篇", "スペシャル", "Specials")
+                        : $"Season {season}"))
+                .ToArray();
 
-        SeasonComboBox.ItemsSource = seasons;
-        SeasonComboBox.SelectedIndex = seasons.Length > 0 ? 0 : -1;
+            SeasonComboBox.ItemsSource = seasons;
+            SeasonComboBox.SelectedIndex = seasons.Length > 0 ? 0 : -1;
+            SeasonComboBox.Visibility = Visibility.Visible;
+        }
 
         RebuildEpisodeList();
     }
 
     private void ApplyPoster(string? posterUrl)
     {
-        PosterImage.Source = null;
-        PosterPlaceholder.Visibility = Visibility.Visible;
+        PosterImage.Source = CreateRemoteImage(posterUrl, 480);
+        PosterPlaceholder.Visibility = PosterImage.Source is null
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
 
-        if (string.IsNullOrWhiteSpace(posterUrl) ||
-            !Uri.TryCreate(posterUrl, UriKind.Absolute, out var uri))
+    private void ApplyBackdrop(string? backdropUrl) =>
+        BackdropImage.Source = CreateRemoteImage(backdropUrl, 1400);
+
+    private static BitmapImage? CreateRemoteImage(
+        string? url,
+        int decodePixelWidth)
+    {
+        if (string.IsNullOrWhiteSpace(url) ||
+            !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+             !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
         {
-            return;
+            return null;
         }
 
         try
         {
-            PosterImage.Source = new BitmapImage(uri);
-            PosterPlaceholder.Visibility = Visibility.Collapsed;
+            return new BitmapImage
+            {
+                UriSource = uri,
+                DecodePixelWidth = decodePixelWidth,
+            };
         }
-        catch (Exception)
+        catch
         {
-            PosterImage.Source = null;
-            PosterPlaceholder.Visibility = Visibility.Visible;
+            return null;
         }
     }
 
@@ -186,9 +254,10 @@ public sealed partial class DetailView : UserControl
                 ? option.Number
                 : _subject.SeasonNumbers.FirstOrDefault();
 
-        var episodes = _subject.Episodes
-            .Where(episode =>
-                (episode.SeasonNumber ?? 1) == selectedSeason)
+        var episodes = (_subject.IsMovieSubject
+                ? _subject.Episodes
+                : _subject.Episodes.Where(episode =>
+                    (episode.SeasonNumber ?? 1) == selectedSeason))
             .Select(CreateEpisodeItem)
             .ToArray();
 
@@ -198,7 +267,7 @@ public sealed partial class DetailView : UserControl
             $"{episodes.Length} / {_subject.EpisodeCount}");
     }
 
-    private EpisodeItemModel CreateEpisodeItem(
+    private EpisodeDisplayItemModel CreateEpisodeItem(
         CatalogEpisodeModel episode)
     {
         var number = episode.EpisodeNumber is { } value
@@ -219,14 +288,17 @@ public sealed partial class DetailView : UserControl
                 _ => string.Empty,
             };
 
-        return new EpisodeItemModel(
+        return new EpisodeDisplayItemModel(
             number,
             episode.Title,
             episode.NativeTitle,
             string.Empty,
             sourceStatus,
             0,
-            episode.PrimaryItem);
+            episode.PrimaryItem,
+            CreateRemoteImage(
+                episode.PrimaryItem.Metadata?.EpisodeThumbnailUrl,
+                320));
     }
 
     private static string FormatEpisodeNumber(decimal value) =>
@@ -238,7 +310,7 @@ public sealed partial class DetailView : UserControl
         object sender,
         ItemClickEventArgs e)
     {
-        if (e.ClickedItem is EpisodeItemModel
+        if (e.ClickedItem is EpisodeDisplayItemModel
             {
                 MediaItem: { } item
             })

@@ -24,6 +24,18 @@ public sealed class MediaCatalogStore
 
     private static readonly MediaRecognitionService RecognitionService = new();
 
+    private static readonly TimeSpan[] MetadataTransportRetryDelays =
+    [
+        TimeSpan.FromMilliseconds(750),
+        TimeSpan.FromSeconds(2),
+    ];
+
+    private static readonly TimeSpan MetadataTransportCooldownBase =
+        TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan MetadataTransportCooldownMaximum =
+        TimeSpan.FromSeconds(30);
+    private const int MetadataTransportFailuresBeforeCooldown = 3;
+
     private readonly object _sync = new();
     private readonly SemaphoreSlim _recognitionRefreshGate = new(1, 1);
     private readonly List<CatalogMediaItemModel> _items;
@@ -105,6 +117,12 @@ public sealed class MediaCatalogStore
                                 : null,
                             Meta = BuildRecognitionMeta(recognition),
                             Recognition = recognition,
+                            // Metadata is provenance-bound to the Recognition
+                            // snapshot that produced its provider search request.
+                            // Once Recognition is refreshed, keeping the old
+                            // Metadata snapshot would expose a known-invalid
+                            // runtime pairing until the next enrichment pass.
+                            Metadata = null,
                         };
                     }
 
@@ -321,6 +339,14 @@ public sealed class MediaCatalogStore
     {
         if (string.IsNullOrWhiteSpace(sourceId))
             return 0;
+
+        // The standalone scrape action does not rediscover media files, so it
+        // must explicitly refresh persisted Recognition snapshots before
+        // Metadata consumes them. Otherwise a component update can run the
+        // current Metadata runtime against Recognition output from an older
+        // runtime (for example Metadata 0.2.5 + Recognition snapshot 0.2.3).
+        await EnsureRecognitionRuntimeCurrentAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         CatalogMediaItemModel[] current;
         lock (_sync)
@@ -561,8 +587,7 @@ public sealed class MediaCatalogStore
         var unresolved = 0;
         var errors = 0;
         var consecutiveTransportErrors = 0;
-        var providerSuspended = false;
-        string? providerSuspendedReason = null;
+        var cooldownLevel = 0;
 
         ReportMetadataProgress();
 
@@ -570,40 +595,23 @@ public sealed class MediaCatalogStore
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var recognition = entry.Item.Recognition!;
-            MediaMetadataSnapshot? metadata;
+            if (consecutiveTransportErrors >=
+                MetadataTransportFailuresBeforeCooldown)
+            {
+                await Task.Delay(
+                        MetadataTransportCooldown(cooldownLevel),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                consecutiveTransportErrors = 0;
+                cooldownLevel++;
+            }
 
-            if (providerSuspended)
-            {
-                metadata = CreateMetadataFailureSnapshot(
+            var recognition = entry.Item.Recognition!;
+            var metadata = await EnrichMetadataWithTransportRetryAsync(
+                    metadataService,
                     recognition,
-                    "ProviderSuspended",
-                    providerSuspendedReason ??
-                    "Metadata provider requests were suspended after repeated transport failures.");
-            }
-            else
-            {
-                try
-                {
-                    metadata = await metadataService
-                        .EnrichAsync(
-                            recognition,
-                            cancellationToken)
-                        .ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                    when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception exception)
-                {
-                    metadata = CreateMetadataFailureSnapshot(
-                        recognition,
-                        exception.GetType().Name,
-                        exception.Message);
-                }
-            }
+                    cancellationToken)
+                .ConfigureAwait(false);
 
             if (metadata is not null)
             {
@@ -628,20 +636,14 @@ public sealed class MediaCatalogStore
                         break;
                 }
 
-                if (!providerSuspended &&
-                    IsTransportMetadataFailure(metadata))
+                if (IsTransportMetadataFailure(metadata))
                 {
                     consecutiveTransportErrors++;
-                    if (consecutiveTransportErrors >= 3)
-                    {
-                        providerSuspended = true;
-                        providerSuspendedReason = metadata.Errors
-                            .FirstOrDefault()?.Message;
-                    }
                 }
-                else if (metadata.Status != MediaMetadataStatus.Error)
+                else
                 {
                     consecutiveTransportErrors = 0;
+                    cooldownLevel = 0;
                 }
             }
             else
@@ -670,6 +672,64 @@ public sealed class MediaCatalogStore
                     MetadataErrors: errors));
 
         return processed;
+    }
+
+    private static async Task<MediaMetadataSnapshot?> EnrichMetadataWithTransportRetryAsync(
+        MediaMetadataService metadataService,
+        MediaRecognitionSnapshot recognition,
+        CancellationToken cancellationToken)
+    {
+        MediaMetadataSnapshot? last = null;
+
+        for (var attempt = 0;
+             attempt <= MetadataTransportRetryDelays.Length;
+             attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                last = await metadataService
+                    .EnrichAsync(recognition, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                last = CreateMetadataFailureSnapshot(
+                    recognition,
+                    exception.GetType().Name,
+                    exception.Message);
+            }
+
+            if (last is null ||
+                !IsTransportMetadataFailure(last) ||
+                attempt == MetadataTransportRetryDelays.Length)
+            {
+                return last;
+            }
+
+            await Task.Delay(
+                    MetadataTransportRetryDelays[attempt],
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return last;
+    }
+
+    private static TimeSpan MetadataTransportCooldown(int cooldownLevel)
+    {
+        var multiplier = 1 << Math.Min(Math.Max(0, cooldownLevel), 3);
+        var milliseconds = Math.Min(
+            MetadataTransportCooldownMaximum.TotalMilliseconds,
+            MetadataTransportCooldownBase.TotalMilliseconds * multiplier);
+
+        return TimeSpan.FromMilliseconds(milliseconds);
     }
 
     private static MediaMetadataSnapshot CreateMetadataFailureSnapshot(
@@ -715,6 +775,7 @@ public sealed class MediaCatalogStore
 
     private static bool IsTransportMetadataFailure(
         MediaMetadataSnapshot metadata) =>
+        metadata.Status != MediaMetadataStatus.Resolved &&
         metadata.Errors.Any(static error =>
             string.Equals(
                 error.ErrorType,

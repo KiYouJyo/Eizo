@@ -8,7 +8,7 @@ namespace Eizo.MetadataIntegration;
 
 public sealed record MediaMetadataServiceOptions(
     bool EnableBangumi = true,
-    string BangumiUserAgent = "KiYouJyo/Eizo/0.3.7 (https://github.com/KiYouJyo/Eizo)",
+    string BangumiUserAgent = "KiYouJyo/Eizo/0.3.9 (https://github.com/KiYouJyo/Eizo)",
     string PreferredLanguage = "zh-CN",
     string? TmdbReadAccessToken = null,
     string? CacheDirectory = null);
@@ -35,12 +35,20 @@ public sealed class MediaMetadataService
             ? "zh-CN"
             : options.PreferredLanguage;
 
-        var cacheRoot = string.IsNullOrWhiteSpace(options.CacheDirectory)
+        var cacheBase = string.IsNullOrWhiteSpace(options.CacheDirectory)
             ? Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Eizo",
                 "MetadataCache")
             : Path.GetFullPath(options.CacheDirectory);
+
+        // Provider cache payloads serialize Metadata runtime contracts. Never
+        // reuse them across runtime versions: older Candidate/Subject JSON can
+        // deserialize successfully while silently defaulting newly added
+        // fields (for example ContentKind) to Unknown.
+        var cacheRoot = Path.Combine(
+            cacheBase,
+            $"runtime-{RuntimeVersion}");
 
         var fileCache = new Core.FileMetadataCache(cacheRoot);
         var memoryCache = new Core.MemoryMetadataCache();
@@ -317,6 +325,11 @@ public sealed class MediaMetadataService
         return snapshot with
         {
             ResolutionReason = ResolutionReason(resolution, subject),
+            ContentKind =
+                ReadOptionalPropertyName(subject, "ContentKind") ??
+                ReadOptionalPropertyName(
+                    resolution.Best?.Candidate,
+                    "ContentKind"),
             SearchTitles = providerRequest.Titles.ToList(),
             CandidateCount = resolution.Candidates.Count,
             AutoResolveThreshold = AutoResolveThreshold,
@@ -338,6 +351,28 @@ public sealed class MediaMetadataService
                         candidate.Evidence.ToList()))
                 .ToList(),
         };
+    }
+
+    private static string? ReadOptionalPropertyName(
+        object? source,
+        string propertyName)
+    {
+        if (source is null)
+        {
+            return null;
+        }
+
+        var property = source.GetType().GetProperty(propertyName);
+        if (property is null)
+        {
+            return null;
+        }
+
+        var value = property.GetValue(source)?.ToString();
+        return string.IsNullOrWhiteSpace(value) ||
+               string.Equals(value, "Unknown", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : value;
     }
 
     private static string ResolutionReason(
