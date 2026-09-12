@@ -3,14 +3,14 @@ name: Eizo v0.3.9 provider resilience acceptance
 on:
   push:
     branches:
-      - "codex/eizo-0.3.9-library-visual-cards"
+      - "codex/eizo-0.3.9-provider-resilience-acceptance"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: eizo-v039-library-aggregation-${{ github.ref }}
+  group: eizo-v039-provider-resilience-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
