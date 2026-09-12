@@ -109,6 +109,58 @@ public sealed class MediaLibraryGroupingTests
     }
 
     [Fact]
+    public void DifferentMetadataSubjectsAcrossExplicitSeasonsCollapseIntoSeriesFamily()
+    {
+        var seasonOne = Recognition("进击的巨人", 2013, 1) with
+        {
+            SeasonNumber = 1,
+        };
+        var seasonTwo = Recognition("进击的巨人", 2017, 1) with
+        {
+            SeasonNumber = 2,
+        };
+        var seasonThree = Recognition("进击的巨人", 2018, 1) with
+        {
+            SeasonNumber = 3,
+        };
+
+        var assignments = MediaLibraryGrouping.AssignSubjectIdentities(
+        [
+            new(
+                "s1",
+                seasonOne,
+                Metadata("bangumi", "55770", "进击的巨人")),
+            new(
+                "s2",
+                seasonTwo,
+                Metadata("bangumi", "118335", "进击的巨人 第二季")),
+            new(
+                "s3",
+                seasonThree,
+                Metadata("bangumi", "217300", "进击的巨人 第三季")),
+        ]);
+
+        Assert.Equal(3, assignments.Count);
+        Assert.All(
+            assignments,
+            static assignment =>
+            {
+                Assert.NotNull(assignment.Identity);
+                Assert.Equal(
+                    "recognition-series-family",
+                    assignment.Identity!.Basis);
+                Assert.Equal(
+                    "进击的巨人",
+                    assignment.Identity.TitleHint);
+            });
+
+        Assert.Single(
+            assignments
+                .Select(static assignment => assignment.Identity!.Key)
+                .Distinct(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void NumberedAnimeMoviesCollapseIntoOneFamilyCard()
     {
         var first = Recognition(
