@@ -13,5 +13,7 @@
              Link="SubtitleTextParser.cs" />
     <Compile Include="../../src/Eizo.App/Playback/ExternalSubtitleNameMatcher.cs"
              Link="ExternalSubtitleNameMatcher.cs" />
+    <Compile Include="../../src/Eizo.App/Models/CatalogEpisodeGroupingResolver.cs"
+             Link="CatalogEpisodeGroupingResolver.cs" />
   </ItemGroup>
 </Project>
