@@ -284,23 +284,63 @@ public sealed class WebDavMediaSourceProvider(
                 "The requested WebDAV file is outside the configured media source.");
         }
 
-        using var request = new HttpRequestMessage(
-            HttpMethod.Get,
-            fileUri);
-        using var response = await GetSharedClient(source).SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
+        Exception? lastFailure = null;
 
-        if (!response.IsSuccessStatusCode)
+        for (var attempt = 1;
+             attempt <= MaxDirectoryRequestAttempts;
+             attempt++)
         {
-            throw new MediaSourceException(
-                MapStatusCode(response.StatusCode),
-                $"WebDAV GET failed with {(int)response.StatusCode} {response.ReasonPhrase}.");
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    fileUri);
+                using var response = await GetSharedClient(source).SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadAsByteArrayAsync(
+                        cancellationToken);
+                }
+
+                var failure = new MediaSourceException(
+                    MapStatusCode(response.StatusCode),
+                    $"WebDAV GET failed with {(int)response.StatusCode} {response.ReasonPhrase}.");
+
+                if (!IsTransientStatus(response.StatusCode) ||
+                    attempt == MaxDirectoryRequestAttempts)
+                {
+                    throw failure;
+                }
+
+                lastFailure = failure;
+            }
+            catch (TaskCanceledException exception)
+                when (!cancellationToken.IsCancellationRequested &&
+                      attempt < MaxDirectoryRequestAttempts)
+            {
+                lastFailure = exception;
+            }
+            catch (HttpRequestException exception)
+                when (attempt < MaxDirectoryRequestAttempts)
+            {
+                lastFailure = exception;
+            }
+
+            await Task.Delay(
+                RetryDelay(attempt),
+                cancellationToken);
         }
 
-        return await response.Content.ReadAsByteArrayAsync(
-            cancellationToken);
+        throw new MediaSourceException(
+            "WebDavDownloadFailed",
+            $"WebDAV GET failed after {MaxDirectoryRequestAttempts} attempts.",
+            lastFailure);
     }
 
     private async Task<string> ReadDirectoryXmlWithRetryAsync(
