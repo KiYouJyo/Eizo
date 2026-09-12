@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.3.11",
-    "packageVersion": "0.3.11.0",
+    "version": "0.4.0",
+    "packageVersion": "0.4.0.0",
     "title": {
-      "zh-CN": "媒体库聚合、卡片交互与 Metadata 运行时链修正",
-      "ja-JP": "ライブラリ集約、カード操作表示、Metadata Runtime 経路の修正",
-      "en-US": "Library Aggregation, Card Interaction & Metadata Runtime Pipeline Fixes"
+      "zh-CN": "播放队列、外挂字幕与双字幕",
+      "ja-JP": "再生キュー、外部字幕、デュアル字幕",
+      "en-US": "Playback Queue, External Subtitles & Dual Subtitles"
     }
   },
   "channels": {
