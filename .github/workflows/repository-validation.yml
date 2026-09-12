@@ -20,6 +20,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate release and About-page version contract
+        shell: pwsh
+        run: ./scripts/Test-ReleaseVersionContract.ps1
+
       - name: Validate RESW key parity
         shell: pwsh
         run: ./scripts/Test-Localization.ps1
