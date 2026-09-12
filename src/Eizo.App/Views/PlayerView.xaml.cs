@@ -46,6 +46,8 @@ public sealed partial class PlayerView : UserControl
     private bool _isUpdatingSubtitlePositions;
     private double _primarySubtitleVerticalPosition = 12d;
     private double _secondarySubtitleVerticalPosition = 24d;
+    private double _primarySubtitleBackgroundOpacity = 70d;
+    private double _secondarySubtitleBackgroundOpacity = 70d;
     private bool _pointerWheelHooked;
     private bool _isPreparingForDetach;
     private int _fullscreenGeneration;
@@ -190,9 +192,13 @@ public sealed partial class PlayerView : UserControl
         SubtitleTrackLabel.Text = T("Playback_SubtitleTrack");
         PrimarySubtitlePositionLabel.Text =
             T("Playback_PrimarySubtitlePosition");
+        PrimarySubtitleOpacityLabel.Text =
+            T("Playback_PrimarySubtitleOpacity");
         SecondarySubtitleTrackLabel.Text = T("Playback_SecondarySubtitle");
         SecondarySubtitlePositionLabel.Text =
             T("Playback_SecondarySubtitlePosition");
+        SecondarySubtitleOpacityLabel.Text =
+            T("Playback_SecondarySubtitleOpacity");
         AudioTrackLabel.Text = T("Playback_AudioTrack");
         PlaybackRateFlyoutTitle.Text = T("Playback_Rate");
         VolumeFlyoutTitle.Text = T("Playback_Volume");
@@ -1623,6 +1629,16 @@ public sealed partial class PlayerView : UserControl
                 settings.SecondarySubtitleVerticalPosition,
                 0d,
                 90d);
+        _primarySubtitleBackgroundOpacity =
+            Math.Clamp(
+                settings.PrimarySubtitleBackgroundOpacity,
+                0d,
+                100d);
+        _secondarySubtitleBackgroundOpacity =
+            Math.Clamp(
+                settings.SecondarySubtitleBackgroundOpacity,
+                0d,
+                100d);
 
         _isUpdatingSubtitlePositions = true;
         try
@@ -1631,7 +1647,13 @@ public sealed partial class PlayerView : UserControl
                 _primarySubtitleVerticalPosition;
             SecondarySubtitlePositionSlider.Value =
                 _secondarySubtitleVerticalPosition;
+            PrimarySubtitleOpacitySlider.Value =
+                _primarySubtitleBackgroundOpacity;
+            SecondarySubtitleOpacitySlider.Value =
+                _secondarySubtitleBackgroundOpacity;
             UpdateSubtitlePositionValueText();
+            UpdateSubtitleOpacityValueText();
+            ApplySubtitleBackgroundOpacity();
         }
         finally
         {
@@ -1677,6 +1699,82 @@ public sealed partial class PlayerView : UserControl
                 SecondarySubtitleVerticalPosition =
                     _secondarySubtitleVerticalPosition
             });
+    }
+
+    private void PrimarySubtitleOpacitySlider_ValueChanged(
+        object sender,
+        RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingSubtitlePositions)
+            return;
+
+        _primarySubtitleBackgroundOpacity =
+            Math.Clamp(e.NewValue, 0d, 100d);
+        UpdateSubtitleOpacityValueText();
+        ApplySubtitleBackgroundOpacity();
+
+        AppSettingsStore.Update(settings =>
+            settings with
+            {
+                PrimarySubtitleBackgroundOpacity =
+                    _primarySubtitleBackgroundOpacity
+            });
+    }
+
+    private void SecondarySubtitleOpacitySlider_ValueChanged(
+        object sender,
+        RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingSubtitlePositions)
+            return;
+
+        _secondarySubtitleBackgroundOpacity =
+            Math.Clamp(e.NewValue, 0d, 100d);
+        UpdateSubtitleOpacityValueText();
+        ApplySubtitleBackgroundOpacity();
+
+        AppSettingsStore.Update(settings =>
+            settings with
+            {
+                SecondarySubtitleBackgroundOpacity =
+                    _secondarySubtitleBackgroundOpacity
+            });
+    }
+
+    private void UpdateSubtitleOpacityValueText()
+    {
+        if (PrimarySubtitleOpacityValueText is not null)
+        {
+            PrimarySubtitleOpacityValueText.Text =
+                $"{Math.Round(_primarySubtitleBackgroundOpacity):0}%";
+        }
+
+        if (SecondarySubtitleOpacityValueText is not null)
+        {
+            SecondarySubtitleOpacityValueText.Text =
+                $"{Math.Round(_secondarySubtitleBackgroundOpacity):0}%";
+        }
+    }
+
+    private void ApplySubtitleBackgroundOpacity()
+    {
+        if (PrimarySubtitleBackgroundBrush is not null)
+        {
+            PrimarySubtitleBackgroundBrush.Opacity =
+                Math.Clamp(
+                    _primarySubtitleBackgroundOpacity / 100d,
+                    0d,
+                    1d);
+        }
+
+        if (SecondarySubtitleBackgroundBrush is not null)
+        {
+            SecondarySubtitleBackgroundBrush.Opacity =
+                Math.Clamp(
+                    _secondarySubtitleBackgroundOpacity / 100d,
+                    0d,
+                    1d);
+        }
     }
 
     private void UpdateSubtitlePositionValueText()
