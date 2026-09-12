@@ -7,6 +7,14 @@ public sealed record MediaSubjectGroupingIdentity(
     string Key,
     string Basis);
 
+public enum MediaLibraryCategoryHint
+{
+    Unknown = 0,
+    Anime = 1,
+    Series = 2,
+    Movies = 3,
+}
+
 public sealed record MediaLibraryGroupingInput(
     string ItemKey,
     MediaRecognitionSnapshot? Recognition,
@@ -139,7 +147,7 @@ public static class MediaLibraryGrouping
     {
         ArgumentNullException.ThrowIfNull(recognition);
 
-        if (!IsEligibleSeriesRecognition(recognition))
+        if (!IsEligibleRecognition(recognition))
         {
             return null;
         }
@@ -148,16 +156,18 @@ public static class MediaLibraryGrouping
             {
                 IsResolved: true,
                 Provider.Length: > 0,
-                ProviderSubjectId.Length: > 0,
-                SubjectKind: "Series"
-            })
+                ProviderSubjectId.Length: > 0
+            } ||
+            metadata.SubjectKind is not ("Series" or "Movie"))
         {
             return null;
         }
 
         return new MediaSubjectGroupingIdentity(
             $"metadata|{metadata.Provider!.Trim().ToLowerInvariant()}|{metadata.ProviderSubjectId}",
-            "metadata-subject");
+            metadata.SubjectKind == "Movie"
+                ? "metadata-movie-subject"
+                : "metadata-subject");
     }
 
     public static MediaSubjectGroupingIdentity? TryGetRecognitionSubjectIdentity(
@@ -165,7 +175,7 @@ public static class MediaLibraryGrouping
     {
         ArgumentNullException.ThrowIfNull(recognition);
 
-        if (!IsEligibleSeriesRecognition(recognition) ||
+        if (!IsEligibleRecognition(recognition) ||
             recognition.ConfidenceLevel is not ("High" or "Medium") ||
             string.IsNullOrWhiteSpace(recognition.Title))
         {
@@ -179,26 +189,137 @@ public static class MediaLibraryGrouping
         }
 
         var year = recognition.Year?.ToString() ?? "-";
+        var movie = string.Equals(
+            recognition.MediaKind,
+            "Movie",
+            StringComparison.OrdinalIgnoreCase);
+
         return new MediaSubjectGroupingIdentity(
-            $"recognition|{normalizedTitle}|{year}",
-            "recognition-title-year");
+            movie
+                ? $"recognition-movie|{normalizedTitle}|{year}"
+                : $"recognition|{normalizedTitle}|{year}",
+            movie
+                ? "recognition-movie-title-year"
+                : "recognition-title-year");
     }
 
-    private static bool IsEligibleSeriesRecognition(
+    public static MediaLibraryCategoryHint Classify(
+        MediaRecognitionSnapshot? recognition,
+        MediaMetadataSnapshot? metadata)
+    {
+        var contentKind = metadata?.ContentKind;
+        if (string.Equals(
+                contentKind,
+                "Animation",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return MediaLibraryCategoryHint.Anime;
+        }
+
+        if (string.Equals(
+                contentKind,
+                "LiveAction",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Equals(
+                    metadata?.SubjectKind,
+                    "Movie",
+                    StringComparison.OrdinalIgnoreCase)
+                ? MediaLibraryCategoryHint.Movies
+                : MediaLibraryCategoryHint.Series;
+        }
+
+        if (recognition is null ||
+            recognition.Status != MediaRecognitionStatus.Recognized ||
+            recognition.IsAmbiguous)
+        {
+            return MediaLibraryCategoryHint.Unknown;
+        }
+
+        if (LooksLikeAnimeRelease(recognition))
+        {
+            return MediaLibraryCategoryHint.Anime;
+        }
+
+        if (string.Equals(
+                recognition.MediaKind,
+                "Movie",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return MediaLibraryCategoryHint.Movies;
+        }
+
+        if (string.Equals(
+                recognition.MediaKind,
+                "SeriesEpisode",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                recognition.MediaKind,
+                "Special",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return MediaLibraryCategoryHint.Series;
+        }
+
+        return MediaLibraryCategoryHint.Unknown;
+    }
+
+    private static bool IsEligibleRecognition(
         MediaRecognitionSnapshot recognition) =>
         recognition.Status == MediaRecognitionStatus.Recognized &&
         !recognition.IsAmbiguous &&
-        IsSeriesLike(recognition.MediaKind);
+        (string.Equals(
+             recognition.MediaKind,
+             "SeriesEpisode",
+             StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(
+             recognition.MediaKind,
+             "Special",
+             StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(
+             recognition.MediaKind,
+             "Movie",
+             StringComparison.OrdinalIgnoreCase));
 
-    private static bool IsSeriesLike(string mediaKind) =>
-        string.Equals(
-            mediaKind,
-            "SeriesEpisode",
-            StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(
-            mediaKind,
-            "Special",
-            StringComparison.OrdinalIgnoreCase);
+    private static bool LooksLikeAnimeRelease(
+        MediaRecognitionSnapshot recognition)
+    {
+        if (recognition.SpecialKind is
+            "Ova" or "Oad" or "NcOp" or "NcEd")
+        {
+            return true;
+        }
+
+        var value = string.Join(
+            " ",
+            recognition.Title ?? string.Empty,
+            recognition.LogicalPath);
+
+        string[] markers =
+        [
+            "VCB-STUDIO",
+            "DBD-RAWS",
+            "ANIME",
+            "BDRIP",
+            "NCOP",
+            "NCED",
+            "OVA",
+            "OAD",
+            "劇場版",
+            "剧场版",
+            "映画",
+            "ANIPLEX",
+        ];
+
+        var normalized = value
+            .Normalize(NormalizationForm.FormKC)
+            .ToUpperInvariant();
+
+        return markers.Any(marker =>
+            normalized.Contains(
+                marker,
+                StringComparison.OrdinalIgnoreCase));
+    }
 
     private static string NormalizeTitle(string value)
     {
