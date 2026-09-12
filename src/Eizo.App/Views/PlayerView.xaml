@@ -44,23 +44,41 @@
                                HorizontalAlignment="Stretch"
                                VerticalAlignment="Stretch" />
 
-        <Border x:Name="SecondarySubtitleOverlay"
-                MaxWidth="1120"
-                Margin="36,0,36,64"
-                Padding="14,7"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Bottom"
-                Background="#B0000000"
-                CornerRadius="6"
-                IsHitTestVisible="False"
-                Visibility="Collapsed">
-          <TextBlock x:Name="SecondarySubtitleText"
-                     Foreground="White"
-                     FontSize="20"
-                     FontWeight="SemiBold"
-                     TextAlignment="Center"
-                     TextWrapping="WrapWholeWords" />
-        </Border>
+        <StackPanel x:Name="SubtitleOverlayStack"
+                    MaxWidth="1120"
+                    Margin="36,0,36,48"
+                    Spacing="8"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    IsHitTestVisible="False">
+          <Border x:Name="SecondarySubtitleOverlay"
+                  Padding="14,7"
+                  HorizontalAlignment="Center"
+                  Background="#B0000000"
+                  CornerRadius="6"
+                  Visibility="Collapsed">
+            <TextBlock x:Name="SecondarySubtitleText"
+                       Foreground="White"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       TextAlignment="Center"
+                       TextWrapping="WrapWholeWords" />
+          </Border>
+
+          <Border x:Name="PrimarySubtitleOverlay"
+                  Padding="14,7"
+                  HorizontalAlignment="Center"
+                  Background="#B0000000"
+                  CornerRadius="6"
+                  Visibility="Collapsed">
+            <TextBlock x:Name="PrimarySubtitleText"
+                       Foreground="White"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       TextAlignment="Center"
+                       TextWrapping="WrapWholeWords" />
+          </Border>
+        </StackPanel>
 
         <Border x:Name="PlaybackStatusPanel"
                 MinWidth="210"
