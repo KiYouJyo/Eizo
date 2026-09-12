@@ -3,7 +3,7 @@ name: Eizo v0.3.11 library UI and season-family acceptance
 on:
   push:
     branches:
-      - "codex/eizo-0.3.11-library-classification-cards"
+      - "codex/eizo-0.3.11-library-ui-season-family"
   workflow_dispatch:
 
 permissions:
