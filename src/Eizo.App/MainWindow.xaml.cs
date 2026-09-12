@@ -467,9 +467,15 @@ public sealed partial class MainWindow : Window
         UpdateTabIdentity(state);
     }
 
+    private Task OpenCatalogMediaAsync(
+        CatalogMediaItemModel item) =>
+        OpenCatalogMediaAsync(
+            item,
+            subject: null);
+
     private async Task OpenCatalogMediaAsync(
         CatalogMediaItemModel item,
-        CatalogSubjectModel? subject = null)
+        CatalogSubjectModel? subject)
     {
         if (item.Location is not { } location)
             return;
