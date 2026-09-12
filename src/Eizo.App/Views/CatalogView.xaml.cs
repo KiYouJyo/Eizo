@@ -512,7 +512,7 @@ public sealed partial class CatalogView : UserControl
                     break;
             }
 
-            if (NeedsReview(recognition))
+            if (NeedsReview(recognition, item.Metadata))
                 review++;
         }
 
@@ -528,7 +528,7 @@ public sealed partial class CatalogView : UserControl
     {
         var builder = new StringBuilder();
         builder.AppendLine(
-            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataResolutionReason,MetadataSearchTitles,MetadataCandidateCount,MetadataAutoResolveThreshold,MetadataMinimumLead,MetadataBestScore,MetadataSecondScore,MetadataLead,MetadataTopCandidates,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
+            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataNeedsReview,MetadataFailureStage,MetadataFailureReason,MetadataResolutionReason,MetadataSearchTitles,MetadataCandidateCount,MetadataAutoResolveThreshold,MetadataMinimumLead,MetadataBestScore,MetadataSecondScore,MetadataLead,MetadataTopCandidates,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
 
         foreach (var item in items)
         {
@@ -538,7 +538,9 @@ public sealed partial class CatalogView : UserControl
                 ? sourceLabel
                 : string.Empty;
 
-            var reviewPriority = ReviewPriority(recognition);
+            var metadata = item.Metadata;
+            var reviewPriority = ReviewPriority(recognition, metadata);
+            var reviewReason = ReviewReason(recognition, metadata);
             var needsReview = !string.IsNullOrEmpty(reviewPriority);
             var titleCandidates = recognition is null
                 ? string.Empty
@@ -553,7 +555,6 @@ public sealed partial class CatalogView : UserControl
                     recognition.Evidence.Select(itemEvidence =>
                         $"{itemEvidence.Code}={itemEvidence.Value ?? "-"} [{itemEvidence.Weight:0.000}]"));
 
-            var metadata = item.Metadata;
             var metadataLocalizedTitles = metadata is null
                 ? string.Empty
                 : string.Join(
@@ -593,7 +594,7 @@ public sealed partial class CatalogView : UserControl
                 builder,
                 needsReview ? "true" : "false",
                 reviewPriority,
-                ReviewReason(recognition),
+                reviewReason,
                 recognition?.RuntimeVersion ?? string.Empty,
                 source,
                 item.SourceTitle,
@@ -624,6 +625,9 @@ public sealed partial class CatalogView : UserControl
                     ? string.Empty
                     : metadata.MatchesRecognitionRuntime(recognition.RuntimeVersion).ToString(),
                 metadataStatus,
+                metadata?.NeedsReview.ToString() ?? string.Empty,
+                metadata?.FailureStage ?? string.Empty,
+                metadata?.FailureReason ?? string.Empty,
                 metadata?.ResolutionReason ?? string.Empty,
                 metadataSearchTitles,
                 metadata?.CandidateCount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
@@ -693,10 +697,25 @@ public sealed partial class CatalogView : UserControl
         return $"\"{value.Replace("\"", "\"\"")}\"";
     }
 
-    private static bool NeedsReview(MediaRecognitionSnapshot recognition) =>
-        !string.IsNullOrEmpty(ReviewPriority(recognition));
+    private static bool NeedsReview(
+        MediaRecognitionSnapshot? recognition,
+        Eizo.MetadataIntegration.MediaMetadataSnapshot? metadata) =>
+        !string.IsNullOrEmpty(ReviewPriority(recognition, metadata));
 
-    private static string ReviewPriority(MediaRecognitionSnapshot? recognition)
+    private static string ReviewPriority(
+        MediaRecognitionSnapshot? recognition,
+        Eizo.MetadataIntegration.MediaMetadataSnapshot? metadata)
+    {
+        var recognitionPriority = RecognitionReviewPriority(recognition);
+        var metadataPriority = MetadataReviewPriority(recognition, metadata);
+
+        return PriorityRank(metadataPriority) > PriorityRank(recognitionPriority)
+            ? metadataPriority
+            : recognitionPriority;
+    }
+
+    private static string RecognitionReviewPriority(
+        MediaRecognitionSnapshot? recognition)
     {
         if (recognition is null)
             return "High";
@@ -721,7 +740,62 @@ public sealed partial class CatalogView : UserControl
         return string.Empty;
     }
 
-    private static string ReviewReason(MediaRecognitionSnapshot? recognition)
+    private static string MetadataReviewPriority(
+        MediaRecognitionSnapshot? recognition,
+        Eizo.MetadataIntegration.MediaMetadataSnapshot? metadata)
+    {
+        if (metadata is null)
+        {
+            if (recognition is not null &&
+                recognition.Status == MediaRecognitionStatus.Recognized &&
+                !recognition.IsAmbiguous &&
+                !string.IsNullOrWhiteSpace(recognition.Title) &&
+                recognition.ConfidenceLevel is "Medium" or "High")
+            {
+                return "High";
+            }
+
+            return string.Empty;
+        }
+
+        if (metadata.Status is Eizo.MetadataIntegration.MediaMetadataStatus.Error or
+            Eizo.MetadataIntegration.MediaMetadataStatus.Unresolved)
+        {
+            return "High";
+        }
+
+        return metadata.NeedsReview
+            ? "Medium"
+            : string.Empty;
+    }
+
+    private static int PriorityRank(string value) =>
+        value switch
+        {
+            "High" => 3,
+            "Medium" => 2,
+            "Low" => 1,
+            _ => 0,
+        };
+
+    private static string ReviewReason(
+        MediaRecognitionSnapshot? recognition,
+        Eizo.MetadataIntegration.MediaMetadataSnapshot? metadata)
+    {
+        var recognitionReason = RecognitionReviewReason(recognition);
+        var metadataReason = MetadataReviewReason(recognition, metadata);
+
+        if (string.IsNullOrWhiteSpace(recognitionReason))
+            return metadataReason;
+
+        if (string.IsNullOrWhiteSpace(metadataReason))
+            return recognitionReason;
+
+        return $"Recognition:{recognitionReason} || Metadata:{metadataReason}";
+    }
+
+    private static string RecognitionReviewReason(
+        MediaRecognitionSnapshot? recognition)
     {
         if (recognition is null)
             return "MissingSnapshot";
@@ -742,6 +816,38 @@ public sealed partial class CatalogView : UserControl
         return string.Empty;
     }
 
+    private static string MetadataReviewReason(
+        MediaRecognitionSnapshot? recognition,
+        Eizo.MetadataIntegration.MediaMetadataSnapshot? metadata)
+    {
+        if (metadata is null)
+        {
+            return recognition is not null &&
+                   recognition.Status == MediaRecognitionStatus.Recognized &&
+                   !recognition.IsAmbiguous &&
+                   !string.IsNullOrWhiteSpace(recognition.Title) &&
+                   recognition.ConfidenceLevel is "Medium" or "High"
+                ? "MissingAfterScan"
+                : string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.FailureReason))
+            return metadata.FailureReason;
+
+        if (!string.IsNullOrWhiteSpace(metadata.ResolutionReason) &&
+            !string.Equals(metadata.ResolutionReason, "Resolved", StringComparison.OrdinalIgnoreCase))
+        {
+            return metadata.ResolutionReason;
+        }
+
+        if (metadata.Status == Eizo.MetadataIntegration.MediaMetadataStatus.Error)
+            return "Error";
+        if (metadata.Status == Eizo.MetadataIntegration.MediaMetadataStatus.Unresolved)
+            return "Unresolved";
+
+        return string.Empty;
+    }
+
     private static string BuildMetadataDetails(
         Eizo.MetadataIntegration.MediaMetadataSnapshot metadata)
     {
@@ -753,6 +859,9 @@ public sealed partial class CatalogView : UserControl
         builder.AppendLine($"Subject kind: {metadata.SubjectKind ?? "-"}");
         builder.AppendLine($"Confidence: {metadata.Confidence:0.000}");
         builder.AppendLine($"Resolution reason: {metadata.ResolutionReason ?? "-"}");
+        builder.AppendLine($"Failure stage: {metadata.FailureStage ?? "-"}");
+        builder.AppendLine($"Failure reason: {metadata.FailureReason ?? "-"}");
+        builder.AppendLine($"Needs review: {metadata.NeedsReview}");
         builder.AppendLine($"Candidates: {metadata.CandidateCount}");
         builder.AppendLine($"Threshold: {metadata.AutoResolveThreshold:0.000}");
         builder.AppendLine($"Minimum lead: {metadata.MinimumLead:0.000}");
