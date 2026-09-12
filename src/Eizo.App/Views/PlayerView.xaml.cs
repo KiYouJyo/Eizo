@@ -1813,6 +1813,11 @@ public sealed partial class PlayerView : UserControl
         SizeChangedEventArgs e) =>
         ApplySubtitlePositions();
 
+    private void SubtitleOverlay_SizeChanged(
+        object sender,
+        SizeChangedEventArgs e) =>
+        ApplySubtitlePositions();
+
     private void PlayerRoot_PointerMoved(object sender, PointerRoutedEventArgs e)
     {
         if (!_isVideoFullscreen)
