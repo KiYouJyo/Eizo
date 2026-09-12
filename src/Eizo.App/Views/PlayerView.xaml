@@ -39,46 +39,45 @@
 
       <Grid x:Name="PlaybackSurfaceHost"
             Grid.Row="1"
-            Background="#080D0E">
+            Background="#080D0E"
+            SizeChanged="PlaybackSurfaceHost_SizeChanged">
         <playback:PlaybackView x:Name="PlaybackSurface"
                                HorizontalAlignment="Stretch"
                                VerticalAlignment="Stretch" />
 
-        <StackPanel x:Name="SubtitleOverlayStack"
-                    MaxWidth="1120"
-                    Margin="36,0,36,48"
-                    Spacing="8"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Bottom"
-                    IsHitTestVisible="False">
-          <Border x:Name="SecondarySubtitleOverlay"
-                  Padding="14,7"
-                  HorizontalAlignment="Center"
-                  Background="#B0000000"
-                  CornerRadius="6"
-                  Visibility="Collapsed">
-            <TextBlock x:Name="SecondarySubtitleText"
-                       Foreground="White"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       TextAlignment="Center"
-                       TextWrapping="WrapWholeWords" />
-          </Border>
+        <Border x:Name="SecondarySubtitleOverlay"
+                Margin="36,0,36,0"
+                Padding="14,7"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Bottom"
+                Background="#B0000000"
+                CornerRadius="6"
+                IsHitTestVisible="False"
+                Visibility="Collapsed">
+          <TextBlock x:Name="SecondarySubtitleText"
+                     Foreground="White"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap" />
+        </Border>
 
-          <Border x:Name="PrimarySubtitleOverlay"
-                  Padding="14,7"
-                  HorizontalAlignment="Center"
-                  Background="#B0000000"
-                  CornerRadius="6"
-                  Visibility="Collapsed">
-            <TextBlock x:Name="PrimarySubtitleText"
-                       Foreground="White"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       TextAlignment="Center"
-                       TextWrapping="WrapWholeWords" />
-          </Border>
-        </StackPanel>
+        <Border x:Name="PrimarySubtitleOverlay"
+                Margin="36,0,36,0"
+                Padding="14,7"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Bottom"
+                Background="#B0000000"
+                CornerRadius="6"
+                IsHitTestVisible="False"
+                Visibility="Collapsed">
+          <TextBlock x:Name="PrimarySubtitleText"
+                     Foreground="White"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap" />
+        </Border>
 
         <Border x:Name="PlaybackStatusPanel"
                 MinWidth="210"
@@ -381,6 +380,22 @@
                     HorizontalAlignment="Stretch"
                     controls:TransientComboBoxTheme.Apply="True"
                     SelectionChanged="SubtitleTrackCombo_SelectionChanged" />
+          <Grid Margin="0,2,0,0"
+                ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="PrimarySubtitlePositionLabel"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+            <TextBlock x:Name="PrimarySubtitlePositionValueText"
+                       Grid.Column="1"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+          </Grid>
+          <Slider x:Name="PrimarySubtitlePositionSlider"
+                  Minimum="0"
+                  Maximum="90"
+                  StepFrequency="1"
+                  ValueChanged="PrimarySubtitlePositionSlider_ValueChanged" />
+
           <TextBlock x:Name="SecondarySubtitleTrackLabel"
                      Margin="0,6,0,0"
                      Style="{StaticResource CardTitleText}" />
@@ -388,6 +403,22 @@
                     HorizontalAlignment="Stretch"
                     controls:TransientComboBoxTheme.Apply="True"
                     SelectionChanged="SecondarySubtitleCombo_SelectionChanged" />
+          <Grid Margin="0,2,0,0"
+                ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="SecondarySubtitlePositionLabel"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+            <TextBlock x:Name="SecondarySubtitlePositionValueText"
+                       Grid.Column="1"
+                       Style="{StaticResource MetadataText}"
+                       VerticalAlignment="Center" />
+          </Grid>
+          <Slider x:Name="SecondarySubtitlePositionSlider"
+                  Minimum="0"
+                  Maximum="90"
+                  StepFrequency="1"
+                  ValueChanged="SecondarySubtitlePositionSlider_ValueChanged" />
+
           <TextBlock x:Name="AudioTrackLabel"
                      Margin="0,6,0,0"
                      Style="{StaticResource CardTitleText}" />
