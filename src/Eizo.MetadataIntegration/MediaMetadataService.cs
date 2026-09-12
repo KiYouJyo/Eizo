@@ -35,12 +35,20 @@ public sealed class MediaMetadataService
             ? "zh-CN"
             : options.PreferredLanguage;
 
-        var cacheRoot = string.IsNullOrWhiteSpace(options.CacheDirectory)
+        var cacheBase = string.IsNullOrWhiteSpace(options.CacheDirectory)
             ? Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Eizo",
                 "MetadataCache")
             : Path.GetFullPath(options.CacheDirectory);
+
+        // Provider cache payloads serialize Metadata runtime contracts. Never
+        // reuse them across runtime versions: older Candidate/Subject JSON can
+        // deserialize successfully while silently defaulting newly added
+        // fields (for example ContentKind) to Unknown.
+        var cacheRoot = Path.Combine(
+            cacheBase,
+            $"runtime-{RuntimeVersion}");
 
         var fileCache = new Core.FileMetadataCache(cacheRoot);
         var memoryCache = new Core.MemoryMetadataCache();
