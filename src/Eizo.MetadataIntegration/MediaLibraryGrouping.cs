@@ -51,6 +51,7 @@ public static class MediaLibraryGrouping
             StringComparer.Ordinal);
         var metadataOwnersByRecognitionKey = new Dictionary<string, HashSet<string>>(
             StringComparer.Ordinal);
+        var seriesFamilyIdentities = BuildSeriesFamilyIdentities(items);
         var movieFamilyIdentities = BuildMovieFamilyIdentities(items);
 
         foreach (var item in items)
@@ -103,6 +104,16 @@ public static class MediaLibraryGrouping
 
         foreach (var item in items)
         {
+            if (seriesFamilyIdentities.TryGetValue(
+                    item.ItemKey,
+                    out var seriesFamilyIdentity))
+            {
+                result.Add(new MediaLibraryGroupingAssignment(
+                    item.ItemKey,
+                    seriesFamilyIdentity));
+                continue;
+            }
+
             if (movieFamilyIdentities.TryGetValue(
                     item.ItemKey,
                     out var movieFamilyIdentity))
@@ -155,6 +166,99 @@ public static class MediaLibraryGrouping
 
         return result;
     }
+
+    private static IReadOnlyDictionary<string, MediaSubjectGroupingIdentity>
+        BuildSeriesFamilyIdentities(
+            IReadOnlyList<MediaLibraryGroupingInput> items)
+    {
+        var candidates = items
+            .Where(static item =>
+                item.Recognition is
+                {
+                    Status: MediaRecognitionStatus.Recognized,
+                    IsAmbiguous: false,
+                    ConfidenceLevel: "High" or "Medium",
+                    Title.Length: > 0,
+                })
+            .Where(static item =>
+                item.Recognition!.MediaKind is
+                    "SeriesEpisode" or "Special")
+            .Select(item => new SeriesFamilyCandidate(
+                item.ItemKey,
+                item.Recognition!.Title!,
+                NormalizeTitle(item.Recognition.Title!),
+                item.Recognition.SeasonNumber))
+            .Where(static item => item.NormalizedTitle.Length >= 3)
+            .ToArray();
+
+        var seeds = candidates
+            .GroupBy(
+                static item => item.NormalizedTitle,
+                StringComparer.Ordinal)
+            .Where(static group =>
+                group
+                    .Select(static item => item.SeasonNumber)
+                    .Where(static season => season is > 0)
+                    .Select(static season => season!.Value)
+                    .Distinct()
+                    .Count() >= 2)
+            .Select(static group =>
+            {
+                var displayTitle = group
+                    .GroupBy(
+                        static item => item.DisplayTitle,
+                        StringComparer.CurrentCultureIgnoreCase)
+                    .OrderByDescending(static titleGroup => titleGroup.Count())
+                    .ThenBy(static titleGroup => titleGroup.Key.Length)
+                    .Select(static titleGroup => titleGroup.Key)
+                    .First();
+
+                return new SeriesFamilySeed(
+                    group.Key,
+                    displayTitle);
+            })
+            .ToDictionary(
+                static seed => seed.NormalizedTitle,
+                StringComparer.Ordinal);
+
+        if (seeds.Count == 0)
+        {
+            return new Dictionary<string, MediaSubjectGroupingIdentity>(
+                StringComparer.Ordinal);
+        }
+
+        var result = new Dictionary<string, MediaSubjectGroupingIdentity>(
+            StringComparer.Ordinal);
+
+        foreach (var candidate in candidates)
+        {
+            if (!seeds.TryGetValue(
+                    candidate.NormalizedTitle,
+                    out var seed))
+            {
+                continue;
+            }
+
+            result[candidate.ItemKey] = new MediaSubjectGroupingIdentity(
+                $"recognition-series-family|{seed.NormalizedTitle}",
+                "recognition-series-family")
+            {
+                TitleHint = seed.DisplayTitle,
+            };
+        }
+
+        return result;
+    }
+
+    private sealed record SeriesFamilyCandidate(
+        string ItemKey,
+        string DisplayTitle,
+        string NormalizedTitle,
+        int? SeasonNumber);
+
+    private sealed record SeriesFamilySeed(
+        string NormalizedTitle,
+        string DisplayTitle);
 
     private static readonly Regex LeadingMovieMarkerRegex = new(
         @"^\s*(?:(?:劇場版|剧场版|映画版|映画)|(?:THE\s+)?MOVIE)\s*[:：._\-–—]?\s*",
