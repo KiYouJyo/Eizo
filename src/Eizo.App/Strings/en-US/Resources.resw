@@ -1148,4 +1148,7 @@
   <data name="Bangumi_TurnstileUnavailable" xml:space="preserve">
     <value>Bangumi has not yet allowed Eizo's Turnstile callback, so write actions are currently unavailable.</value>
   </data>
+  <data name="Bangumi_CommentComposerHint" xml:space="preserve">
+    <value>Type here directly. Publishing requests Bangumi verification; if Eizo's callback is not yet allowlisted, your draft stays in place.</value>
+  </data>
 </root>
