@@ -249,8 +249,9 @@ public sealed partial class BangumiSubjectDetailView : UserControl
                     _subjectId,
                     append ? _commentsOffset : 0,
                     limit: 20,
-                    _account.GetAccessTokenForRequest(),
-                    cancellationToken);
+                    accessToken:
+                        _account.GetAccessTokenForRequest(),
+                    cancellationToken: cancellationToken);
 
             if (!append)
                 _comments.Clear();
@@ -298,8 +299,9 @@ public sealed partial class BangumiSubjectDetailView : UserControl
                     _subjectId,
                     append ? _reviewsOffset : 0,
                     limit: 10,
-                    _account.GetAccessTokenForRequest(),
-                    cancellationToken);
+                    accessToken:
+                        _account.GetAccessTokenForRequest(),
+                    cancellationToken: cancellationToken);
 
             if (!append)
                 _reviews.Clear();
