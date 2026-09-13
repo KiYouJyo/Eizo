@@ -2,7 +2,7 @@
 
 # Eizo v0.4.4
 
-Bangumi 账户连接默认通过浏览器授权。手动 Access Token 输入保留为高级备用登录。
+Bangumi 账户连接统一改为浏览器授权，移除原有的手动 Access Token 登录入口。
 
 - Eizo 打开 Cloudflare OAuth relay，Bangumi 授权后通过 `eizo://bangumi-auth` 返回应用。
 - 仅短时一次性 ticket 出现在协议 URL 中；Access/Refresh Token 经 `/claim` 返回客户端，经 `/v0/me` 验证后保存在 Windows Credential Locker。
