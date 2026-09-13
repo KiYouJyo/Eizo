@@ -29,7 +29,6 @@ $topicXaml = Read-Text 'src/Eizo.App/Views/BangumiTopicDetailView.xaml'
 $communityText = Read-Text 'src/Eizo.App/Models/BangumiCommunityText.cs'
 $animeBlogsView = Read-Text 'src/Eizo.App/Views/BangumiAnimeBlogsView.xaml.cs'
 $animeBlogsXaml = Read-Text 'src/Eizo.App/Views/BangumiAnimeBlogsView.xaml'
-$turnstile = Read-Text 'src/Eizo.App/Views/BangumiTurnstileDialogService.cs'
 $shell = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
 
 foreach ($required in @(
@@ -61,11 +60,6 @@ foreach ($required in @(
     'GetBlogCommentsAsync',
     'GetSubjectTopicAsync',
     'GetChannelBlogsAsync',
-    'CreateBlogEntryAsync',
-    'CreateSubjectTopicAsync',
-    'CreateSubjectCommentAsync',
-    'CreateBlogCommentAsync',
-    'CreateSubjectReplyAsync',
     'LikeSubjectCommentAsync',
     'UnlikeSubjectCommentAsync',
     'LikeSubjectPostAsync',
@@ -107,13 +101,7 @@ foreach ($required in @(
     'SubjectRequested?.Invoke',
     'ReviewRequested?.Invoke',
     'TopicRequested?.Invoke',
-    'PublishCommentButton_Click',
-    'CommentInputBox_TextChanged',
-    'CommentReactionButton_Click',
-    'CreateReviewButton_Click',
-    'PublishReviewButton_Click',
-    'CreateTopicButton_Click',
-    'PublishTopicButton_Click')) {
+    'CommentReactionButton_Click')) {
     if (-not $view.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi subject community UI contract missing: $required"
     }
@@ -133,13 +121,8 @@ foreach ($required in @(
     'GetBlogCommentsAsync',
     'BangumiCommunityText.ToPlainText',
     'https://bgm.tv/blog/',
-    'ReplyButton_Click',
-    'ReplyInputBox_TextChanged',
-    'CommentReplyButton_Click',
-    'CancelReplyTargetButton_Click',
     'RenderContent',
-    'ParseContentBlocks',
-    'CreateBlogCommentAsync')) {
+    'ParseContentBlocks')) {
     if (-not $reviewView.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi review detail contract missing: $required"
     }
@@ -149,33 +132,9 @@ foreach ($required in @(
     'GetSubjectTopicAsync',
     'BangumiCommunityText.ToPlainText',
     'https://bgm.tv/subject/topic/',
-    'ReplyButton_Click',
-    'ReplyInputBox_TextChanged',
-    'CreateSubjectReplyAsync',
     'ReplyReactionButton_Click')) {
     if (-not $topicView.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi topic detail contract missing: $required"
-    }
-}
-
-foreach ($required in @(
-    'ReplyComposerBorder',
-    'ReplyTargetPanel',
-    'ReplyTargetText',
-    'ReplyInputBox',
-    'ReplyButton',
-    'ContentBlocksPanel')) {
-    if (-not $reviewXaml.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Bangumi review inline composer contract missing: $required"
-    }
-}
-
-foreach ($required in @(
-    'ReplyComposerBorder',
-    'ReplyInputBox',
-    'ReplyButton')) {
-    if (-not $topicXaml.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Bangumi topic inline composer contract missing: $required"
     }
 }
 
@@ -199,35 +158,9 @@ foreach ($required in @(
 }
 
 foreach ($required in @(
-    'https://next.bgm.tv/p1/turnstile',
-    'eizo://bangumi-turnstile-callback',
-    'IsAvailableAsync',
-    'AcquireAsync')) {
-    if (-not $turnstile.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Bangumi Turnstile integration contract missing: $required"
-    }
-}
-
-foreach ($required in @(
     'CommentsTab',
     'CommentsFilterCombo',
-    'CommentComposerBorder',
-    'CommentInputBox',
-    'CommentCollectionCombo',
-    'CommentRateBox',
-    'PublishCommentButton',
     'ReviewsTab',
-    'CreateReviewButton',
-    'ReviewComposerBorder',
-    'ReviewTitleBox',
-    'ReviewContentBox',
-    'PublishReviewButton',
-    'TopicsTab',
-    'CreateTopicButton',
-    'TopicComposerBorder',
-    'TopicTitleBox',
-    'TopicContentBox',
-    'PublishTopicButton',
     'TopicsTab',
     'RelatedTab',
     'RecommendationsList',
