@@ -2,7 +2,7 @@
 
 # Eizo v0.4.5
 
-Bangumi 条目页升级为可直接浏览社区内容的桌面入口，本版保持只读，不改动本地媒体库刮削链，也不向 Bangumi 写入收藏、回复或点赞。
+Bangumi 条目页升级为可直接浏览社区内容的桌面入口，本版不改动本地媒体库刮削链；社区 reaction 已支持直接写回 Bangumi，短评与回复编辑器也已接入，但发布动作会在 Bangumi 尚未放行 Eizo Turnstile 回调时自动禁用。
 
 - 新增隔离的 `BangumiCommunityClient` / `BangumiCommunityRepository`，Private API `/p1` 与稳定 Public API `/v0` 分离，降低上游接口变动影响。
 - 条目详情新增短评、长评、讨论、关联四个社区页签。
@@ -15,4 +15,4 @@ Bangumi 条目页升级为可直接浏览社区内容的桌面入口，本版保
 - 单个 Private API 区块失败不会影响现有 Bangumi 基础资料页。
 - 增加中、日、英三语社区界面、解析/客户端单元测试、静态集成契约和真实公网 Community API smoke。
 
-本版暂不提供发短评、发帖、回复、点赞或播放进度写回；这些写操作将在后续版本独立处理。
+播放进度写回仍不在本版范围内。短评与回复的写入链已完成，但是否可用取决于 Bangumi Private API 的 Turnstile 回调白名单；Eizo 不会绕过该限制。
