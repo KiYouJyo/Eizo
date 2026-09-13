@@ -6,6 +6,7 @@ Bangumi subject details now act as a desktop entry point for browsing community 
 
 - Added isolated `BangumiCommunityClient` / `BangumiCommunityRepository` layers so the Private API `/p1` does not contaminate the stable Public API `/v0` path.
 - Added Short Comments, Reviews, Discussions, and Related tabs to Bangumi subject details.
+- Added **Anime Blogs** to the Bangumi hamburger group above Broadcast Calendar, with paged loading from Bangumi's anime channel and in-app full review opening.
 - Short comments show user identity, collection state, rating, update time, and reaction count, with paging and filters for Wish / Completed / Watching / On hold / Dropped.
 - Long reviews now open inside Eizo with full content, author, tags, view/reply counts, comments, and one level of nested replies.
 - Subject discussions now open inside Eizo with the root post, replies, and one level of nested replies.
