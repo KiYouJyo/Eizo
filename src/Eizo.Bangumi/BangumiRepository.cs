@@ -198,7 +198,7 @@ public sealed class BangumiRepository
             cancellationToken);
     }
 
-    internal static int GetSeasonStartMonth(int month)
+    public static int GetSeasonStartMonth(int month)
     {
         if (month is < 1 or > 12)
             throw new ArgumentOutOfRangeException(nameof(month));
@@ -206,7 +206,7 @@ public sealed class BangumiRepository
         return ((month - 1) / 3 * 3) + 1;
     }
 
-    internal static (int Year, int StartMonth) ShiftSeason(
+    public static (int Year, int StartMonth) ShiftSeason(
         int year,
         int startMonth,
         int delta)
