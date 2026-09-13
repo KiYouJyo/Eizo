@@ -252,7 +252,11 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         bool reset,
         CancellationToken cancellationToken)
     {
-        CommentComposerBorder.IsEnabled =
+        CommentInputBox.IsEnabled =
+            _account.IsConnected;
+        CommentCollectionCombo.IsEnabled =
+            _account.IsConnected;
+        CommentRateBox.IsEnabled =
             _account.IsConnected;
         CommentComposerHintText.Text =
             _account.IsConnected
