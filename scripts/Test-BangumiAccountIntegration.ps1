@@ -31,8 +31,7 @@ foreach ($required in @(
     '"v0/me"',
     'Authorization',
     '"Bearer"',
-    '/collections?subject_type=2&type=',
-    'BangumiCollectionType.Doing')) {
+    '/collections?subject_type=2&type=')) {
     if (-not $client.Contains(
             $required,
             [StringComparison]::Ordinal)) {
@@ -43,6 +42,7 @@ foreach ($required in @(
 foreach ($required in @(
     'GetMyselfAsync',
     'GetFollowingAsync',
+    'BangumiCollectionType.Doing',
     'ParseUserProfile',
     'ParseUserCollectionPage')) {
     $haystack = $repository + $parser
