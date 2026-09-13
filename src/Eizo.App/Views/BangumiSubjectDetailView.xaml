@@ -126,7 +126,7 @@
                  Margin="0,2,0,0">
             <PivotItem x:Name="CommentsTab">
               <StackPanel Spacing="10">
-                <Grid ColumnDefinitions="*,Auto,Auto"
+                <Grid ColumnDefinitions="*,Auto"
                       ColumnSpacing="10">
                   <TextBlock x:Name="CommentsStatusText"
                              Style="{StaticResource MetadataText}"
@@ -136,10 +136,42 @@
                             Grid.Column="1"
                             MinWidth="128"
                             SelectionChanged="CommentsFilterCombo_SelectionChanged" />
-                  <Button x:Name="PublishCommentButton"
-                          Grid.Column="2"
-                          Click="PublishCommentButton_Click" />
                 </Grid>
+
+                <Border x:Name="CommentComposerBorder"
+                        Padding="12"
+                        CornerRadius="10"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                  <StackPanel Spacing="10">
+                    <TextBox x:Name="CommentInputBox"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="96"
+                             MaxLength="380"
+                             TextChanged="CommentInputBox_TextChanged" />
+                    <Grid ColumnDefinitions="*,120,Auto"
+                          ColumnSpacing="10">
+                      <ComboBox x:Name="CommentCollectionCombo"
+                                HorizontalAlignment="Stretch" />
+                      <NumberBox x:Name="CommentRateBox"
+                                 Grid.Column="1"
+                                 Minimum="0"
+                                 Maximum="10"
+                                 SpinButtonPlacementMode="Compact"
+                                 Value="0" />
+                      <Button x:Name="PublishCommentButton"
+                              Grid.Column="2"
+                              VerticalAlignment="Bottom"
+                              Click="PublishCommentButton_Click" />
+                    </Grid>
+                    <TextBlock x:Name="CommentComposerHintText"
+                               Style="{StaticResource MetadataText}"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+
                 <ItemsControl x:Name="CommentsList">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
