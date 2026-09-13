@@ -21,6 +21,7 @@ public sealed partial class BangumiTopicDetailView : UserControl
     private readonly ObservableCollection<BangumiReplyViewModel> _replies = [];
     private readonly BangumiSubjectTopic _topic;
     private BangumiSubjectCard _subject;
+    private int _viewerUserId;
     private CancellationTokenSource? _loadCancellation;
 
     public BangumiTopicDetailView(
@@ -89,6 +90,18 @@ public sealed partial class BangumiTopicDetailView : UserControl
 
         try
         {
+            if (_account.IsConnected)
+            {
+                var profile = await _account.GetProfileAsync(
+                    forceRefresh: false,
+                    cancellationToken);
+                _viewerUserId = profile?.Id ?? 0;
+            }
+            else
+            {
+                _viewerUserId = 0;
+            }
+
             var detail = await _community.GetSubjectTopicAsync(
                 _topic.Id,
                 _account.GetAccessTokenForRequest(),
@@ -174,6 +187,10 @@ public sealed partial class BangumiTopicDetailView : UserControl
             ? FormatTime(createdAt)
             : string.Empty;
 
+        var reacted =
+            _viewerUserId > 0 &&
+            reply.ReactionUserIds.Contains(_viewerUserId);
+
         return new BangumiReplyViewModel(
             reply,
             CreateArtwork(
@@ -188,11 +205,92 @@ public sealed partial class BangumiTopicDetailView : UserControl
                 T("Bangumi_UnknownUser")),
             BangumiCommunityText.ToPlainText(reply.Content),
             meta,
-            reply.ReactionCount > 0
-                ? $"♥ {reply.ReactionCount}"
-                : string.Empty,
+            ReactionLabel(
+                reacted,
+                reply.ReactionCount),
+            _viewerUserId > 0,
+            reacted,
             nested ? new Thickness(32, 0, 0, 0) : new Thickness(0));
     }
+
+    private async void ReplyReactionButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button
+            {
+                Tag: BangumiReplyViewModel item
+            })
+        {
+            return;
+        }
+
+        var token = _account.GetAccessTokenForRequest();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            RepliesStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+            return;
+        }
+
+        var index = _replies.IndexOf(item);
+        if (index < 0)
+            return;
+
+        var button = (Button)sender;
+        button.IsEnabled = false;
+
+        try
+        {
+            if (item.IsReacted)
+            {
+                await _community.UnlikeSubjectPostAsync(
+                    item.Reply.Id,
+                    token,
+                    _loadCancellation?.Token ??
+                    CancellationToken.None);
+            }
+            else
+            {
+                await _community.LikeSubjectPostAsync(
+                    item.Reply.Id,
+                    value: 0,
+                    token,
+                    _loadCancellation?.Token ??
+                    CancellationToken.None);
+            }
+
+            var reacted = !item.IsReacted;
+            var count = Math.Max(
+                0,
+                item.Reply.ReactionCount +
+                (reacted ? 1 : -1));
+            _replies[index] = item with
+            {
+                IsReacted = reacted,
+                ReactionText = ReactionLabel(
+                    reacted,
+                    count),
+            };
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            RepliesStatusText.Text =
+                T("Bangumi_CommunityWriteFailed");
+        }
+        finally
+        {
+            button.IsEnabled = true;
+        }
+    }
+
+    private static string ReactionLabel(
+        bool reacted,
+        int count) =>
+        $"{(reacted ? "♥" : "♡")} {Math.Max(0, count)}";
 
     private void OpenSubjectButton_Click(
         object sender,
