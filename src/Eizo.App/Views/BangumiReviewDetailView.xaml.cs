@@ -201,7 +201,7 @@ public sealed partial class BangumiReviewDetailView : UserControl
             reply.ReactionCount > 0
                 ? $"♥ {reply.ReactionCount}"
                 : string.Empty,
-            nested ? "32,0,0,0" : "0");
+            nested ? new Thickness(32, 0, 0, 0) : new Thickness(0));
     }
 
     private void OpenSubjectButton_Click(
