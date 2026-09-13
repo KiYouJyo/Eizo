@@ -65,3 +65,5 @@ Desktop.ini
 # Stage 7 local dependency bootstrap
 .deps/
 .packages/
+node_modules/
+.wrangler/

@@ -21,10 +21,22 @@ public sealed partial class CatalogView : UserControl
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
     private readonly MediaCatalogStore _catalog = MediaCatalogStore.Default;
     private readonly MediaSourceStore _sources = MediaSourceStore.Default;
+    private readonly MediaCategoryKind? _categoryFilter;
     private readonly DispatcherQueueTimer _searchTimer;
 
     public CatalogView()
+        : this(categoryFilter: null)
     {
+    }
+
+    public CatalogView(MediaCategoryKind categoryFilter)
+        : this((MediaCategoryKind?)categoryFilter)
+    {
+    }
+
+    private CatalogView(MediaCategoryKind? categoryFilter)
+    {
+        _categoryFilter = categoryFilter;
         InitializeComponent();
 
         _searchTimer = DispatcherQueue.CreateTimer();
@@ -52,7 +64,13 @@ public sealed partial class CatalogView : UserControl
 
     private void ApplyText()
     {
-        PageTitle.Text = T("Nav_Library");
+        PageTitle.Text = _categoryFilter switch
+        {
+            MediaCategoryKind.Anime => T("Nav_Anime"),
+            MediaCategoryKind.Movies => T("Nav_Movies"),
+            MediaCategoryKind.Series => T("Nav_Series"),
+            _ => T("Nav_Library")
+        };
         PageSubtitle.Text = T("Catalog_Subtitle");
         SearchBox.PlaceholderText = T("Catalog_SearchPlaceholder");
         ClearSearchButton.Content = T("Catalog_Clear");
@@ -117,8 +135,12 @@ public sealed partial class CatalogView : UserControl
             .Concat(
                 aggregation.StandaloneItems.Select(static item =>
                     CatalogDisplayEntry.FromItem(item)))
+            .Where(entry =>
+                _categoryFilter is null ||
+                entry.Category == _categoryFilter)
             .Where(entry => Matches(entry, query))
             .OrderBy(entry => CategoryOrder(entry.Category))
+            .ThenBy(PreferredMetadataOrder)
             .ThenBy(entry => entry.Title, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
 
@@ -1056,6 +1078,28 @@ public sealed partial class CatalogView : UserControl
         MediaCategoryKind.Movies => 2,
         _ => 3
     };
+
+    private static int PreferredMetadataOrder(CatalogDisplayEntry entry)
+    {
+        if (entry.Subject is { } subject)
+        {
+            return subject.Items.Any(HasPreferredMetadata)
+                ? 0
+                : 1;
+        }
+
+        return entry.Item is { } item &&
+               HasPreferredMetadata(item)
+            ? 0
+            : 1;
+    }
+
+    private static bool HasPreferredMetadata(CatalogMediaItemModel item) =>
+        item.Metadata is { IsResolved: true } metadata &&
+        !string.IsNullOrWhiteSpace(metadata.PosterUrl) &&
+        (!string.IsNullOrWhiteSpace(metadata.CanonicalTitle) ||
+         !string.IsNullOrWhiteSpace(metadata.OriginalTitle) ||
+         !string.IsNullOrWhiteSpace(metadata.ReleaseDate));
 
     private static string FormatNullableNumber(decimal? value) =>
         value?.ToString("0.###", CultureInfo.InvariantCulture) ?? string.Empty;

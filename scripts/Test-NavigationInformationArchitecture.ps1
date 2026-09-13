@@ -77,9 +77,9 @@ $requiredMappings = @(
     'new HomeView()',
     'case "categories":',
     'new CatalogView()',
-    'new CategoryView(MediaCategoryKind.Anime)',
-    'new CategoryView(MediaCategoryKind.Movies)',
-    'new CategoryView(MediaCategoryKind.Series)',
+    'new CatalogView(MediaCategoryKind.Anime)',
+    'new CatalogView(MediaCategoryKind.Movies)',
+    'new CatalogView(MediaCategoryKind.Series)',
     'case "sources":',
     'return new SourcesView();',
     'case "cache":',
@@ -92,10 +92,10 @@ $requiredMappings = @(
     'case "bangumi-seasonal":',
     'case "bangumi-discover":',
     'case "bangumi-following":',
-    'new BangumiPlaceholderView(BangumiPlaceholderKind.Calendar)',
-    'new BangumiPlaceholderView(BangumiPlaceholderKind.Seasonal)',
-    'new BangumiPlaceholderView(BangumiPlaceholderKind.Discover)',
-    'new BangumiPlaceholderView(BangumiPlaceholderKind.Following)'
+    'new BangumiPublicView(BangumiPublicPageKind.Calendar)',
+    'new BangumiPublicView(BangumiPublicPageKind.Seasonal)',
+    'new BangumiPublicView(BangumiPublicPageKind.Discover)',
+    'new BangumiFollowingView()'
 )
 
 foreach ($mapping in $requiredMappings) {

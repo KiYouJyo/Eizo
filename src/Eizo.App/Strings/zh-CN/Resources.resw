@@ -847,4 +847,161 @@
   <data name="Bangumi_FollowingPlaceholderDescription" xml:space="preserve">
     <value>用于同步 Bangumi 收藏与单集观看状态。账户登录与数据同步将在后续阶段接入。</value>
   </data>
+
+  <data name="Bangumi_CalendarSubtitle" xml:space="preserve">
+    <value>本周动画放送日程</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitle" xml:space="preserve">
+    <value>当前季度 TV 动画</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitleFormat" xml:space="preserve">
+    <value>{0} {1}季 TV 动画</value>
+  </data>
+  <data name="Bangumi_DiscoverSubtitle" xml:space="preserve">
+    <value>Bangumi 动画综合排名</value>
+  </data>
+  <data name="Bangumi_Refresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="Bangumi_Loading" xml:space="preserve">
+    <value>正在读取 Bangumi 数据…</value>
+  </data>
+  <data name="Bangumi_NoResults" xml:space="preserve">
+    <value>当前没有可显示的 Bangumi 条目。</value>
+  </data>
+  <data name="Bangumi_NetworkError" xml:space="preserve">
+    <value>无法连接 Bangumi，且没有可用的本地缓存。</value>
+  </data>
+  <data name="Bangumi_StaleCacheFormat" xml:space="preserve">
+    <value>网络不可用，正在显示缓存数据 · 缓存时间 {0}</value>
+  </data>
+  <data name="Bangumi_CacheFormat" xml:space="preserve">
+    <value>来自本地缓存 · 更新时间 {0}</value>
+  </data>
+  <data name="Bangumi_UpdatedFormat" xml:space="preserve">
+    <value>已从 Bangumi 更新 · {0}</value>
+  </data>
+  <data name="Bangumi_DetailPageTitle" xml:space="preserve">
+    <value>Bangumi 条目</value>
+  </data>
+  <data name="Bangumi_OpenOnBangumi" xml:space="preserve">
+    <value>在 Bangumi 查看</value>
+  </data>
+  <data name="Bangumi_Summary" xml:space="preserve">
+    <value>简介</value>
+  </data>
+  <data name="Bangumi_Tags" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Bangumi_NoTags" xml:space="preserve">
+    <value>暂无标签</value>
+  </data>
+  <data name="Bangumi_NoSummary" xml:space="preserve">
+    <value>暂无简介</value>
+  </data>
+
+  <data name="Bangumi_CurrentSeason" xml:space="preserve">
+    <value>本季</value>
+  </data>
+  <data name="Bangumi_LoadMore" xml:space="preserve">
+    <value>加载更多</value>
+  </data>
+  <data name="Bangumi_LoadingMore" xml:space="preserve">
+    <value>正在加载更多 Bangumi 条目…</value>
+  </data>
+  <data name="Bangumi_LoadMoreError" xml:space="preserve">
+    <value>加载更多失败，已保留当前内容。</value>
+  </data>
+  <data name="Bangumi_RankingAllTime" xml:space="preserve">
+    <value>综合排名</value>
+  </data>
+  <data name="Bangumi_RankingCurrentSeason" xml:space="preserve">
+    <value>本季排名</value>
+  </data>
+  <data name="Bangumi_RankingCurrentYear" xml:space="preserve">
+    <value>本年排名</value>
+  </data>
+  <data name="Bangumi_SeasonLabelFormat" xml:space="preserve">
+    <value>{0} {1}季</value>
+  </data>
+
+  <data name="Bangumi_FollowingSubtitle" xml:space="preserve">
+    <value>来自 Bangumi 账户的“在看”动画</value>
+  </data>
+  <data name="Bangumi_Connect" xml:space="preserve">
+    <value>连接</value>
+  </data>
+  <data name="Bangumi_Disconnect" xml:space="preserve">
+    <value>断开连接</value>
+  </data>
+  <data name="Bangumi_ConnectAccount" xml:space="preserve">
+    <value>连接 Bangumi 账户</value>
+  </data>
+  <data name="Bangumi_ConnectFailed" xml:space="preserve">
+    <value>连接失败</value>
+  </data>
+  <data name="Bangumi_AccountTokenPlaceholder" xml:space="preserve">
+    <value>粘贴 Bangumi Access Token</value>
+  </data>
+  <data name="Bangumi_AccountTokenHelp" xml:space="preserve">
+    <value>Eizo 采用无服务器方式连接 Bangumi。请在 Bangumi 官方页面生成 Access Token，再粘贴到这里。Token 仅保存在 Windows Credential Locker 中，不写入 Eizo 设置文件或日志。</value>
+  </data>
+  <data name="Bangumi_OpenTokenPage" xml:space="preserve">
+    <value>打开 Bangumi Access Token 页面</value>
+  </data>
+  <data name="Bangumi_AccountTokenRequired" xml:space="preserve">
+    <value>请输入 Access Token。</value>
+  </data>
+  <data name="Bangumi_AccountTokenInvalid" xml:space="preserve">
+    <value>无法使用该 Access Token 获取 Bangumi 账户信息。请确认 Token 有效后重试。</value>
+  </data>
+  <data name="Bangumi_DisconnectConfirm" xml:space="preserve">
+    <value>断开后会从 Windows Credential Locker 删除此 Bangumi Access Token。不会修改你的 Bangumi 收藏数据。</value>
+  </data>
+  <data name="Bangumi_AccountNotConnected" xml:space="preserve">
+    <value>尚未连接 Bangumi</value>
+  </data>
+  <data name="Bangumi_AccountNotConnectedDescription" xml:space="preserve">
+    <value>连接后可在 Eizo 中查看“我的追番”。</value>
+  </data>
+  <data name="Bangumi_FollowingConnectPrompt" xml:space="preserve">
+    <value>连接 Bangumi 账户后，这里会显示你当前“在看”的动画。</value>
+  </data>
+  <data name="Bangumi_AccountChecking" xml:space="preserve">
+    <value>正在检查 Bangumi 账户…</value>
+  </data>
+  <data name="Bangumi_AccountCheckingDescription" xml:space="preserve">
+    <value>正在验证已保存的 Access Token。</value>
+  </data>
+  <data name="Bangumi_AccountNetworkError" xml:space="preserve">
+    <value>暂时无法读取 Bangumi 账户数据。已保存的 Token 不会被删除。</value>
+  </data>
+  <data name="Bangumi_FollowingEmpty" xml:space="preserve">
+    <value>当前没有“在看”的动画。</value>
+  </data>
+  <data name="Bangumi_FollowingCountFormat" xml:space="preserve">
+    <value>已显示 {0} / {1} 部在看动画</value>
+  </data>
+  <data name="Bangumi_Watching" xml:space="preserve">
+    <value>在看</value>
+  </data>
+  <data name="Bangumi_SettingsSection" xml:space="preserve">
+    <value>Bangumi</value>
+  </data>
+  <data name="Bangumi_Account" xml:space="preserve">
+    <value>Bangumi 账户</value>
+  </data>
+  <data name="Bangumi_AccountSettingsDescription" xml:space="preserve">
+    <value>默认通过浏览器登录 Bangumi；高级选项保留 Access Token 登录。当前版本仅读取账户和“在看”收藏。</value>
+  </data>
+  <data name="Bangumi_AccountConnectedFormat" xml:space="preserve">
+    <value>已连接：{0} (@{1})</value>
+  </data>
+  <data name="Bangumi_AccountConnectNetworkError" xml:space="preserve">
+    <value>暂时无法连接 Bangumi。请检查网络后重试；Access Token 尚未保存。</value>
+  </data>
+  <data name="Bangumi_BrowserLogin" xml:space="preserve"><value>通过浏览器登录</value></data>
+  <data name="Bangumi_ManualLogin" xml:space="preserve"><value>高级：Access Token 登录</value></data>
+  <data name="Bangumi_BrowserLoginHelp" xml:space="preserve"><value>在浏览器中登录 Bangumi，授权后 Eizo 将自动打开。手动输入 Access Token 保留在“高级”选项中。</value></data>
+  <data name="Bangumi_BrowserLoginFailed" xml:space="preserve"><value>无法打开浏览器。请重试或使用高级 Access Token 登录。</value></data>
 </root>

@@ -94,9 +94,21 @@ foreach ($relativePath in @(
 }
 
 $currentAcceptanceScript = "scripts/Build-EizoV$($version.Replace('.', '').PadLeft(4,'0'))Acceptance.ps1"
-# Current naming convention is V0311 for 0.3.11.
+# Current naming convention is V0311 for 0.3.11 and V042 for 0.4.2.
 $currentAcceptanceScript = "scripts/Build-EizoV0$($version.Split('.')[1])$($version.Split('.')[2])Acceptance.ps1"
-$currentAcceptanceWorkflow = ".github/workflows/v0$($version.Split('.')[1])$($version.Split('.')[2])-library-ui-season-family-acceptance.yml"
+
+$workflowPrefix = "v0$($version.Split('.')[1])$($version.Split('.')[2])-"
+$currentAcceptanceWorkflow = @(
+    Get-ChildItem -LiteralPath (Join-Path $repoRoot '.github/workflows') -File -Filter "$workflowPrefix*acceptance.yml"
+    | Sort-Object Name
+    | Select-Object -First 1
+)
+if (-not $currentAcceptanceWorkflow) {
+    throw "No acceptance workflow found for Eizo $version using prefix $workflowPrefix"
+}
+$currentAcceptanceWorkflow = [IO.Path]::GetRelativePath(
+    $repoRoot,
+    $currentAcceptanceWorkflow[0].FullName)
 
 foreach ($relativePath in @($currentAcceptanceScript, $currentAcceptanceWorkflow)) {
     $text = Read-Text $relativePath

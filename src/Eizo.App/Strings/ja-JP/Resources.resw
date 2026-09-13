@@ -847,4 +847,161 @@
   <data name="Bangumi_FollowingPlaceholderDescription" xml:space="preserve">
     <value>Bangumi のコレクションとエピソード視聴状態の同期用ページです。アカウントログインと同期は後続段階で追加します。</value>
   </data>
+
+  <data name="Bangumi_CalendarSubtitle" xml:space="preserve">
+    <value>今週のアニメ放送スケジュール</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitle" xml:space="preserve">
+    <value>今期のTVアニメ</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitleFormat" xml:space="preserve">
+    <value>{0}年 {1}クール TVアニメ</value>
+  </data>
+  <data name="Bangumi_DiscoverSubtitle" xml:space="preserve">
+    <value>Bangumi アニメ総合ランキング</value>
+  </data>
+  <data name="Bangumi_Refresh" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="Bangumi_Loading" xml:space="preserve">
+    <value>Bangumi データを読み込んでいます…</value>
+  </data>
+  <data name="Bangumi_NoResults" xml:space="preserve">
+    <value>表示できる Bangumi 項目がありません。</value>
+  </data>
+  <data name="Bangumi_NetworkError" xml:space="preserve">
+    <value>Bangumi に接続できず、利用可能なローカルキャッシュもありません。</value>
+  </data>
+  <data name="Bangumi_StaleCacheFormat" xml:space="preserve">
+    <value>オフラインのためキャッシュを表示中 · キャッシュ時刻 {0}</value>
+  </data>
+  <data name="Bangumi_CacheFormat" xml:space="preserve">
+    <value>ローカルキャッシュ · 更新 {0}</value>
+  </data>
+  <data name="Bangumi_UpdatedFormat" xml:space="preserve">
+    <value>Bangumi から更新済み · {0}</value>
+  </data>
+  <data name="Bangumi_DetailPageTitle" xml:space="preserve">
+    <value>Bangumi 作品</value>
+  </data>
+  <data name="Bangumi_OpenOnBangumi" xml:space="preserve">
+    <value>Bangumi で見る</value>
+  </data>
+  <data name="Bangumi_Summary" xml:space="preserve">
+    <value>あらすじ</value>
+  </data>
+  <data name="Bangumi_Tags" xml:space="preserve">
+    <value>タグ</value>
+  </data>
+  <data name="Bangumi_NoTags" xml:space="preserve">
+    <value>タグはありません</value>
+  </data>
+  <data name="Bangumi_NoSummary" xml:space="preserve">
+    <value>あらすじはありません</value>
+  </data>
+
+  <data name="Bangumi_CurrentSeason" xml:space="preserve">
+    <value>今期</value>
+  </data>
+  <data name="Bangumi_LoadMore" xml:space="preserve">
+    <value>さらに読み込む</value>
+  </data>
+  <data name="Bangumi_LoadingMore" xml:space="preserve">
+    <value>Bangumi の続きを読み込んでいます…</value>
+  </data>
+  <data name="Bangumi_LoadMoreError" xml:space="preserve">
+    <value>追加読み込みに失敗しました。現在の内容は保持されています。</value>
+  </data>
+  <data name="Bangumi_RankingAllTime" xml:space="preserve">
+    <value>総合ランキング</value>
+  </data>
+  <data name="Bangumi_RankingCurrentSeason" xml:space="preserve">
+    <value>今期ランキング</value>
+  </data>
+  <data name="Bangumi_RankingCurrentYear" xml:space="preserve">
+    <value>今年ランキング</value>
+  </data>
+  <data name="Bangumi_SeasonLabelFormat" xml:space="preserve">
+    <value>{0}年 {1}クール</value>
+  </data>
+
+  <data name="Bangumi_FollowingSubtitle" xml:space="preserve">
+    <value>Bangumi アカウントの「見てる」アニメ</value>
+  </data>
+  <data name="Bangumi_Connect" xml:space="preserve">
+    <value>接続</value>
+  </data>
+  <data name="Bangumi_Disconnect" xml:space="preserve">
+    <value>接続解除</value>
+  </data>
+  <data name="Bangumi_ConnectAccount" xml:space="preserve">
+    <value>Bangumi アカウントを接続</value>
+  </data>
+  <data name="Bangumi_ConnectFailed" xml:space="preserve">
+    <value>接続に失敗しました</value>
+  </data>
+  <data name="Bangumi_AccountTokenPlaceholder" xml:space="preserve">
+    <value>Bangumi Access Token を貼り付け</value>
+  </data>
+  <data name="Bangumi_AccountTokenHelp" xml:space="preserve">
+    <value>Eizo はサーバーレス方式で Bangumi に接続します。Bangumi 公式ページで Access Token を生成し、ここに貼り付けてください。Token は Windows Credential Locker のみに保存され、Eizo の設定ファイルやログには書き込みません。</value>
+  </data>
+  <data name="Bangumi_OpenTokenPage" xml:space="preserve">
+    <value>Bangumi Access Token ページを開く</value>
+  </data>
+  <data name="Bangumi_AccountTokenRequired" xml:space="preserve">
+    <value>Access Token を入力してください。</value>
+  </data>
+  <data name="Bangumi_AccountTokenInvalid" xml:space="preserve">
+    <value>この Access Token では Bangumi アカウント情報を取得できませんでした。Token を確認して再試行してください。</value>
+  </data>
+  <data name="Bangumi_DisconnectConfirm" xml:space="preserve">
+    <value>接続解除すると、この Bangumi Access Token を Windows Credential Locker から削除します。Bangumi 側の收藏データは変更しません。</value>
+  </data>
+  <data name="Bangumi_AccountNotConnected" xml:space="preserve">
+    <value>Bangumi に未接続</value>
+  </data>
+  <data name="Bangumi_AccountNotConnectedDescription" xml:space="preserve">
+    <value>接続すると Eizo で「追番」を確認できます。</value>
+  </data>
+  <data name="Bangumi_FollowingConnectPrompt" xml:space="preserve">
+    <value>Bangumi アカウントを接続すると、現在「見てる」のアニメがここに表示されます。</value>
+  </data>
+  <data name="Bangumi_AccountChecking" xml:space="preserve">
+    <value>Bangumi アカウントを確認中…</value>
+  </data>
+  <data name="Bangumi_AccountCheckingDescription" xml:space="preserve">
+    <value>保存済み Access Token を検証しています。</value>
+  </data>
+  <data name="Bangumi_AccountNetworkError" xml:space="preserve">
+    <value>Bangumi アカウントデータを取得できません。保存済み Token は削除されません。</value>
+  </data>
+  <data name="Bangumi_FollowingEmpty" xml:space="preserve">
+    <value>現在「見てる」のアニメはありません。</value>
+  </data>
+  <data name="Bangumi_FollowingCountFormat" xml:space="preserve">
+    <value>{0} / {1} 件の追番を表示中</value>
+  </data>
+  <data name="Bangumi_Watching" xml:space="preserve">
+    <value>見てる</value>
+  </data>
+  <data name="Bangumi_SettingsSection" xml:space="preserve">
+    <value>Bangumi</value>
+  </data>
+  <data name="Bangumi_Account" xml:space="preserve">
+    <value>Bangumi アカウント</value>
+  </data>
+  <data name="Bangumi_AccountSettingsDescription" xml:space="preserve">
+    <value>既定ではブラウザーで Bangumi にログインします。詳細設定ではアクセストークン入力も利用できます。アカウントと「見てる」コレクションの読み取りのみを行います。</value>
+  </data>
+  <data name="Bangumi_AccountConnectedFormat" xml:space="preserve">
+    <value>接続済み：{0} (@{1})</value>
+  </data>
+  <data name="Bangumi_AccountConnectNetworkError" xml:space="preserve">
+    <value>Bangumi に接続できません。ネットワークを確認して再試行してください。Access Token はまだ保存されていません。</value>
+  </data>
+  <data name="Bangumi_BrowserLogin" xml:space="preserve"><value>ブラウザーでログイン</value></data>
+  <data name="Bangumi_ManualLogin" xml:space="preserve"><value>詳細設定：アクセストークン</value></data>
+  <data name="Bangumi_BrowserLoginHelp" xml:space="preserve"><value>ブラウザーで Bangumi にログインします。認可後、Eizo が自動的に開きます。手動のアクセストークン入力は詳細設定から利用できます。</value></data>
+  <data name="Bangumi_BrowserLoginFailed" xml:space="preserve"><value>ブラウザーを開けませんでした。再試行するか、詳細設定のアクセストークンログインを使用してください。</value></data>
 </root>

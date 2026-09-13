@@ -333,13 +333,29 @@ public sealed partial class MainWindow : Window
                 return view;
             }
             case "bangumi-calendar":
-                return new BangumiPlaceholderView(BangumiPlaceholderKind.Calendar);
+            {
+                var view = new BangumiPublicView(BangumiPublicPageKind.Calendar);
+                WireBangumiPublicView(view);
+                return view;
+            }
             case "bangumi-seasonal":
-                return new BangumiPlaceholderView(BangumiPlaceholderKind.Seasonal);
+            {
+                var view = new BangumiPublicView(BangumiPublicPageKind.Seasonal);
+                WireBangumiPublicView(view);
+                return view;
+            }
             case "bangumi-discover":
-                return new BangumiPlaceholderView(BangumiPlaceholderKind.Discover);
+            {
+                var view = new BangumiPublicView(BangumiPublicPageKind.Discover);
+                WireBangumiPublicView(view);
+                return view;
+            }
             case "bangumi-following":
-                return new BangumiPlaceholderView(BangumiPlaceholderKind.Following);
+            {
+                var view = new BangumiFollowingView();
+                WireBangumiFollowingView(view);
+                return view;
+            }
             case "categories":
             {
                 var view = new CatalogView();
@@ -348,19 +364,19 @@ public sealed partial class MainWindow : Window
             }
             case "anime":
             {
-                var view = new CategoryView(MediaCategoryKind.Anime);
+                var view = new CatalogView(MediaCategoryKind.Anime);
                 WireWorkspaceMediaView(view);
                 return view;
             }
             case "movies":
             {
-                var view = new CategoryView(MediaCategoryKind.Movies);
+                var view = new CatalogView(MediaCategoryKind.Movies);
                 WireWorkspaceMediaView(view);
                 return view;
             }
             case "series":
             {
-                var view = new CategoryView(MediaCategoryKind.Series);
+                var view = new CatalogView(MediaCategoryKind.Series);
                 WireWorkspaceMediaView(view);
                 return view;
             }
@@ -381,6 +397,12 @@ public sealed partial class MainWindow : Window
     {
         view.DetailRequested += (_, title) => OpenDetail(title, startPlaying: false);
         view.PlayRequested += (_, title) => OpenDetail(title, startPlaying: true);
+        view.BangumiSubjectRequested += (_, subject) =>
+            OpenBangumiSubject(subject);
+        view.BangumiSeasonalRequested += (_, _) =>
+            NavigateSelectedWorkspace(
+                "bangumi-seasonal",
+                SeasonalNav);
     }
 
     private void WireWorkspaceMediaView(CategoryView view)
@@ -396,6 +418,49 @@ public sealed partial class MainWindow : Window
 
         view.MediaRequested += async (_, item) =>
             await OpenCatalogMediaAsync(item);
+    }
+
+    private void WireBangumiPublicView(BangumiPublicView view)
+    {
+        view.SubjectRequested += (_, subject) =>
+            OpenBangumiSubject(subject);
+    }
+
+    private void WireBangumiFollowingView(BangumiFollowingView view)
+    {
+        view.SubjectRequested += (_, subject) =>
+            OpenBangumiSubject(subject);
+    }
+
+    private void OpenBangumiSubject(Eizo.Bangumi.BangumiSubjectCard subject)
+    {
+        ArgumentNullException.ThrowIfNull(subject);
+
+        var key = "bangumi-subject:" + subject.Id;
+        if (_tabs.TryGetValue(key, out var existing))
+        {
+            SelectTab(existing.Key);
+            return;
+        }
+
+        var title = string.IsNullOrWhiteSpace(subject.ChineseTitle)
+            ? subject.NativeTitle
+            : subject.ChineseTitle;
+
+        var state = new ShellTabState(
+            key,
+            ShellTabKind.Detail,
+            pageKey: null,
+            title,
+            "\uE8B2",
+            new BangumiSubjectDetailView(subject),
+            navItem: null,
+            PreferredTabWidth)
+        {
+            MediaTitle = title
+        };
+
+        AddTab(state, select: true);
     }
 
     private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch

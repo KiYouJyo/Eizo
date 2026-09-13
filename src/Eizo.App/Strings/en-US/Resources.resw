@@ -847,4 +847,161 @@
   <data name="Bangumi_FollowingPlaceholderDescription" xml:space="preserve">
     <value>Reserved for Bangumi collection and episode-watch synchronization. Account sign-in and data sync will be added later.</value>
   </data>
+
+  <data name="Bangumi_CalendarSubtitle" xml:space="preserve">
+    <value>This week's anime broadcast schedule</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitle" xml:space="preserve">
+    <value>Current-season TV anime</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitleFormat" xml:space="preserve">
+    <value>{0} {1} TV anime</value>
+  </data>
+  <data name="Bangumi_DiscoverSubtitle" xml:space="preserve">
+    <value>Bangumi anime ranking</value>
+  </data>
+  <data name="Bangumi_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Bangumi_Loading" xml:space="preserve">
+    <value>Loading Bangumi data…</value>
+  </data>
+  <data name="Bangumi_NoResults" xml:space="preserve">
+    <value>No Bangumi titles are available to display.</value>
+  </data>
+  <data name="Bangumi_NetworkError" xml:space="preserve">
+    <value>Could not reach Bangumi and no local cache is available.</value>
+  </data>
+  <data name="Bangumi_StaleCacheFormat" xml:space="preserve">
+    <value>Offline: showing cached data · cached {0}</value>
+  </data>
+  <data name="Bangumi_CacheFormat" xml:space="preserve">
+    <value>Local cache · updated {0}</value>
+  </data>
+  <data name="Bangumi_UpdatedFormat" xml:space="preserve">
+    <value>Updated from Bangumi · {0}</value>
+  </data>
+  <data name="Bangumi_DetailPageTitle" xml:space="preserve">
+    <value>Bangumi title</value>
+  </data>
+  <data name="Bangumi_OpenOnBangumi" xml:space="preserve">
+    <value>Open on Bangumi</value>
+  </data>
+  <data name="Bangumi_Summary" xml:space="preserve">
+    <value>Summary</value>
+  </data>
+  <data name="Bangumi_Tags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Bangumi_NoTags" xml:space="preserve">
+    <value>No tags</value>
+  </data>
+  <data name="Bangumi_NoSummary" xml:space="preserve">
+    <value>No summary available</value>
+  </data>
+
+  <data name="Bangumi_CurrentSeason" xml:space="preserve">
+    <value>Current</value>
+  </data>
+  <data name="Bangumi_LoadMore" xml:space="preserve">
+    <value>Load more</value>
+  </data>
+  <data name="Bangumi_LoadingMore" xml:space="preserve">
+    <value>Loading more Bangumi titles…</value>
+  </data>
+  <data name="Bangumi_LoadMoreError" xml:space="preserve">
+    <value>Could not load more titles. Existing results were kept.</value>
+  </data>
+  <data name="Bangumi_RankingAllTime" xml:space="preserve">
+    <value>All-time ranking</value>
+  </data>
+  <data name="Bangumi_RankingCurrentSeason" xml:space="preserve">
+    <value>Current-season ranking</value>
+  </data>
+  <data name="Bangumi_RankingCurrentYear" xml:space="preserve">
+    <value>Current-year ranking</value>
+  </data>
+  <data name="Bangumi_SeasonLabelFormat" xml:space="preserve">
+    <value>{0} {1}</value>
+  </data>
+
+  <data name="Bangumi_FollowingSubtitle" xml:space="preserve">
+    <value>Anime marked Watching on your Bangumi account</value>
+  </data>
+  <data name="Bangumi_Connect" xml:space="preserve">
+    <value>Connect</value>
+  </data>
+  <data name="Bangumi_Disconnect" xml:space="preserve">
+    <value>Disconnect</value>
+  </data>
+  <data name="Bangumi_ConnectAccount" xml:space="preserve">
+    <value>Connect Bangumi account</value>
+  </data>
+  <data name="Bangumi_ConnectFailed" xml:space="preserve">
+    <value>Connection failed</value>
+  </data>
+  <data name="Bangumi_AccountTokenPlaceholder" xml:space="preserve">
+    <value>Paste Bangumi Access Token</value>
+  </data>
+  <data name="Bangumi_AccountTokenHelp" xml:space="preserve">
+    <value>Eizo uses a serverless Bangumi connection. Generate an Access Token on Bangumi's official page and paste it here. The token is stored only in Windows Credential Locker and is never written to Eizo settings or logs.</value>
+  </data>
+  <data name="Bangumi_OpenTokenPage" xml:space="preserve">
+    <value>Open Bangumi Access Token page</value>
+  </data>
+  <data name="Bangumi_AccountTokenRequired" xml:space="preserve">
+    <value>Enter an Access Token.</value>
+  </data>
+  <data name="Bangumi_AccountTokenInvalid" xml:space="preserve">
+    <value>Eizo could not retrieve Bangumi account information with this Access Token. Check the token and try again.</value>
+  </data>
+  <data name="Bangumi_DisconnectConfirm" xml:space="preserve">
+    <value>Disconnecting removes this Bangumi Access Token from Windows Credential Locker. It does not change your Bangumi collection data.</value>
+  </data>
+  <data name="Bangumi_AccountNotConnected" xml:space="preserve">
+    <value>Bangumi is not connected</value>
+  </data>
+  <data name="Bangumi_AccountNotConnectedDescription" xml:space="preserve">
+    <value>Connect to view My Following in Eizo.</value>
+  </data>
+  <data name="Bangumi_FollowingConnectPrompt" xml:space="preserve">
+    <value>Connect your Bangumi account to show anime currently marked Watching.</value>
+  </data>
+  <data name="Bangumi_AccountChecking" xml:space="preserve">
+    <value>Checking Bangumi account…</value>
+  </data>
+  <data name="Bangumi_AccountCheckingDescription" xml:space="preserve">
+    <value>Validating the saved Access Token.</value>
+  </data>
+  <data name="Bangumi_AccountNetworkError" xml:space="preserve">
+    <value>Bangumi account data is temporarily unavailable. The saved token has not been removed.</value>
+  </data>
+  <data name="Bangumi_FollowingEmpty" xml:space="preserve">
+    <value>You have no anime currently marked Watching.</value>
+  </data>
+  <data name="Bangumi_FollowingCountFormat" xml:space="preserve">
+    <value>Showing {0} of {1} Watching titles</value>
+  </data>
+  <data name="Bangumi_Watching" xml:space="preserve">
+    <value>Watching</value>
+  </data>
+  <data name="Bangumi_SettingsSection" xml:space="preserve">
+    <value>Bangumi</value>
+  </data>
+  <data name="Bangumi_Account" xml:space="preserve">
+    <value>Bangumi account</value>
+  </data>
+  <data name="Bangumi_AccountSettingsDescription" xml:space="preserve">
+    <value>Sign in to Bangumi with your browser by default. Advanced Access Token sign-in remains available. This release reads account and Watching collection data only.</value>
+  </data>
+  <data name="Bangumi_AccountConnectedFormat" xml:space="preserve">
+    <value>Connected: {0} (@{1})</value>
+  </data>
+  <data name="Bangumi_AccountConnectNetworkError" xml:space="preserve">
+    <value>Could not reach Bangumi. Check your network and try again; the Access Token has not been saved.</value>
+  </data>
+  <data name="Bangumi_BrowserLogin" xml:space="preserve"><value>Sign in with browser</value></data>
+  <data name="Bangumi_ManualLogin" xml:space="preserve"><value>Advanced: Access Token</value></data>
+  <data name="Bangumi_BrowserLoginHelp" xml:space="preserve"><value>Sign in on Bangumi in your browser. Eizo will reopen after authorization. Access Token entry remains available under Advanced.</value></data>
+  <data name="Bangumi_BrowserLoginFailed" xml:space="preserve"><value>The browser could not be opened. Try again or use Advanced Access Token sign-in.</value></data>
 </root>

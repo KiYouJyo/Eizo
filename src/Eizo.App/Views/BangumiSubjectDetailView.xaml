@@ -1,0 +1,124 @@
+<UserControl x:Class="Eizo.Views.BangumiSubjectDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ScrollViewer Background="Transparent"
+                HorizontalScrollMode="Disabled"
+                HorizontalScrollBarVisibility="Disabled"
+                HorizontalContentAlignment="Stretch">
+    <Grid x:Name="DetailRoot"
+          Padding="24,16,24,32"
+          RowDefinitions="Auto,18,*"
+          HorizontalAlignment="Stretch"
+          UseLayoutRounding="True">
+      <VisualStateManager.VisualStateGroups>
+        <VisualStateGroup>
+          <VisualState x:Name="DetailCompact">
+            <VisualState.StateTriggers>
+              <AdaptiveTrigger MinWindowWidth="0" />
+            </VisualState.StateTriggers>
+            <VisualState.Setters>
+              <Setter Target="PosterBorder.Visibility"
+                      Value="Collapsed" />
+              <Setter Target="DetailContent.(Grid.Column)"
+                      Value="0" />
+              <Setter Target="DetailContent.(Grid.ColumnSpan)"
+                      Value="2" />
+            </VisualState.Setters>
+          </VisualState>
+          <VisualState x:Name="DetailWide">
+            <VisualState.StateTriggers>
+              <AdaptiveTrigger MinWindowWidth="760" />
+            </VisualState.StateTriggers>
+            <VisualState.Setters>
+              <Setter Target="PosterBorder.Visibility"
+                      Value="Visible" />
+              <Setter Target="DetailContent.(Grid.Column)"
+                      Value="1" />
+              <Setter Target="DetailContent.(Grid.ColumnSpan)"
+                      Value="1" />
+            </VisualState.Setters>
+          </VisualState>
+        </VisualStateGroup>
+      </VisualStateManager.VisualStateGroups>
+
+      <Grid ColumnDefinitions="*,Auto"
+            ColumnSpacing="10">
+        <TextBlock x:Name="PageTitle"
+                   Style="{StaticResource PageTitleText}" />
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="8">
+          <ProgressRing x:Name="LoadingRing"
+                        Width="22"
+                        Height="22"
+                        IsActive="False"
+                        Visibility="Collapsed"
+                        VerticalAlignment="Center" />
+          <Button x:Name="RefreshButton"
+                  Click="RefreshButton_Click" />
+          <Button x:Name="OpenBangumiButton"
+                  Click="OpenBangumiButton_Click" />
+        </StackPanel>
+      </Grid>
+
+      <Grid Grid.Row="2"
+            ColumnDefinitions="240,*"
+            ColumnSpacing="24">
+        <Border x:Name="PosterBorder"
+                Width="220"
+                Height="314"
+                CornerRadius="12"
+                Background="{ThemeResource EizoSelectionBrush}"
+                VerticalAlignment="Top">
+          <Grid>
+            <FontIcon Glyph="&#xE8B2;"
+                      FontSize="52"
+                      Opacity="0.18" />
+            <Image x:Name="PosterImage"
+                   Stretch="UniformToFill" />
+          </Grid>
+        </Border>
+
+        <StackPanel x:Name="DetailContent"
+                    Grid.Column="1"
+                    Spacing="12">
+          <TextBlock x:Name="TitleText"
+                     FontSize="28"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="NativeTitleText"
+                     Style="{StaticResource BodyText}"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="MetaText"
+                     Style="{StaticResource MetadataText}"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="StatusText"
+                     Style="{StaticResource MetadataText}"
+                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                     TextWrapping="Wrap" />
+
+          <Border Height="1"
+                  Margin="0,2"
+                  Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+          <TextBlock x:Name="SummaryTitle"
+                     Style="{StaticResource SectionTitleText}" />
+          <TextBlock x:Name="SummaryText"
+                     Style="{StaticResource BodyText}"
+                     TextWrapping="Wrap"
+                     MaxWidth="860"
+                     HorizontalAlignment="Left" />
+
+          <TextBlock x:Name="TagsTitle"
+                     Margin="0,8,0,0"
+                     Style="{StaticResource SectionTitleText}" />
+          <TextBlock x:Name="TagsText"
+                     Style="{StaticResource MetadataText}"
+                     TextWrapping="Wrap"
+                     MaxWidth="860"
+                     HorizontalAlignment="Left" />
+        </StackPanel>
+      </Grid>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

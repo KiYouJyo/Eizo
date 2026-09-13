@@ -30,6 +30,8 @@ public static class Program
             return;
         }
 
+        App.OnInitialActivation(currentInstance.GetActivatedEventArgs());
+
         mainInstance.Activated += (_, activationArguments) =>
             App.OnRedirectedActivation(activationArguments);
 

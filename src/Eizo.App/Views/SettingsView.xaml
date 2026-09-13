@@ -36,6 +36,11 @@
               <Setter Target="RomajiToggle.(Grid.Column)" Value="0" />
               <Setter Target="RomajiToggle.(Grid.ColumnSpan)" Value="2" />
               <Setter Target="RomajiToggle.HorizontalAlignment" Value="Left" />
+              <Setter Target="BangumiAccountActions.(Grid.Row)" Value="1" />
+              <Setter Target="BangumiAccountActions.(Grid.Column)" Value="0" />
+              <Setter Target="BangumiAccountActions.(Grid.ColumnSpan)" Value="2" />
+              <Setter Target="BangumiAccountActions.HorizontalAlignment" Value="Left" />
+              <Setter Target="BangumiAccountActions.Orientation" Value="Vertical" />
             </VisualState.Setters>
           </VisualState>
 
@@ -62,6 +67,11 @@
               <Setter Target="RomajiToggle.(Grid.Column)" Value="1" />
               <Setter Target="RomajiToggle.(Grid.ColumnSpan)" Value="1" />
               <Setter Target="RomajiToggle.HorizontalAlignment" Value="Right" />
+              <Setter Target="BangumiAccountActions.(Grid.Row)" Value="0" />
+              <Setter Target="BangumiAccountActions.(Grid.Column)" Value="1" />
+              <Setter Target="BangumiAccountActions.(Grid.ColumnSpan)" Value="1" />
+              <Setter Target="BangumiAccountActions.HorizontalAlignment" Value="Right" />
+              <Setter Target="BangumiAccountActions.Orientation" Value="Horizontal" />
             </VisualState.Setters>
           </VisualState>
         </VisualStateGroup>
@@ -149,6 +159,47 @@
                             SelectionChanged="AppearanceCombo_SelectionChanged" />
                 </Grid>
               </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource SettingsSectionCardStyle}">
+          <StackPanel Spacing="14">
+            <TextBlock x:Name="BangumiSectionTitle"
+                       Style="{StaticResource SectionTitleText}" />
+
+            <Border Style="{StaticResource SettingsInnerCardStyle}">
+              <Grid Padding="14"
+                    MinHeight="92"
+                    ColumnSpacing="24"
+                    RowSpacing="10"
+                    ColumnDefinitions="*,Auto"
+                    RowDefinitions="Auto,Auto">
+                <StackPanel VerticalAlignment="Center"
+                            Spacing="3">
+                  <TextBlock x:Name="BangumiAccountTitle"
+                             Style="{StaticResource SettingsRowLabelStyle}" />
+                  <TextBlock x:Name="BangumiAccountDescription"
+                             Style="{StaticResource SettingsDescriptionStyle}"
+                             TextWrapping="Wrap" />
+                  <TextBlock x:Name="BangumiAccountStatusText"
+                             Margin="0,4,0,0"
+                             Style="{StaticResource MetadataText}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel x:Name="BangumiAccountActions"
+                            Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                  <Button x:Name="BangumiConnectButton"
+                          Click="BangumiConnectButton_Click" />
+                  <Button x:Name="BangumiDisconnectButton"
+                          Visibility="Collapsed"
+                          Click="BangumiDisconnectButton_Click" />
+                </StackPanel>
+              </Grid>
             </Border>
           </StackPanel>
         </Border>
