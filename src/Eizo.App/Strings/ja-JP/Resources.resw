@@ -924,4 +924,77 @@
   <data name="Bangumi_SeasonLabelFormat" xml:space="preserve">
     <value>{0}年 {1}クール</value>
   </data>
+
+  <data name="Bangumi_FollowingSubtitle" xml:space="preserve">
+    <value>Bangumi アカウントの「見てる」アニメ</value>
+  </data>
+  <data name="Bangumi_Connect" xml:space="preserve">
+    <value>接続</value>
+  </data>
+  <data name="Bangumi_Disconnect" xml:space="preserve">
+    <value>接続解除</value>
+  </data>
+  <data name="Bangumi_ConnectAccount" xml:space="preserve">
+    <value>Bangumi アカウントを接続</value>
+  </data>
+  <data name="Bangumi_ConnectFailed" xml:space="preserve">
+    <value>接続に失敗しました</value>
+  </data>
+  <data name="Bangumi_AccountTokenPlaceholder" xml:space="preserve">
+    <value>Bangumi Access Token を貼り付け</value>
+  </data>
+  <data name="Bangumi_AccountTokenHelp" xml:space="preserve">
+    <value>Eizo はサーバーレス方式で Bangumi に接続します。Bangumi 公式ページで Access Token を生成し、ここに貼り付けてください。Token は Windows Credential Locker のみに保存され、Eizo の設定ファイルやログには書き込みません。</value>
+  </data>
+  <data name="Bangumi_OpenTokenPage" xml:space="preserve">
+    <value>Bangumi Access Token ページを開く</value>
+  </data>
+  <data name="Bangumi_AccountTokenRequired" xml:space="preserve">
+    <value>Access Token を入力してください。</value>
+  </data>
+  <data name="Bangumi_AccountTokenInvalid" xml:space="preserve">
+    <value>この Access Token では Bangumi アカウント情報を取得できませんでした。Token を確認して再試行してください。</value>
+  </data>
+  <data name="Bangumi_DisconnectConfirm" xml:space="preserve">
+    <value>接続解除すると、この Bangumi Access Token を Windows Credential Locker から削除します。Bangumi 側の收藏データは変更しません。</value>
+  </data>
+  <data name="Bangumi_AccountNotConnected" xml:space="preserve">
+    <value>Bangumi に未接続</value>
+  </data>
+  <data name="Bangumi_AccountNotConnectedDescription" xml:space="preserve">
+    <value>接続すると Eizo で「追番」を確認できます。</value>
+  </data>
+  <data name="Bangumi_FollowingConnectPrompt" xml:space="preserve">
+    <value>Bangumi アカウントを接続すると、現在「見てる」のアニメがここに表示されます。</value>
+  </data>
+  <data name="Bangumi_AccountChecking" xml:space="preserve">
+    <value>Bangumi アカウントを確認中…</value>
+  </data>
+  <data name="Bangumi_AccountCheckingDescription" xml:space="preserve">
+    <value>保存済み Access Token を検証しています。</value>
+  </data>
+  <data name="Bangumi_AccountNetworkError" xml:space="preserve">
+    <value>Bangumi アカウントデータを取得できません。保存済み Token は削除されません。</value>
+  </data>
+  <data name="Bangumi_FollowingEmpty" xml:space="preserve">
+    <value>現在「見てる」のアニメはありません。</value>
+  </data>
+  <data name="Bangumi_FollowingCountFormat" xml:space="preserve">
+    <value>{0} / {1} 件の追番を表示中</value>
+  </data>
+  <data name="Bangumi_Watching" xml:space="preserve">
+    <value>見てる</value>
+  </data>
+  <data name="Bangumi_SettingsSection" xml:space="preserve">
+    <value>Bangumi</value>
+  </data>
+  <data name="Bangumi_Account" xml:space="preserve">
+    <value>Bangumi アカウント</value>
+  </data>
+  <data name="Bangumi_AccountSettingsDescription" xml:space="preserve">
+    <value>Bangumi 公式 Access Token で接続します。このバージョンはアカウントと「見てる」收藏の読み取りのみで、收藏や視聴進捗の書き込みは行いません。</value>
+  </data>
+  <data name="Bangumi_AccountConnectedFormat" xml:space="preserve">
+    <value>接続済み：{0} (@{1})</value>
+  </data>
 </root>
