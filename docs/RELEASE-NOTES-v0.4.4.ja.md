@@ -2,7 +2,7 @@
 
 # Eizo v0.4.4
 
-Bangumi のブラウザー認可を既定のログイン方法にしました。手動のアクセストークン入力は詳細設定の代替手段として残しています。
+Bangumi アカウント接続をブラウザー認可に統一し、従来の手動アクセストークン入力をログイン画面から削除しました。
 
 - Cloudflare relay が認可コードを交換し、`eizo://bangumi-auth` で Eizo に戻ります。
 - プロトコル URL には有効期間が短い一回限りの ticket だけを含めます。`/claim` で受け取った Access/Refresh Token は `/v0/me` で検証し、Windows Credential Locker に保存します。
