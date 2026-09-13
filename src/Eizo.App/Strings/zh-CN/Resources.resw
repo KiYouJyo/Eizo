@@ -1148,4 +1148,7 @@
   <data name="Bangumi_TurnstileUnavailable" xml:space="preserve">
     <value>Bangumi 当前未向 Eizo 开放 Turnstile 回调；写入功能暂不可用。</value>
   </data>
+  <data name="Bangumi_CommentComposerHint" xml:space="preserve">
+    <value>直接在这里输入内容。发布时会请求 Bangumi 人机验证；若上游尚未放行 Eizo 回调，草稿会保留。</value>
+  </data>
 </root>
