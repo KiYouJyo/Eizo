@@ -1103,4 +1103,49 @@
   <data name="Bangumi_CommunityAllComments" xml:space="preserve">
     <value>全部短评</value>
   </data>
+  <data name="Bangumi_WriteComment" xml:space="preserve">
+    <value>发表短评</value>
+  </data>
+  <data name="Bangumi_WriteCommentTitle" xml:space="preserve">
+    <value>发表 Bangumi 短评</value>
+  </data>
+  <data name="Bangumi_WriteCommentPlaceholder" xml:space="preserve">
+    <value>写下你的短评…</value>
+  </data>
+  <data name="Bangumi_WriteCollectionState" xml:space="preserve">
+    <value>收藏状态</value>
+  </data>
+  <data name="Bangumi_WriteRating" xml:space="preserve">
+    <value>评分（0–10）</value>
+  </data>
+  <data name="Bangumi_WriteCollectionWarning" xml:space="preserve">
+    <value>发表短评会同时更新该条目的收藏状态和评分。</value>
+  </data>
+  <data name="Bangumi_WriteReply" xml:space="preserve">
+    <value>回复</value>
+  </data>
+  <data name="Bangumi_WriteReplyPlaceholder" xml:space="preserve">
+    <value>写下你的回复…</value>
+  </data>
+  <data name="Bangumi_WriteReviewReplyTitle" xml:space="preserve">
+    <value>回复长评</value>
+  </data>
+  <data name="Bangumi_WriteTopicReplyTitle" xml:space="preserve">
+    <value>回复讨论</value>
+  </data>
+  <data name="Bangumi_Publish" xml:space="preserve">
+    <value>发布</value>
+  </data>
+  <data name="Bangumi_CommunitySignInToInteract" xml:space="preserve">
+    <value>请先登录 Bangumi 后再进行社区互动。</value>
+  </data>
+  <data name="Bangumi_CommunityWriteFailed" xml:space="preserve">
+    <value>提交失败，请稍后重试或在 Bangumi 网页中操作。</value>
+  </data>
+  <data name="Bangumi_TurnstileTitle" xml:space="preserve">
+    <value>Bangumi 人机验证</value>
+  </data>
+  <data name="Bangumi_TurnstileUnavailable" xml:space="preserve">
+    <value>Bangumi 当前未向 Eizo 开放 Turnstile 回调；写入功能暂不可用。</value>
+  </data>
 </root>
