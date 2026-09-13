@@ -143,3 +143,33 @@ public sealed record BangumiSubjectRelation(
     string RelationJapanese,
     string RelationDescription,
     int Order);
+
+public sealed record BangumiCommunityReply(
+    int Id,
+    BangumiCommunityUser User,
+    string Content,
+    DateTimeOffset? CreatedAt,
+    int ReactionCount,
+    IReadOnlyList<BangumiCommunityReply> Replies);
+
+public sealed record BangumiBlogDetail(
+    int EntryId,
+    BangumiCommunityUser User,
+    string Title,
+    string Content,
+    IReadOnlyList<string> Tags,
+    int ViewCount,
+    int ReplyCount,
+    DateTimeOffset? CreatedAt,
+    DateTimeOffset? UpdatedAt,
+    bool IsPublic);
+
+public sealed record BangumiTopicDetail(
+    int TopicId,
+    BangumiCommunityUser User,
+    BangumiSubjectCard Subject,
+    string Title,
+    DateTimeOffset? CreatedAt,
+    DateTimeOffset? UpdatedAt,
+    BangumiCommunityReply? RootPost,
+    IReadOnlyList<BangumiCommunityReply> Replies);
