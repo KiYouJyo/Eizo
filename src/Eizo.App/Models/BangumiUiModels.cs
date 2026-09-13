@@ -1,4 +1,5 @@
 using Eizo.Bangumi;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace Eizo.Models;
@@ -53,7 +54,7 @@ public sealed record BangumiReplyViewModel(
     string Content,
     string MetaLine,
     string ReactionText,
-    string Indent);
+    Thickness Indent);
 
 public sealed record BangumiCommunityDetailHeaderViewModel(
     BitmapImage? Avatar,
