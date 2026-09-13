@@ -36,6 +36,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-NavigationInformationArchitecture.ps1
 
+      - name: Validate cache system contract
+        shell: pwsh
+        run: ./scripts/Test-CacheSystemContract.ps1
+
       - name: Validate Bangumi public integration contract
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1
@@ -105,6 +109,9 @@ jobs:
 
       - name: Run Metadata integration tests
         run: dotnet test tests/Eizo.MetadataIntegration.Tests/Eizo.MetadataIntegration.Tests.csproj --configuration Release
+
+      - name: Run cache integration tests
+        run: dotnet test tests/Eizo.Cache.Tests/Eizo.Cache.Tests.csproj --configuration Release
 
       - name: Run Bangumi integration tests
         run: dotnet test tests/Eizo.Bangumi.Tests/Eizo.Bangumi.Tests.csproj --configuration Release

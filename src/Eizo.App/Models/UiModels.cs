@@ -125,4 +125,9 @@ public sealed record EpisodeItemModel(
     string Status,
     double Progress = 0,
     CatalogMediaItemModel? MediaItem = null);
-public sealed record CacheItemModel(string Title, string Source, string Size, string LastAccessed);
+public sealed record CacheItemModel(
+    string Id,
+    string Title,
+    string Source,
+    string Size,
+    string LastAccessed);

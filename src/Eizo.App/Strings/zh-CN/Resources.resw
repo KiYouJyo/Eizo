@@ -416,13 +416,13 @@
     <value>密码</value>
   </data>
   <data name="Cache_Subtitle" xml:space="preserve">
-    <value>管理远程播放缓存与离线内容。</value>
+    <value>管理媒体、封面与网络数据缓存。</value>
   </data>
   <data name="Cache_Overview" xml:space="preserve">
     <value>缓存总览</value>
   </data>
   <data name="Cache_OverviewLimit" xml:space="preserve">
-    <value>已使用 / 32 GB 上限</value>
+    <value>已使用 / {0} 上限</value>
   </data>
   <data name="Cache_Clear" xml:space="preserve">
     <value>清理缓存</value>
@@ -1189,5 +1189,36 @@
   </data>
   <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
     <value>正在回复 {0}</value>
+  </data>
+
+  <data name="Cache_Limit" xml:space="preserve">
+    <value>缓存容量上限</value>
+  </data>
+  <data name="Cache_LimitDescription" xml:space="preserve">
+    <value>达到上限后，自动清理会按最近最少使用顺序释放空间。</value>
+  </data>
+  <data name="Cache_CategoryMedia" xml:space="preserve">
+    <value>媒体</value>
+  </data>
+  <data name="Cache_CategoryArtwork" xml:space="preserve">
+    <value>封面</value>
+  </data>
+  <data name="Cache_CategoryMetadata" xml:space="preserve">
+    <value>数据</value>
+  </data>
+  <data name="Cache_Empty" xml:space="preserve">
+    <value>当前没有缓存内容。</value>
+  </data>
+  <data name="Cache_StatusError" xml:space="preserve">
+    <value>无法读取缓存状态。</value>
+  </data>
+  <data name="Cache_ClearConfirmTitle" xml:space="preserve">
+    <value>清理全部缓存？</value>
+  </data>
+  <data name="Cache_ClearConfirmBody" xml:space="preserve">
+    <value>将删除媒体、封面和网络数据缓存。之后需要时会重新下载。</value>
+  </data>
+  <data name="Cache_ClearConfirmPrimary" xml:space="preserve">
+    <value>清理</value>
   </data>
 </root>

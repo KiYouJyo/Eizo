@@ -4,8 +4,4 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="../Eizo.Cache/Eizo.Cache.csproj" />
-  </ItemGroup>
 </Project>

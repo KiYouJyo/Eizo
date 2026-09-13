@@ -1,0 +1,45 @@
+param()
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+
+function Read-RepoFile([string] $relativePath) {
+    return Get-Content -LiteralPath (Join-Path $repoRoot $relativePath) -Raw
+}
+
+function Assert-Contains(
+    [string] $text,
+    [string] $value,
+    [string] $message) {
+    if (-not $text.Contains($value, [StringComparison]::Ordinal)) {
+        throw $message
+    }
+}
+
+$cacheView = Read-RepoFile 'src/Eizo.App/Views/CacheView.xaml'
+$cacheCode = Read-RepoFile 'src/Eizo.App/Views/CacheView.xaml.cs'
+$appProject = Read-RepoFile 'src/Eizo.App/Eizo.App.csproj'
+$bangumiProject = Read-RepoFile 'src/Eizo.Bangumi/Eizo.Bangumi.csproj'
+$bangumiCache = Read-RepoFile 'src/Eizo.Bangumi/BangumiCacheStore.cs'
+$settings = Read-RepoFile 'src/Eizo.App/AppSettingsStore.cs'
+
+foreach ($placeholder in @('8.6 GB', '6.9 GB', '1.7 GB', '26.9%')) {
+    if ($cacheView.Contains($placeholder, [StringComparison]::Ordinal)) {
+        throw "Cache page still contains placeholder value: $placeholder"
+    }
+}
+
+Assert-Contains $cacheView 'x:Name="OverviewUsedText"' 'Cache overview is not bound to real usage.'
+Assert-Contains $cacheView 'x:Name="CacheUsageProgress"' 'Cache usage progress is not bindable.'
+Assert-Contains $cacheView 'ClearCacheButton_Click' 'Clear-cache action is not wired.'
+Assert-Contains $cacheCode 'CacheRuntime.Store.GetSnapshotAsync' 'Cache page does not read the unified cache store.'
+Assert-Contains $cacheCode 'CacheRuntime.EnforcePolicyAsync' 'Cache page does not apply the cache policy.'
+Assert-Contains $appProject '../Eizo.Cache/Eizo.Cache.csproj' 'Eizo.App does not reference Eizo.Cache.'
+Assert-Contains $bangumiProject '../Eizo.Cache/Eizo.Cache.csproj' 'Eizo.Bangumi does not reference Eizo.Cache.'
+Assert-Contains $bangumiCache 'DiskCacheStore' 'Bangumi cache is not using the unified disk cache.'
+Assert-Contains $settings 'CacheAutoCleanup' 'Cache policy is not persisted.'
+Assert-Contains $settings 'RemotePrecacheBytes' 'Remote pre-cache policy is not persisted.'
+
+Write-Host 'Cache system contract PASS.'

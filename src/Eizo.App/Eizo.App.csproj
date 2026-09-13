@@ -24,6 +24,7 @@
     <ProjectReference Include="../../.deps/Eizo.Playback/src/Eizo.Playback.LibVLC.WinUI/Eizo.Playback.LibVLC.WinUI.csproj" Condition="'$(EizoPlaybackUseSource)' == 'true'" />
     <ProjectReference Include="../Eizo.RecognitionIntegration/Eizo.RecognitionIntegration.csproj" />
     <ProjectReference Include="../Eizo.MetadataIntegration/Eizo.MetadataIntegration.csproj" />
+    <ProjectReference Include="../Eizo.Cache/Eizo.Cache.csproj" />
     <ProjectReference Include="../Eizo.Bangumi/Eizo.Bangumi.csproj" />
     <!-- The final Windows host owns the native LibVLC runtime deployment.
          Playback runtime updates replace only Eizo.Playback managed assemblies;

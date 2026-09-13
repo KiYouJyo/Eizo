@@ -416,13 +416,13 @@
     <value>パスワード</value>
   </data>
   <data name="Cache_Subtitle" xml:space="preserve">
-    <value>リモート再生キャッシュとオフラインコンテンツを管理します。</value>
+    <value>メディア、アートワーク、ネットワークデータのキャッシュを管理します。</value>
   </data>
   <data name="Cache_Overview" xml:space="preserve">
     <value>キャッシュ概要</value>
   </data>
   <data name="Cache_OverviewLimit" xml:space="preserve">
-    <value>使用中 / 上限 32 GB</value>
+    <value>使用中 / 上限 {0}</value>
   </data>
   <data name="Cache_Clear" xml:space="preserve">
     <value>キャッシュを削除</value>
@@ -1189,5 +1189,36 @@
   </data>
   <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
     <value>{0} に返信中</value>
+  </data>
+
+  <data name="Cache_Limit" xml:space="preserve">
+    <value>キャッシュ上限</value>
+  </data>
+  <data name="Cache_LimitDescription" xml:space="preserve">
+    <value>上限に達すると、最終アクセスが古い項目から自動的に削除します。</value>
+  </data>
+  <data name="Cache_CategoryMedia" xml:space="preserve">
+    <value>メディア</value>
+  </data>
+  <data name="Cache_CategoryArtwork" xml:space="preserve">
+    <value>アートワーク</value>
+  </data>
+  <data name="Cache_CategoryMetadata" xml:space="preserve">
+    <value>データ</value>
+  </data>
+  <data name="Cache_Empty" xml:space="preserve">
+    <value>現在キャッシュされている内容はありません。</value>
+  </data>
+  <data name="Cache_StatusError" xml:space="preserve">
+    <value>キャッシュ状態を読み取れませんでした。</value>
+  </data>
+  <data name="Cache_ClearConfirmTitle" xml:space="preserve">
+    <value>すべてのキャッシュを削除しますか？</value>
+  </data>
+  <data name="Cache_ClearConfirmBody" xml:space="preserve">
+    <value>メディア、アートワーク、ネットワークデータのキャッシュを削除します。必要になった場合は再度ダウンロードされます。</value>
+  </data>
+  <data name="Cache_ClearConfirmPrimary" xml:space="preserve">
+    <value>削除</value>
   </data>
 </root>
