@@ -64,3 +64,11 @@ public sealed record BangumiCommunityDetailHeaderViewModel(
     BitmapImage? Avatar,
     string UserName,
     string MetaLine);
+
+public sealed record BangumiChannelBlogViewModel(
+    BangumiChannelBlog Blog,
+    BitmapImage? Avatar,
+    string UserName,
+    string Title,
+    string Summary,
+    string MetaLine);
