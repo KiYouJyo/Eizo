@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.4.2",
-    "packageVersion": "0.4.2.0",
+    "version": "0.4.3",
+    "packageVersion": "0.4.3.0",
     "title": {
-      "zh-CN": "Bangumi 公开内容接入",
-      "ja-JP": "Bangumi 公開コンテンツ連携",
-      "en-US": "Bangumi Public Content Integration"
+      "zh-CN": "Bangumi 账户与我的追番",
+      "ja-JP": "Bangumi アカウントと追番",
+      "en-US": "Bangumi Account & My Following"
     }
   },
   "channels": {
