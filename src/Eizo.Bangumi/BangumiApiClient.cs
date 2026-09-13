@@ -72,7 +72,7 @@ internal sealed class BangumiApiClient
         client.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/json"));
         client.DefaultRequestHeaders.UserAgent.ParseAdd(
-            "Eizo/0.4.2 (KiYouJyo; https://github.com/KiYouJyo/Eizo)");
+            "KiYouJyo/Eizo/0.4.2 (Windows) (https://github.com/KiYouJyo/Eizo)");
         return client;
     }
 }
