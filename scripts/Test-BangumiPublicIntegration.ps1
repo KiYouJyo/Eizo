@@ -25,8 +25,10 @@ foreach ($required in @(
     '../Eizo.Bangumi/Eizo.Bangumi.csproj',
     'https://api.bgm.tv/',
     'Eizo/0.4.2',
-    'v0/subjects?type=2&cat=1&sort=date',
-    'v0/subjects?type=2&sort=rank',
+    '"type=2"',
+    '"sort=" + sort',
+    'GetSeasonMonthAsync',
+    'GetRankedAnimeAsync',
     '"calendar"',
     'v0/subjects/{subjectId}')) {
     $haystack = $project + $client
@@ -42,7 +44,12 @@ foreach ($required in @(
     'SubjectCacheLifetime',
     'IsStale: true',
     'GetCurrentSeasonAsync',
+    'GetSeasonAsync',
     'GetRankedAnimeAsync',
+    'GetRankedAnimeForYearAsync',
+    'GetRankedAnimeForSeasonAsync',
+    'ShiftSeason',
+    'Enumerable.Range(startMonth, 3)',
     'GetCalendarAsync',
     'GetSubjectAsync')) {
     if (-not $repository.Contains($required, [StringComparison]::Ordinal)) {
@@ -52,6 +59,7 @@ foreach ($required in @(
 
 foreach ($required in @(
     'ParsePagedSubjects',
+    'ParsePagedSubjectPage',
     'ParseCalendar',
     'ParseSubject',
     'subject.Type == 2',
@@ -63,8 +71,13 @@ foreach ($required in @(
 
 foreach ($required in @(
     'GetCalendarAsync',
-    'GetCurrentSeasonAsync',
+    'GetSeasonAsync',
     'GetRankedAnimeAsync',
+    'GetRankedAnimeForYearAsync',
+    'GetRankedAnimeForSeasonAsync',
+    'PreviousSeasonButton_Click',
+    'NextSeasonButton_Click',
+    'LoadMoreButton_Click',
     'SubjectRequested?.Invoke',
     'Bangumi_StaleCacheFormat')) {
     if (-not $view.Contains($required, [StringComparison]::Ordinal)) {
