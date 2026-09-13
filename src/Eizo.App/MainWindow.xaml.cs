@@ -333,11 +333,23 @@ public sealed partial class MainWindow : Window
                 return view;
             }
             case "bangumi-calendar":
-                return new BangumiPlaceholderView(BangumiPlaceholderKind.Calendar);
+            {
+                var view = new BangumiPublicView(BangumiPublicPageKind.Calendar);
+                WireBangumiPublicView(view);
+                return view;
+            }
             case "bangumi-seasonal":
-                return new BangumiPlaceholderView(BangumiPlaceholderKind.Seasonal);
+            {
+                var view = new BangumiPublicView(BangumiPublicPageKind.Seasonal);
+                WireBangumiPublicView(view);
+                return view;
+            }
             case "bangumi-discover":
-                return new BangumiPlaceholderView(BangumiPlaceholderKind.Discover);
+            {
+                var view = new BangumiPublicView(BangumiPublicPageKind.Discover);
+                WireBangumiPublicView(view);
+                return view;
+            }
             case "bangumi-following":
                 return new BangumiPlaceholderView(BangumiPlaceholderKind.Following);
             case "categories":
@@ -396,6 +408,43 @@ public sealed partial class MainWindow : Window
 
         view.MediaRequested += async (_, item) =>
             await OpenCatalogMediaAsync(item);
+    }
+
+    private void WireBangumiPublicView(BangumiPublicView view)
+    {
+        view.SubjectRequested += (_, subject) =>
+            OpenBangumiSubject(subject);
+    }
+
+    private void OpenBangumiSubject(Eizo.Bangumi.BangumiSubjectCard subject)
+    {
+        ArgumentNullException.ThrowIfNull(subject);
+
+        var key = "bangumi-subject:" + subject.Id;
+        if (_tabs.TryGetValue(key, out var existing))
+        {
+            SelectTab(existing.Key);
+            return;
+        }
+
+        var title = string.IsNullOrWhiteSpace(subject.ChineseTitle)
+            ? subject.NativeTitle
+            : subject.ChineseTitle;
+
+        var state = new ShellTabState(
+            key,
+            ShellTabKind.Detail,
+            pageKey: null,
+            title,
+            "\uE8B2",
+            new BangumiSubjectDetailView(subject),
+            navItem: null,
+            PreferredTabWidth)
+        {
+            MediaTitle = title
+        };
+
+        AddTab(state, select: true);
     }
 
     private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch
