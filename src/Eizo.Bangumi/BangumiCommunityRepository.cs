@@ -26,7 +26,10 @@ public sealed class BangumiCommunityRepository
             offset,
             accessToken,
             cancellationToken);
-        return BangumiCommunityJsonParser.ParseComments(payload);
+        return BangumiCommunityJsonParser.ParseComments(payload) with
+        {
+            Offset = offset,
+        };
     }
 
     public async Task<BangumiCommunityPage<BangumiSubjectReview>>
@@ -43,7 +46,10 @@ public sealed class BangumiCommunityRepository
             offset,
             accessToken,
             cancellationToken);
-        return BangumiCommunityJsonParser.ParseReviews(payload);
+        return BangumiCommunityJsonParser.ParseReviews(payload) with
+        {
+            Offset = offset,
+        };
     }
 
     public async Task<BangumiCommunityPage<BangumiSubjectTopic>>
@@ -60,7 +66,10 @@ public sealed class BangumiCommunityRepository
             offset,
             accessToken,
             cancellationToken);
-        return BangumiCommunityJsonParser.ParseTopics(payload);
+        return BangumiCommunityJsonParser.ParseTopics(payload) with
+        {
+            Offset = offset,
+        };
     }
 
     public async Task<BangumiCommunityPage<BangumiSubjectRecommendation>>
@@ -77,7 +86,10 @@ public sealed class BangumiCommunityRepository
             offset,
             accessToken,
             cancellationToken);
-        return BangumiCommunityJsonParser.ParseRecommendations(payload);
+        return BangumiCommunityJsonParser.ParseRecommendations(payload) with
+        {
+            Offset = offset,
+        };
     }
 
     public async Task<BangumiCommunityPage<BangumiSubjectRelation>>
@@ -94,6 +106,9 @@ public sealed class BangumiCommunityRepository
             offset,
             accessToken,
             cancellationToken);
-        return BangumiCommunityJsonParser.ParseRelations(payload);
+        return BangumiCommunityJsonParser.ParseRelations(payload) with
+        {
+            Offset = offset,
+        };
     }
 }
