@@ -49,6 +49,14 @@ try {
         }
     }
 
+    $animeBlogs = $client.GetStringAsync(
+        "p1/channels/2/blogs?limit=1&offset=0").GetAwaiter().GetResult() |
+        ConvertFrom-Json
+    if ($null -eq $animeBlogs.total -or $null -eq $animeBlogs.data) {
+        throw 'Bangumi anime blogs smoke failed.'
+    }
+    Write-Host "Anime blogs PASS: total=$($animeBlogs.total)"
+
     $doingComments = $client.GetStringAsync(
         "p1/subjects/$SubjectId/comments?type=3&limit=1&offset=0").GetAwaiter().GetResult() |
         ConvertFrom-Json
