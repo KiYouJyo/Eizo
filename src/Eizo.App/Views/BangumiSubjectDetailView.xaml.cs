@@ -95,7 +95,13 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         CommentsLoadMoreButton.Content =
             T("Bangumi_LoadMore");
         PublishCommentButton.Content =
-            T("Bangumi_WriteComment");
+            T("Bangumi_Publish");
+        CommentInputBox.PlaceholderText =
+            T("Bangumi_WriteCommentPlaceholder");
+        CommentCollectionCombo.Header =
+            T("Bangumi_WriteCollectionState");
+        CommentRateBox.Header =
+            T("Bangumi_WriteRating");
         ReviewsLoadMoreButton.Content =
             T("Bangumi_LoadMore");
         TopicsLoadMoreButton.Content =
@@ -123,6 +129,27 @@ public sealed partial class BangumiSubjectDetailView : UserControl
             (int)BangumiCollectionType.Dropped);
         CommentsFilterCombo.SelectedIndex = 0;
         _suppressCommentsFilterChanged = false;
+
+        CommentCollectionCombo.Items.Clear();
+        AddCommentComposerItem(
+            T("Bangumi_CollectionWish"),
+            BangumiCollectionType.Wish);
+        AddCommentComposerItem(
+            T("Bangumi_CollectionDone"),
+            BangumiCollectionType.Done);
+        AddCommentComposerItem(
+            T("Bangumi_CollectionDoing"),
+            BangumiCollectionType.Doing);
+        AddCommentComposerItem(
+            T("Bangumi_CollectionOnHold"),
+            BangumiCollectionType.OnHold);
+        AddCommentComposerItem(
+            T("Bangumi_CollectionDropped"),
+            BangumiCollectionType.Dropped);
+        CommentCollectionCombo.SelectedIndex = 2;
+        CommentComposerHintText.Text =
+            T("Bangumi_CommentComposerHint");
+        UpdateCommentComposerState();
     }
 
     private async void BangumiSubjectDetailView_Loaded(
@@ -225,9 +252,13 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         bool reset,
         CancellationToken cancellationToken)
     {
-        PublishCommentButton.IsEnabled =
-            _account.IsConnected &&
-            await BangumiTurnstileDialogService.IsAvailableAsync();
+        CommentComposerBorder.IsEnabled =
+            _account.IsConnected;
+        CommentComposerHintText.Text =
+            _account.IsConnected
+                ? T("Bangumi_CommentComposerHint")
+                : T("Bangumi_CommunitySignInToInteract");
+        UpdateCommentComposerState();
 
         if (_account.IsConnected)
         {
@@ -546,11 +577,24 @@ public sealed partial class BangumiSubjectDetailView : UserControl
             return;
         }
 
-        var draft =
-            await BangumiCommunityWriteDialogService
-                .PromptSubjectCommentAsync(XamlRoot);
-        if (draft is null)
+        var comment = CommentInputBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(comment) ||
+            CommentCollectionCombo.SelectedItem is not ComboBoxItem
+            {
+                Tag: BangumiCollectionType type
+            })
+        {
             return;
+        }
+
+        var rate = double.IsNaN(CommentRateBox.Value)
+            ? 0
+            : Math.Clamp(
+                (int)Math.Round(CommentRateBox.Value),
+                0,
+                10);
+
+        PublishCommentButton.IsEnabled = false;
 
         var turnstile =
             await BangumiTurnstileDialogService.AcquireAsync(
@@ -559,26 +603,27 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         {
             CommentsStatusText.Text =
                 T("Bangumi_TurnstileUnavailable");
+            UpdateCommentComposerState();
             return;
         }
 
-        PublishCommentButton.IsEnabled = false;
         try
         {
             await _community.CreateSubjectCommentAsync(
                 _subjectId,
-                draft.Comment,
-                draft.Type,
-                draft.Rate,
+                comment,
+                type,
+                rate,
                 turnstile,
                 token,
                 _loadCancellation?.Token ??
                 CancellationToken.None);
 
-            _commentsFilter = draft.Type;
+            CommentInputBox.Text = string.Empty;
+            _commentsFilter = type;
             _suppressCommentsFilterChanged = true;
             CommentsFilterCombo.SelectedIndex =
-                (int)draft.Type;
+                (int)type;
             _suppressCommentsFilterChanged = false;
 
             _commentsOffset = 0;
@@ -597,9 +642,33 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         }
         finally
         {
-            PublishCommentButton.IsEnabled =
-                _account.IsConnected;
+            UpdateCommentComposerState();
         }
+    }
+
+    private void CommentInputBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e) =>
+        UpdateCommentComposerState();
+
+    private void UpdateCommentComposerState()
+    {
+        PublishCommentButton.IsEnabled =
+            _account.IsConnected &&
+            !string.IsNullOrWhiteSpace(
+                CommentInputBox.Text);
+    }
+
+    private void AddCommentComposerItem(
+        string label,
+        BangumiCollectionType type)
+    {
+        CommentCollectionCombo.Items.Add(
+            new ComboBoxItem
+            {
+                Content = label,
+                Tag = type,
+            });
     }
 
     private async void CommentsLoadMoreButton_Click(
