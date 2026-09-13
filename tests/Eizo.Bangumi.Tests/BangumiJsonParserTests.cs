@@ -50,9 +50,13 @@ public sealed class BangumiJsonParserTests
         }
         """;
 
-        var item = Assert.Single(
-            BangumiJsonParser.ParsePagedSubjects(json));
+        var page = BangumiJsonParser.ParsePagedSubjectPage(json);
+        var item = Assert.Single(page.Items);
 
+        Assert.Equal(1, page.Total);
+        Assert.Equal(10, page.Limit);
+        Assert.Equal(0, page.Offset);
+        Assert.False(page.HasMore);
         Assert.Equal(123, item.Id);
         Assert.Equal("测试动画", item.ChineseTitle);
         Assert.Equal("テストアニメ", item.NativeTitle);
@@ -133,5 +137,26 @@ public sealed class BangumiJsonParserTests
         Assert.Equal(
             expected,
             BangumiRepository.GetSeasonStartMonth(month));
+    }
+
+    [Theory]
+    [InlineData(2026, 1, -1, 2025, 10)]
+    [InlineData(2026, 1, 1, 2026, 4)]
+    [InlineData(2026, 10, 1, 2027, 1)]
+    [InlineData(2026, 7, -2, 2026, 1)]
+    public void ShiftSeason_CrossesYearBoundaries(
+        int year,
+        int startMonth,
+        int delta,
+        int expectedYear,
+        int expectedMonth)
+    {
+        var shifted = BangumiRepository.ShiftSeason(
+            year,
+            startMonth,
+            delta);
+
+        Assert.Equal(expectedYear, shifted.Year);
+        Assert.Equal(expectedMonth, shifted.StartMonth);
     }
 }
