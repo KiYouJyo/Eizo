@@ -22,6 +22,7 @@ public sealed partial class BangumiReviewDetailView : UserControl
     private readonly BangumiSubjectReview _review;
     private readonly BangumiSubjectCard? _subject;
     private CancellationTokenSource? _loadCancellation;
+    private int _replyToCommentId;
 
     public BangumiReviewDetailView(
         BangumiSubjectReview review,
@@ -123,9 +124,7 @@ public sealed partial class BangumiReviewDetailView : UserControl
                     detail.User.AvatarLarge,
                     detail.User.AvatarSmall),
                 96);
-            ContentText.Text =
-                BangumiCommunityText.ToPlainText(
-                    detail.Content);
+            RenderContent(detail.Content);
 
             var meta = new List<string>();
             if (detail.CreatedAt is { } createdAt)
@@ -252,7 +251,7 @@ public sealed partial class BangumiReviewDetailView : UserControl
             await _community.CreateBlogCommentAsync(
                 _review.EntryId,
                 content,
-                replyTo: 0,
+                replyTo: _replyToCommentId,
                 turnstile,
                 token,
                 _loadCancellation?.Token ??
@@ -266,6 +265,7 @@ public sealed partial class BangumiReviewDetailView : UserControl
                     CancellationToken.None);
 
             ReplyInputBox.Text = string.Empty;
+            ClearReplyTarget();
             _comments.Clear();
             foreach (var reply in FlattenReplies(comments))
                 _comments.Add(reply);
@@ -288,6 +288,39 @@ public sealed partial class BangumiReviewDetailView : UserControl
         {
             UpdateReplyComposerState();
         }
+    }
+
+    private void CommentReplyButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button
+            {
+                Tag: BangumiReplyViewModel item
+            })
+        {
+            return;
+        }
+
+        _replyToCommentId = item.Reply.Id;
+        ReplyTargetText.Text = string.Format(
+            CultureInfo.CurrentCulture,
+            T("Bangumi_ReplyingToFormat"),
+            item.UserName);
+        ReplyTargetPanel.Visibility = Visibility.Visible;
+        ReplyInputBox.Focus(FocusState.Programmatic);
+    }
+
+    private void CancelReplyTargetButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        ClearReplyTarget();
+
+    private void ClearReplyTarget()
+    {
+        _replyToCommentId = 0;
+        ReplyTargetText.Text = string.Empty;
+        ReplyTargetPanel.Visibility = Visibility.Collapsed;
     }
 
     private void ReplyInputBox_TextChanged(
@@ -319,6 +352,48 @@ public sealed partial class BangumiReviewDetailView : UserControl
             new Uri(
                 $"https://bgm.tv/blog/{_review.EntryId}",
                 UriKind.Absolute));
+    }
+
+    private void RenderContent(string? content)
+    {
+        ContentBlocksPanel.Children.Clear();
+
+        var blocks =
+            BangumiCommunityText.ParseContentBlocks(content);
+        if (blocks.Count == 0)
+            return;
+
+        foreach (var block in blocks)
+        {
+            if (block.IsImage &&
+                CreateArtwork(
+                    block.ImageUrl,
+                    1600) is { } imageSource)
+            {
+                ContentBlocksPanel.Children.Add(
+                    new Image
+                    {
+                        Source = imageSource,
+                        MaxWidth = 900,
+                        Stretch =
+                            Microsoft.UI.Xaml.Media.Stretch.Uniform,
+                        HorizontalAlignment =
+                            HorizontalAlignment.Left,
+                    });
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(block.Text))
+            {
+                ContentBlocksPanel.Children.Add(
+                    new TextBlock
+                    {
+                        Text = block.Text,
+                        TextWrapping = TextWrapping.Wrap,
+                        IsTextSelectionEnabled = true,
+                    });
+            }
+        }
     }
 
     private static string FormatTime(DateTimeOffset value) =>
