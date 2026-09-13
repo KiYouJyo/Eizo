@@ -17,13 +17,15 @@ public sealed partial class SettingsView : UserControl
         ApplyText();
         Loaded += SettingsView_Loaded;
         Unloaded += SettingsView_Unloaded;
-        _bangumiAccount.Changed += BangumiAccount_Changed;
     }
 
     private string T(string key) => _localization.GetString(key);
 
     private async void SettingsView_Loaded(object sender, RoutedEventArgs e)
     {
+        _bangumiAccount.Changed -= BangumiAccount_Changed;
+        _bangumiAccount.Changed += BangumiAccount_Changed;
+
         _isSynchronizing = true;
         try
         {
