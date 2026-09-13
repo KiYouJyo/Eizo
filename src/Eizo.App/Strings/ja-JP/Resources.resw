@@ -1067,4 +1067,37 @@
   <data name="Bangumi_CollectionDropped" xml:space="preserve">
     <value>切った</value>
   </data>
+  <data name="Bangumi_ReviewDetailPageTitle" xml:space="preserve">
+    <value>Bangumi 長評</value>
+  </data>
+  <data name="Bangumi_TopicDetailPageTitle" xml:space="preserve">
+    <value>Bangumi ディスカッション</value>
+  </data>
+  <data name="Bangumi_BackToSubject" xml:space="preserve">
+    <value>作品に戻る</value>
+  </data>
+  <data name="Bangumi_ReviewComments" xml:space="preserve">
+    <value>コメント</value>
+  </data>
+  <data name="Bangumi_TopicReplies" xml:space="preserve">
+    <value>返信</value>
+  </data>
+  <data name="Bangumi_CommunityViewsFormat" xml:space="preserve">
+    <value>閲覧 {0}</value>
+  </data>
+  <data name="Bangumi_CommunityLoadedCountFormat" xml:space="preserve">
+    <value>{0} 件を読み込み済み</value>
+  </data>
+  <data name="Bangumi_ReviewNoComments" xml:space="preserve">
+    <value>コメントはありません。</value>
+  </data>
+  <data name="Bangumi_TopicNoReplies" xml:space="preserve">
+    <value>返信はありません。</value>
+  </data>
+  <data name="Bangumi_CommunityContentUnavailable" xml:space="preserve">
+    <value>本文を取得できません。</value>
+  </data>
+  <data name="Bangumi_UnknownUser" xml:space="preserve">
+    <value>不明なユーザー</value>
+  </data>
 </root>
