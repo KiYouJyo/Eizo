@@ -22,7 +22,6 @@ public sealed partial class BangumiReviewDetailView : UserControl
     private readonly BangumiSubjectReview _review;
     private readonly BangumiSubjectCard? _subject;
     private CancellationTokenSource? _loadCancellation;
-    private int _replyToCommentId;
 
     public BangumiReviewDetailView(
         BangumiSubjectReview review,
@@ -42,12 +41,6 @@ public sealed partial class BangumiReviewDetailView : UserControl
                 : Visibility.Visible;
         OpenBangumiButton.Content = T("Bangumi_OpenOnBangumi");
         CommentsTitle.Text = T("Bangumi_ReviewComments");
-        ReplyButton.Content = T("Bangumi_Publish");
-        ReplyInputBox.PlaceholderText =
-            T("Bangumi_WriteReplyPlaceholder");
-        ReplyInputBox.IsEnabled =
-            _account.IsConnected;
-        UpdateReplyComposerState();
         TitleText.Text = review.Title;
         AuthorText.Text = FirstNonEmpty(
             review.User.NickName,
@@ -97,10 +90,6 @@ public sealed partial class BangumiReviewDetailView : UserControl
 
         try
         {
-            ReplyInputBox.IsEnabled =
-                _account.IsConnected;
-            UpdateReplyComposerState();
-
             var accessToken = _account.GetAccessTokenForRequest();
             var detailTask = _community.GetBlogEntryAsync(
                 _review.EntryId,
@@ -217,123 +206,6 @@ public sealed partial class BangumiReviewDetailView : UserControl
             CanReact: false,
             IsReacted: false,
             Indent: nested ? new Thickness(32, 0, 0, 0) : new Thickness(0));
-    }
-
-    private async void ReplyButton_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        var token = _account.GetAccessTokenForRequest();
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            CommentsStatusText.Text =
-                T("Bangumi_CommunitySignInToInteract");
-            return;
-        }
-
-        var content = ReplyInputBox.Text.Trim();
-        if (string.IsNullOrWhiteSpace(content))
-            return;
-
-        var turnstile =
-            await BangumiTurnstileDialogService.AcquireAsync(
-                XamlRoot);
-        if (string.IsNullOrWhiteSpace(turnstile))
-        {
-            CommentsStatusText.Text =
-                T("Bangumi_TurnstileUnavailable");
-            return;
-        }
-
-        ReplyButton.IsEnabled = false;
-        try
-        {
-            await _community.CreateBlogCommentAsync(
-                _review.EntryId,
-                content,
-                replyTo: _replyToCommentId,
-                turnstile,
-                token,
-                _loadCancellation?.Token ??
-                CancellationToken.None);
-
-            var comments =
-                await _community.GetBlogCommentsAsync(
-                    _review.EntryId,
-                    token,
-                    _loadCancellation?.Token ??
-                    CancellationToken.None);
-
-            ReplyInputBox.Text = string.Empty;
-            ClearReplyTarget();
-            _comments.Clear();
-            foreach (var reply in FlattenReplies(comments))
-                _comments.Add(reply);
-
-            CommentsStatusText.Text =
-                string.Format(
-                    CultureInfo.CurrentCulture,
-                    T("Bangumi_CommunityLoadedCountFormat"),
-                    _comments.Count);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch
-        {
-            CommentsStatusText.Text =
-                T("Bangumi_CommunityWriteFailed");
-        }
-        finally
-        {
-            UpdateReplyComposerState();
-        }
-    }
-
-    private void CommentReplyButton_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (sender is not Button
-            {
-                Tag: BangumiReplyViewModel item
-            })
-        {
-            return;
-        }
-
-        _replyToCommentId = item.Reply.Id;
-        ReplyTargetText.Text = string.Format(
-            CultureInfo.CurrentCulture,
-            T("Bangumi_ReplyingToFormat"),
-            item.UserName);
-        ReplyTargetPanel.Visibility = Visibility.Visible;
-        ReplyInputBox.Focus(FocusState.Programmatic);
-    }
-
-    private void CancelReplyTargetButton_Click(
-        object sender,
-        RoutedEventArgs e) =>
-        ClearReplyTarget();
-
-    private void ClearReplyTarget()
-    {
-        _replyToCommentId = 0;
-        ReplyTargetText.Text = string.Empty;
-        ReplyTargetPanel.Visibility = Visibility.Collapsed;
-    }
-
-    private void ReplyInputBox_TextChanged(
-        object sender,
-        TextChangedEventArgs e) =>
-        UpdateReplyComposerState();
-
-    private void UpdateReplyComposerState()
-    {
-        ReplyButton.IsEnabled =
-            _account.IsConnected &&
-            !string.IsNullOrWhiteSpace(
-                ReplyInputBox.Text);
     }
 
     private void OpenSubjectButton_Click(
