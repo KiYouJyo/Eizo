@@ -123,6 +123,17 @@ public sealed record BangumiSubjectReview(
     DateTimeOffset? CreatedAt,
     DateTimeOffset? UpdatedAt);
 
+public sealed record BangumiChannelBlog(
+    int EntryId,
+    int Type,
+    BangumiCommunityUser User,
+    string Title,
+    string Summary,
+    int ReplyCount,
+    bool IsPublic,
+    DateTimeOffset? CreatedAt,
+    DateTimeOffset? UpdatedAt);
+
 public sealed record BangumiSubjectTopic(
     int Id,
     BangumiCommunityUser User,
