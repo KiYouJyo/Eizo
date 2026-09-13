@@ -102,14 +102,15 @@ foreach ($required in @(
     }
 }
 
-foreach ($required in @(
+foreach ($forbidden in @(
     'https://next.bgm.tv/demo/access-token',
     'PasswordBox',
-    'BangumiAccountService.Default.ConnectAsync')) {
-    if (-not $dialog.Contains(
-            $required,
+    'Bangumi_ManualLogin',
+    'ShowManualConnectAsync')) {
+    if ($dialog.Contains(
+            $forbidden,
             [StringComparison]::Ordinal)) {
-        throw "Bangumi serverless connection dialog contract missing: $required"
+        throw "Legacy manual Bangumi token login UI remains: $forbidden"
     }
 }
 
