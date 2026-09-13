@@ -173,6 +173,21 @@ internal sealed class BangumiApiClient
         string accessToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
-        return accessToken.Trim();
+
+        var token = accessToken.Trim();
+        const string bearerPrefix = "Bearer ";
+        if (token.StartsWith(
+                bearerPrefix,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            token = token[bearerPrefix.Length..].Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(token))
+            throw new ArgumentException(
+                "Bangumi access token is empty.",
+                nameof(accessToken));
+
+        return token;
     }
 }
