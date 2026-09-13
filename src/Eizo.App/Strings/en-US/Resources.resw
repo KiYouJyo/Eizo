@@ -847,4 +847,56 @@
   <data name="Bangumi_FollowingPlaceholderDescription" xml:space="preserve">
     <value>Reserved for Bangumi collection and episode-watch synchronization. Account sign-in and data sync will be added later.</value>
   </data>
+
+  <data name="Bangumi_CalendarSubtitle" xml:space="preserve">
+    <value>This week's anime broadcast schedule</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitle" xml:space="preserve">
+    <value>Current-season TV anime</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitleFormat" xml:space="preserve">
+    <value>{0} {1} TV anime</value>
+  </data>
+  <data name="Bangumi_DiscoverSubtitle" xml:space="preserve">
+    <value>Bangumi anime ranking</value>
+  </data>
+  <data name="Bangumi_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Bangumi_Loading" xml:space="preserve">
+    <value>Loading Bangumi data…</value>
+  </data>
+  <data name="Bangumi_NoResults" xml:space="preserve">
+    <value>No Bangumi titles are available to display.</value>
+  </data>
+  <data name="Bangumi_NetworkError" xml:space="preserve">
+    <value>Could not reach Bangumi and no local cache is available.</value>
+  </data>
+  <data name="Bangumi_StaleCacheFormat" xml:space="preserve">
+    <value>Offline: showing cached data · cached {0}</value>
+  </data>
+  <data name="Bangumi_CacheFormat" xml:space="preserve">
+    <value>Local cache · updated {0}</value>
+  </data>
+  <data name="Bangumi_UpdatedFormat" xml:space="preserve">
+    <value>Updated from Bangumi · {0}</value>
+  </data>
+  <data name="Bangumi_DetailPageTitle" xml:space="preserve">
+    <value>Bangumi title</value>
+  </data>
+  <data name="Bangumi_OpenOnBangumi" xml:space="preserve">
+    <value>Open on Bangumi</value>
+  </data>
+  <data name="Bangumi_Summary" xml:space="preserve">
+    <value>Summary</value>
+  </data>
+  <data name="Bangumi_Tags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Bangumi_NoTags" xml:space="preserve">
+    <value>No tags</value>
+  </data>
+  <data name="Bangumi_NoSummary" xml:space="preserve">
+    <value>No summary available</value>
+  </data>
 </root>
