@@ -924,4 +924,77 @@
   <data name="Bangumi_SeasonLabelFormat" xml:space="preserve">
     <value>{0} {1}</value>
   </data>
+
+  <data name="Bangumi_FollowingSubtitle" xml:space="preserve">
+    <value>Anime marked Watching on your Bangumi account</value>
+  </data>
+  <data name="Bangumi_Connect" xml:space="preserve">
+    <value>Connect</value>
+  </data>
+  <data name="Bangumi_Disconnect" xml:space="preserve">
+    <value>Disconnect</value>
+  </data>
+  <data name="Bangumi_ConnectAccount" xml:space="preserve">
+    <value>Connect Bangumi account</value>
+  </data>
+  <data name="Bangumi_ConnectFailed" xml:space="preserve">
+    <value>Connection failed</value>
+  </data>
+  <data name="Bangumi_AccountTokenPlaceholder" xml:space="preserve">
+    <value>Paste Bangumi Access Token</value>
+  </data>
+  <data name="Bangumi_AccountTokenHelp" xml:space="preserve">
+    <value>Eizo uses a serverless Bangumi connection. Generate an Access Token on Bangumi's official page and paste it here. The token is stored only in Windows Credential Locker and is never written to Eizo settings or logs.</value>
+  </data>
+  <data name="Bangumi_OpenTokenPage" xml:space="preserve">
+    <value>Open Bangumi Access Token page</value>
+  </data>
+  <data name="Bangumi_AccountTokenRequired" xml:space="preserve">
+    <value>Enter an Access Token.</value>
+  </data>
+  <data name="Bangumi_AccountTokenInvalid" xml:space="preserve">
+    <value>Eizo could not retrieve Bangumi account information with this Access Token. Check the token and try again.</value>
+  </data>
+  <data name="Bangumi_DisconnectConfirm" xml:space="preserve">
+    <value>Disconnecting removes this Bangumi Access Token from Windows Credential Locker. It does not change your Bangumi collection data.</value>
+  </data>
+  <data name="Bangumi_AccountNotConnected" xml:space="preserve">
+    <value>Bangumi is not connected</value>
+  </data>
+  <data name="Bangumi_AccountNotConnectedDescription" xml:space="preserve">
+    <value>Connect to view My Following in Eizo.</value>
+  </data>
+  <data name="Bangumi_FollowingConnectPrompt" xml:space="preserve">
+    <value>Connect your Bangumi account to show anime currently marked Watching.</value>
+  </data>
+  <data name="Bangumi_AccountChecking" xml:space="preserve">
+    <value>Checking Bangumi account…</value>
+  </data>
+  <data name="Bangumi_AccountCheckingDescription" xml:space="preserve">
+    <value>Validating the saved Access Token.</value>
+  </data>
+  <data name="Bangumi_AccountNetworkError" xml:space="preserve">
+    <value>Bangumi account data is temporarily unavailable. The saved token has not been removed.</value>
+  </data>
+  <data name="Bangumi_FollowingEmpty" xml:space="preserve">
+    <value>You have no anime currently marked Watching.</value>
+  </data>
+  <data name="Bangumi_FollowingCountFormat" xml:space="preserve">
+    <value>Showing {0} of {1} Watching titles</value>
+  </data>
+  <data name="Bangumi_Watching" xml:space="preserve">
+    <value>Watching</value>
+  </data>
+  <data name="Bangumi_SettingsSection" xml:space="preserve">
+    <value>Bangumi</value>
+  </data>
+  <data name="Bangumi_Account" xml:space="preserve">
+    <value>Bangumi account</value>
+  </data>
+  <data name="Bangumi_AccountSettingsDescription" xml:space="preserve">
+    <value>Connect with an official Bangumi Access Token. This release only reads account and Watching collection data; it does not write collections or viewing progress.</value>
+  </data>
+  <data name="Bangumi_AccountConnectedFormat" xml:space="preserve">
+    <value>Connected: {0} (@{1})</value>
+  </data>
 </root>
