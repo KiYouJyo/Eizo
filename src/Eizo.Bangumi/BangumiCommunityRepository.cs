@@ -12,102 +12,6 @@ public sealed class BangumiCommunityRepository
 
     public static BangumiCommunityRepository Default { get; } = new();
 
-    public async Task<int> CreateBlogEntryAsync(
-        int subjectId,
-        string title,
-        string content,
-        IReadOnlyList<string>? tags,
-        bool isPublic,
-        string turnstileToken,
-        string accessToken,
-        CancellationToken cancellationToken = default)
-    {
-        var payload = await _client.CreateBlogEntryAsync(
-            subjectId,
-            title,
-            content,
-            tags,
-            isPublic,
-            turnstileToken,
-            accessToken,
-            cancellationToken);
-        return ParseCreatedId(payload);
-    }
-
-    public async Task<int> CreateSubjectTopicAsync(
-        int subjectId,
-        string title,
-        string content,
-        string turnstileToken,
-        string accessToken,
-        CancellationToken cancellationToken = default)
-    {
-        var payload = await _client.CreateSubjectTopicAsync(
-            subjectId,
-            title,
-            content,
-            turnstileToken,
-            accessToken,
-            cancellationToken);
-        return ParseCreatedId(payload);
-    }
-
-    public async Task<int> CreateSubjectCommentAsync(
-        int subjectId,
-        string comment,
-        BangumiCollectionType? type,
-        int? rate,
-        string turnstileToken,
-        string accessToken,
-        CancellationToken cancellationToken = default)
-    {
-        var payload = await _client.CreateSubjectCommentAsync(
-            subjectId,
-            comment,
-            type,
-            rate,
-            turnstileToken,
-            accessToken,
-            cancellationToken);
-        return ParseCreatedId(payload);
-    }
-
-    public async Task<int> CreateBlogCommentAsync(
-        int entryId,
-        string content,
-        int replyTo,
-        string turnstileToken,
-        string accessToken,
-        CancellationToken cancellationToken = default)
-    {
-        var payload = await _client.CreateBlogCommentAsync(
-            entryId,
-            content,
-            replyTo,
-            turnstileToken,
-            accessToken,
-            cancellationToken);
-        return ParseCreatedId(payload);
-    }
-
-    public async Task<int> CreateSubjectReplyAsync(
-        int topicId,
-        string content,
-        int replyTo,
-        string turnstileToken,
-        string accessToken,
-        CancellationToken cancellationToken = default)
-    {
-        var payload = await _client.CreateSubjectReplyAsync(
-            topicId,
-            content,
-            replyTo,
-            turnstileToken,
-            accessToken,
-            cancellationToken);
-        return ParseCreatedId(payload);
-    }
-
     public Task LikeSubjectCommentAsync(
         int commentId,
         int value,
@@ -310,20 +214,6 @@ public sealed class BangumiCommunityRepository
             Offset = offset,
         };
     }
-    private static int ParseCreatedId(string json)
-    {
-        using var document = System.Text.Json.JsonDocument.Parse(json);
-        if (!document.RootElement.TryGetProperty("id", out var id) ||
-            !id.TryGetInt32(out var value) ||
-            value <= 0)
-        {
-            throw new System.Text.Json.JsonException(
-                "Bangumi create response did not include a valid id.");
-        }
-
-        return value;
-    }
-
     private static async Task CompleteAsync(Task<string> task)
     {
         _ = await task;
