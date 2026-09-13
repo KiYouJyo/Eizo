@@ -91,13 +91,60 @@ internal sealed class BangumiApiClient
                 $"v0/subjects/{subjectId}"),
             cancellationToken);
 
+    public Task<string> GetMyselfAsync(
+        string accessToken,
+        CancellationToken cancellationToken) =>
+        GetStringAsync(
+            "v0/me",
+            cancellationToken,
+            NormalizeAccessToken(accessToken));
+
+    public Task<string> GetUserCollectionsAsync(
+        string userName,
+        BangumiCollectionType type,
+        int limit,
+        int offset,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userName);
+        if (limit is < 1 or > 50)
+            throw new ArgumentOutOfRangeException(nameof(limit));
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+
+        var relativeUri =
+            "v0/users/" +
+            Uri.EscapeDataString(userName.Trim()) +
+            "/collections?subject_type=2&type=" +
+            ((int)type).ToString(CultureInfo.InvariantCulture) +
+            "&limit=" +
+            limit.ToString(CultureInfo.InvariantCulture) +
+            "&offset=" +
+            offset.ToString(CultureInfo.InvariantCulture);
+
+        return GetStringAsync(
+            relativeUri,
+            cancellationToken,
+            NormalizeAccessToken(accessToken));
+    }
+
     private async Task<string> GetStringAsync(
         string relativeUri,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? bearerToken = null)
     {
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
             relativeUri);
+
+        if (!string.IsNullOrWhiteSpace(bearerToken))
+        {
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    bearerToken);
+        }
         using var response = await _httpClient.SendAsync(
             request,
             HttpCompletionOption.ResponseHeadersRead,
@@ -118,7 +165,14 @@ internal sealed class BangumiApiClient
             new MediaTypeWithQualityHeaderValue("application/json"));
         client.DefaultRequestHeaders.TryAddWithoutValidation(
             "User-Agent",
-            "KiYouJyo/Eizo/0.4.2 (Windows) (https://github.com/KiYouJyo/Eizo)");
+            "KiYouJyo/Eizo/0.4.3 (Windows) (https://github.com/KiYouJyo/Eizo)");
         return client;
+    }
+
+    private static string NormalizeAccessToken(
+        string accessToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        return accessToken.Trim();
     }
 }
