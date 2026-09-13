@@ -1151,4 +1151,28 @@
   <data name="Bangumi_CommentComposerHint" xml:space="preserve">
     <value>ここに直接入力できます。投稿時に Bangumi の人間確認を行い、Eizo のコールバックが未許可の場合も下書きは残ります。</value>
   </data>
+  <data name="Bangumi_CreateReview" xml:space="preserve">
+    <value>長評を投稿</value>
+  </data>
+  <data name="Bangumi_CreateReviewTitlePlaceholder" xml:space="preserve">
+    <value>長評タイトル</value>
+  </data>
+  <data name="Bangumi_CreateReviewContentPlaceholder" xml:space="preserve">
+    <value>長評本文を入力（Bangumi BBCode 対応）…</value>
+  </data>
+  <data name="Bangumi_CreateReviewTagsPlaceholder" xml:space="preserve">
+    <value>タグ（カンマ区切り）</value>
+  </data>
+  <data name="Bangumi_CreateReviewPublic" xml:space="preserve">
+    <value>公開</value>
+  </data>
+  <data name="Bangumi_CreateTopic" xml:space="preserve">
+    <value>ディスカッションを作成</value>
+  </data>
+  <data name="Bangumi_CreateTopicTitlePlaceholder" xml:space="preserve">
+    <value>ディスカッションタイトル</value>
+  </data>
+  <data name="Bangumi_CreateTopicContentPlaceholder" xml:space="preserve">
+    <value>本文を入力（Bangumi BBCode 対応）…</value>
+  </data>
 </root>
