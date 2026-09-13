@@ -57,7 +57,7 @@ public sealed class BangumiRepository
             ct => _client.GetSeasonAsync(
                 year,
                 startMonth,
-                limit: 60,
+                limit: 50,
                 ct),
             payload =>
                 new BangumiSeasonSnapshot(
@@ -76,7 +76,7 @@ public sealed class BangumiRepository
             "ranked-anime",
             RankingCacheLifetime,
             ct => _client.GetRankedAnimeAsync(
-                limit: 60,
+                limit: 50,
                 ct),
             BangumiJsonParser.ParsePagedSubjects,
             forceRefresh,
