@@ -13,24 +13,69 @@ internal sealed class BangumiApiClient
         _httpClient = httpClient ?? SharedClient;
     }
 
-    public Task<string> GetSeasonAsync(
+    public Task<string> GetAnimeAsync(
+        int limit,
+        int offset,
+        string sort,
+        int? year,
+        int? month,
+        int? category,
+        CancellationToken cancellationToken)
+    {
+        if (limit is < 1 or > 50)
+            throw new ArgumentOutOfRangeException(nameof(limit));
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+        if (sort is not ("date" or "rank"))
+            throw new ArgumentOutOfRangeException(nameof(sort));
+
+        var query = new List<string>
+        {
+            "type=2",
+            "sort=" + sort,
+            "limit=" + limit.ToString(CultureInfo.InvariantCulture),
+            "offset=" + offset.ToString(CultureInfo.InvariantCulture),
+        };
+
+        if (category is { } categoryValue)
+            query.Add("cat=" + categoryValue.ToString(CultureInfo.InvariantCulture));
+        if (year is { } yearValue)
+            query.Add("year=" + yearValue.ToString(CultureInfo.InvariantCulture));
+        if (month is { } monthValue)
+            query.Add("month=" + monthValue.ToString(CultureInfo.InvariantCulture));
+
+        return GetStringAsync(
+            "v0/subjects?" + string.Join("&", query),
+            cancellationToken);
+    }
+
+    public Task<string> GetSeasonMonthAsync(
         int year,
-        int startMonth,
+        int month,
         int limit,
         CancellationToken cancellationToken) =>
-        GetStringAsync(
-            string.Create(
-                CultureInfo.InvariantCulture,
-                $"v0/subjects?type=2&cat=1&sort=date&year={year}&month={startMonth}&limit={limit}&offset=0"),
+        GetAnimeAsync(
+            limit,
+            offset: 0,
+            sort: "date",
+            year,
+            month,
+            category: 1,
             cancellationToken);
 
     public Task<string> GetRankedAnimeAsync(
         int limit,
+        int offset,
+        int? year,
+        int? month,
         CancellationToken cancellationToken) =>
-        GetStringAsync(
-            string.Create(
-                CultureInfo.InvariantCulture,
-                $"v0/subjects?type=2&sort=rank&limit={limit}&offset=0"),
+        GetAnimeAsync(
+            limit,
+            offset,
+            sort: "rank",
+            year,
+            month,
+            category: null,
             cancellationToken);
 
     public Task<string> GetCalendarAsync(
