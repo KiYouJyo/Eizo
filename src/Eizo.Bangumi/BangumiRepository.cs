@@ -198,6 +198,40 @@ public sealed class BangumiRepository
             cancellationToken);
     }
 
+    public async Task<BangumiUserProfile> GetMyselfAsync(
+        string accessToken,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.GetMyselfAsync(
+            accessToken,
+            cancellationToken);
+        return BangumiJsonParser.ParseUserProfile(payload);
+    }
+
+    public async Task<BangumiUserCollectionPage>
+        GetFollowingAsync(
+            string accessToken,
+            string userName,
+            int offset = 0,
+            CancellationToken cancellationToken = default)
+    {
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+
+        var payload =
+            await _client.GetUserCollectionsAsync(
+                userName,
+                BangumiCollectionType.Doing,
+                PageSize,
+                offset,
+                accessToken,
+                cancellationToken);
+
+        return BangumiJsonParser.ParseUserCollectionPage(
+            payload);
+    }
+
+
     public static int GetSeasonStartMonth(int month)
     {
         if (month is < 1 or > 12)
