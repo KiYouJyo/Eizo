@@ -425,13 +425,15 @@ public sealed class BangumiCommunityTests
             limit: 20,
             offset: 40,
             accessToken: "Bearer test-token",
-            TestContext.Current.CancellationToken);
+            cancellationToken:
+                TestContext.Current.CancellationToken,
+            type: BangumiCollectionType.Doing);
 
         Assert.NotNull(captured);
         using (captured)
         {
             Assert.Equal(
-                "https://next.bgm.tv/p1/subjects/8/comments?limit=20&offset=40",
+                "https://next.bgm.tv/p1/subjects/8/comments?limit=20&offset=40&type=3",
                 captured!.RequestUri!.ToString());
             Assert.Equal(
                 new AuthenticationHeaderValue(
