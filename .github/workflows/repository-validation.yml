@@ -44,6 +44,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-BangumiAccountIntegration.ps1
 
+      - name: Validate Bangumi OAuth relay and activation
+        shell: pwsh
+        run: ./scripts/Test-BangumiOAuthIntegration.ps1
+
       - name: Validate WebDAV Stage 1 media-source contract
         shell: pwsh
         run: ./scripts/Test-MediaSourceStage1Contract.ps1

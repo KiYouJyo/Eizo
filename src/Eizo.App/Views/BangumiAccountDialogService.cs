@@ -17,6 +17,44 @@ internal static class BangumiAccountDialogService
         XamlRoot xamlRoot)
     {
         ArgumentNullException.ThrowIfNull(xamlRoot);
+        var localization = AppLocalizationService.Default;
+        var dialog = new ContentDialog
+        {
+            XamlRoot = xamlRoot,
+            Title = localization.GetString("Bangumi_ConnectAccount"),
+            Content = new TextBlock
+            {
+                Text = localization.GetString("Bangumi_BrowserLoginHelp"),
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 520,
+            },
+            PrimaryButtonText = localization.GetString("Bangumi_BrowserLogin"),
+            SecondaryButtonText = localization.GetString("Bangumi_ManualLogin"),
+            CloseButtonText = localization.GetString("Common_Cancel"),
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Secondary)
+            return await ShowManualConnectAsync(xamlRoot);
+        if (result != ContentDialogResult.Primary) return false;
+        try
+        {
+            await BangumiOAuthService.Default.StartAsync();
+            return false;
+        }
+        catch
+        {
+            await ShowMessageAsync(xamlRoot,
+                localization.GetString("Bangumi_BrowserLoginFailed"),
+                localization.GetString("Bangumi_ConnectFailed"));
+            return false;
+        }
+    }
+
+    private static async Task<bool> ShowManualConnectAsync(
+        XamlRoot xamlRoot)
+    {
+        ArgumentNullException.ThrowIfNull(xamlRoot);
 
         var localization = AppLocalizationService.Default;
         string T(string key) =>
@@ -54,7 +92,7 @@ internal static class BangumiAccountDialogService
         var dialog = new ContentDialog
         {
             XamlRoot = xamlRoot,
-            Title = T("Bangumi_ConnectAccount"),
+            Title = T("Bangumi_ManualLogin"),
             Content = content,
             PrimaryButtonText = T("Bangumi_Connect"),
             CloseButtonText = T("Common_Cancel"),

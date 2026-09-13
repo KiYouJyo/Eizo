@@ -193,8 +193,6 @@
                             Orientation="Horizontal"
                             Spacing="8"
                             VerticalAlignment="Center">
-                  <HyperlinkButton x:Name="BangumiTokenPageButton"
-                                   NavigateUri="https://next.bgm.tv/demo/access-token" />
                   <Button x:Name="BangumiConnectButton"
                           Click="BangumiConnectButton_Click" />
                   <Button x:Name="BangumiDisconnectButton"

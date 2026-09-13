@@ -66,6 +66,18 @@ internal sealed class BangumiAccountService
         return profile;
     }
 
+    public async Task<BangumiUserProfile> ConnectOAuthAsync(
+        string accessToken, string? refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        var profile = await _repository.GetMyselfAsync(accessToken, cancellationToken);
+        _credentials.SaveTokens(accessToken, refreshToken);
+        _profile = profile;
+        Changed?.Invoke(this, EventArgs.Empty);
+        return profile;
+    }
+
     public async Task<BangumiUserProfile?> GetProfileAsync(
         bool forceRefresh = false,
         CancellationToken cancellationToken = default)

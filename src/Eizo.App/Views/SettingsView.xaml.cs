@@ -246,7 +246,6 @@ public sealed partial class SettingsView : UserControl
         BangumiSectionTitle.Text = T("Bangumi_SettingsSection");
         BangumiAccountTitle.Text = T("Bangumi_Account");
         BangumiAccountDescription.Text = T("Bangumi_AccountSettingsDescription");
-        BangumiTokenPageButton.Content = T("Bangumi_OpenTokenPage");
         BangumiConnectButton.Content = T("Bangumi_Connect");
         BangumiDisconnectButton.Content = T("Bangumi_Disconnect");
 
