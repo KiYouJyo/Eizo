@@ -38,6 +38,8 @@ public sealed partial class BangumiTopicDetailView : UserControl
         OpenSubjectButton.Content = T("Bangumi_BackToSubject");
         OpenBangumiButton.Content = T("Bangumi_OpenOnBangumi");
         RepliesTitle.Text = T("Bangumi_TopicReplies");
+        ReplyButton.Content = T("Bangumi_WriteReply");
+        ReplyButton.IsEnabled = false;
         TitleText.Text = topic.Title;
         SubjectText.Text = FirstNonEmpty(
             subject.ChineseTitle,
@@ -90,6 +92,10 @@ public sealed partial class BangumiTopicDetailView : UserControl
 
         try
         {
+            ReplyButton.IsEnabled =
+                _account.IsConnected &&
+                await BangumiTurnstileDialogService.IsAvailableAsync();
+
             if (_account.IsConnected)
             {
                 var profile = await _account.GetProfileAsync(
@@ -211,6 +217,81 @@ public sealed partial class BangumiTopicDetailView : UserControl
             _viewerUserId > 0,
             reacted,
             nested ? new Thickness(32, 0, 0, 0) : new Thickness(0));
+    }
+
+    private async void ReplyButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var token = _account.GetAccessTokenForRequest();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            RepliesStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+            return;
+        }
+
+        var content =
+            await BangumiCommunityWriteDialogService
+                .PromptReplyAsync(
+                    XamlRoot,
+                    T("Bangumi_WriteTopicReplyTitle"));
+        if (string.IsNullOrWhiteSpace(content))
+            return;
+
+        var turnstile =
+            await BangumiTurnstileDialogService.AcquireAsync(
+                XamlRoot);
+        if (string.IsNullOrWhiteSpace(turnstile))
+        {
+            RepliesStatusText.Text =
+                T("Bangumi_TurnstileUnavailable");
+            return;
+        }
+
+        ReplyButton.IsEnabled = false;
+        try
+        {
+            await _community.CreateSubjectReplyAsync(
+                _topic.Id,
+                content,
+                replyTo: 0,
+                turnstile,
+                token,
+                _loadCancellation?.Token ??
+                CancellationToken.None);
+
+            var detail =
+                await _community.GetSubjectTopicAsync(
+                    _topic.Id,
+                    token,
+                    _loadCancellation?.Token ??
+                    CancellationToken.None);
+
+            _replies.Clear();
+            foreach (var reply in FlattenReplies(detail.Replies))
+                _replies.Add(reply);
+
+            RepliesStatusText.Text =
+                string.Format(
+                    CultureInfo.CurrentCulture,
+                    T("Bangumi_CommunityLoadedCountFormat"),
+                    _replies.Count);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            RepliesStatusText.Text =
+                T("Bangumi_CommunityWriteFailed");
+        }
+        finally
+        {
+            ReplyButton.IsEnabled =
+                _account.IsConnected &&
+                await BangumiTurnstileDialogService.IsAvailableAsync();
+        }
     }
 
     private async void ReplyReactionButton_Click(
