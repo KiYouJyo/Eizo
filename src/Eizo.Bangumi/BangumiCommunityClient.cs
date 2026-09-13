@@ -18,7 +18,8 @@ internal sealed class BangumiCommunityClient
         int limit,
         int offset,
         string? accessToken,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken,
+        BangumiCollectionType? type = null) =>
         GetSubjectPageAsync(
             subjectId,
             "comments",
@@ -26,7 +27,12 @@ internal sealed class BangumiCommunityClient
             offset,
             maximumLimit: 100,
             accessToken,
-            cancellationToken);
+            cancellationToken,
+            type is { } collectionType
+                ? "&type=" +
+                  ((int)collectionType).ToString(
+                      CultureInfo.InvariantCulture)
+                : null);
 
     public Task<string> GetSubjectReviewsAsync(
         int subjectId,
@@ -91,7 +97,8 @@ internal sealed class BangumiCommunityClient
     public Task<string> GetBlogEntryAsync(
         int entryId,
         string? accessToken,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? extraQuery = null)
     {
         if (entryId <= 0)
             throw new ArgumentOutOfRangeException(nameof(entryId));
@@ -155,7 +162,7 @@ internal sealed class BangumiCommunityClient
         return GetStringAsync(
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"p1/subjects/{subjectId}/{resource}?limit={limit}&offset={offset}"),
+                $"p1/subjects/{subjectId}/{resource}?limit={limit}&offset={offset}{extraQuery}"),
             accessToken,
             cancellationToken);
     }
