@@ -1103,4 +1103,49 @@
   <data name="Bangumi_CommunityAllComments" xml:space="preserve">
     <value>すべての短評</value>
   </data>
+  <data name="Bangumi_WriteComment" xml:space="preserve">
+    <value>短評を投稿</value>
+  </data>
+  <data name="Bangumi_WriteCommentTitle" xml:space="preserve">
+    <value>Bangumi に短評を投稿</value>
+  </data>
+  <data name="Bangumi_WriteCommentPlaceholder" xml:space="preserve">
+    <value>短評を入力…</value>
+  </data>
+  <data name="Bangumi_WriteCollectionState" xml:space="preserve">
+    <value>コレクション状態</value>
+  </data>
+  <data name="Bangumi_WriteRating" xml:space="preserve">
+    <value>評価（0–10）</value>
+  </data>
+  <data name="Bangumi_WriteCollectionWarning" xml:space="preserve">
+    <value>短評を投稿すると、この作品のコレクション状態と評価も更新されます。</value>
+  </data>
+  <data name="Bangumi_WriteReply" xml:space="preserve">
+    <value>返信</value>
+  </data>
+  <data name="Bangumi_WriteReplyPlaceholder" xml:space="preserve">
+    <value>返信を入力…</value>
+  </data>
+  <data name="Bangumi_WriteReviewReplyTitle" xml:space="preserve">
+    <value>長評に返信</value>
+  </data>
+  <data name="Bangumi_WriteTopicReplyTitle" xml:space="preserve">
+    <value>ディスカッションに返信</value>
+  </data>
+  <data name="Bangumi_Publish" xml:space="preserve">
+    <value>投稿</value>
+  </data>
+  <data name="Bangumi_CommunitySignInToInteract" xml:space="preserve">
+    <value>コミュニティ操作には Bangumi へのログインが必要です。</value>
+  </data>
+  <data name="Bangumi_CommunityWriteFailed" xml:space="preserve">
+    <value>送信に失敗しました。後でもう一度試すか、Bangumi の Web ページで操作してください。</value>
+  </data>
+  <data name="Bangumi_TurnstileTitle" xml:space="preserve">
+    <value>Bangumi 人間確認</value>
+  </data>
+  <data name="Bangumi_TurnstileUnavailable" xml:space="preserve">
+    <value>Bangumi がまだ Eizo の Turnstile コールバックを許可していないため、書き込み機能は現在利用できません。</value>
+  </data>
 </root>
