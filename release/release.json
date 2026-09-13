@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.4.1",
-    "packageVersion": "0.4.1.0",
+    "version": "0.4.2",
+    "packageVersion": "0.4.2.0",
     "title": {
-      "zh-CN": "媒体库分库实际接入与刮削内容优先展示",
-      "ja-JP": "ライブラリ分類ページ実装と取得済みメタデータ優先表示",
-      "en-US": "Real Library Category Pages & Scraped-Media Priority"
+      "zh-CN": "Bangumi 公开内容接入",
+      "ja-JP": "Bangumi 公開コンテンツ連携",
+      "en-US": "Bangumi Public Content Integration"
     }
   },
   "channels": {
