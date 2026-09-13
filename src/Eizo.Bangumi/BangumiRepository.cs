@@ -138,7 +138,7 @@ public sealed class BangumiRepository
                     sort: "rank",
                     year,
                     month,
-                    category: null,
+                    category: 1,
                     offset: 0,
                     forceRefresh,
                     cancellationToken))
