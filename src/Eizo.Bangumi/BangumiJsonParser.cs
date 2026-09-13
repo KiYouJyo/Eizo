@@ -12,17 +12,28 @@ internal static class BangumiJsonParser
         };
 
     public static IReadOnlyList<BangumiSubjectCard> ParsePagedSubjects(
+        string json) =>
+        ParsePagedSubjectPage(json).Items;
+
+    public static BangumiSubjectPage ParsePagedSubjectPage(
         string json)
     {
         var payload = JsonSerializer.Deserialize<PagedSubjectDto>(
             json,
-            SerializerOptions);
+            SerializerOptions)
+            ?? new PagedSubjectDto();
 
-        return payload?.Data?
+        var items = payload.Data?
             .Where(static subject => subject.Type == 2)
             .Select(ToCard)
             .ToArray()
             ?? [];
+
+        return new BangumiSubjectPage(
+            payload.Total,
+            payload.Limit,
+            payload.Offset,
+            items);
     }
 
     public static BangumiCalendarSnapshot ParseCalendar(
@@ -144,6 +155,15 @@ internal static class BangumiJsonParser
 
     private sealed class PagedSubjectDto
     {
+        [JsonPropertyName("total")]
+        public int Total { get; set; }
+
+        [JsonPropertyName("limit")]
+        public int Limit { get; set; }
+
+        [JsonPropertyName("offset")]
+        public int Offset { get; set; }
+
         [JsonPropertyName("data")]
         public List<SubjectDto>? Data { get; set; }
     }
