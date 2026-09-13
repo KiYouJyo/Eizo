@@ -28,6 +28,16 @@ public sealed record BangumiSeasonSnapshot(
     int StartMonth,
     IReadOnlyList<BangumiSubjectCard> Items);
 
+public sealed record BangumiSubjectPage(
+    int Total,
+    int Limit,
+    int Offset,
+    IReadOnlyList<BangumiSubjectCard> Items)
+{
+    public bool HasMore =>
+        Offset + Items.Count < Total;
+}
+
 public sealed record BangumiSubjectDetail(
     BangumiSubjectCard Card,
     IReadOnlyList<string> MetaTags,
