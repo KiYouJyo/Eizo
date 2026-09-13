@@ -81,6 +81,8 @@ foreach ($required in @(
     'GetAccessTokenForRequest',
     'LoadCommunityAsync',
     'CommentsLoadMoreButton_Click',
+    'CommentsFilterCombo_SelectionChanged',
+    '_commentsFilter',
     'ReviewsLoadMoreButton_Click',
     'TopicsLoadMoreButton_Click',
     'SubjectRequested?.Invoke',
@@ -112,6 +114,7 @@ foreach ($required in @(
 
 foreach ($required in @(
     'CommentsTab',
+    'CommentsFilterCombo',
     'ReviewsTab',
     'TopicsTab',
     'RelatedTab',
