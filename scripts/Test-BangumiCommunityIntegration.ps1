@@ -168,6 +168,12 @@ foreach ($required in @(
     if (-not $reviewXaml.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi review inline composer contract missing: $required"
     }
+}
+
+foreach ($required in @(
+    'ReplyComposerBorder',
+    'ReplyInputBox',
+    'ReplyButton')) {
     if (-not $topicXaml.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi topic inline composer contract missing: $required"
     }
