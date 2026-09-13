@@ -16,6 +16,13 @@ internal enum BangumiPublicPageKind
     Discover,
 }
 
+internal enum BangumiDiscoverScope
+{
+    AllTime = 0,
+    CurrentSeason = 1,
+    CurrentYear = 2,
+}
+
 public sealed partial class BangumiPublicView : UserControl
 {
     private readonly AppLocalizationService _localization =
@@ -24,23 +31,43 @@ public sealed partial class BangumiPublicView : UserControl
         BangumiRepository.Default;
     private readonly BangumiPublicPageKind _kind;
     private readonly ObservableCollection<BangumiCardViewModel> _items = [];
+
     private BangumiCalendarSnapshot? _calendar;
     private CancellationTokenSource? _loadCancellation;
     private bool _daySelectionSynchronizing;
+    private bool _controlsReady;
+    private int _selectedSeasonYear;
+    private int _selectedSeasonStartMonth;
+    private int _discoverNextOffset;
 
     internal BangumiPublicView(BangumiPublicPageKind kind)
     {
         _kind = kind;
+
+        var now = DateTimeOffset.Now;
+        _selectedSeasonYear = now.Year;
+        _selectedSeasonStartMonth =
+            BangumiRepository.GetSeasonStartMonth(now.Month);
+
         InitializeComponent();
 
         ResultsList.ItemsSource = _items;
         ApplyText();
+        _controlsReady = true;
 
         Loaded += BangumiPublicView_Loaded;
         Unloaded += BangumiPublicView_Unloaded;
     }
 
     public event EventHandler<BangumiSubjectCard>? SubjectRequested;
+
+    private BangumiDiscoverScope DiscoverScope =>
+        DiscoverScopeCombo.SelectedIndex switch
+        {
+            1 => BangumiDiscoverScope.CurrentSeason,
+            2 => BangumiDiscoverScope.CurrentYear,
+            _ => BangumiDiscoverScope.AllTime,
+        };
 
     private string T(string key) =>
         _localization.GetString(key);
@@ -79,10 +106,33 @@ public sealed partial class BangumiPublicView : UserControl
         };
 
         RefreshButtonText.Text = T("Bangumi_Refresh");
+        CurrentSeasonButton.Content =
+            T("Bangumi_CurrentSeason");
+        LoadMoreButton.Content =
+            T("Bangumi_LoadMore");
+
+        DiscoverScopeCombo.ItemsSource = new[]
+        {
+            T("Bangumi_RankingAllTime"),
+            T("Bangumi_RankingCurrentSeason"),
+            T("Bangumi_RankingCurrentYear"),
+        };
+        DiscoverScopeCombo.SelectedIndex = 0;
+
         DayList.Visibility =
             _kind == BangumiPublicPageKind.Calendar
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+        SeasonControls.Visibility =
+            _kind == BangumiPublicPageKind.Seasonal
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        DiscoverControls.Visibility =
+            _kind == BangumiPublicPageKind.Discover
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        UpdateSeasonHeader();
     }
 
     private async void BangumiPublicView_Loaded(
@@ -108,6 +158,60 @@ public sealed partial class BangumiPublicView : UserControl
         await LoadAsync(forceRefresh: true);
     }
 
+    private async void PreviousSeasonButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ShiftSeason(-1);
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async void NextSeasonButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ShiftSeason(1);
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async void CurrentSeasonButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var now = DateTimeOffset.Now;
+        _selectedSeasonYear = now.Year;
+        _selectedSeasonStartMonth =
+            BangumiRepository.GetSeasonStartMonth(now.Month);
+        UpdateSeasonHeader();
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async void DiscoverScopeCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (!_controlsReady)
+            return;
+
+        _discoverNextOffset = 0;
+        await LoadAsync(forceRefresh: false);
+    }
+
+    private async void LoadMoreButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_kind != BangumiPublicPageKind.Discover ||
+            DiscoverScope == BangumiDiscoverScope.CurrentSeason)
+        {
+            return;
+        }
+
+        await LoadDiscoverAsync(
+            forceRefresh: false,
+            append: true);
+    }
+
     private async Task LoadAsync(bool forceRefresh)
     {
         _loadCancellation?.Cancel();
@@ -115,10 +219,9 @@ public sealed partial class BangumiPublicView : UserControl
         _loadCancellation = new CancellationTokenSource();
         var cancellationToken = _loadCancellation.Token;
 
-        LoadingRing.IsActive = true;
-        LoadingRing.Visibility = Visibility.Visible;
-        RefreshButton.IsEnabled = false;
+        SetBusy(true);
         StatusText.Text = T("Bangumi_Loading");
+        LoadMoreButton.Visibility = Visibility.Collapsed;
 
         try
         {
@@ -143,16 +246,13 @@ public sealed partial class BangumiPublicView : UserControl
                 case BangumiPublicPageKind.Seasonal:
                 {
                     var result =
-                        await _repository.GetCurrentSeasonAsync(
-                            DateTimeOffset.Now,
+                        await _repository.GetSeasonAsync(
+                            _selectedSeasonYear,
+                            _selectedSeasonStartMonth,
                             forceRefresh,
                             cancellationToken);
                     SetItems(result.Value.Items);
-                    PageSubtitle.Text = string.Format(
-                        CultureInfo.CurrentCulture,
-                        T("Bangumi_SeasonalSubtitleFormat"),
-                        result.Value.Year,
-                        SeasonName(result.Value.StartMonth));
+                    UpdateSeasonHeader();
                     ApplyLoadStatus(
                         result.IsFromCache,
                         result.IsStale,
@@ -161,25 +261,15 @@ public sealed partial class BangumiPublicView : UserControl
                 }
 
                 default:
-                {
-                    var result =
-                        await _repository.GetRankedAnimeAsync(
-                            forceRefresh,
-                            cancellationToken);
-                    SetItems(result.Value);
-                    ApplyLoadStatus(
-                        result.IsFromCache,
-                        result.IsStale,
-                        result.FetchedAtUtc);
+                    await LoadDiscoverCoreAsync(
+                        forceRefresh,
+                        append: false,
+                        cancellationToken);
                     break;
-                }
             }
 
             if (_items.Count == 0)
-            {
-                StatusText.Text =
-                    T("Bangumi_NoResults");
-            }
+                StatusText.Text = T("Bangumi_NoResults");
         }
         catch (OperationCanceledException)
         {
@@ -187,15 +277,158 @@ public sealed partial class BangumiPublicView : UserControl
         catch
         {
             _items.Clear();
-            StatusText.Text =
-                T("Bangumi_NetworkError");
+            StatusText.Text = T("Bangumi_NetworkError");
         }
         finally
         {
-            LoadingRing.IsActive = false;
-            LoadingRing.Visibility = Visibility.Collapsed;
-            RefreshButton.IsEnabled = true;
+            SetBusy(false);
         }
+    }
+
+    private async Task LoadDiscoverAsync(
+        bool forceRefresh,
+        bool append)
+    {
+        _loadCancellation?.Cancel();
+        _loadCancellation?.Dispose();
+        _loadCancellation = new CancellationTokenSource();
+        var cancellationToken = _loadCancellation.Token;
+
+        SetBusy(true);
+        LoadMoreButton.Visibility = Visibility.Collapsed;
+        StatusText.Text = append
+            ? T("Bangumi_LoadingMore")
+            : T("Bangumi_Loading");
+
+        try
+        {
+            await LoadDiscoverCoreAsync(
+                forceRefresh,
+                append,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            if (!append)
+                _items.Clear();
+
+            StatusText.Text = append
+                ? T("Bangumi_LoadMoreError")
+                : T("Bangumi_NetworkError");
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private async Task LoadDiscoverCoreAsync(
+        bool forceRefresh,
+        bool append,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.Now;
+        var offset = append
+            ? _discoverNextOffset
+            : 0;
+
+        BangumiLoadResult<BangumiSubjectPage> result;
+
+        switch (DiscoverScope)
+        {
+            case BangumiDiscoverScope.CurrentSeason:
+                result =
+                    await _repository.GetRankedAnimeForSeasonAsync(
+                        now.Year,
+                        BangumiRepository.GetSeasonStartMonth(now.Month),
+                        forceRefresh,
+                        cancellationToken);
+                break;
+
+            case BangumiDiscoverScope.CurrentYear:
+                result =
+                    await _repository.GetRankedAnimeForYearAsync(
+                        now.Year,
+                        offset,
+                        forceRefresh,
+                        cancellationToken);
+                break;
+
+            default:
+                result =
+                    await _repository.GetRankedAnimeAsync(
+                        offset,
+                        forceRefresh,
+                        cancellationToken);
+                break;
+        }
+
+        if (append)
+            AppendItems(result.Value.Items);
+        else
+            SetItems(result.Value.Items);
+
+        _discoverNextOffset =
+            result.Value.Offset +
+            result.Value.Items.Count;
+
+        LoadMoreButton.Visibility =
+            DiscoverScope != BangumiDiscoverScope.CurrentSeason &&
+            result.Value.HasMore
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        ApplyLoadStatus(
+            result.IsFromCache,
+            result.IsStale,
+            result.FetchedAtUtc);
+    }
+
+    private void ShiftSeason(int delta)
+    {
+        var shifted =
+            BangumiRepository.ShiftSeason(
+                _selectedSeasonYear,
+                _selectedSeasonStartMonth,
+                delta);
+
+        _selectedSeasonYear = shifted.Year;
+        _selectedSeasonStartMonth = shifted.StartMonth;
+        UpdateSeasonHeader();
+    }
+
+    private void UpdateSeasonHeader()
+    {
+        if (_kind != BangumiPublicPageKind.Seasonal)
+            return;
+
+        SelectedSeasonText.Text = string.Format(
+            CultureInfo.CurrentCulture,
+            T("Bangumi_SeasonLabelFormat"),
+            _selectedSeasonYear,
+            SeasonName(_selectedSeasonStartMonth));
+
+        PageSubtitle.Text = string.Format(
+            CultureInfo.CurrentCulture,
+            T("Bangumi_SeasonalSubtitleFormat"),
+            _selectedSeasonYear,
+            SeasonName(_selectedSeasonStartMonth));
+    }
+
+    private void SetBusy(bool busy)
+    {
+        LoadingRing.IsActive = busy;
+        LoadingRing.Visibility =
+            busy ? Visibility.Visible : Visibility.Collapsed;
+        RefreshButton.IsEnabled = !busy;
+        PreviousSeasonButton.IsEnabled = !busy;
+        NextSeasonButton.IsEnabled = !busy;
+        CurrentSeasonButton.IsEnabled = !busy;
+        DiscoverScopeCombo.IsEnabled = !busy;
+        LoadMoreButton.IsEnabled = !busy;
     }
 
     private void RebuildCalendarDays()
@@ -257,9 +490,20 @@ public sealed partial class BangumiPublicView : UserControl
         IReadOnlyList<BangumiSubjectCard> subjects)
     {
         _items.Clear();
+        AppendItems(subjects);
+    }
+
+    private void AppendItems(
+        IReadOnlyList<BangumiSubjectCard> subjects)
+    {
+        var existingIds = _items
+            .Select(static item => item.Subject.Id)
+            .ToHashSet();
+
         foreach (var subject in subjects)
         {
-            _items.Add(CreateViewModel(subject));
+            if (existingIds.Add(subject.Id))
+                _items.Add(CreateViewModel(subject));
         }
     }
 
