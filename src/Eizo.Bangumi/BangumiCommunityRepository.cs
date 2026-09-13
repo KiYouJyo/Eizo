@@ -1,0 +1,99 @@
+namespace Eizo.Bangumi;
+
+public sealed class BangumiCommunityRepository
+{
+    private readonly BangumiCommunityClient _client;
+
+    internal BangumiCommunityRepository(
+        BangumiCommunityClient? client = null)
+    {
+        _client = client ?? new BangumiCommunityClient();
+    }
+
+    public static BangumiCommunityRepository Default { get; } = new();
+
+    public async Task<BangumiCommunityPage<BangumiSubjectComment>>
+        GetSubjectCommentsAsync(
+            int subjectId,
+            int offset = 0,
+            int limit = 20,
+            string? accessToken = null,
+            CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.GetSubjectCommentsAsync(
+            subjectId,
+            limit,
+            offset,
+            accessToken,
+            cancellationToken);
+        return BangumiCommunityJsonParser.ParseComments(payload);
+    }
+
+    public async Task<BangumiCommunityPage<BangumiSubjectReview>>
+        GetSubjectReviewsAsync(
+            int subjectId,
+            int offset = 0,
+            int limit = 10,
+            string? accessToken = null,
+            CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.GetSubjectReviewsAsync(
+            subjectId,
+            limit,
+            offset,
+            accessToken,
+            cancellationToken);
+        return BangumiCommunityJsonParser.ParseReviews(payload);
+    }
+
+    public async Task<BangumiCommunityPage<BangumiSubjectTopic>>
+        GetSubjectTopicsAsync(
+            int subjectId,
+            int offset = 0,
+            int limit = 20,
+            string? accessToken = null,
+            CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.GetSubjectTopicsAsync(
+            subjectId,
+            limit,
+            offset,
+            accessToken,
+            cancellationToken);
+        return BangumiCommunityJsonParser.ParseTopics(payload);
+    }
+
+    public async Task<BangumiCommunityPage<BangumiSubjectRecommendation>>
+        GetSubjectRecommendationsAsync(
+            int subjectId,
+            int offset = 0,
+            int limit = 10,
+            string? accessToken = null,
+            CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.GetSubjectRecommendationsAsync(
+            subjectId,
+            limit,
+            offset,
+            accessToken,
+            cancellationToken);
+        return BangumiCommunityJsonParser.ParseRecommendations(payload);
+    }
+
+    public async Task<BangumiCommunityPage<BangumiSubjectRelation>>
+        GetSubjectRelationsAsync(
+            int subjectId,
+            int offset = 0,
+            int limit = 20,
+            string? accessToken = null,
+            CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.GetSubjectRelationsAsync(
+            subjectId,
+            limit,
+            offset,
+            accessToken,
+            cancellationToken);
+        return BangumiCommunityJsonParser.ParseRelations(payload);
+    }
+}
