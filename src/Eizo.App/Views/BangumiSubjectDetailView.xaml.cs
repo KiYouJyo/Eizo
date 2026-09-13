@@ -30,6 +30,8 @@ public sealed partial class BangumiSubjectDetailView : UserControl
     private BangumiSubjectCard _subject;
     private CancellationTokenSource? _loadCancellation;
     private int _commentsOffset;
+    private BangumiCollectionType? _commentsFilter;
+    private bool _suppressCommentsFilterChanged;
     private int _reviewsOffset;
     private int _topicsOffset;
 
@@ -95,6 +97,29 @@ public sealed partial class BangumiSubjectDetailView : UserControl
             T("Bangumi_LoadMore");
         TopicsLoadMoreButton.Content =
             T("Bangumi_LoadMore");
+
+        _suppressCommentsFilterChanged = true;
+        CommentsFilterCombo.Items.Clear();
+        AddCommentFilterItem(
+            T("Bangumi_CommunityAllComments"),
+            value: 0);
+        AddCommentFilterItem(
+            T("Bangumi_CollectionWish"),
+            (int)BangumiCollectionType.Wish);
+        AddCommentFilterItem(
+            T("Bangumi_CollectionDone"),
+            (int)BangumiCollectionType.Done);
+        AddCommentFilterItem(
+            T("Bangumi_CollectionDoing"),
+            (int)BangumiCollectionType.Doing);
+        AddCommentFilterItem(
+            T("Bangumi_CollectionOnHold"),
+            (int)BangumiCollectionType.OnHold);
+        AddCommentFilterItem(
+            T("Bangumi_CollectionDropped"),
+            (int)BangumiCollectionType.Dropped);
+        CommentsFilterCombo.SelectedIndex = 0;
+        _suppressCommentsFilterChanged = false;
     }
 
     private async void BangumiSubjectDetailView_Loaded(
@@ -253,6 +278,7 @@ public sealed partial class BangumiSubjectDetailView : UserControl
                     limit: 20,
                     accessToken:
                         _account.GetAccessTokenForRequest(),
+                    type: _commentsFilter,
                     cancellationToken: cancellationToken);
 
             if (!append)
@@ -442,6 +468,50 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         {
             RelatedStatusText.Text =
                 T("Bangumi_CommunityUnavailable");
+        }
+    }
+
+    private void AddCommentFilterItem(
+        string label,
+        int value)
+    {
+        CommentsFilterCombo.Items.Add(
+            new ComboBoxItem
+            {
+                Content = label,
+                Tag = value,
+            });
+    }
+
+    private async void CommentsFilterCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_suppressCommentsFilterChanged ||
+            _loadCancellation is null ||
+            CommentsFilterCombo.SelectedItem is not ComboBoxItem item ||
+            item.Tag is not int value)
+        {
+            return;
+        }
+
+        _commentsFilter = value == 0
+            ? null
+            : (BangumiCollectionType)value;
+        _commentsOffset = 0;
+        CommentsStatusText.Text =
+            T("Bangumi_CommunityLoading");
+        CommentsFilterCombo.IsEnabled = false;
+
+        try
+        {
+            await LoadCommentsPageAsync(
+                append: false,
+                _loadCancellation.Token);
+        }
+        finally
+        {
+            CommentsFilterCombo.IsEnabled = true;
         }
     }
 
