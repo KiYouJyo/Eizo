@@ -1148,4 +1148,7 @@
   <data name="Bangumi_TurnstileUnavailable" xml:space="preserve">
     <value>Bangumi がまだ Eizo の Turnstile コールバックを許可していないため、書き込み機能は現在利用できません。</value>
   </data>
+  <data name="Bangumi_CommentComposerHint" xml:space="preserve">
+    <value>ここに直接入力できます。投稿時に Bangumi の人間確認を行い、Eizo のコールバックが未許可の場合も下書きは残ります。</value>
+  </data>
 </root>
