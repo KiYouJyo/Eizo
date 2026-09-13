@@ -2,7 +2,7 @@
 
 # Eizo v0.4.4
 
-Browser authorization is the default Bangumi sign-in method. Manual Access Token entry remains under Advanced as a fallback.
+Bangumi account sign-in now uses browser authorization only; the legacy manual Access Token login entry has been removed.
 
 - Bangumi authorization returns to Eizo through `eizo://bangumi-auth` after the Cloudflare relay exchanges the code.
 - The protocol URL carries only a short-lived, single-use ticket. `/claim` returns Access/Refresh Tokens, which are validated through `/v0/me` and then stored in Windows Credential Locker.
