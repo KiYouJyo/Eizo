@@ -1004,4 +1004,67 @@
   <data name="Bangumi_ManualLogin" xml:space="preserve"><value>Advanced: Access Token</value></data>
   <data name="Bangumi_BrowserLoginHelp" xml:space="preserve"><value>Sign in on Bangumi in your browser. Eizo will reopen after authorization. Access Token entry remains available under Advanced.</value></data>
   <data name="Bangumi_BrowserLoginFailed" xml:space="preserve"><value>The browser could not be opened. Try again or use Advanced Access Token sign-in.</value></data>
+  <data name="Bangumi_CommunityComments" xml:space="preserve">
+    <value>Short comments</value>
+  </data>
+  <data name="Bangumi_CommunityReviews" xml:space="preserve">
+    <value>Reviews</value>
+  </data>
+  <data name="Bangumi_CommunityTopics" xml:space="preserve">
+    <value>Discussions</value>
+  </data>
+  <data name="Bangumi_CommunityRelated" xml:space="preserve">
+    <value>Related</value>
+  </data>
+  <data name="Bangumi_CommunityRecommendations" xml:space="preserve">
+    <value>Recommendations</value>
+  </data>
+  <data name="Bangumi_CommunityRelations" xml:space="preserve">
+    <value>Related titles</value>
+  </data>
+  <data name="Bangumi_CommunityLoading" xml:space="preserve">
+    <value>Loading Bangumi community content…</value>
+  </data>
+  <data name="Bangumi_CommunityUnavailable" xml:space="preserve">
+    <value>This community section is temporarily unavailable. Bangumi's Private API may have changed; Open on Bangumi is still available.</value>
+  </data>
+  <data name="Bangumi_CommunityNoComments" xml:space="preserve">
+    <value>No short comments yet.</value>
+  </data>
+  <data name="Bangumi_CommunityNoReviews" xml:space="preserve">
+    <value>No reviews yet.</value>
+  </data>
+  <data name="Bangumi_CommunityNoTopics" xml:space="preserve">
+    <value>No discussions yet.</value>
+  </data>
+  <data name="Bangumi_CommunityNoRelated" xml:space="preserve">
+    <value>No recommendations or related titles.</value>
+  </data>
+  <data name="Bangumi_CommunityCountFormat" xml:space="preserve">
+    <value>Showing {0} of {1}</value>
+  </data>
+  <data name="Bangumi_CommunityRepliesFormat" xml:space="preserve">
+    <value>{0} replies</value>
+  </data>
+  <data name="Bangumi_CommunityRecommendationCountFormat" xml:space="preserve">
+    <value>Recommended by {0}</value>
+  </data>
+  <data name="Bangumi_CommunitySimilarityFormat" xml:space="preserve">
+    <value>Similarity {0:P0}</value>
+  </data>
+  <data name="Bangumi_CollectionWish" xml:space="preserve">
+    <value>Wish</value>
+  </data>
+  <data name="Bangumi_CollectionDone" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="Bangumi_CollectionDoing" xml:space="preserve">
+    <value>Watching</value>
+  </data>
+  <data name="Bangumi_CollectionOnHold" xml:space="preserve">
+    <value>On hold</value>
+  </data>
+  <data name="Bangumi_CollectionDropped" xml:space="preserve">
+    <value>Dropped</value>
+  </data>
 </root>
