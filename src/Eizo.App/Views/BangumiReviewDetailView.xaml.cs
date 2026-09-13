@@ -37,6 +37,8 @@ public sealed partial class BangumiReviewDetailView : UserControl
         OpenSubjectButton.Content = T("Bangumi_BackToSubject");
         OpenBangumiButton.Content = T("Bangumi_OpenOnBangumi");
         CommentsTitle.Text = T("Bangumi_ReviewComments");
+        ReplyButton.Content = T("Bangumi_WriteReply");
+        ReplyButton.IsEnabled = false;
         TitleText.Text = review.Title;
         AuthorText.Text = FirstNonEmpty(
             review.User.NickName,
@@ -86,6 +88,10 @@ public sealed partial class BangumiReviewDetailView : UserControl
 
         try
         {
+            ReplyButton.IsEnabled =
+                _account.IsConnected &&
+                await BangumiTurnstileDialogService.IsAvailableAsync();
+
             var accessToken = _account.GetAccessTokenForRequest();
             var detailTask = _community.GetBlogEntryAsync(
                 _review.EntryId,
@@ -204,6 +210,81 @@ public sealed partial class BangumiReviewDetailView : UserControl
             CanReact: false,
             IsReacted: false,
             Indent: nested ? new Thickness(32, 0, 0, 0) : new Thickness(0));
+    }
+
+    private async void ReplyButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var token = _account.GetAccessTokenForRequest();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            CommentsStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+            return;
+        }
+
+        var content =
+            await BangumiCommunityWriteDialogService
+                .PromptReplyAsync(
+                    XamlRoot,
+                    T("Bangumi_WriteReviewReplyTitle"));
+        if (string.IsNullOrWhiteSpace(content))
+            return;
+
+        var turnstile =
+            await BangumiTurnstileDialogService.AcquireAsync(
+                XamlRoot);
+        if (string.IsNullOrWhiteSpace(turnstile))
+        {
+            CommentsStatusText.Text =
+                T("Bangumi_TurnstileUnavailable");
+            return;
+        }
+
+        ReplyButton.IsEnabled = false;
+        try
+        {
+            await _community.CreateBlogCommentAsync(
+                _review.EntryId,
+                content,
+                replyTo: 0,
+                turnstile,
+                token,
+                _loadCancellation?.Token ??
+                CancellationToken.None);
+
+            var comments =
+                await _community.GetBlogCommentsAsync(
+                    _review.EntryId,
+                    token,
+                    _loadCancellation?.Token ??
+                    CancellationToken.None);
+
+            _comments.Clear();
+            foreach (var reply in FlattenReplies(comments))
+                _comments.Add(reply);
+
+            CommentsStatusText.Text =
+                string.Format(
+                    CultureInfo.CurrentCulture,
+                    T("Bangumi_CommunityLoadedCountFormat"),
+                    _comments.Count);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            CommentsStatusText.Text =
+                T("Bangumi_CommunityWriteFailed");
+        }
+        finally
+        {
+            ReplyButton.IsEnabled =
+                _account.IsConnected &&
+                await BangumiTurnstileDialogService.IsAvailableAsync();
+        }
     }
 
     private void OpenSubjectButton_Click(
