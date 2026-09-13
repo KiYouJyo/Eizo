@@ -36,8 +36,8 @@
     <DataTemplate x:Key="SeasonCardTemplate" x:DataType="models:MediaCardModel">
       <Button Style="{StaticResource MediaCardButton}"
               Height="182"
-              Tag="{x:Bind Title}"
-              Click="MediaCard_Click">
+              Tag="{x:Bind ExternalKey}"
+              Click="SeasonCard_Click">
         <Grid RowDefinitions="108,*">
           <Border Background="{ThemeResource EizoSelectionBrush}"
                   CornerRadius="8,8,0,0">
@@ -174,12 +174,26 @@
             RowSpacing="12" />
 
       <Grid Grid.Row="10"
-            ColumnDefinitions="*,Auto">
-        <TextBlock x:Name="SeasonTitle"
-                   Style="{StaticResource SectionTitleText}" />
+            ColumnDefinitions="*,Auto,Auto"
+            ColumnSpacing="8">
+        <StackPanel Spacing="2">
+          <TextBlock x:Name="SeasonTitle"
+                     Style="{StaticResource SectionTitleText}" />
+          <TextBlock x:Name="SeasonStatusText"
+                     Style="{StaticResource MetadataText}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+        <ProgressRing x:Name="SeasonLoadingRing"
+                      Grid.Column="1"
+                      Width="18"
+                      Height="18"
+                      IsActive="False"
+                      Visibility="Collapsed"
+                      VerticalAlignment="Center" />
         <Button x:Name="SeasonAllButton"
-                Grid.Column="1"
-                Style="{StaticResource CompactActionButton}" />
+                Grid.Column="2"
+                Style="{StaticResource CompactActionButton}"
+                Click="SeasonAllButton_Click" />
       </Grid>
 
       <Grid x:Name="SeasonGrid"
