@@ -443,6 +443,83 @@ public sealed class BangumiCommunityTests
         }
     }
 
+    [Fact]
+    public async Task Client_WritesCommunityPayloadsWithBearerToken()
+    {
+        var captured = new List<(HttpMethod Method, string Uri, string? Authorization, string? Body)>();
+        var handler = new CallbackHandler(request =>
+        {
+            var body = request.Content is null
+                ? null
+                : request.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            captured.Add((
+                request.Method,
+                request.RequestUri!.ToString(),
+                request.Headers.Authorization?.ToString(),
+                body));
+            return Json("""{"id":123}""");
+        });
+
+        using var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri(
+                "https://next.bgm.tv/",
+                UriKind.Absolute),
+        };
+
+        var api = new BangumiCommunityClient(client);
+        _ = await api.CreateSubjectCommentAsync(
+            8,
+            "test comment",
+            BangumiCollectionType.Doing,
+            rate: 8,
+            turnstileToken: "turnstile-test",
+            accessToken: "Bearer access-test",
+            TestContext.Current.CancellationToken);
+
+        _ = await api.LikeSubjectPostAsync(
+            99,
+            value: 0,
+            accessToken: "access-test",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, captured.Count);
+
+        var comment = captured[0];
+        Assert.Equal(HttpMethod.Post, comment.Method);
+        Assert.Equal(
+            "https://next.bgm.tv/p1/subjects/8/comments",
+            comment.Uri);
+        Assert.Equal("Bearer access-test", comment.Authorization);
+        Assert.Contains(
+            ""comment":"test comment"",
+            comment.Body,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            ""turnstileToken":"turnstile-test"",
+            comment.Body,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            ""type":3",
+            comment.Body,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            ""rate":8",
+            comment.Body,
+            StringComparison.Ordinal);
+
+        var reaction = captured[1];
+        Assert.Equal(HttpMethod.Put, reaction.Method);
+        Assert.Equal(
+            "https://next.bgm.tv/p1/subjects/-/posts/99/like",
+            reaction.Uri);
+        Assert.Equal("Bearer access-test", reaction.Authorization);
+        Assert.Contains(
+            ""value":0",
+            reaction.Body,
+            StringComparison.Ordinal);
+    }
+
     private static HttpRequestMessage Clone(
         HttpRequestMessage request)
     {
