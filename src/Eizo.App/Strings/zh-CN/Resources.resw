@@ -1175,4 +1175,16 @@
   <data name="Bangumi_CreateTopicContentPlaceholder" xml:space="preserve">
     <value>写下讨论正文（支持 Bangumi BBCode）…</value>
   </data>
+  <data name="Nav_AnimeBlogs" xml:space="preserve">
+    <value>动画日志</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsSubtitle" xml:space="preserve">
+    <value>来自 Bangumi 动画频道的最新日志与评论。</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsEmpty" xml:space="preserve">
+    <value>暂无动画日志。</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsCountFormat" xml:space="preserve">
+    <value>已显示 {0} / {1} 篇日志</value>
+  </data>
 </root>
