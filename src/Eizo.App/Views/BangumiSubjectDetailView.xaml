@@ -165,9 +165,12 @@
                             <Grid ColumnDefinitions="*,Auto">
                               <TextBlock Text="{Binding UserName}"
                                          FontWeight="SemiBold" />
-                              <TextBlock Grid.Column="1"
-                                         Text="{Binding ReactionText}"
-                                         Style="{StaticResource MetadataText}" />
+                              <Button Grid.Column="1"
+                                      Padding="8,2"
+                                      Content="{Binding ReactionText}"
+                                      IsEnabled="{Binding CanReact}"
+                                      Tag="{Binding}"
+                                      Click="CommentReactionButton_Click" />
                             </Grid>
                             <TextBlock Text="{Binding MetaLine}"
                                        Style="{StaticResource MetadataText}"
