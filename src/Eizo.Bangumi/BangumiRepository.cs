@@ -11,6 +11,8 @@ public sealed class BangumiRepository
     private static readonly TimeSpan SubjectCacheLifetime =
         TimeSpan.FromHours(24);
 
+    private const int PageSize = 50;
+
     private readonly BangumiApiClient _client;
     private readonly BangumiCacheStore _cache;
 
@@ -45,42 +47,124 @@ public sealed class BangumiRepository
             bool forceRefresh = false,
             CancellationToken cancellationToken = default)
     {
-        if (year is < 1900 or > 2200)
-            throw new ArgumentOutOfRangeException(nameof(year));
-        if (startMonth is not (1 or 4 or 7 or 10))
-            throw new ArgumentOutOfRangeException(nameof(startMonth));
+        ValidateSeason(year, startMonth);
 
-        var key = $"season:{year}:{startMonth}";
-        return await GetCachedAsync(
-            key,
-            SeasonCacheLifetime,
-            ct => _client.GetSeasonAsync(
+        var requests = Enumerable.Range(startMonth, 3)
+            .Select(month =>
+                GetAnimePageAsync(
+                    $"season:{year}:{month}",
+                    SeasonCacheLifetime,
+                    sort: "date",
+                    year,
+                    month,
+                    category: 1,
+                    offset: 0,
+                    forceRefresh,
+                    cancellationToken))
+            .ToArray();
+
+        var pages = await Task.WhenAll(requests);
+
+        var items = pages
+            .SelectMany(static result => result.Value.Items)
+            .GroupBy(static item => item.Id)
+            .Select(static group => group.First())
+            .OrderBy(static item => item.AirDate, StringComparer.Ordinal)
+            .ThenBy(static item => item.NativeTitle, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+
+        return new BangumiLoadResult<BangumiSeasonSnapshot>(
+            new BangumiSeasonSnapshot(
                 year,
                 startMonth,
-                limit: 50,
-                ct),
-            payload =>
-                new BangumiSeasonSnapshot(
-                    year,
-                    startMonth,
-                    BangumiJsonParser.ParsePagedSubjects(payload)),
+                items),
+            IsFromCache: pages.All(static result => result.IsFromCache),
+            IsStale: pages.Any(static result => result.IsStale),
+            FetchedAtUtc: pages.Min(static result => result.FetchedAtUtc));
+    }
+
+    public Task<BangumiLoadResult<BangumiSubjectPage>>
+        GetRankedAnimeAsync(
+            int offset = 0,
+            bool forceRefresh = false,
+            CancellationToken cancellationToken = default) =>
+        GetAnimePageAsync(
+            $"ranked-anime:{offset}",
+            RankingCacheLifetime,
+            sort: "rank",
+            year: null,
+            month: null,
+            category: null,
+            offset,
+            forceRefresh,
+            cancellationToken);
+
+    public Task<BangumiLoadResult<BangumiSubjectPage>>
+        GetRankedAnimeForYearAsync(
+            int year,
+            int offset = 0,
+            bool forceRefresh = false,
+            CancellationToken cancellationToken = default)
+    {
+        if (year is < 1900 or > 2200)
+            throw new ArgumentOutOfRangeException(nameof(year));
+
+        return GetAnimePageAsync(
+            $"ranked-anime:year:{year}:{offset}",
+            RankingCacheLifetime,
+            sort: "rank",
+            year,
+            month: null,
+            category: null,
+            offset,
             forceRefresh,
             cancellationToken);
     }
 
-    public Task<BangumiLoadResult<IReadOnlyList<BangumiSubjectCard>>>
-        GetRankedAnimeAsync(
+    public async Task<BangumiLoadResult<BangumiSubjectPage>>
+        GetRankedAnimeForSeasonAsync(
+            int year,
+            int startMonth,
             bool forceRefresh = false,
-            CancellationToken cancellationToken = default) =>
-        GetCachedAsync(
-            "ranked-anime",
-            RankingCacheLifetime,
-            ct => _client.GetRankedAnimeAsync(
-                limit: 50,
-                ct),
-            BangumiJsonParser.ParsePagedSubjects,
-            forceRefresh,
-            cancellationToken);
+            CancellationToken cancellationToken = default)
+    {
+        ValidateSeason(year, startMonth);
+
+        var requests = Enumerable.Range(startMonth, 3)
+            .Select(month =>
+                GetAnimePageAsync(
+                    $"ranked-anime:season:{year}:{month}",
+                    RankingCacheLifetime,
+                    sort: "rank",
+                    year,
+                    month,
+                    category: null,
+                    offset: 0,
+                    forceRefresh,
+                    cancellationToken))
+            .ToArray();
+
+        var pages = await Task.WhenAll(requests);
+
+        var items = pages
+            .SelectMany(static result => result.Value.Items)
+            .GroupBy(static item => item.Id)
+            .Select(static group => group.First())
+            .OrderBy(static item => item.Rank <= 0 ? int.MaxValue : item.Rank)
+            .ThenByDescending(static item => item.Score)
+            .ThenBy(static item => item.NativeTitle, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+
+        return new BangumiLoadResult<BangumiSubjectPage>(
+            new BangumiSubjectPage(
+                Total: items.Length,
+                Limit: items.Length,
+                Offset: 0,
+                Items: items),
+            IsFromCache: pages.All(static result => result.IsFromCache),
+            IsStale: pages.Any(static result => result.IsStale),
+            FetchedAtUtc: pages.Min(static result => result.FetchedAtUtc));
+    }
 
     public Task<BangumiLoadResult<BangumiCalendarSnapshot>>
         GetCalendarAsync(
@@ -120,6 +204,71 @@ public sealed class BangumiRepository
             throw new ArgumentOutOfRangeException(nameof(month));
 
         return ((month - 1) / 3 * 3) + 1;
+    }
+
+    internal static (int Year, int StartMonth) ShiftSeason(
+        int year,
+        int startMonth,
+        int delta)
+    {
+        ValidateSeason(year, startMonth);
+
+        var index =
+            (year * 4) +
+            ((startMonth - 1) / 3) +
+            delta;
+
+        var shiftedYear = Math.DivRem(index, 4, out var quarterIndex);
+        if (quarterIndex < 0)
+        {
+            quarterIndex += 4;
+            shiftedYear--;
+        }
+
+        return (
+            shiftedYear,
+            (quarterIndex * 3) + 1);
+    }
+
+    private Task<BangumiLoadResult<BangumiSubjectPage>>
+        GetAnimePageAsync(
+            string cacheKey,
+            TimeSpan lifetime,
+            string sort,
+            int? year,
+            int? month,
+            int? category,
+            int offset,
+            bool forceRefresh,
+            CancellationToken cancellationToken)
+    {
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+
+        return GetCachedAsync(
+            cacheKey,
+            lifetime,
+            ct => _client.GetAnimeAsync(
+                PageSize,
+                offset,
+                sort,
+                year,
+                month,
+                category,
+                ct),
+            BangumiJsonParser.ParsePagedSubjectPage,
+            forceRefresh,
+            cancellationToken);
+    }
+
+    private static void ValidateSeason(
+        int year,
+        int startMonth)
+    {
+        if (year is < 1900 or > 2200)
+            throw new ArgumentOutOfRangeException(nameof(year));
+        if (startMonth is not (1 or 4 or 7 or 10))
+            throw new ArgumentOutOfRangeException(nameof(startMonth));
     }
 
     private async Task<BangumiLoadResult<T>> GetCachedAsync<T>(
