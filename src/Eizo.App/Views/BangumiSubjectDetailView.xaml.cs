@@ -55,6 +55,8 @@ public sealed partial class BangumiSubjectDetailView : UserControl
     }
 
     public event EventHandler<BangumiSubjectCard>? SubjectRequested;
+    public event EventHandler<BangumiSubjectReview>? ReviewRequested;
+    public event EventHandler<BangumiSubjectTopic>? TopicRequested;
 
     private string T(string key) =>
         _localization.GetString(key);
@@ -485,7 +487,7 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         TopicsLoadMoreButton.IsEnabled = true;
     }
 
-    private async void ReviewItem_Click(
+    private void ReviewItem_Click(
         object sender,
         RoutedEventArgs e)
     {
@@ -494,14 +496,11 @@ public sealed partial class BangumiSubjectDetailView : UserControl
                 Tag: BangumiSubjectReview review
             })
         {
-            await Launcher.LaunchUriAsync(
-                new Uri(
-                    $"https://bgm.tv/blog/{review.EntryId}",
-                    UriKind.Absolute));
+            ReviewRequested?.Invoke(this, review);
         }
     }
 
-    private async void TopicItem_Click(
+    private void TopicItem_Click(
         object sender,
         RoutedEventArgs e)
     {
@@ -510,10 +509,7 @@ public sealed partial class BangumiSubjectDetailView : UserControl
                 Tag: BangumiSubjectTopic topic
             })
         {
-            await Launcher.LaunchUriAsync(
-                new Uri(
-                    $"https://bgm.tv/subject/topic/{topic.Id}",
-                    UriKind.Absolute));
+            TopicRequested?.Invoke(this, topic);
         }
     }
 
