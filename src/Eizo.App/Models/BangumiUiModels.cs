@@ -23,7 +23,9 @@ public sealed record BangumiCommentViewModel(
     string UserName,
     string MetaLine,
     string CommentText,
-    string ReactionText);
+    string ReactionText,
+    bool CanReact,
+    bool IsReacted);
 
 public sealed record BangumiReviewViewModel(
     BangumiSubjectReview Review,
@@ -54,6 +56,8 @@ public sealed record BangumiReplyViewModel(
     string Content,
     string MetaLine,
     string ReactionText,
+    bool CanReact,
+    bool IsReacted,
     Thickness Indent);
 
 public sealed record BangumiCommunityDetailHeaderViewModel(
