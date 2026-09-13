@@ -8,6 +8,7 @@ $app = [IO.File]::ReadAllText((Join-Path $root 'src/Eizo.App/App.xaml.cs'))
 $store = [IO.File]::ReadAllText((Join-Path $root 'src/Eizo.App/Models/BangumiAccountCredentialStore.cs'))
 $service = [IO.File]::ReadAllText((Join-Path $root 'src/Eizo.App/Models/BangumiOAuthService.cs'))
 $worker = [IO.File]::ReadAllText((Join-Path $root 'cloudflare/eizo-bangumi-auth/worker.js'))
+$dialog = [IO.File]::ReadAllText((Join-Path $root 'src/Eizo.App/Views/BangumiAccountDialogService.cs'))
 foreach ($item in @(
     @($manifest, '<uap:Protocol Name="eizo">'),
     @($app, 'OnInitialActivation'),
@@ -19,6 +20,11 @@ foreach ($item in @(
 )) {
     if (-not $item[0].Contains($item[1], [StringComparison]::Ordinal)) {
         throw "Bangumi OAuth integration missing: $($item[1])"
+    }
+}
+foreach ($forbidden in @('Bangumi_ManualLogin', 'ShowManualConnectAsync', 'PasswordBox')) {
+    if ($dialog.Contains($forbidden, [StringComparison]::Ordinal)) {
+        throw "Legacy manual token login UI remains in OAuth release: $forbidden"
     }
 }
 & node --test (Join-Path $root 'cloudflare/eizo-bangumi-auth/worker.test.mjs')
