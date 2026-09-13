@@ -1175,4 +1175,16 @@
   <data name="Bangumi_CreateTopicContentPlaceholder" xml:space="preserve">
     <value>Write your discussion (Bangumi BBCode supported)…</value>
   </data>
+  <data name="Nav_AnimeBlogs" xml:space="preserve">
+    <value>Anime Blogs</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsSubtitle" xml:space="preserve">
+    <value>Latest blogs and reviews from Bangumi's anime channel.</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsEmpty" xml:space="preserve">
+    <value>No anime blogs are available.</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsCountFormat" xml:space="preserve">
+    <value>Showing {0} of {1} blogs</value>
+  </data>
 </root>
