@@ -83,6 +83,60 @@ internal static class BangumiJsonParser
                 ?? []);
     }
 
+    public static BangumiUserProfile ParseUserProfile(
+        string json)
+    {
+        var user = JsonSerializer.Deserialize<UserDto>(
+            json,
+            SerializerOptions)
+            ?? throw new JsonException(
+                "Bangumi user response was empty.");
+
+        return new BangumiUserProfile(
+            user.Id,
+            user.UserName ?? string.Empty,
+            user.NickName ?? string.Empty,
+            user.Sign ?? string.Empty,
+            user.Avatar?.Large,
+            user.Avatar?.Medium,
+            user.Avatar?.Small);
+    }
+
+    public static BangumiUserCollectionPage ParseUserCollectionPage(
+        string json)
+    {
+        var payload =
+            JsonSerializer.Deserialize<PagedUserCollectionDto>(
+                json,
+                SerializerOptions)
+            ?? new PagedUserCollectionDto();
+
+        var items = payload.Data?
+            .Where(static item =>
+                item.Subject is { Type: 2 })
+            .Select(static item =>
+                new BangumiUserCollectionItem(
+                    ToCard(item.Subject!),
+                    Enum.IsDefined(
+                        typeof(BangumiCollectionType),
+                        item.Type)
+                        ? (BangumiCollectionType)item.Type
+                        : BangumiCollectionType.Doing,
+                    item.EpisodeStatus,
+                    item.Rate,
+                    item.IsPrivate,
+                    ParseDateTimeOffset(item.UpdatedAt)))
+            .ToArray()
+            ?? [];
+
+        return new BangumiUserCollectionPage(
+            payload.Total,
+            payload.Limit,
+            payload.Offset,
+            items);
+    }
+
+
     private static BangumiSubjectCard ToCard(SubjectDto subject)
     {
         var collection = subject.Collection;
@@ -140,6 +194,29 @@ internal static class BangumiJsonParser
             collectionTotal);
     }
 
+    private static BangumiSubjectCard ToCard(
+        SlimSubjectDto subject) =>
+        new(
+            subject.Id,
+            subject.Name ?? string.Empty,
+            subject.NameCn ?? string.Empty,
+            subject.ShortSummary ?? string.Empty,
+            subject.Date,
+            ResolvePoster(subject.Images),
+            null,
+            subject.Score,
+            subject.Rank,
+            subject.Eps,
+            subject.CollectionTotal);
+
+    private static DateTimeOffset? ParseDateTimeOffset(
+        string? value) =>
+        DateTimeOffset.TryParse(
+            value,
+            out var parsed)
+            ? parsed
+            : null;
+
     private static string? ResolvePoster(ImagesDto? images) =>
         FirstNonEmpty(
             images?.Large,
@@ -152,6 +229,114 @@ internal static class BangumiJsonParser
         params string?[] candidates) =>
         candidates.FirstOrDefault(
             static value => !string.IsNullOrWhiteSpace(value));
+
+    private sealed class UserDto
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("username")]
+        public string? UserName { get; set; }
+
+        [JsonPropertyName("nickname")]
+        public string? NickName { get; set; }
+
+        [JsonPropertyName("sign")]
+        public string? Sign { get; set; }
+
+        [JsonPropertyName("avatar")]
+        public AvatarDto? Avatar { get; set; }
+    }
+
+    private sealed class AvatarDto
+    {
+        [JsonPropertyName("large")]
+        public string? Large { get; set; }
+
+        [JsonPropertyName("medium")]
+        public string? Medium { get; set; }
+
+        [JsonPropertyName("small")]
+        public string? Small { get; set; }
+    }
+
+    private sealed class PagedUserCollectionDto
+    {
+        [JsonPropertyName("total")]
+        public int Total { get; set; }
+
+        [JsonPropertyName("limit")]
+        public int Limit { get; set; }
+
+        [JsonPropertyName("offset")]
+        public int Offset { get; set; }
+
+        [JsonPropertyName("data")]
+        public List<UserCollectionDto>? Data { get; set; }
+    }
+
+    private sealed class UserCollectionDto
+    {
+        [JsonPropertyName("subject_id")]
+        public int SubjectId { get; set; }
+
+        [JsonPropertyName("subject_type")]
+        public int SubjectType { get; set; }
+
+        [JsonPropertyName("rate")]
+        public int Rate { get; set; }
+
+        [JsonPropertyName("type")]
+        public int Type { get; set; }
+
+        [JsonPropertyName("ep_status")]
+        public int EpisodeStatus { get; set; }
+
+        [JsonPropertyName("updated_at")]
+        public string? UpdatedAt { get; set; }
+
+        [JsonPropertyName("private")]
+        public bool IsPrivate { get; set; }
+
+        [JsonPropertyName("subject")]
+        public SlimSubjectDto? Subject { get; set; }
+    }
+
+    private sealed class SlimSubjectDto
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("type")]
+        public int Type { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("name_cn")]
+        public string? NameCn { get; set; }
+
+        [JsonPropertyName("short_summary")]
+        public string? ShortSummary { get; set; }
+
+        [JsonPropertyName("date")]
+        public string? Date { get; set; }
+
+        [JsonPropertyName("images")]
+        public ImagesDto? Images { get; set; }
+
+        [JsonPropertyName("eps")]
+        public int Eps { get; set; }
+
+        [JsonPropertyName("collection_total")]
+        public int CollectionTotal { get; set; }
+
+        [JsonPropertyName("score")]
+        public double Score { get; set; }
+
+        [JsonPropertyName("rank")]
+        public int Rank { get; set; }
+    }
 
     private sealed class PagedSubjectDto
     {
