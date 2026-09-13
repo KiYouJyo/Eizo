@@ -1100,4 +1100,7 @@
   <data name="Bangumi_UnknownUser" xml:space="preserve">
     <value>未知用户</value>
   </data>
+  <data name="Bangumi_CommunityAllComments" xml:space="preserve">
+    <value>全部短评</value>
+  </data>
 </root>
