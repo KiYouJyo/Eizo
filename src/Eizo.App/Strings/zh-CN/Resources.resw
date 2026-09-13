@@ -899,4 +899,29 @@
   <data name="Bangumi_NoSummary" xml:space="preserve">
     <value>暂无简介</value>
   </data>
+
+  <data name="Bangumi_CurrentSeason" xml:space="preserve">
+    <value>本季</value>
+  </data>
+  <data name="Bangumi_LoadMore" xml:space="preserve">
+    <value>加载更多</value>
+  </data>
+  <data name="Bangumi_LoadingMore" xml:space="preserve">
+    <value>正在加载更多 Bangumi 条目…</value>
+  </data>
+  <data name="Bangumi_LoadMoreError" xml:space="preserve">
+    <value>加载更多失败，已保留当前内容。</value>
+  </data>
+  <data name="Bangumi_RankingAllTime" xml:space="preserve">
+    <value>综合排名</value>
+  </data>
+  <data name="Bangumi_RankingCurrentSeason" xml:space="preserve">
+    <value>本季排名</value>
+  </data>
+  <data name="Bangumi_RankingCurrentYear" xml:space="preserve">
+    <value>本年排名</value>
+  </data>
+  <data name="Bangumi_SeasonLabelFormat" xml:space="preserve">
+    <value>{0} {1}季</value>
+  </data>
 </root>
