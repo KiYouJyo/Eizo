@@ -847,4 +847,56 @@
   <data name="Bangumi_FollowingPlaceholderDescription" xml:space="preserve">
     <value>Bangumi のコレクションとエピソード視聴状態の同期用ページです。アカウントログインと同期は後続段階で追加します。</value>
   </data>
+
+  <data name="Bangumi_CalendarSubtitle" xml:space="preserve">
+    <value>今週のアニメ放送スケジュール</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitle" xml:space="preserve">
+    <value>今期のTVアニメ</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitleFormat" xml:space="preserve">
+    <value>{0}年 {1}クール TVアニメ</value>
+  </data>
+  <data name="Bangumi_DiscoverSubtitle" xml:space="preserve">
+    <value>Bangumi アニメ総合ランキング</value>
+  </data>
+  <data name="Bangumi_Refresh" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="Bangumi_Loading" xml:space="preserve">
+    <value>Bangumi データを読み込んでいます…</value>
+  </data>
+  <data name="Bangumi_NoResults" xml:space="preserve">
+    <value>表示できる Bangumi 項目がありません。</value>
+  </data>
+  <data name="Bangumi_NetworkError" xml:space="preserve">
+    <value>Bangumi に接続できず、利用可能なローカルキャッシュもありません。</value>
+  </data>
+  <data name="Bangumi_StaleCacheFormat" xml:space="preserve">
+    <value>オフラインのためキャッシュを表示中 · キャッシュ時刻 {0}</value>
+  </data>
+  <data name="Bangumi_CacheFormat" xml:space="preserve">
+    <value>ローカルキャッシュ · 更新 {0}</value>
+  </data>
+  <data name="Bangumi_UpdatedFormat" xml:space="preserve">
+    <value>Bangumi から更新済み · {0}</value>
+  </data>
+  <data name="Bangumi_DetailPageTitle" xml:space="preserve">
+    <value>Bangumi 作品</value>
+  </data>
+  <data name="Bangumi_OpenOnBangumi" xml:space="preserve">
+    <value>Bangumi で見る</value>
+  </data>
+  <data name="Bangumi_Summary" xml:space="preserve">
+    <value>あらすじ</value>
+  </data>
+  <data name="Bangumi_Tags" xml:space="preserve">
+    <value>タグ</value>
+  </data>
+  <data name="Bangumi_NoTags" xml:space="preserve">
+    <value>タグはありません</value>
+  </data>
+  <data name="Bangumi_NoSummary" xml:space="preserve">
+    <value>あらすじはありません</value>
+  </data>
 </root>
