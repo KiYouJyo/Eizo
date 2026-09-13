@@ -1,4 +1,5 @@
 using Eizo.Localization;
+using Eizo.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -7,6 +8,7 @@ namespace Eizo.Views;
 public sealed partial class SettingsView : UserControl
 {
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
+    private readonly BangumiAccountService _bangumiAccount = BangumiAccountService.Default;
     private bool _isSynchronizing;
 
     public SettingsView()
@@ -14,11 +16,13 @@ public sealed partial class SettingsView : UserControl
         InitializeComponent();
         ApplyText();
         Loaded += SettingsView_Loaded;
+        Unloaded += SettingsView_Unloaded;
+        _bangumiAccount.Changed += BangumiAccount_Changed;
     }
 
     private string T(string key) => _localization.GetString(key);
 
-    private void SettingsView_Loaded(object sender, RoutedEventArgs e)
+    private async void SettingsView_Loaded(object sender, RoutedEventArgs e)
     {
         _isSynchronizing = true;
         try
@@ -46,6 +50,106 @@ public sealed partial class SettingsView : UserControl
         {
             _isSynchronizing = false;
         }
+
+        await RefreshBangumiAccountStateAsync(
+            forceRefresh: false);
+    }
+
+    private void SettingsView_Unloaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _bangumiAccount.Changed -= BangumiAccount_Changed;
+    }
+
+    private async void BangumiAccount_Changed(
+        object? sender,
+        EventArgs e)
+    {
+        await RefreshBangumiAccountStateAsync(
+            forceRefresh: false);
+    }
+
+    private async Task RefreshBangumiAccountStateAsync(
+        bool forceRefresh)
+    {
+        if (!_bangumiAccount.IsConnected)
+        {
+            BangumiAccountStatusText.Text =
+                T("Bangumi_AccountNotConnected");
+            BangumiConnectButton.Visibility =
+                Visibility.Visible;
+            BangumiDisconnectButton.Visibility =
+                Visibility.Collapsed;
+            return;
+        }
+
+        BangumiAccountStatusText.Text =
+            T("Bangumi_AccountChecking");
+
+        try
+        {
+            var profile =
+                await _bangumiAccount.GetProfileAsync(
+                    forceRefresh);
+
+            if (profile is null)
+            {
+                BangumiAccountStatusText.Text =
+                    T("Bangumi_AccountNotConnected");
+                BangumiConnectButton.Visibility =
+                    Visibility.Visible;
+                BangumiDisconnectButton.Visibility =
+                    Visibility.Collapsed;
+                return;
+            }
+
+            var displayName =
+                string.IsNullOrWhiteSpace(profile.NickName)
+                    ? profile.UserName
+                    : profile.NickName;
+
+            BangumiAccountStatusText.Text =
+                string.Format(
+                    T("Bangumi_AccountConnectedFormat"),
+                    displayName,
+                    profile.UserName);
+            BangumiConnectButton.Visibility =
+                Visibility.Collapsed;
+            BangumiDisconnectButton.Visibility =
+                Visibility.Visible;
+        }
+        catch
+        {
+            BangumiAccountStatusText.Text =
+                T("Bangumi_AccountNetworkError");
+            BangumiConnectButton.Visibility =
+                Visibility.Collapsed;
+            BangumiDisconnectButton.Visibility =
+                Visibility.Visible;
+        }
+    }
+
+    private async void BangumiConnectButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (XamlRoot is null)
+            return;
+
+        await BangumiAccountDialogService.ShowConnectAsync(
+            XamlRoot);
+    }
+
+    private async void BangumiDisconnectButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (XamlRoot is null)
+            return;
+
+        await BangumiAccountDialogService.ConfirmDisconnectAsync(
+            XamlRoot);
     }
 
     private void AppearanceCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -136,6 +240,13 @@ public sealed partial class SettingsView : UserControl
             T("Settings_AppearanceLight"),
             T("Settings_AppearanceDark")
         };
+
+        BangumiSectionTitle.Text = T("Bangumi_SettingsSection");
+        BangumiAccountTitle.Text = T("Bangumi_Account");
+        BangumiAccountDescription.Text = T("Bangumi_AccountSettingsDescription");
+        BangumiTokenPageButton.Content = T("Bangumi_OpenTokenPage");
+        BangumiConnectButton.Content = T("Bangumi_Connect");
+        BangumiDisconnectButton.Content = T("Bangumi_Disconnect");
 
         JapaneseMediaTitle.Text = T("Settings_JapaneseMedia");
         PreferredTitleLabel.Text = T("Settings_PreferredTitle");
