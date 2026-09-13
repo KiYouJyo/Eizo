@@ -42,6 +42,20 @@ internal sealed class BangumiAccountService
         ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
 
         var normalizedToken = accessToken.Trim();
+        const string bearerPrefix = "Bearer ";
+        if (normalizedToken.StartsWith(
+                bearerPrefix,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            normalizedToken =
+                normalizedToken[bearerPrefix.Length..].Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(normalizedToken))
+            throw new ArgumentException(
+                "Bangumi access token is empty.",
+                nameof(accessToken));
+
         var profile = await _repository.GetMyselfAsync(
             normalizedToken,
             cancellationToken);
