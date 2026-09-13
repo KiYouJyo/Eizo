@@ -38,6 +38,31 @@ internal static class BangumiCommunityJsonParser
                 ?? []);
     }
 
+    public static BangumiCommunityPage<BangumiChannelBlog>
+        ParseChannelBlogs(string json)
+    {
+        var payload = DeserializePage<SlimBlogEntryDto>(json);
+        return new BangumiCommunityPage<BangumiChannelBlog>(
+            payload.Total,
+            payload.Offset,
+            payload.Data?
+                .Select(static item =>
+                    new BangumiChannelBlog(
+                        item.Id,
+                        item.Type,
+                        item.User is null
+                            ? EmptyUser()
+                            : ToUser(item.User),
+                        item.Title ?? string.Empty,
+                        item.Summary ?? string.Empty,
+                        item.Replies,
+                        item.IsPublic,
+                        FromUnixSeconds(item.CreatedAt),
+                        FromUnixSeconds(item.UpdatedAt)))
+                .ToArray()
+                ?? []);
+    }
+
     public static BangumiCommunityPage<BangumiSubjectReview>
         ParseReviews(string json)
     {
@@ -450,6 +475,15 @@ internal static class BangumiCommunityJsonParser
         [JsonPropertyName("id")]
         public int Id { get; set; }
 
+        [JsonPropertyName("type")]
+        public int Type { get; set; }
+
+        [JsonPropertyName("uid")]
+        public int UserId { get; set; }
+
+        [JsonPropertyName("user")]
+        public SlimUserDto? User { get; set; }
+
         [JsonPropertyName("title")]
         public string? Title { get; set; }
 
@@ -458,6 +492,9 @@ internal static class BangumiCommunityJsonParser
 
         [JsonPropertyName("replies")]
         public int Replies { get; set; }
+
+        [JsonPropertyName("public")]
+        public bool IsPublic { get; set; }
 
         [JsonPropertyName("createdAt")]
         public long CreatedAt { get; set; }
