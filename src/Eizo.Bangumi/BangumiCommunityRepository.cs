@@ -152,6 +152,26 @@ public sealed class BangumiCommunityRepository
                 accessToken,
                 cancellationToken));
 
+    public async Task<BangumiCommunityPage<BangumiChannelBlog>>
+        GetChannelBlogsAsync(
+            int type,
+            int offset = 0,
+            int limit = 20,
+            string? accessToken = null,
+            CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.GetChannelBlogsAsync(
+            type,
+            limit,
+            offset,
+            accessToken,
+            cancellationToken);
+        return BangumiCommunityJsonParser.ParseChannelBlogs(payload) with
+        {
+            Offset = offset,
+        };
+    }
+
     public async Task<BangumiBlogDetail> GetBlogEntryAsync(
         int entryId,
         string? accessToken = null,
