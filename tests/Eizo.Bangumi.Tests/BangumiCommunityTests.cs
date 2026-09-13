@@ -403,6 +403,56 @@ public sealed class BangumiCommunityTests
     }
 
     [Fact]
+    public void ChannelBlogs_MapsAnimeBlogList()
+    {
+        const string json = """
+        {
+          "total": 1,
+          "data": [
+            {
+              "id": 123,
+              "type": 1,
+              "uid": 7,
+              "user": {
+                "id": 7,
+                "username": "writer",
+                "nickname": "Writer",
+                "avatar": {
+                  "large": "",
+                  "medium": "",
+                  "small": ""
+                },
+                "group": 10,
+                "sign": "",
+                "joinedAt": 1
+              },
+              "title": "动画日志",
+              "icon": "",
+              "summary": "日志摘要",
+              "replies": 4,
+              "public": true,
+              "createdAt": 1700000000,
+              "updatedAt": 1700000100
+            }
+          ]
+        }
+        """;
+
+        var page =
+            BangumiCommunityJsonParser.ParseChannelBlogs(json);
+        var item = Assert.Single(page.Items);
+
+        Assert.Equal(1, page.Total);
+        Assert.Equal(123, item.EntryId);
+        Assert.Equal("动画日志", item.Title);
+        Assert.Equal("日志摘要", item.Summary);
+        Assert.Equal("writer", item.User.UserName);
+        Assert.Equal(4, item.ReplyCount);
+        Assert.True(item.IsPublic);
+        Assert.NotNull(item.CreatedAt);
+    }
+
+    [Fact]
     public async Task Client_UsesNextBangumiPrivateApiAndBearerToken()
     {
         HttpRequestMessage? captured = null;
@@ -420,6 +470,28 @@ public sealed class BangumiCommunityTests
         };
 
         var api = new BangumiCommunityClient(client);
+        _ = await api.GetChannelBlogsAsync(
+            type: 2,
+            limit: 20,
+            offset: 40,
+            accessToken: "Bearer test-token",
+            cancellationToken:
+                TestContext.Current.CancellationToken);
+
+        Assert.NotNull(captured);
+        using (captured)
+        {
+            Assert.Equal(
+                "https://next.bgm.tv/p1/channels/2/blogs?limit=20&offset=40",
+                captured!.RequestUri!.ToString());
+            Assert.Equal(
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    "test-token"),
+                captured.Headers.Authorization);
+        }
+
+        captured = null;
         _ = await api.GetSubjectCommentsAsync(
             8,
             limit: 20,
