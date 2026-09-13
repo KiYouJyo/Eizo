@@ -38,8 +38,12 @@ public sealed partial class BangumiTopicDetailView : UserControl
         OpenSubjectButton.Content = T("Bangumi_BackToSubject");
         OpenBangumiButton.Content = T("Bangumi_OpenOnBangumi");
         RepliesTitle.Text = T("Bangumi_TopicReplies");
-        ReplyButton.Content = T("Bangumi_WriteReply");
-        ReplyButton.IsEnabled = false;
+        ReplyButton.Content = T("Bangumi_Publish");
+        ReplyInputBox.PlaceholderText =
+            T("Bangumi_WriteReplyPlaceholder");
+        ReplyComposerBorder.IsEnabled =
+            _account.IsConnected;
+        UpdateReplyComposerState();
         TitleText.Text = topic.Title;
         SubjectText.Text = FirstNonEmpty(
             subject.ChineseTitle,
@@ -92,9 +96,9 @@ public sealed partial class BangumiTopicDetailView : UserControl
 
         try
         {
-            ReplyButton.IsEnabled =
-                _account.IsConnected &&
-                await BangumiTurnstileDialogService.IsAvailableAsync();
+            ReplyComposerBorder.IsEnabled =
+                _account.IsConnected;
+            UpdateReplyComposerState();
 
             if (_account.IsConnected)
             {
@@ -144,6 +148,7 @@ public sealed partial class BangumiTopicDetailView : UserControl
                 RootMetaText.Text = string.Empty;
             }
 
+            ReplyInputBox.Text = string.Empty;
             _replies.Clear();
             foreach (var reply in FlattenReplies(detail.Replies))
                 _replies.Add(reply);
@@ -231,11 +236,7 @@ public sealed partial class BangumiTopicDetailView : UserControl
             return;
         }
 
-        var content =
-            await BangumiCommunityWriteDialogService
-                .PromptReplyAsync(
-                    XamlRoot,
-                    T("Bangumi_WriteTopicReplyTitle"));
+        var content = ReplyInputBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(content))
             return;
 
@@ -288,10 +289,21 @@ public sealed partial class BangumiTopicDetailView : UserControl
         }
         finally
         {
-            ReplyButton.IsEnabled =
-                _account.IsConnected &&
-                await BangumiTurnstileDialogService.IsAvailableAsync();
+            UpdateReplyComposerState();
         }
+    }
+
+    private void ReplyInputBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e) =>
+        UpdateReplyComposerState();
+
+    private void UpdateReplyComposerState()
+    {
+        ReplyButton.IsEnabled =
+            _account.IsConnected &&
+            !string.IsNullOrWhiteSpace(
+                ReplyInputBox.Text);
     }
 
     private async void ReplyReactionButton_Click(
