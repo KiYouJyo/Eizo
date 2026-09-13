@@ -49,6 +49,14 @@ try {
         }
     }
 
+    $doingComments = $client.GetStringAsync(
+        "p1/subjects/$SubjectId/comments?type=3&limit=1&offset=0").GetAwaiter().GetResult() |
+        ConvertFrom-Json
+    if ($null -eq $doingComments.total -or $null -eq $doingComments.data) {
+        throw 'Bangumi filtered comments smoke failed.'
+    }
+    Write-Host "Filtered comments PASS: doing=$($doingComments.total)"
+
     $reviewsBody = $client.GetStringAsync(
         "p1/subjects/$SubjectId/reviews?limit=1&offset=0").GetAwaiter().GetResult() |
         ConvertFrom-Json
