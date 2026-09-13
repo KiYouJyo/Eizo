@@ -477,13 +477,31 @@ public sealed class BangumiCommunityTests
             accessToken: "Bearer access-test",
             TestContext.Current.CancellationToken);
 
+        _ = await api.CreateBlogEntryAsync(
+            8,
+            "Review title",
+            "Review content",
+            new[] { "tag-a", "tag-b" },
+            isPublic: true,
+            turnstileToken: "turnstile-test",
+            accessToken: "access-test",
+            TestContext.Current.CancellationToken);
+
+        _ = await api.CreateSubjectTopicAsync(
+            8,
+            "Topic title",
+            "Topic content",
+            turnstileToken: "turnstile-test",
+            accessToken: "access-test",
+            TestContext.Current.CancellationToken);
+
         _ = await api.LikeSubjectPostAsync(
             99,
             value: 0,
             accessToken: "access-test",
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, captured.Count);
+        Assert.Equal(4, captured.Count);
 
         var comment = captured[0];
         Assert.Equal(HttpMethod.Post, comment.Method);
@@ -508,7 +526,31 @@ public sealed class BangumiCommunityTests
             comment.Body,
             StringComparison.Ordinal);
 
-        var reaction = captured[1];
+        var blog = captured[1];
+        Assert.Equal(HttpMethod.Post, blog.Method);
+        Assert.Equal(
+            "https://next.bgm.tv/p1/blogs",
+            blog.Uri);
+        Assert.Contains(
+            "\"subjectIDs\":[8]",
+            blog.Body,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "\"title\":\"Review title\"",
+            blog.Body,
+            StringComparison.Ordinal);
+
+        var topic = captured[2];
+        Assert.Equal(HttpMethod.Post, topic.Method);
+        Assert.Equal(
+            "https://next.bgm.tv/p1/subjects/8/topics",
+            topic.Uri);
+        Assert.Contains(
+            "\"title\":\"Topic title\"",
+            topic.Body,
+            StringComparison.Ordinal);
+
+        var reaction = captured[3];
         Assert.Equal(HttpMethod.Put, reaction.Method);
         Assert.Equal(
             "https://next.bgm.tv/p1/subjects/-/posts/99/like",
