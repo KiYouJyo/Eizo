@@ -55,6 +55,7 @@ public sealed class BangumiCommunityRepository
             int offset = 0,
             int limit = 20,
             string? accessToken = null,
+            BangumiCollectionType? type = null,
             CancellationToken cancellationToken = default)
     {
         var payload = await _client.GetSubjectCommentsAsync(
@@ -62,7 +63,8 @@ public sealed class BangumiCommunityRepository
             limit,
             offset,
             accessToken,
-            cancellationToken);
+            cancellationToken,
+            type);
         return BangumiCommunityJsonParser.ParseComments(payload) with
         {
             Offset = offset,
