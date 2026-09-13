@@ -4,7 +4,12 @@ using System.Runtime.CompilerServices;
 namespace Eizo.Models;
 
 public enum MediaCategoryKind { Anime, Movies, Series }
-public sealed record MediaCardModel(string Title, string NativeTitle, string Meta, double Progress = 0);
+public sealed record MediaCardModel(
+    string Title,
+    string NativeTitle,
+    string Meta,
+    double Progress = 0,
+    string? ExternalKey = null);
 
 public sealed class SourceItemModel : INotifyPropertyChanged
 {
