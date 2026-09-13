@@ -22,6 +22,8 @@ $parser = Read-Text 'src/Eizo.Bangumi/BangumiCommunityJsonParser.cs'
 $models = Read-Text 'src/Eizo.Bangumi/BangumiModels.cs'
 $view = Read-Text 'src/Eizo.App/Views/BangumiSubjectDetailView.xaml.cs'
 $xaml = Read-Text 'src/Eizo.App/Views/BangumiSubjectDetailView.xaml'
+$reviewView = Read-Text 'src/Eizo.App/Views/BangumiReviewDetailView.xaml.cs'
+$topicView = Read-Text 'src/Eizo.App/Views/BangumiTopicDetailView.xaml.cs'
 $shell = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
 
 foreach ($required in @(
@@ -33,6 +35,9 @@ foreach ($required in @(
     '"topics"',
     '"recs"',
     '"relations"',
+    'p1/blogs/{entryId}',
+    'p1/blogs/{entryId}/comments',
+    'p1/subjects/-/topics/{topicId}',
     'AuthenticationHeaderValue')) {
     if (-not $client.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi private community client contract missing: $required"
@@ -44,7 +49,10 @@ foreach ($required in @(
     'GetSubjectReviewsAsync',
     'GetSubjectTopicsAsync',
     'GetSubjectRecommendationsAsync',
-    'GetSubjectRelationsAsync')) {
+    'GetSubjectRelationsAsync',
+    'GetBlogEntryAsync',
+    'GetBlogCommentsAsync',
+    'GetSubjectTopicAsync')) {
     if (-not $repository.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi community repository contract missing: $required"
     }
@@ -56,7 +64,12 @@ foreach ($required in @(
     'ParseTopics',
     'ParseRecommendations',
     'ParseRelations',
-    'BangumiCommunityPage')) {
+    'ParseBlogEntry',
+    'ParseBlogComments',
+    'ParseTopicDetail',
+    'BangumiCommunityPage',
+    'BangumiBlogDetail',
+    'BangumiTopicDetail')) {
     $haystack = $parser + $models
     if (-not $haystack.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi community parser/model contract missing: $required"
@@ -71,10 +84,29 @@ foreach ($required in @(
     'ReviewsLoadMoreButton_Click',
     'TopicsLoadMoreButton_Click',
     'SubjectRequested?.Invoke',
-    'https://bgm.tv/blog/',
-    'https://bgm.tv/subject/topic/')) {
+    'ReviewRequested?.Invoke',
+    'TopicRequested?.Invoke')) {
     if (-not $view.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi subject community UI contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'GetBlogEntryAsync',
+    'GetBlogCommentsAsync',
+    'BangumiCommunityText.ToPlainText',
+    'https://bgm.tv/blog/')) {
+    if (-not $reviewView.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Bangumi review detail contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'GetSubjectTopicAsync',
+    'BangumiCommunityText.ToPlainText',
+    'https://bgm.tv/subject/topic/')) {
+    if (-not $topicView.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Bangumi topic detail contract missing: $required"
     }
 }
 
@@ -90,10 +122,17 @@ foreach ($required in @(
     }
 }
 
-if (-not $shell.Contains(
-        'view.SubjectRequested',
-        [StringComparison]::Ordinal)) {
-    throw 'Bangumi related-subject in-app navigation contract missing.'
+foreach ($required in @(
+    'view.SubjectRequested',
+    'view.ReviewRequested',
+    'view.TopicRequested',
+    'OpenBangumiReview',
+    'OpenBangumiTopic',
+    'new BangumiReviewDetailView',
+    'new BangumiTopicDetailView')) {
+    if (-not $shell.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Bangumi in-app community navigation contract missing: $required"
+    }
 }
 
 Write-Host 'Eizo v0.4.5 Bangumi community integration contract PASS.'
