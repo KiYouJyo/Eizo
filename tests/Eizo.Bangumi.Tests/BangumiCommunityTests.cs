@@ -218,6 +218,191 @@ public sealed class BangumiCommunityTests
     }
 
     [Fact]
+    public void CommunityDetails_MapBlogThreadAndNestedReplies()
+    {
+        const string blog = """
+        {
+          "id": 88,
+          "type": 0,
+          "uid": 1,
+          "user": {
+            "id": 1,
+            "username": "sai",
+            "nickname": "Sai",
+            "avatar": { "large": "", "medium": "", "small": "" },
+            "group": 10,
+            "sign": "",
+            "joinedAt": 1
+          },
+          "title": "长评全文",
+          "icon": "",
+          "content": "[b]正文[/b]",
+          "tags": ["动画", "演出"],
+          "views": 123,
+          "replies": 2,
+          "createdAt": 1700000000,
+          "updatedAt": 1700000100,
+          "noreply": 0,
+          "related": 0,
+          "public": true
+        }
+        """;
+
+        const string comments = """
+        [
+          {
+            "id": 501,
+            "mainID": 88,
+            "creatorID": 2,
+            "relatedID": 0,
+            "relatedPhotoID": 0,
+            "createdAt": 1700000200,
+            "content": "主评论",
+            "state": 0,
+            "user": {
+              "id": 2,
+              "username": "reader",
+              "nickname": "Reader",
+              "avatar": { "large": "", "medium": "", "small": "" },
+              "group": 10,
+              "sign": "",
+              "joinedAt": 1
+            },
+            "reactions": [
+              {
+                "value": 1,
+                "users": [
+                  { "id": 9, "username": "x", "nickname": "X" }
+                ]
+              }
+            ],
+            "replies": [
+              {
+                "id": 502,
+                "mainID": 88,
+                "creatorID": 3,
+                "relatedID": 501,
+                "relatedPhotoID": 0,
+                "createdAt": 1700000300,
+                "content": "嵌套回复",
+                "state": 0,
+                "user": {
+                  "id": 3,
+                  "username": "reply",
+                  "nickname": "Reply",
+                  "avatar": { "large": "", "medium": "", "small": "" },
+                  "group": 10,
+                  "sign": "",
+                  "joinedAt": 1
+                },
+                "reactions": []
+              }
+            ]
+          }
+        ]
+        """;
+
+        const string topic = """
+        {
+          "id": 99,
+          "title": "讨论全文",
+          "creatorID": 1,
+          "parentID": 8,
+          "replyCount": 1,
+          "createdAt": 1700000000,
+          "updatedAt": 1700000400,
+          "state": 0,
+          "display": 0,
+          "creator": {
+            "id": 1,
+            "username": "sai",
+            "nickname": "Sai",
+            "avatar": { "large": "", "medium": "", "small": "" },
+            "group": 10,
+            "sign": "",
+            "joinedAt": 1
+          },
+          "subject": {
+            "id": 8,
+            "name": "Subject",
+            "nameCN": "条目",
+            "type": 2,
+            "info": "",
+            "metaTags": [],
+            "rating": { "rank": 1, "count": [], "score": 9.1, "total": 10 },
+            "locked": false,
+            "nsfw": false,
+            "images": {
+              "large": "",
+              "common": "",
+              "medium": "",
+              "small": "",
+              "grid": ""
+            }
+          },
+          "replies": [
+            {
+              "id": 600,
+              "creatorID": 1,
+              "createdAt": 1700000000,
+              "content": "[b]主楼[/b]",
+              "state": 0,
+              "creator": {
+                "id": 1,
+                "username": "sai",
+                "nickname": "Sai",
+                "avatar": { "large": "", "medium": "", "small": "" },
+                "group": 10,
+                "sign": "",
+                "joinedAt": 1
+              },
+              "reactions": [],
+              "replies": []
+            },
+            {
+              "id": 601,
+              "creatorID": 2,
+              "createdAt": 1700000500,
+              "content": "第一楼",
+              "state": 0,
+              "creator": {
+                "id": 2,
+                "username": "reader",
+                "nickname": "Reader",
+                "avatar": { "large": "", "medium": "", "small": "" },
+                "group": 10,
+                "sign": "",
+                "joinedAt": 1
+              },
+              "reactions": [],
+              "replies": []
+            }
+          ]
+        }
+        """;
+
+        var blogDetail =
+            BangumiCommunityJsonParser.ParseBlogEntry(blog);
+        var blogComments =
+            BangumiCommunityJsonParser.ParseBlogComments(comments);
+        var topicDetail =
+            BangumiCommunityJsonParser.ParseTopicDetail(topic);
+
+        Assert.Equal("长评全文", blogDetail.Title);
+        Assert.Equal("[b]正文[/b]", blogDetail.Content);
+        Assert.Equal(123, blogDetail.ViewCount);
+        var blogComment = Assert.Single(blogComments);
+        Assert.Equal(1, blogComment.ReactionCount);
+        Assert.Equal("嵌套回复", Assert.Single(blogComment.Replies).Content);
+
+        Assert.Equal(99, topicDetail.TopicId);
+        Assert.Equal(8, topicDetail.Subject.Id);
+        Assert.NotNull(topicDetail.RootPost);
+        Assert.Equal("[b]主楼[/b]", topicDetail.RootPost!.Content);
+        Assert.Equal("第一楼", Assert.Single(topicDetail.Replies).Content);
+    }
+
+    [Fact]
     public async Task Client_UsesNextBangumiPrivateApiAndBearerToken()
     {
         HttpRequestMessage? captured = null;
