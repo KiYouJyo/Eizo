@@ -165,7 +165,7 @@ internal sealed class BangumiApiClient
             new MediaTypeWithQualityHeaderValue("application/json"));
         client.DefaultRequestHeaders.TryAddWithoutValidation(
             "User-Agent",
-            "KiYouJyo/Eizo/0.4.3 (Windows) (https://github.com/KiYouJyo/Eizo)");
+            "KiYouJyo/Eizo/0.4.5 (Windows) (https://github.com/KiYouJyo/Eizo)");
         return client;
     }
 
