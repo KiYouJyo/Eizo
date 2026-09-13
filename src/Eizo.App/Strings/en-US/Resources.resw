@@ -899,4 +899,29 @@
   <data name="Bangumi_NoSummary" xml:space="preserve">
     <value>No summary available</value>
   </data>
+
+  <data name="Bangumi_CurrentSeason" xml:space="preserve">
+    <value>Current</value>
+  </data>
+  <data name="Bangumi_LoadMore" xml:space="preserve">
+    <value>Load more</value>
+  </data>
+  <data name="Bangumi_LoadingMore" xml:space="preserve">
+    <value>Loading more Bangumi titles…</value>
+  </data>
+  <data name="Bangumi_LoadMoreError" xml:space="preserve">
+    <value>Could not load more titles. Existing results were kept.</value>
+  </data>
+  <data name="Bangumi_RankingAllTime" xml:space="preserve">
+    <value>All-time ranking</value>
+  </data>
+  <data name="Bangumi_RankingCurrentSeason" xml:space="preserve">
+    <value>Current-season ranking</value>
+  </data>
+  <data name="Bangumi_RankingCurrentYear" xml:space="preserve">
+    <value>Current-year ranking</value>
+  </data>
+  <data name="Bangumi_SeasonLabelFormat" xml:space="preserve">
+    <value>{0} {1}</value>
+  </data>
 </root>
