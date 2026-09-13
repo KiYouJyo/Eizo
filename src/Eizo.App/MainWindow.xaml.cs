@@ -393,6 +393,12 @@ public sealed partial class MainWindow : Window
     {
         view.DetailRequested += (_, title) => OpenDetail(title, startPlaying: false);
         view.PlayRequested += (_, title) => OpenDetail(title, startPlaying: true);
+        view.BangumiSubjectRequested += (_, subject) =>
+            OpenBangumiSubject(subject);
+        view.BangumiSeasonalRequested += (_, _) =>
+            NavigateSelectedWorkspace(
+                "bangumi-seasonal",
+                SeasonalNav);
     }
 
     private void WireWorkspaceMediaView(CategoryView view)
