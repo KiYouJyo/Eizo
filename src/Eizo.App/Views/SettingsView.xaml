@@ -40,6 +40,7 @@
               <Setter Target="BangumiAccountActions.(Grid.Column)" Value="0" />
               <Setter Target="BangumiAccountActions.(Grid.ColumnSpan)" Value="2" />
               <Setter Target="BangumiAccountActions.HorizontalAlignment" Value="Left" />
+              <Setter Target="BangumiAccountActions.Orientation" Value="Vertical" />
             </VisualState.Setters>
           </VisualState>
 
@@ -70,6 +71,7 @@
               <Setter Target="BangumiAccountActions.(Grid.Column)" Value="1" />
               <Setter Target="BangumiAccountActions.(Grid.ColumnSpan)" Value="1" />
               <Setter Target="BangumiAccountActions.HorizontalAlignment" Value="Right" />
+              <Setter Target="BangumiAccountActions.Orientation" Value="Horizontal" />
             </VisualState.Setters>
           </VisualState>
         </VisualStateGroup>
