@@ -1067,4 +1067,37 @@
   <data name="Bangumi_CollectionDropped" xml:space="preserve">
     <value>抛弃</value>
   </data>
+  <data name="Bangumi_ReviewDetailPageTitle" xml:space="preserve">
+    <value>Bangumi 长评</value>
+  </data>
+  <data name="Bangumi_TopicDetailPageTitle" xml:space="preserve">
+    <value>Bangumi 讨论</value>
+  </data>
+  <data name="Bangumi_BackToSubject" xml:space="preserve">
+    <value>返回条目</value>
+  </data>
+  <data name="Bangumi_ReviewComments" xml:space="preserve">
+    <value>评论</value>
+  </data>
+  <data name="Bangumi_TopicReplies" xml:space="preserve">
+    <value>回复</value>
+  </data>
+  <data name="Bangumi_CommunityViewsFormat" xml:space="preserve">
+    <value>{0} 浏览</value>
+  </data>
+  <data name="Bangumi_CommunityLoadedCountFormat" xml:space="preserve">
+    <value>已加载 {0} 条</value>
+  </data>
+  <data name="Bangumi_ReviewNoComments" xml:space="preserve">
+    <value>暂无评论。</value>
+  </data>
+  <data name="Bangumi_TopicNoReplies" xml:space="preserve">
+    <value>暂无回复。</value>
+  </data>
+  <data name="Bangumi_CommunityContentUnavailable" xml:space="preserve">
+    <value>正文暂不可用。</value>
+  </data>
+  <data name="Bangumi_UnknownUser" xml:space="preserve">
+    <value>未知用户</value>
+  </data>
 </root>
