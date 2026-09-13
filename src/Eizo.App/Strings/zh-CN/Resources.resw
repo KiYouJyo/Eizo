@@ -847,4 +847,56 @@
   <data name="Bangumi_FollowingPlaceholderDescription" xml:space="preserve">
     <value>用于同步 Bangumi 收藏与单集观看状态。账户登录与数据同步将在后续阶段接入。</value>
   </data>
+
+  <data name="Bangumi_CalendarSubtitle" xml:space="preserve">
+    <value>本周动画放送日程</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitle" xml:space="preserve">
+    <value>当前季度 TV 动画</value>
+  </data>
+  <data name="Bangumi_SeasonalSubtitleFormat" xml:space="preserve">
+    <value>{0} {1}季 TV 动画</value>
+  </data>
+  <data name="Bangumi_DiscoverSubtitle" xml:space="preserve">
+    <value>Bangumi 动画综合排名</value>
+  </data>
+  <data name="Bangumi_Refresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="Bangumi_Loading" xml:space="preserve">
+    <value>正在读取 Bangumi 数据…</value>
+  </data>
+  <data name="Bangumi_NoResults" xml:space="preserve">
+    <value>当前没有可显示的 Bangumi 条目。</value>
+  </data>
+  <data name="Bangumi_NetworkError" xml:space="preserve">
+    <value>无法连接 Bangumi，且没有可用的本地缓存。</value>
+  </data>
+  <data name="Bangumi_StaleCacheFormat" xml:space="preserve">
+    <value>网络不可用，正在显示缓存数据 · 缓存时间 {0}</value>
+  </data>
+  <data name="Bangumi_CacheFormat" xml:space="preserve">
+    <value>来自本地缓存 · 更新时间 {0}</value>
+  </data>
+  <data name="Bangumi_UpdatedFormat" xml:space="preserve">
+    <value>已从 Bangumi 更新 · {0}</value>
+  </data>
+  <data name="Bangumi_DetailPageTitle" xml:space="preserve">
+    <value>Bangumi 条目</value>
+  </data>
+  <data name="Bangumi_OpenOnBangumi" xml:space="preserve">
+    <value>在 Bangumi 查看</value>
+  </data>
+  <data name="Bangumi_Summary" xml:space="preserve">
+    <value>简介</value>
+  </data>
+  <data name="Bangumi_Tags" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Bangumi_NoTags" xml:space="preserve">
+    <value>暂无标签</value>
+  </data>
+  <data name="Bangumi_NoSummary" xml:space="preserve">
+    <value>暂无简介</value>
+  </data>
 </root>
