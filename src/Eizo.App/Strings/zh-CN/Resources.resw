@@ -1187,4 +1187,7 @@
   <data name="Bangumi_AnimeBlogsCountFormat" xml:space="preserve">
     <value>已显示 {0} / {1} 篇日志</value>
   </data>
+  <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
+    <value>正在回复 {0}</value>
+  </data>
 </root>
