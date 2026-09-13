@@ -40,7 +40,7 @@ public sealed partial class BangumiReviewDetailView : UserControl
         ReplyButton.Content = T("Bangumi_Publish");
         ReplyInputBox.PlaceholderText =
             T("Bangumi_WriteReplyPlaceholder");
-        ReplyComposerBorder.IsEnabled =
+        ReplyInputBox.IsEnabled =
             _account.IsConnected;
         UpdateReplyComposerState();
         TitleText.Text = review.Title;
@@ -92,7 +92,7 @@ public sealed partial class BangumiReviewDetailView : UserControl
 
         try
         {
-            ReplyComposerBorder.IsEnabled =
+            ReplyInputBox.IsEnabled =
                 _account.IsConnected;
             UpdateReplyComposerState();
 
