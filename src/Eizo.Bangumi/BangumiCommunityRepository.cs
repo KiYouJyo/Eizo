@@ -12,6 +12,43 @@ public sealed class BangumiCommunityRepository
 
     public static BangumiCommunityRepository Default { get; } = new();
 
+    public async Task<BangumiBlogDetail> GetBlogEntryAsync(
+        int entryId,
+        string? accessToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.GetBlogEntryAsync(
+            entryId,
+            accessToken,
+            cancellationToken);
+        return BangumiCommunityJsonParser.ParseBlogEntry(payload);
+    }
+
+    public async Task<IReadOnlyList<BangumiCommunityReply>>
+        GetBlogCommentsAsync(
+            int entryId,
+            string? accessToken = null,
+            CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.GetBlogCommentsAsync(
+            entryId,
+            accessToken,
+            cancellationToken);
+        return BangumiCommunityJsonParser.ParseBlogComments(payload);
+    }
+
+    public async Task<BangumiTopicDetail> GetSubjectTopicAsync(
+        int topicId,
+        string? accessToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.GetSubjectTopicAsync(
+            topicId,
+            accessToken,
+            cancellationToken);
+        return BangumiCommunityJsonParser.ParseTopicDetail(payload);
+    }
+
     public async Task<BangumiCommunityPage<BangumiSubjectComment>>
         GetSubjectCommentsAsync(
             int subjectId,
