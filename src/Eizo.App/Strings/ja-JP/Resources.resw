@@ -1187,4 +1187,7 @@
   <data name="Bangumi_AnimeBlogsCountFormat" xml:space="preserve">
     <value>{0} / {1} 件を表示</value>
   </data>
+  <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
+    <value>{0} に返信中</value>
+  </data>
 </root>
