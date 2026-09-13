@@ -88,6 +88,54 @@ internal sealed class BangumiCommunityClient
             accessToken,
             cancellationToken);
 
+    public Task<string> GetBlogEntryAsync(
+        int entryId,
+        string? accessToken,
+        CancellationToken cancellationToken)
+    {
+        if (entryId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(entryId));
+
+        return GetStringAsync(
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"p1/blogs/{entryId}"),
+            accessToken,
+            cancellationToken);
+    }
+
+    public Task<string> GetBlogCommentsAsync(
+        int entryId,
+        string? accessToken,
+        CancellationToken cancellationToken)
+    {
+        if (entryId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(entryId));
+
+        return GetStringAsync(
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"p1/blogs/{entryId}/comments"),
+            accessToken,
+            cancellationToken);
+    }
+
+    public Task<string> GetSubjectTopicAsync(
+        int topicId,
+        string? accessToken,
+        CancellationToken cancellationToken)
+    {
+        if (topicId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(topicId));
+
+        return GetStringAsync(
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"p1/subjects/-/topics/{topicId}"),
+            accessToken,
+            cancellationToken);
+    }
+
     private Task<string> GetSubjectPageAsync(
         int subjectId,
         string resource,
