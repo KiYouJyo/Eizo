@@ -86,42 +86,6 @@
         <TextBlock x:Name="CommentsTitle"
                    Style="{StaticResource SectionTitleText}" />
 
-        <Border x:Name="ReplyComposerBorder"
-                Padding="12"
-                CornerRadius="10"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1">
-          <StackPanel Spacing="8">
-            <Grid x:Name="ReplyTargetPanel"
-                  Visibility="Collapsed"
-                  ColumnDefinitions="*,Auto"
-                  ColumnSpacing="8">
-              <TextBlock x:Name="ReplyTargetText"
-                         Style="{StaticResource MetadataText}"
-                         TextWrapping="Wrap"
-                         VerticalAlignment="Center" />
-              <Button x:Name="CancelReplyTargetButton"
-                      Grid.Column="1"
-                      Padding="8,2"
-                      Content="×"
-                      Click="CancelReplyTargetButton_Click" />
-            </Grid>
-            <Grid ColumnDefinitions="*,Auto"
-                  ColumnSpacing="10">
-              <TextBox x:Name="ReplyInputBox"
-                       AcceptsReturn="True"
-                       TextWrapping="Wrap"
-                       MinHeight="88"
-                       TextChanged="ReplyInputBox_TextChanged" />
-              <Button x:Name="ReplyButton"
-                      Grid.Column="1"
-                      VerticalAlignment="Bottom"
-                      Click="ReplyButton_Click" />
-            </Grid>
-          </StackPanel>
-        </Border>
-
         <TextBlock x:Name="CommentsStatusText"
                    Style="{StaticResource MetadataText}"
                    TextWrapping="Wrap" />
@@ -152,7 +116,7 @@
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1">
                   <StackPanel Spacing="4">
-                    <Grid ColumnDefinitions="*,Auto,Auto"
+                    <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="6">
                       <TextBlock Text="{Binding UserName}"
                                  FontWeight="SemiBold" />
@@ -160,11 +124,6 @@
                                  Text="{Binding ReactionText}"
                                  Style="{StaticResource MetadataText}"
                                  VerticalAlignment="Center" />
-                      <Button Grid.Column="2"
-                              Padding="8,2"
-                              Content="↩"
-                              Tag="{Binding}"
-                              Click="CommentReplyButton_Click" />
                     </Grid>
                     <TextBlock Text="{Binding Content}"
                                Style="{StaticResource BodyText}"
