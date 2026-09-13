@@ -30,6 +30,7 @@ public sealed partial class BangumiSubjectDetailView : UserControl
     private BangumiSubjectCard _subject;
     private CancellationTokenSource? _loadCancellation;
     private int _commentsOffset;
+    private int _viewerUserId;
     private BangumiCollectionType? _commentsFilter;
     private bool _suppressCommentsFilterChanged;
     private int _reviewsOffset;
@@ -222,6 +223,18 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         bool reset,
         CancellationToken cancellationToken)
     {
+        if (_account.IsConnected)
+        {
+            var profile = await _account.GetProfileAsync(
+                forceRefresh: false,
+                cancellationToken);
+            _viewerUserId = profile?.Id ?? 0;
+        }
+        else
+        {
+            _viewerUserId = 0;
+        }
+
         if (reset)
         {
             _comments.Clear();
@@ -611,6 +624,10 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         if (comment.UpdatedAt is { } updatedAt)
             meta.Add(FormatCommunityTime(updatedAt));
 
+        var reacted =
+            _viewerUserId > 0 &&
+            comment.ReactionUserIds.Contains(_viewerUserId);
+
         return new BangumiCommentViewModel(
             comment,
             CreateArtwork(
@@ -624,10 +641,91 @@ public sealed partial class BangumiSubjectDetailView : UserControl
                 comment.User.UserName),
             string.Join(" · ", meta),
             comment.Comment,
-            comment.ReactionCount > 0
-                ? $"♥ {comment.ReactionCount}"
-                : string.Empty);
+            ReactionLabel(
+                reacted,
+                comment.ReactionCount),
+            _viewerUserId > 0,
+            reacted);
     }
+
+    private async void CommentReactionButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button
+            {
+                Tag: BangumiCommentViewModel item
+            })
+        {
+            return;
+        }
+
+        var token = _account.GetAccessTokenForRequest();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            CommentsStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+            return;
+        }
+
+        var index = _comments.IndexOf(item);
+        if (index < 0)
+            return;
+
+        var button = (Button)sender;
+        button.IsEnabled = false;
+
+        try
+        {
+            if (item.IsReacted)
+            {
+                await _community.UnlikeSubjectCommentAsync(
+                    item.Comment.Id,
+                    token,
+                    _loadCancellation?.Token ??
+                    CancellationToken.None);
+            }
+            else
+            {
+                await _community.LikeSubjectCommentAsync(
+                    item.Comment.Id,
+                    value: 0,
+                    token,
+                    _loadCancellation?.Token ??
+                    CancellationToken.None);
+            }
+
+            var reacted = !item.IsReacted;
+            var count = Math.Max(
+                0,
+                item.Comment.ReactionCount +
+                (reacted ? 1 : -1));
+            _comments[index] = item with
+            {
+                IsReacted = reacted,
+                ReactionText = ReactionLabel(
+                    reacted,
+                    count),
+            };
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            CommentsStatusText.Text =
+                T("Bangumi_CommunityWriteFailed");
+        }
+        finally
+        {
+            button.IsEnabled = true;
+        }
+    }
+
+    private static string ReactionLabel(
+        bool reacted,
+        int count) =>
+        $"{(reacted ? "♥" : "♡")} {Math.Max(0, count)}";
 
     private BangumiReviewViewModel CreateReviewViewModel(
         BangumiSubjectReview review)
