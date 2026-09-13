@@ -447,13 +447,18 @@ public sealed partial class MainWindow : Window
             ? subject.NativeTitle
             : subject.ChineseTitle;
 
+        var view =
+            new BangumiSubjectDetailView(subject);
+        view.SubjectRequested += (_, relatedSubject) =>
+            OpenBangumiSubject(relatedSubject);
+
         var state = new ShellTabState(
             key,
             ShellTabKind.Detail,
             pageKey: null,
             title,
             "\uE8B2",
-            new BangumiSubjectDetailView(subject),
+            view,
             navItem: null,
             PreferredTabWidth)
         {
