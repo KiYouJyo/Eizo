@@ -36,6 +36,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-NavigationInformationArchitecture.ps1
 
+      - name: Validate Bangumi public integration contract
+        shell: pwsh
+        run: ./scripts/Test-BangumiPublicIntegration.ps1
+
       - name: Validate WebDAV Stage 1 media-source contract
         shell: pwsh
         run: ./scripts/Test-MediaSourceStage1Contract.ps1
@@ -89,6 +93,9 @@ jobs:
 
       - name: Run Metadata integration tests
         run: dotnet test tests/Eizo.MetadataIntegration.Tests/Eizo.MetadataIntegration.Tests.csproj --configuration Release
+
+      - name: Run Bangumi integration tests
+        run: dotnet test tests/Eizo.Bangumi.Tests/Eizo.Bangumi.Tests.csproj --configuration Release
 
   winui-build:
     name: Build WinUI 3 app
