@@ -125,8 +125,57 @@ public sealed partial class CacheView : UserControl
     {
         _items.Clear();
 
+        var groupedEntryIds =
+            new HashSet<string>(
+                StringComparer.Ordinal);
+
+        foreach (var group in snapshot.Entries
+                     .Where(static entry =>
+                         entry.Category ==
+                             CacheCategory.Media &&
+                         !string.IsNullOrWhiteSpace(
+                             entry.GroupKey))
+                     .GroupBy(
+                         static entry =>
+                             entry.GroupKey!,
+                         StringComparer.Ordinal))
+        {
+            var entries =
+                group.ToArray();
+            var newest =
+                entries.Max(
+                    static entry =>
+                        entry.LastAccessedUtc);
+            var first =
+                entries[0];
+
+            _items.Add(
+                new CacheItemModel(
+                    "group:" + group.Key,
+                    first.DisplayName,
+                    first.Source,
+                    FormatBytes(
+                        entries.Sum(
+                            static entry =>
+                                entry.SizeBytes)),
+                    newest
+                        .ToLocalTime()
+                        .ToString(
+                            "g",
+                            CultureInfo.CurrentCulture)));
+
+            foreach (var entry in entries)
+                groupedEntryIds.Add(entry.Id);
+        }
+
         foreach (var entry in snapshot.Entries)
         {
+            if (groupedEntryIds.Contains(
+                    entry.Id))
+            {
+                continue;
+            }
+
             _items.Add(
                 new CacheItemModel(
                     entry.Id,
@@ -272,7 +321,19 @@ public sealed partial class CacheView : UserControl
         SetBusy(true);
         try
         {
-            await CacheRuntime.Store.DeleteAsync(id);
+            const string groupPrefix = "group:";
+
+            if (id.StartsWith(
+                    groupPrefix,
+                    StringComparison.Ordinal))
+            {
+                await CacheRuntime.Store.ClearGroupAsync(
+                    id[groupPrefix.Length..]);
+            }
+            else
+            {
+                await CacheRuntime.Store.DeleteAsync(id);
+            }
         }
         finally
         {

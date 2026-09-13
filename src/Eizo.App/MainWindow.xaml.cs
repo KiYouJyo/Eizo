@@ -685,12 +685,16 @@ public sealed partial class MainWindow : Window
                      UriKind.Absolute,
                      out var remoteUri))
         {
+            WebDavMediaSourceProvider? webDavProvider = null;
+            WebDavMediaProbeResult? probe = null;
+
             if (MediaSourceProviderRegistry.TryGet(
                     MediaSourceKind.WebDav,
                     out var provider) &&
-                provider is WebDavMediaSourceProvider webDavProvider)
+                provider is WebDavMediaSourceProvider resolvedProvider)
             {
-                var probe = await webDavProvider.ProbeMediaAsync(
+                webDavProvider = resolvedProvider;
+                probe = await webDavProvider.ProbeMediaAsync(
                     webDavSource,
                     remoteUri);
 
@@ -703,20 +707,41 @@ public sealed partial class MainWindow : Window
                 }
             }
 
-            var credential =
-                MediaCredentialStore.Default.GetWebDav(
-                    webDavSource);
+            if (webDavProvider is not null &&
+                probe is
+                {
+                    SupportsRanges: true,
+                    ContentLength: > 0
+                })
+            {
+                playbackSource =
+                    PlaybackSource.FromRandomAccess(
+                        remoteUri,
+                        new WebDavCachedRandomAccessSource(
+                            webDavProvider,
+                            webDavSource,
+                            remoteUri,
+                            item.DisplayTitle,
+                            probe),
+                        item.DisplayTitle);
+            }
+            else
+            {
+                var credential =
+                    MediaCredentialStore.Default.GetWebDav(
+                        webDavSource);
 
-            var access = credential is null
-                ? null
-                : new PlaybackNetworkAccess(
-                    credential.UserName,
-                    credential.Password);
+                var access = credential is null
+                    ? null
+                    : new PlaybackNetworkAccess(
+                        credential.UserName,
+                        credential.Password);
 
-            playbackSource = PlaybackSource.FromUri(
-                remoteUri,
-                item.DisplayTitle,
-                access);
+                playbackSource = PlaybackSource.FromUri(
+                    remoteUri,
+                    item.DisplayTitle,
+                    access);
+            }
         }
         else
         {

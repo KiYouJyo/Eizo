@@ -11,7 +11,9 @@ public sealed record WebDavMediaProbeResult(
     bool SupportsRanges,
     long? ContentLength = null,
     string? ErrorCode = null,
-    string? Detail = null);
+    string? Detail = null,
+    string? EntityTag = null,
+    DateTimeOffset? LastModified = null);
 
 public sealed class WebDavMediaSourceProvider(
     IMediaCredentialProvider credentialStore)
@@ -214,7 +216,9 @@ public sealed class WebDavMediaSourceProvider(
                 return new WebDavMediaProbeResult(
                     true,
                     true,
-                    total ?? response.Content.Headers.ContentLength);
+                    total ?? response.Content.Headers.ContentLength,
+                    EntityTag: response.Headers.ETag?.Tag,
+                    LastModified: response.Content.Headers.LastModified);
             }
 
             if (response.IsSuccessStatusCode)
@@ -229,7 +233,9 @@ public sealed class WebDavMediaSourceProvider(
                 return new WebDavMediaProbeResult(
                     true,
                     acceptsRanges,
-                    response.Content.Headers.ContentLength);
+                    response.Content.Headers.ContentLength,
+                    EntityTag: response.Headers.ETag?.Tag,
+                    LastModified: response.Content.Headers.LastModified);
             }
 
             return new WebDavMediaProbeResult(
@@ -261,6 +267,125 @@ public sealed class WebDavMediaSourceProvider(
                 ErrorCode: exception.ErrorCode,
                 Detail: exception.Message);
         }
+    }
+
+    public async Task<byte[]> DownloadRangeAsync(
+        MediaSourceDefinition source,
+        Uri fileUri,
+        long offset,
+        int count,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(fileUri);
+
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+        if (count <= 0)
+            throw new ArgumentOutOfRangeException(nameof(count));
+
+        ValidateSource(source);
+
+        var rootUri = new Uri(
+            source.RootLocation!,
+            UriKind.Absolute);
+
+        if (!fileUri.IsAbsoluteUri ||
+            !IsUriWithinRoot(rootUri, fileUri))
+        {
+            throw new MediaSourceException(
+                "RemoteUriOutsideSource",
+                "The requested WebDAV file is outside the configured media source.");
+        }
+
+        var end = checked(
+            offset +
+            count -
+            1L);
+        Exception? lastFailure = null;
+
+        for (var attempt = 1;
+             attempt <= MaxDirectoryRequestAttempts;
+             attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    fileUri);
+                request.Headers.Range =
+                    new RangeHeaderValue(
+                        offset,
+                        end);
+
+                using var response =
+                    await GetSharedClient(source).SendAsync(
+                        request,
+                        HttpCompletionOption.ResponseHeadersRead,
+                        cancellationToken);
+
+                if (response.StatusCode ==
+                    HttpStatusCode.PartialContent)
+                {
+                    if (response.Content.Headers.ContentRange?.From is long from &&
+                        from != offset)
+                    {
+                        throw new MediaSourceException(
+                            "InvalidRangeResponse",
+                            $"WebDAV returned range offset {from} instead of {offset}.");
+                    }
+
+                    var bytes =
+                        await response.Content.ReadAsByteArrayAsync(
+                            cancellationToken);
+
+                    if (bytes.Length > count)
+                    {
+                        Array.Resize(
+                            ref bytes,
+                            count);
+                    }
+
+                    return bytes;
+                }
+
+                var failure = new MediaSourceException(
+                    response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable
+                        ? "RangeNotSatisfiable"
+                        : "RangeNotSupported",
+                    $"WebDAV range GET failed with {(int)response.StatusCode} {response.ReasonPhrase}.");
+
+                if (!IsTransientStatus(response.StatusCode) ||
+                    attempt == MaxDirectoryRequestAttempts)
+                {
+                    throw failure;
+                }
+
+                lastFailure = failure;
+            }
+            catch (TaskCanceledException exception)
+                when (!cancellationToken.IsCancellationRequested &&
+                      attempt < MaxDirectoryRequestAttempts)
+            {
+                lastFailure = exception;
+            }
+            catch (HttpRequestException exception)
+                when (attempt < MaxDirectoryRequestAttempts)
+            {
+                lastFailure = exception;
+            }
+
+            await Task.Delay(
+                RetryDelay(attempt),
+                cancellationToken);
+        }
+
+        throw new MediaSourceException(
+            "WebDavRangeDownloadFailed",
+            $"WebDAV range GET failed after {MaxDirectoryRequestAttempts} attempts.",
+            lastFailure);
     }
 
     public async Task<byte[]> DownloadFileAsync(

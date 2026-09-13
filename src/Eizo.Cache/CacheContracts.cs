@@ -13,7 +13,8 @@ public sealed record CacheWriteOptions(
     string? DisplayName = null,
     string? Source = null,
     string? Extension = null,
-    bool? Pinned = null);
+    bool? Pinned = null,
+    string? GroupKey = null);
 
 public sealed record CacheEntrySnapshot(
     string Id,
@@ -24,7 +25,8 @@ public sealed record CacheEntrySnapshot(
     long SizeBytes,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset LastAccessedUtc,
-    bool Pinned);
+    bool Pinned,
+    string? GroupKey = null);
 
 public sealed record CacheSnapshot(
     long TotalBytes,

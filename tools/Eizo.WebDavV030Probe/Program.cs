@@ -183,6 +183,32 @@ namespace Eizo.WebDavV030Probe
                 probe.ContentLength ==
                     WebDavProbeServer.LargeMediaLength,
                 "Range probe lost the large content length.");
+            Assert(
+                probe.EntityTag == "\"probe-etag\"",
+                "Range probe did not preserve the media ETag.");
+
+            var rangeBytes =
+                await provider.DownloadRangeAsync(
+                    source,
+                    episodeUri,
+                    offset: 123,
+                    count: 32);
+
+            Assert(
+                rangeBytes.Length == 32,
+                $"Expected 32 range bytes, got {rangeBytes.Length}.");
+
+            for (var index = 0;
+                 index < rangeBytes.Length;
+                 index++)
+            {
+                var expected =
+                    (byte)((123 + index) % 251);
+
+                Assert(
+                    rangeBytes[index] == expected,
+                    $"Range payload mismatch at {index}: expected {expected}, got {rangeBytes[index]}.");
+            }
 
             var missing =
                 await provider.ProbeMediaAsync(
@@ -551,27 +577,46 @@ namespace Eizo.WebDavV030Probe
                 if (request.Headers.TryGetValue(
                         "Range",
                         out var range) &&
-                    range.StartsWith(
-                        "bytes=0-0",
-                        StringComparison.OrdinalIgnoreCase))
+                    TryParseRange(
+                        range,
+                        totalLength,
+                        out var rangeStart,
+                        out var rangeEnd))
                 {
                     Interlocked.Increment(
                         ref _rangeRequestCount);
+
+                    var count =
+                        checked(
+                            (int)(
+                                rangeEnd -
+                                rangeStart +
+                                1));
+                    var body =
+                        request.Method.Equals(
+                            "HEAD",
+                            StringComparison.OrdinalIgnoreCase)
+                            ? null
+                            : Enumerable
+                                .Range(0, count)
+                                .Select(index =>
+                                    (byte)(
+                                        (rangeStart + index) %
+                                        251))
+                                .ToArray();
 
                     await WriteResponseAsync(
                         stream,
                         "206 Partial Content",
                         [
                             "Accept-Ranges: bytes",
-                            $"Content-Range: bytes 0-0/{totalLength}",
-                            "Content-Length: 1",
-                            "Content-Type: application/octet-stream"
+                            $"Content-Range: bytes {rangeStart}-{rangeEnd}/{totalLength}",
+                            $"Content-Length: {count}",
+                            "Content-Type: application/octet-stream",
+                            "ETag: \"probe-etag\"",
+                            "Last-Modified: Tue, 09 Sep 2026 09:00:00 GMT"
                         ],
-                        request.Method.Equals(
-                            "HEAD",
-                            StringComparison.OrdinalIgnoreCase)
-                            ? null
-                            : [0],
+                        body,
                         cancellationToken);
                     return;
                 }
@@ -586,6 +631,65 @@ namespace Eizo.WebDavV030Probe
                     ],
                     null,
                     cancellationToken);
+            }
+
+            private static bool TryParseRange(
+                string value,
+                long totalLength,
+                out long start,
+                out long end)
+            {
+                start = 0;
+                end = 0;
+
+                if (!value.StartsWith(
+                        "bytes=",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                var parts =
+                    value["bytes=".Length..]
+                        .Split(
+                            '-',
+                            2);
+
+                if (parts.Length != 2 ||
+                    !long.TryParse(
+                        parts[0],
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out start) ||
+                    start < 0 ||
+                    start >= totalLength)
+                {
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(
+                        parts[1]))
+                {
+                    end =
+                        totalLength -
+                        1;
+                }
+                else if (!long.TryParse(
+                             parts[1],
+                             NumberStyles.Integer,
+                             CultureInfo.InvariantCulture,
+                             out end))
+                {
+                    return false;
+                }
+
+                end =
+                    Math.Min(
+                        end,
+                        totalLength -
+                        1);
+
+                return end >= start;
             }
 
             private static string MultiStatus(

@@ -229,7 +229,13 @@ public sealed class DiskCacheStore
                 now,
                 options.Pinned ??
                 existing?.Pinned ??
-                false);
+                false)
+            {
+                GroupKey =
+                    string.IsNullOrWhiteSpace(options.GroupKey)
+                        ? existing?.GroupKey
+                        : options.GroupKey
+            };
 
             index.Entries[id] = entry;
             await SaveIndexCoreAsync(
@@ -375,6 +381,156 @@ public sealed class DiskCacheStore
             }
 
             return removed;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<int> ClearGroupAsync(
+        string groupKey,
+        bool preservePinned = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(groupKey);
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var index = LoadIndexCore();
+            var removed = 0;
+
+            foreach (var pair in index.Entries.ToArray())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var entry = pair.Value;
+                if (!string.Equals(
+                        entry.GroupKey,
+                        groupKey,
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (preservePinned &&
+                    entry.Pinned)
+                {
+                    continue;
+                }
+
+                DeleteEntryFileCore(entry);
+                index.Entries.Remove(pair.Key);
+                removed++;
+            }
+
+            if (removed > 0)
+            {
+                await SaveIndexCoreAsync(
+                    index,
+                    cancellationToken);
+            }
+
+            return removed;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<CacheCleanupResult> TrimGroupAsync(
+        string groupKey,
+        long limitBytes,
+        bool preservePinned = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(groupKey);
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var index = LoadIndexCore();
+            var groupEntries = new List<CacheIndexEntry>();
+            long bytesBefore = 0;
+            var changed = false;
+
+            foreach (var pair in index.Entries.ToArray())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var entry = pair.Value;
+                if (!string.Equals(
+                        entry.GroupKey,
+                        groupKey,
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var path = ResolveEntryPath(
+                    entry.RelativePath);
+
+                if (!File.Exists(path))
+                {
+                    index.Entries.Remove(pair.Key);
+                    changed = true;
+                    continue;
+                }
+
+                var size = new FileInfo(path).Length;
+                if (size != entry.SizeBytes)
+                {
+                    entry = entry with
+                    {
+                        SizeBytes = size
+                    };
+                    index.Entries[pair.Key] = entry;
+                    changed = true;
+                }
+
+                bytesBefore += size;
+                if (!preservePinned ||
+                    !entry.Pinned)
+                {
+                    groupEntries.Add(entry);
+                }
+            }
+
+            var limit = Math.Max(
+                0,
+                limitBytes);
+            var bytesAfter = bytesBefore;
+            var removed = 0;
+
+            foreach (var entry in groupEntries
+                         .OrderBy(static value =>
+                             value.LastAccessedUtc)
+                         .ThenBy(static value =>
+                             value.CreatedAtUtc))
+            {
+                if (bytesAfter <= limit)
+                    break;
+
+                DeleteEntryFileCore(entry);
+                index.Entries.Remove(entry.Id);
+                bytesAfter -= entry.SizeBytes;
+                removed++;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                await SaveIndexCoreAsync(
+                    index,
+                    cancellationToken);
+            }
+
+            return new CacheCleanupResult(
+                bytesBefore,
+                Math.Max(0, bytesAfter),
+                removed);
         }
         finally
         {
@@ -742,7 +898,8 @@ public sealed class DiskCacheStore
             entry.SizeBytes,
             entry.CreatedAtUtc,
             entry.LastAccessedUtc,
-            entry.Pinned);
+            entry.Pinned,
+            entry.GroupKey);
 
     private static string CreateId(
         CacheCategory category,
@@ -842,4 +999,5 @@ internal sealed record CacheIndexEntry
     public DateTimeOffset CreatedAtUtc { get; init; }
     public DateTimeOffset LastAccessedUtc { get; init; }
     public bool Pinned { get; init; }
+    public string? GroupKey { get; init; }
 }

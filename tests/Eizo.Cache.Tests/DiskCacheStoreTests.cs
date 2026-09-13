@@ -137,6 +137,123 @@ public sealed class DiskCacheStoreTests
     }
 
     [Fact]
+    public async Task TrimGroup_RemovesLeastRecentlyUsedBlocksOnlyWithinGroup()
+    {
+        var root = CreateTempDirectory();
+
+        try
+        {
+            var store = new DiskCacheStore(root);
+
+            await store.WriteBytesAsync(
+                CacheCategory.Media,
+                "episode:block:0",
+                new byte[40],
+                new CacheWriteOptions(
+                    "Episode",
+                    "WebDAV",
+                    ".blk",
+                    GroupKey: "episode"));
+
+            await Task.Delay(20);
+
+            await store.WriteBytesAsync(
+                CacheCategory.Media,
+                "episode:block:1",
+                new byte[40],
+                new CacheWriteOptions(
+                    "Episode",
+                    "WebDAV",
+                    ".blk",
+                    GroupKey: "episode"));
+
+            await store.WriteBytesAsync(
+                CacheCategory.Media,
+                "other:block:0",
+                new byte[40],
+                new CacheWriteOptions(
+                    "Other",
+                    "WebDAV",
+                    ".blk",
+                    GroupKey: "other"));
+
+            var result = await store.TrimGroupAsync(
+                "episode",
+                40);
+
+            Assert.Equal(80L, result.BytesBefore);
+            Assert.Equal(40L, result.BytesAfter);
+            Assert.Equal(1, result.EntriesRemoved);
+
+            var snapshot =
+                await store.GetSnapshotAsync();
+
+            Assert.Equal(2, snapshot.Entries.Count);
+            Assert.Single(
+                snapshot.Entries.Where(
+                    entry =>
+                        entry.GroupKey == "episode"));
+            Assert.Single(
+                snapshot.Entries.Where(
+                    entry =>
+                        entry.GroupKey == "other"));
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task ClearGroup_RemovesAllBlocksFromSelectedMediaOnly()
+    {
+        var root = CreateTempDirectory();
+
+        try
+        {
+            var store = new DiskCacheStore(root);
+
+            for (var index = 0;
+                 index < 3;
+                 index++)
+            {
+                await store.WriteBytesAsync(
+                    CacheCategory.Media,
+                    "episode:block:" + index,
+                    new byte[8],
+                    new CacheWriteOptions(
+                        "Episode",
+                        "WebDAV",
+                        ".blk",
+                        GroupKey: "episode"));
+            }
+
+            await store.WriteBytesAsync(
+                CacheCategory.Metadata,
+                "subject",
+                new byte[4]);
+
+            var removed =
+                await store.ClearGroupAsync(
+                    "episode");
+
+            Assert.Equal(3, removed);
+
+            var snapshot =
+                await store.GetSnapshotAsync();
+
+            Assert.Single(snapshot.Entries);
+            Assert.Equal(
+                CacheCategory.Metadata,
+                snapshot.Entries[0].Category);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task ClearCategory_DoesNotDeleteOtherCategories()
     {
         var root = CreateTempDirectory();

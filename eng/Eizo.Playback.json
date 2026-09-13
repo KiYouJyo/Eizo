@@ -1,6 +1,5 @@
 {
   "repository": "https://github.com/KiYouJyo/Eizo.Playback.git",
-  "commit": "a815f5a7699a68084a0a14caf3799d78a9e1eca4",
-  "version": "0.2.1-eizo.1",
-  "patch": "eng/playback-patches/0001-playback-concurrency.patch"
+  "commit": "ec880e104f30f514c46f098a4f1ee647900b144e",
+  "version": "0.2.2"
 }
