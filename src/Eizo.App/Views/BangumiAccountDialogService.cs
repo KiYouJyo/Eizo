@@ -1,3 +1,4 @@
+using System.Net;
 using Eizo.Localization;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
@@ -79,11 +80,20 @@ internal static class BangumiAccountDialogService
             await BangumiAccountService.Default.ConnectAsync(token);
             return true;
         }
-        catch
+        catch (HttpRequestException ex)
+            when (ex.StatusCode == HttpStatusCode.Unauthorized)
         {
             await ShowMessageAsync(
                 xamlRoot,
                 T("Bangumi_AccountTokenInvalid"),
+                T("Bangumi_ConnectFailed"));
+            return false;
+        }
+        catch
+        {
+            await ShowMessageAsync(
+                xamlRoot,
+                T("Bangumi_AccountConnectNetworkError"),
                 T("Bangumi_ConnectFailed"));
             return false;
         }
