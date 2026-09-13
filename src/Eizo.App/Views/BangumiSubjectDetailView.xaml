@@ -117,6 +117,270 @@
                      TextWrapping="Wrap"
                      MaxWidth="860"
                      HorizontalAlignment="Left" />
+
+          <Border Height="1"
+                  Margin="0,8,0,0"
+                  Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+          <Pivot x:Name="CommunityPivot"
+                 Margin="0,2,0,0">
+            <PivotItem x:Name="CommentsTab">
+              <StackPanel Spacing="10">
+                <TextBlock x:Name="CommentsStatusText"
+                           Style="{StaticResource MetadataText}"
+                           TextWrapping="Wrap" />
+                <ItemsControl x:Name="CommentsList">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Margin="0,0,0,10"
+                              Padding="12"
+                              CornerRadius="10"
+                              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                              BorderThickness="1">
+                        <Grid ColumnDefinitions="Auto,*"
+                              ColumnSpacing="10">
+                          <Border Width="40"
+                                  Height="40"
+                                  CornerRadius="20"
+                                  Background="{ThemeResource EizoSelectionBrush}">
+                            <Grid>
+                              <FontIcon Glyph="&#xE77B;"
+                                        FontSize="18"
+                                        Opacity="0.28" />
+                              <Image Source="{Binding Avatar}"
+                                     Stretch="UniformToFill" />
+                            </Grid>
+                          </Border>
+                          <StackPanel Grid.Column="1"
+                                      Spacing="4">
+                            <Grid ColumnDefinitions="*,Auto">
+                              <TextBlock Text="{Binding UserName}"
+                                         FontWeight="SemiBold" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding ReactionText}"
+                                         Style="{StaticResource MetadataText}" />
+                            </Grid>
+                            <TextBlock Text="{Binding MetaLine}"
+                                       Style="{StaticResource MetadataText}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding CommentText}"
+                                       Style="{StaticResource BodyText}"
+                                       TextWrapping="Wrap" />
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button x:Name="CommentsLoadMoreButton"
+                        HorizontalAlignment="Center"
+                        Visibility="Collapsed"
+                        Click="CommentsLoadMoreButton_Click" />
+              </StackPanel>
+            </PivotItem>
+
+            <PivotItem x:Name="ReviewsTab">
+              <StackPanel Spacing="10">
+                <TextBlock x:Name="ReviewsStatusText"
+                           Style="{StaticResource MetadataText}"
+                           TextWrapping="Wrap" />
+                <ItemsControl x:Name="ReviewsList">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Button HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              Padding="0"
+                              Margin="0,0,0,10"
+                              Tag="{Binding Review}"
+                              Click="ReviewItem_Click">
+                        <Border Padding="12"
+                                CornerRadius="10"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                          <Grid ColumnDefinitions="Auto,*"
+                                ColumnSpacing="10">
+                            <Border Width="40"
+                                    Height="40"
+                                    CornerRadius="20"
+                                    Background="{ThemeResource EizoSelectionBrush}">
+                              <Grid>
+                                <FontIcon Glyph="&#xE77B;"
+                                          FontSize="18"
+                                          Opacity="0.28" />
+                                <Image Source="{Binding Avatar}"
+                                       Stretch="UniformToFill" />
+                              </Grid>
+                            </Border>
+                            <StackPanel Grid.Column="1"
+                                        Spacing="4">
+                              <TextBlock Text="{Binding Title}"
+                                         FontWeight="SemiBold"
+                                         TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding UserName}"
+                                         Style="{StaticResource MetadataText}" />
+                              <TextBlock Text="{Binding Summary}"
+                                         Style="{StaticResource BodyText}"
+                                         MaxLines="4"
+                                         TextTrimming="CharacterEllipsis"
+                                         TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding MetaLine}"
+                                         Style="{StaticResource MetadataText}" />
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button x:Name="ReviewsLoadMoreButton"
+                        HorizontalAlignment="Center"
+                        Visibility="Collapsed"
+                        Click="ReviewsLoadMoreButton_Click" />
+              </StackPanel>
+            </PivotItem>
+
+            <PivotItem x:Name="TopicsTab">
+              <StackPanel Spacing="10">
+                <TextBlock x:Name="TopicsStatusText"
+                           Style="{StaticResource MetadataText}"
+                           TextWrapping="Wrap" />
+                <ItemsControl x:Name="TopicsList">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Button HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              Padding="0"
+                              Margin="0,0,0,10"
+                              Tag="{Binding Topic}"
+                              Click="TopicItem_Click">
+                        <Border Padding="12"
+                                CornerRadius="10"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding Title}"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding UserName}"
+                                       Style="{StaticResource MetadataText}" />
+                            <TextBlock Text="{Binding MetaLine}"
+                                       Style="{StaticResource MetadataText}"
+                                       TextWrapping="Wrap" />
+                          </StackPanel>
+                        </Border>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button x:Name="TopicsLoadMoreButton"
+                        HorizontalAlignment="Center"
+                        Visibility="Collapsed"
+                        Click="TopicsLoadMoreButton_Click" />
+              </StackPanel>
+            </PivotItem>
+
+            <PivotItem x:Name="RelatedTab">
+              <StackPanel Spacing="12">
+                <TextBlock x:Name="RelatedStatusText"
+                           Style="{StaticResource MetadataText}"
+                           TextWrapping="Wrap" />
+
+                <TextBlock x:Name="RecommendationsTitle"
+                           Style="{StaticResource SectionTitleText}" />
+                <ItemsControl x:Name="RecommendationsList">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Button HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              Padding="0"
+                              Margin="0,0,0,8"
+                              Tag="{Binding Subject}"
+                              Click="RelatedSubject_Click">
+                        <Border Padding="10"
+                                CornerRadius="8"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                          <Grid ColumnDefinitions="52,*"
+                                ColumnSpacing="10">
+                            <Border Width="48"
+                                    Height="68"
+                                    CornerRadius="6"
+                                    Background="{ThemeResource EizoSelectionBrush}">
+                              <Image Source="{Binding Artwork}"
+                                     Stretch="UniformToFill" />
+                            </Border>
+                            <StackPanel Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Spacing="3">
+                              <TextBlock Text="{Binding Title}"
+                                         FontWeight="SemiBold"
+                                         TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Subtitle}"
+                                         Style="{StaticResource MetadataText}"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Text="{Binding MetaLine}"
+                                         Style="{StaticResource MetadataText}"
+                                         TextWrapping="Wrap" />
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock x:Name="RelationsTitle"
+                           Margin="0,6,0,0"
+                           Style="{StaticResource SectionTitleText}" />
+                <ItemsControl x:Name="RelationsList">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Button HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              Padding="0"
+                              Margin="0,0,0,8"
+                              Tag="{Binding Subject}"
+                              Click="RelatedSubject_Click">
+                        <Border Padding="10"
+                                CornerRadius="8"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                          <Grid ColumnDefinitions="52,*"
+                                ColumnSpacing="10">
+                            <Border Width="48"
+                                    Height="68"
+                                    CornerRadius="6"
+                                    Background="{ThemeResource EizoSelectionBrush}">
+                              <Image Source="{Binding Artwork}"
+                                     Stretch="UniformToFill" />
+                            </Border>
+                            <StackPanel Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Spacing="3">
+                              <TextBlock Text="{Binding Title}"
+                                         FontWeight="SemiBold"
+                                         TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Subtitle}"
+                                         Style="{StaticResource MetadataText}"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Text="{Binding MetaLine}"
+                                         Style="{StaticResource MetadataText}"
+                                         TextWrapping="Wrap" />
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </PivotItem>
+          </Pivot>
         </StackPanel>
       </Grid>
     </Grid>
