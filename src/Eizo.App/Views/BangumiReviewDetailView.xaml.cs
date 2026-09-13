@@ -20,12 +20,12 @@ public sealed partial class BangumiReviewDetailView : UserControl
         BangumiAccountService.Default;
     private readonly ObservableCollection<BangumiReplyViewModel> _comments = [];
     private readonly BangumiSubjectReview _review;
-    private readonly BangumiSubjectCard _subject;
+    private readonly BangumiSubjectCard? _subject;
     private CancellationTokenSource? _loadCancellation;
 
     public BangumiReviewDetailView(
         BangumiSubjectReview review,
-        BangumiSubjectCard subject)
+        BangumiSubjectCard? subject = null)
     {
         _review = review;
         _subject = subject;
@@ -35,6 +35,10 @@ public sealed partial class BangumiReviewDetailView : UserControl
 
         PageTitle.Text = T("Bangumi_ReviewDetailPageTitle");
         OpenSubjectButton.Content = T("Bangumi_BackToSubject");
+        OpenSubjectButton.Visibility =
+            subject is null
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         OpenBangumiButton.Content = T("Bangumi_OpenOnBangumi");
         CommentsTitle.Text = T("Bangumi_ReviewComments");
         ReplyButton.Content = T("Bangumi_Publish");
@@ -301,8 +305,11 @@ public sealed partial class BangumiReviewDetailView : UserControl
 
     private void OpenSubjectButton_Click(
         object sender,
-        RoutedEventArgs e) =>
-        SubjectRequested?.Invoke(this, _subject);
+        RoutedEventArgs e)
+    {
+        if (_subject is not null)
+            SubjectRequested?.Invoke(this, _subject);
+    }
 
     private async void OpenBangumiButton_Click(
         object sender,
