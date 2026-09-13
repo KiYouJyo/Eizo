@@ -3,7 +3,7 @@ param()
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$userAgent = 'KiYouJyo/Eizo/0.4.2 (Windows) (https://github.com/KiYouJyo/Eizo)'
+$userAgent = 'KiYouJyo/Eizo/0.4.3 (Windows) (https://github.com/KiYouJyo/Eizo)'
 $client = [System.Net.Http.HttpClient]::new()
 $client.Timeout = [TimeSpan]::FromSeconds(20)
 $null = $client.DefaultRequestHeaders.TryAddWithoutValidation('User-Agent', $userAgent)
