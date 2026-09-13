@@ -95,7 +95,7 @@ $requiredMappings = @(
     'new BangumiPublicView(BangumiPublicPageKind.Calendar)',
     'new BangumiPublicView(BangumiPublicPageKind.Seasonal)',
     'new BangumiPublicView(BangumiPublicPageKind.Discover)',
-    'new BangumiPlaceholderView(BangumiPlaceholderKind.Following)'
+    'new BangumiFollowingView()'
 )
 
 foreach ($mapping in $requiredMappings) {
