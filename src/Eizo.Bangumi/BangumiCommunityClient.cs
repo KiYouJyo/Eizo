@@ -144,6 +144,69 @@ internal sealed class BangumiCommunityClient
             cancellationToken);
     }
 
+    public Task<string> CreateBlogEntryAsync(
+        int subjectId,
+        string title,
+        string content,
+        IReadOnlyList<string>? tags,
+        bool isPublic,
+        string turnstileToken,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        if (subjectId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(subjectId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        ArgumentException.ThrowIfNullOrWhiteSpace(turnstileToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+
+        return SendJsonAsync(
+            HttpMethod.Post,
+            "p1/blogs",
+            new
+            {
+                title,
+                content,
+                tags = tags is { Count: > 0 } ? tags : null,
+                @public = isPublic,
+                subjectIDs = new[] { subjectId },
+                turnstileToken,
+            },
+            accessToken,
+            cancellationToken);
+    }
+
+    public Task<string> CreateSubjectTopicAsync(
+        int subjectId,
+        string title,
+        string content,
+        string turnstileToken,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        if (subjectId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(subjectId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        ArgumentException.ThrowIfNullOrWhiteSpace(turnstileToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+
+        return SendJsonAsync(
+            HttpMethod.Post,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"p1/subjects/{subjectId}/topics"),
+            new
+            {
+                title,
+                content,
+                turnstileToken,
+            },
+            accessToken,
+            cancellationToken);
+    }
+
     public Task<string> CreateSubjectCommentAsync(
         int subjectId,
         string comment,
