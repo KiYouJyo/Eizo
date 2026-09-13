@@ -32,7 +32,8 @@ internal static class BangumiCommunityJsonParser
                         item.Rate,
                         item.Comment ?? string.Empty,
                         FromUnixSeconds(item.UpdatedAt),
-                        CountReactions(item.Reactions)))
+                        CountReactions(item.Reactions),
+                        ReactionUserIds(item.Reactions)))
                 .ToArray()
                 ?? []);
     }
@@ -220,6 +221,7 @@ internal static class BangumiCommunityJsonParser
             item.Content ?? string.Empty,
             FromUnixSeconds(item.CreatedAt),
             CountReactions(item.Reactions),
+            ReactionUserIds(item.Reactions),
             item.Replies?
                 .Where(static reply => ResolveReplyUser(reply) is not null)
                 .Select(ToReply)
@@ -280,6 +282,15 @@ internal static class BangumiCommunityJsonParser
         reactions?.Sum(static reaction =>
             reaction.Users?.Count ?? 0)
         ?? 0;
+
+    private static IReadOnlySet<int> ReactionUserIds(
+        IReadOnlyList<ReactionDto>? reactions) =>
+        reactions?
+            .SelectMany(static reaction =>
+                reaction.Users ?? [])
+            .Select(static user => user.Id)
+            .ToHashSet()
+        ?? new HashSet<int>();
 
     private static DateTimeOffset? FromUnixSeconds(long value)
     {
