@@ -40,6 +40,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1
 
+      - name: Validate Bangumi account integration contract
+        shell: pwsh
+        run: ./scripts/Test-BangumiAccountIntegration.ps1
+
       - name: Validate WebDAV Stage 1 media-source contract
         shell: pwsh
         run: ./scripts/Test-MediaSourceStage1Contract.ps1
