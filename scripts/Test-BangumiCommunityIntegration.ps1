@@ -56,6 +56,8 @@ foreach ($required in @(
     'GetBlogEntryAsync',
     'GetBlogCommentsAsync',
     'GetSubjectTopicAsync',
+    'CreateBlogEntryAsync',
+    'CreateSubjectTopicAsync',
     'CreateSubjectCommentAsync',
     'CreateBlogCommentAsync',
     'CreateSubjectReplyAsync',
@@ -100,7 +102,11 @@ foreach ($required in @(
     'TopicRequested?.Invoke',
     'PublishCommentButton_Click',
     'CommentInputBox_TextChanged',
-    'CommentReactionButton_Click')) {
+    'CommentReactionButton_Click',
+    'CreateReviewButton_Click',
+    'PublishReviewButton_Click',
+    'CreateTopicButton_Click',
+    'PublishTopicButton_Click')) {
     if (-not $view.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi subject community UI contract missing: $required"
     }
@@ -163,6 +169,17 @@ foreach ($required in @(
     'CommentRateBox',
     'PublishCommentButton',
     'ReviewsTab',
+    'CreateReviewButton',
+    'ReviewComposerBorder',
+    'ReviewTitleBox',
+    'ReviewContentBox',
+    'PublishReviewButton',
+    'TopicsTab',
+    'CreateTopicButton',
+    'TopicComposerBorder',
+    'TopicTitleBox',
+    'TopicContentBox',
+    'PublishTopicButton',
     'TopicsTab',
     'RelatedTab',
     'RecommendationsList',
