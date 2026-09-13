@@ -138,40 +138,6 @@
                             SelectionChanged="CommentsFilterCombo_SelectionChanged" />
                 </Grid>
 
-                <Border x:Name="CommentComposerBorder"
-                        Padding="12"
-                        CornerRadius="10"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1">
-                  <StackPanel Spacing="10">
-                    <TextBox x:Name="CommentInputBox"
-                             AcceptsReturn="True"
-                             TextWrapping="Wrap"
-                             MinHeight="96"
-                             MaxLength="380"
-                             TextChanged="CommentInputBox_TextChanged" />
-                    <Grid ColumnDefinitions="*,120,Auto"
-                          ColumnSpacing="10">
-                      <ComboBox x:Name="CommentCollectionCombo"
-                                HorizontalAlignment="Stretch" />
-                      <NumberBox x:Name="CommentRateBox"
-                                 Grid.Column="1"
-                                 Minimum="0"
-                                 Maximum="10"
-                                 SpinButtonPlacementMode="Compact"
-                                 Value="0" />
-                      <Button x:Name="PublishCommentButton"
-                              Grid.Column="2"
-                              VerticalAlignment="Bottom"
-                              Click="PublishCommentButton_Click" />
-                    </Grid>
-                    <TextBlock x:Name="CommentComposerHintText"
-                               Style="{StaticResource MetadataText}"
-                               TextWrapping="Wrap" />
-                  </StackPanel>
-                </Border>
-
                 <ItemsControl x:Name="CommentsList">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -228,52 +194,9 @@
 
             <PivotItem x:Name="ReviewsTab">
               <StackPanel Spacing="10">
-                <Grid ColumnDefinitions="*,Auto"
-                      ColumnSpacing="10">
-                  <TextBlock x:Name="ReviewsStatusText"
-                             Style="{StaticResource MetadataText}"
-                             TextWrapping="Wrap"
-                             VerticalAlignment="Center" />
-                  <Button x:Name="CreateReviewButton"
-                          Grid.Column="1"
-                          Click="CreateReviewButton_Click" />
-                </Grid>
-
-                <Border x:Name="ReviewComposerBorder"
-                        Visibility="Collapsed"
-                        Padding="12"
-                        CornerRadius="10"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1">
-                  <StackPanel Spacing="10">
-                    <TextBox x:Name="ReviewTitleBox"
-                             MaxLength="80"
-                             TextChanged="ReviewComposer_TextChanged" />
-                    <TextBox x:Name="ReviewContentBox"
-                             AcceptsReturn="True"
-                             TextWrapping="Wrap"
-                             MinHeight="180"
-                             TextChanged="ReviewComposer_TextChanged" />
-                    <Grid ColumnDefinitions="*,Auto"
-                          ColumnSpacing="10">
-                      <TextBox x:Name="ReviewTagsBox"
-                               Grid.Column="0" />
-                      <CheckBox x:Name="ReviewPublicCheckBox"
-                                Grid.Column="1"
-                                IsChecked="True"
-                                VerticalAlignment="Center" />
-                    </Grid>
-                    <StackPanel Orientation="Horizontal"
-                                HorizontalAlignment="Right"
-                                Spacing="8">
-                      <Button x:Name="CancelReviewButton"
-                              Click="CancelReviewButton_Click" />
-                      <Button x:Name="PublishReviewButton"
-                              Click="PublishReviewButton_Click" />
-                    </StackPanel>
-                  </StackPanel>
-                </Border>
+                <TextBlock x:Name="ReviewsStatusText"
+                           Style="{StaticResource MetadataText}"
+                           TextWrapping="Wrap" />
 
                 <ItemsControl x:Name="ReviewsList">
                   <ItemsControl.ItemTemplate>
@@ -333,42 +256,9 @@
 
             <PivotItem x:Name="TopicsTab">
               <StackPanel Spacing="10">
-                <Grid ColumnDefinitions="*,Auto"
-                      ColumnSpacing="10">
-                  <TextBlock x:Name="TopicsStatusText"
-                             Style="{StaticResource MetadataText}"
-                             TextWrapping="Wrap"
-                             VerticalAlignment="Center" />
-                  <Button x:Name="CreateTopicButton"
-                          Grid.Column="1"
-                          Click="CreateTopicButton_Click" />
-                </Grid>
-
-                <Border x:Name="TopicComposerBorder"
-                        Visibility="Collapsed"
-                        Padding="12"
-                        CornerRadius="10"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1">
-                  <StackPanel Spacing="10">
-                    <TextBox x:Name="TopicTitleBox"
-                             TextChanged="TopicComposer_TextChanged" />
-                    <TextBox x:Name="TopicContentBox"
-                             AcceptsReturn="True"
-                             TextWrapping="Wrap"
-                             MinHeight="160"
-                             TextChanged="TopicComposer_TextChanged" />
-                    <StackPanel Orientation="Horizontal"
-                                HorizontalAlignment="Right"
-                                Spacing="8">
-                      <Button x:Name="CancelTopicButton"
-                              Click="CancelTopicButton_Click" />
-                      <Button x:Name="PublishTopicButton"
-                              Click="PublishTopicButton_Click" />
-                    </StackPanel>
-                  </StackPanel>
-                </Border>
+                <TextBlock x:Name="TopicsStatusText"
+                           Style="{StaticResource MetadataText}"
+                           TextWrapping="Wrap" />
 
                 <ItemsControl x:Name="TopicsList">
                   <ItemsControl.ItemTemplate>
