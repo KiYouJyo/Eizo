@@ -104,8 +104,36 @@ public sealed partial class BangumiSubjectDetailView : UserControl
             T("Bangumi_WriteRating");
         ReviewsLoadMoreButton.Content =
             T("Bangumi_LoadMore");
+        CreateReviewButton.Content =
+            T("Bangumi_CreateReview");
+        ReviewTitleBox.PlaceholderText =
+            T("Bangumi_CreateReviewTitlePlaceholder");
+        ReviewContentBox.PlaceholderText =
+            T("Bangumi_CreateReviewContentPlaceholder");
+        ReviewTagsBox.PlaceholderText =
+            T("Bangumi_CreateReviewTagsPlaceholder");
+        ReviewPublicCheckBox.Content =
+            T("Bangumi_CreateReviewPublic");
+        CancelReviewButton.Content =
+            T("Common_Cancel");
+        PublishReviewButton.Content =
+            T("Bangumi_Publish");
+
         TopicsLoadMoreButton.Content =
             T("Bangumi_LoadMore");
+        CreateTopicButton.Content =
+            T("Bangumi_CreateTopic");
+        TopicTitleBox.PlaceholderText =
+            T("Bangumi_CreateTopicTitlePlaceholder");
+        TopicContentBox.PlaceholderText =
+            T("Bangumi_CreateTopicContentPlaceholder");
+        CancelTopicButton.Content =
+            T("Common_Cancel");
+        PublishTopicButton.Content =
+            T("Bangumi_Publish");
+
+        UpdateReviewComposerState();
+        UpdateTopicComposerState();
 
         _suppressCommentsFilterChanged = true;
         CommentsFilterCombo.Items.Clear();
@@ -253,6 +281,14 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         CancellationToken cancellationToken)
     {
         CommentInputBox.IsEnabled =
+            _account.IsConnected;
+        CreateReviewButton.IsEnabled =
+            _account.IsConnected;
+        CreateTopicButton.IsEnabled =
+            _account.IsConnected;
+        ReviewComposerBorder.IsEnabled =
+            _account.IsConnected;
+        TopicComposerBorder.IsEnabled =
             _account.IsConnected;
         CommentCollectionCombo.IsEnabled =
             _account.IsConnected;
@@ -687,6 +723,262 @@ public sealed partial class BangumiSubjectDetailView : UserControl
             append: true,
             _loadCancellation.Token);
         CommentsLoadMoreButton.IsEnabled = true;
+    }
+
+    private void CreateReviewButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (!_account.IsConnected)
+        {
+            ReviewsStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+            return;
+        }
+
+        ReviewComposerBorder.Visibility =
+            ReviewComposerBorder.Visibility ==
+            Visibility.Visible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        if (ReviewComposerBorder.Visibility ==
+            Visibility.Visible)
+        {
+            ReviewTitleBox.Focus(
+                FocusState.Programmatic);
+        }
+    }
+
+    private void CancelReviewButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ReviewComposerBorder.Visibility =
+            Visibility.Collapsed;
+    }
+
+    private void ReviewComposer_TextChanged(
+        object sender,
+        TextChangedEventArgs e) =>
+        UpdateReviewComposerState();
+
+    private void UpdateReviewComposerState()
+    {
+        PublishReviewButton.IsEnabled =
+            _account.IsConnected &&
+            !string.IsNullOrWhiteSpace(
+                ReviewTitleBox.Text) &&
+            !string.IsNullOrWhiteSpace(
+                ReviewContentBox.Text);
+    }
+
+    private async void PublishReviewButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var token = _account.GetAccessTokenForRequest();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            ReviewsStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+            return;
+        }
+
+        var title = ReviewTitleBox.Text.Trim();
+        var content = ReviewContentBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(title) ||
+            string.IsNullOrWhiteSpace(content))
+        {
+            return;
+        }
+
+        var turnstile =
+            await BangumiTurnstileDialogService.AcquireAsync(
+                XamlRoot);
+        if (string.IsNullOrWhiteSpace(turnstile))
+        {
+            ReviewsStatusText.Text =
+                T("Bangumi_TurnstileUnavailable");
+            return;
+        }
+
+        PublishReviewButton.IsEnabled = false;
+        try
+        {
+            var tags = ParseCommunityTags(
+                ReviewTagsBox.Text);
+
+            await _community.CreateBlogEntryAsync(
+                _subjectId,
+                title,
+                content,
+                tags,
+                ReviewPublicCheckBox.IsChecked != false,
+                turnstile,
+                token,
+                _loadCancellation?.Token ??
+                CancellationToken.None);
+
+            ReviewTitleBox.Text = string.Empty;
+            ReviewContentBox.Text = string.Empty;
+            ReviewTagsBox.Text = string.Empty;
+            ReviewPublicCheckBox.IsChecked = true;
+            ReviewComposerBorder.Visibility =
+                Visibility.Collapsed;
+            _reviewsOffset = 0;
+
+            await LoadReviewsPageAsync(
+                append: false,
+                _loadCancellation?.Token ??
+                CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            ReviewsStatusText.Text =
+                T("Bangumi_CommunityWriteFailed");
+        }
+        finally
+        {
+            UpdateReviewComposerState();
+        }
+    }
+
+    private void CreateTopicButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (!_account.IsConnected)
+        {
+            TopicsStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+            return;
+        }
+
+        TopicComposerBorder.Visibility =
+            TopicComposerBorder.Visibility ==
+            Visibility.Visible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        if (TopicComposerBorder.Visibility ==
+            Visibility.Visible)
+        {
+            TopicTitleBox.Focus(
+                FocusState.Programmatic);
+        }
+    }
+
+    private void CancelTopicButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        TopicComposerBorder.Visibility =
+            Visibility.Collapsed;
+    }
+
+    private void TopicComposer_TextChanged(
+        object sender,
+        TextChangedEventArgs e) =>
+        UpdateTopicComposerState();
+
+    private void UpdateTopicComposerState()
+    {
+        PublishTopicButton.IsEnabled =
+            _account.IsConnected &&
+            !string.IsNullOrWhiteSpace(
+                TopicTitleBox.Text) &&
+            !string.IsNullOrWhiteSpace(
+                TopicContentBox.Text);
+    }
+
+    private async void PublishTopicButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var token = _account.GetAccessTokenForRequest();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            TopicsStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+            return;
+        }
+
+        var title = TopicTitleBox.Text.Trim();
+        var content = TopicContentBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(title) ||
+            string.IsNullOrWhiteSpace(content))
+        {
+            return;
+        }
+
+        var turnstile =
+            await BangumiTurnstileDialogService.AcquireAsync(
+                XamlRoot);
+        if (string.IsNullOrWhiteSpace(turnstile))
+        {
+            TopicsStatusText.Text =
+                T("Bangumi_TurnstileUnavailable");
+            return;
+        }
+
+        PublishTopicButton.IsEnabled = false;
+        try
+        {
+            await _community.CreateSubjectTopicAsync(
+                _subjectId,
+                title,
+                content,
+                turnstile,
+                token,
+                _loadCancellation?.Token ??
+                CancellationToken.None);
+
+            TopicTitleBox.Text = string.Empty;
+            TopicContentBox.Text = string.Empty;
+            TopicComposerBorder.Visibility =
+                Visibility.Collapsed;
+            _topicsOffset = 0;
+
+            await LoadTopicsPageAsync(
+                append: false,
+                _loadCancellation?.Token ??
+                CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            TopicsStatusText.Text =
+                T("Bangumi_CommunityWriteFailed");
+        }
+        finally
+        {
+            UpdateTopicComposerState();
+        }
+    }
+
+    private static IReadOnlyList<string> ParseCommunityTags(
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return [];
+
+        return value
+            .Split(
+                [',', '，', ';', '；'],
+                StringSplitOptions.RemoveEmptyEntries |
+                StringSplitOptions.TrimEntries)
+            .Where(static tag =>
+                !string.IsNullOrWhiteSpace(tag))
+            .Distinct(
+                StringComparer.CurrentCultureIgnoreCase)
+            .Take(12)
+            .ToArray();
     }
 
     private async void ReviewsLoadMoreButton_Click(
