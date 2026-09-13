@@ -203,7 +203,7 @@ public sealed partial class BangumiReviewDetailView : UserControl
                 : string.Empty,
             CanReact: false,
             IsReacted: false,
-            nested ? new Thickness(32, 0, 0, 0) : new Thickness(0));
+            Indent: nested ? new Thickness(32, 0, 0, 0) : new Thickness(0));
     }
 
     private void OpenSubjectButton_Click(
