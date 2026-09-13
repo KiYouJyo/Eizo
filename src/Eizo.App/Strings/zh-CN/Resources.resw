@@ -1151,4 +1151,28 @@
   <data name="Bangumi_CommentComposerHint" xml:space="preserve">
     <value>直接在这里输入内容。发布时会请求 Bangumi 人机验证；若上游尚未放行 Eizo 回调，草稿会保留。</value>
   </data>
+  <data name="Bangumi_CreateReview" xml:space="preserve">
+    <value>发布长评</value>
+  </data>
+  <data name="Bangumi_CreateReviewTitlePlaceholder" xml:space="preserve">
+    <value>长评标题</value>
+  </data>
+  <data name="Bangumi_CreateReviewContentPlaceholder" xml:space="preserve">
+    <value>写下长评正文（支持 Bangumi BBCode）…</value>
+  </data>
+  <data name="Bangumi_CreateReviewTagsPlaceholder" xml:space="preserve">
+    <value>标签，用逗号分隔</value>
+  </data>
+  <data name="Bangumi_CreateReviewPublic" xml:space="preserve">
+    <value>公开</value>
+  </data>
+  <data name="Bangumi_CreateTopic" xml:space="preserve">
+    <value>发起讨论</value>
+  </data>
+  <data name="Bangumi_CreateTopicTitlePlaceholder" xml:space="preserve">
+    <value>讨论标题</value>
+  </data>
+  <data name="Bangumi_CreateTopicContentPlaceholder" xml:space="preserve">
+    <value>写下讨论正文（支持 Bangumi BBCode）…</value>
+  </data>
 </root>
