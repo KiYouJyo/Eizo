@@ -286,9 +286,17 @@ public sealed partial class BangumiSubjectDetailView : UserControl
             _account.IsConnected;
         CreateTopicButton.IsEnabled =
             _account.IsConnected;
-        ReviewComposerBorder.IsEnabled =
+        ReviewTitleBox.IsEnabled =
             _account.IsConnected;
-        TopicComposerBorder.IsEnabled =
+        ReviewContentBox.IsEnabled =
+            _account.IsConnected;
+        ReviewTagsBox.IsEnabled =
+            _account.IsConnected;
+        ReviewPublicCheckBox.IsEnabled =
+            _account.IsConnected;
+        TopicTitleBox.IsEnabled =
+            _account.IsConnected;
+        TopicContentBox.IsEnabled =
             _account.IsConnected;
         CommentCollectionCombo.IsEnabled =
             _account.IsConnected;
