@@ -215,4 +215,108 @@ public sealed class BangumiRepositoryTests
             CancellationToken cancellationToken) =>
             Task.FromResult(callback(request));
     }
+    [Fact]
+    public async Task AccountReads_SendBearerTokenAndWatchingFilter()
+    {
+        const string token = "secret-test-token";
+        var requested = new List<HttpRequestMessage>();
+
+        var handler = new CallbackHandler(request =>
+        {
+            var clone = new HttpRequestMessage(
+                request.Method,
+                request.RequestUri);
+            clone.Headers.Authorization =
+                request.Headers.Authorization;
+            requested.Add(clone);
+
+            if (request.RequestUri!.AbsolutePath.EndsWith(
+                    "/v0/me",
+                    StringComparison.Ordinal))
+            {
+                return JsonResponse("""
+                {
+                  "id": 42,
+                  "username": "eizo-user",
+                  "nickname": "Eizo User",
+                  "user_group": 10,
+                  "avatar": {
+                    "large": "",
+                    "medium": "",
+                    "small": ""
+                  },
+                  "sign": ""
+                }
+                """);
+            }
+
+            return JsonResponse("""
+            {
+              "total": 0,
+              "limit": 50,
+              "offset": 0,
+              "data": []
+            }
+            """);
+        });
+
+        var cacheRoot = CreateTempDirectory();
+        try
+        {
+            using var client = CreateClient(handler);
+            var repository = new BangumiRepository(
+                new BangumiApiClient(client),
+                new BangumiCacheStore(cacheRoot));
+
+            var profile =
+                await repository.GetMyselfAsync(
+                    token,
+                    TestContext.Current.CancellationToken);
+            var following =
+                await repository.GetFollowingAsync(
+                    token,
+                    profile.UserName,
+                    cancellationToken:
+                        TestContext.Current.CancellationToken);
+
+            Assert.Equal("eizo-user", profile.UserName);
+            Assert.Empty(following.Items);
+            Assert.Equal(2, requested.Count);
+
+            foreach (var request in requested)
+            {
+                Assert.Equal(
+                    "Bearer",
+                    request.Headers.Authorization?.Scheme);
+                Assert.Equal(
+                    token,
+                    request.Headers.Authorization?.Parameter);
+            }
+
+            var collectionUri =
+                requested[1].RequestUri!.ToString();
+            Assert.Contains(
+                "subject_type=2",
+                collectionUri,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "type=3",
+                collectionUri,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "limit=50",
+                collectionUri,
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            foreach (var request in requested)
+                request.Dispose();
+
+            Directory.Delete(
+                cacheRoot,
+                recursive: true);
+        }
+    }
+
 }
