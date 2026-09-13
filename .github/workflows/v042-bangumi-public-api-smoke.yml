@@ -1,0 +1,27 @@
+name: Eizo v0.4.2 Bangumi public API smoke
+
+on:
+  push:
+    branches:
+      - "feat/v0.4.2-bangumi-public"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eizo-v042-bangumi-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-api:
+    name: Probe Bangumi public API
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Probe public endpoints with Eizo User-Agent
+        shell: pwsh
+        run: ./scripts/Test-BangumiPublicApiLive.ps1
