@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Eizo.Cache;
 using Eizo.Models;
 using Eizo.Playback;
 
@@ -13,7 +14,7 @@ internal sealed record ExternalSubtitleCandidate(
 
 internal static class ExternalSubtitleService
 {
-    private static readonly string CacheDirectory = Path.Combine(
+    private static readonly string LegacyCacheDirectory = Path.Combine(
         Environment.GetFolderPath(
             Environment.SpecialFolder.LocalApplicationData),
         "Eizo",
@@ -291,51 +292,122 @@ internal static class ExternalSubtitleService
         if (!ExternalSubtitleNameMatcher.IsSupported(subtitleUri.AbsolutePath))
             return null;
 
-        Directory.CreateDirectory(CacheDirectory);
+        var cacheKey =
+            "webdav-subtitle:" +
+            source.Id +
+            ":" +
+            subtitleUri.AbsoluteUri;
 
+        var cachedPath =
+            await CacheRuntime.Store.TryGetPathAsync(
+                CacheCategory.Subtitles,
+                cacheKey,
+                cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(cachedPath))
+            return new Uri(Path.GetFullPath(cachedPath));
+
+        var migratedPath =
+            await TryMigrateLegacySubtitleAsync(
+                source,
+                subtitleUri,
+                extension,
+                cacheKey,
+                cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(migratedPath))
+            return new Uri(Path.GetFullPath(migratedPath));
+
+        var bytes = await provider.DownloadFileAsync(
+            source,
+            subtitleUri,
+            cancellationToken);
+
+        var entry =
+            await CacheRuntime.Store.WriteBytesAsync(
+                CacheCategory.Subtitles,
+                cacheKey,
+                bytes,
+                new CacheWriteOptions(
+                    Path.GetFileName(
+                        Uri.UnescapeDataString(
+                            subtitleUri.AbsolutePath)),
+                    source.DisplayName,
+                    extension),
+                cancellationToken);
+
+        return new Uri(Path.GetFullPath(entry.Path));
+    }
+
+    private static async Task<string?> TryMigrateLegacySubtitleAsync(
+        MediaSourceDefinition source,
+        Uri subtitleUri,
+        string extension,
+        string cacheKey,
+        CancellationToken cancellationToken)
+    {
         var digest = SHA256.HashData(
-            Encoding.UTF8.GetBytes(subtitleUri.AbsoluteUri));
+            Encoding.UTF8.GetBytes(
+                subtitleUri.AbsoluteUri));
         var fileName =
             Convert.ToHexString(digest)
                 .ToLowerInvariant() +
             extension.ToLowerInvariant();
-        var path = Path.Combine(
-            CacheDirectory,
+        var legacyPath = Path.Combine(
+            LegacyCacheDirectory,
             fileName);
 
-        if (!File.Exists(path))
+        if (!File.Exists(legacyPath))
+            return null;
+
+        try
         {
-            var bytes = await provider.DownloadFileAsync(
-                source,
-                subtitleUri,
+            var bytes = await File.ReadAllBytesAsync(
+                legacyPath,
                 cancellationToken);
-            var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+
+            var entry =
+                await CacheRuntime.Store.WriteBytesAsync(
+                    CacheCategory.Subtitles,
+                    cacheKey,
+                    bytes,
+                    new CacheWriteOptions(
+                        Path.GetFileName(
+                            Uri.UnescapeDataString(
+                                subtitleUri.AbsolutePath)),
+                        source.DisplayName,
+                        extension),
+                    cancellationToken);
 
             try
             {
-                await File.WriteAllBytesAsync(
-                    temporary,
-                    bytes,
-                    cancellationToken);
-                File.Move(
-                    temporary,
-                    path,
-                    overwrite: true);
-            }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(temporary))
-                        File.Delete(temporary);
-                }
-                catch
-                {
-                }
-            }
-        }
+                File.Delete(legacyPath);
 
-        return new Uri(Path.GetFullPath(path));
+                if (Directory.Exists(LegacyCacheDirectory) &&
+                    !Directory.EnumerateFileSystemEntries(
+                        LegacyCacheDirectory).Any())
+                {
+                    Directory.Delete(LegacyCacheDirectory);
+                }
+            }
+            catch
+            {
+                // Legacy cleanup is best-effort after successful migration.
+            }
+
+            return entry.Path;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+            when (exception is
+                IOException or
+                UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private static void Trace(

@@ -23,6 +23,7 @@ $cacheCode = Read-RepoFile 'src/Eizo.App/Views/CacheView.xaml.cs'
 $appProject = Read-RepoFile 'src/Eizo.App/Eizo.App.csproj'
 $bangumiProject = Read-RepoFile 'src/Eizo.Bangumi/Eizo.Bangumi.csproj'
 $bangumiCache = Read-RepoFile 'src/Eizo.Bangumi/BangumiCacheStore.cs'
+$subtitleCache = Read-RepoFile 'src/Eizo.App/Playback/ExternalSubtitleService.cs'
 $settings = Read-RepoFile 'src/Eizo.App/AppSettingsStore.cs'
 
 foreach ($placeholder in @('8.6 GB', '6.9 GB', '1.7 GB', '26.9%')) {
@@ -39,6 +40,9 @@ Assert-Contains $cacheCode 'CacheRuntime.EnforcePolicyAsync' 'Cache page does no
 Assert-Contains $appProject '../Eizo.Cache/Eizo.Cache.csproj' 'Eizo.App does not reference Eizo.Cache.'
 Assert-Contains $bangumiProject '../Eizo.Cache/Eizo.Cache.csproj' 'Eizo.Bangumi does not reference Eizo.Cache.'
 Assert-Contains $bangumiCache 'DiskCacheStore' 'Bangumi cache is not using the unified disk cache.'
+Assert-Contains $subtitleCache 'CacheCategory.Subtitles' 'Remote subtitle cache is not classified in the unified cache.'
+Assert-Contains $subtitleCache 'CacheRuntime.Store.WriteBytesAsync' 'Remote subtitle cache still bypasses the unified cache store.'
+Assert-Contains $subtitleCache 'TryMigrateLegacySubtitleAsync' 'Legacy subtitle cache migration is missing.'
 Assert-Contains $settings 'CacheAutoCleanup' 'Cache policy is not persisted.'
 Assert-Contains $settings 'RemotePrecacheBytes' 'Remote pre-cache policy is not persisted.'
 
