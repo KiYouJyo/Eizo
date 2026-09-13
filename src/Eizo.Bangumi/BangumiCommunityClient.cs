@@ -96,6 +96,28 @@ internal sealed class BangumiCommunityClient
             accessToken,
             cancellationToken);
 
+    public Task<string> GetChannelBlogsAsync(
+        int type,
+        int limit,
+        int offset,
+        string? accessToken,
+        CancellationToken cancellationToken)
+    {
+        if (type <= 0)
+            throw new ArgumentOutOfRangeException(nameof(type));
+        if (limit is < 1 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(limit));
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+
+        return GetStringAsync(
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"p1/channels/{type}/blogs?limit={limit}&offset={offset}"),
+            accessToken,
+            cancellationToken);
+    }
+
     public Task<string> GetBlogEntryAsync(
         int entryId,
         string? accessToken,
