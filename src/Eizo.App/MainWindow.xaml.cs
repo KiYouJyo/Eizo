@@ -927,6 +927,25 @@ public sealed partial class MainWindow : Window
             return null;
         }
 
+        if (MediaSourceProviderRegistry.TryGet(
+                MediaSourceKind.WebDav,
+                out var provider) &&
+            provider is WebDavMediaSourceProvider webDavProvider &&
+            webDavProvider.TryGetKnownRangeSupport(
+                webDavSource.Id,
+                out var supportsRanges) &&
+            supportsRanges)
+        {
+            return PlaybackSource.FromRandomAccess(
+                remoteUri,
+                new WebDavCachedRandomAccessSource(
+                    webDavProvider,
+                    webDavSource,
+                    remoteUri,
+                    item.DisplayTitle),
+                item.DisplayTitle);
+        }
+
         var credential =
             MediaCredentialStore.Default.GetWebDav(
                 webDavSource);

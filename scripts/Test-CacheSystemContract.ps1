@@ -50,10 +50,12 @@ Assert-Contains $subtitleCache 'TryMigrateLegacySubtitleAsync' 'Legacy subtitle 
 Assert-Contains $settings 'CacheAutoCleanup' 'Cache policy is not persisted.'
 Assert-Contains $settings 'RemotePrecacheBytes' 'Remote pre-cache policy is not persisted.'
 Assert-Contains $webDavProvider 'DownloadRangeAsync' 'WebDAV provider does not expose byte-range downloads.'
+Assert-Contains $webDavProvider 'TryGetKnownRangeSupport' 'WebDAV provider does not retain verified range capability for queue playback.'
 Assert-Contains $webDavCache 'IPlaybackRandomAccessSource' 'WebDAV cache is not exposed as a playback random-access source.'
 Assert-Contains $webDavCache 'CacheCategory.Media' 'WebDAV media blocks are not stored in the unified media cache.'
 Assert-Contains $webDavCache 'TrimGroupAsync' 'Per-media cache working-set trimming is missing.'
 Assert-Contains $mainWindow 'PlaybackSource.FromRandomAccess' 'WebDAV playback is not wired to the cache-backed random-access source.'
+Assert-Contains $mainWindow 'TryGetKnownRangeSupport' 'Playback queue does not reuse verified WebDAV range capability.'
 Assert-Contains $playbackPin '"version": "0.2.2"' 'Eizo is not pinned to Playback 0.2.2.'
 if ($playbackPin.Contains('"patch"', [StringComparison]::Ordinal)) {
     throw 'Playback pin still relies on the legacy Eizo-local source patch.'

@@ -28,8 +28,26 @@ public sealed class WebDavMediaSourceProvider(
     private readonly object _clientSync = new();
     private readonly Dictionary<string, HttpClient> _sharedClients =
         new(StringComparer.Ordinal);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool>
+        _knownRangeSupport =
+            new(StringComparer.Ordinal);
 
     public MediaSourceKind Kind => MediaSourceKind.WebDav;
+
+    public bool TryGetKnownRangeSupport(
+        string sourceId,
+        out bool supportsRanges)
+    {
+        if (string.IsNullOrWhiteSpace(sourceId))
+        {
+            supportsRanges = false;
+            return false;
+        }
+
+        return _knownRangeSupport.TryGetValue(
+            sourceId,
+            out supportsRanges);
+    }
 
     public async ValueTask<MediaSourceConnectionResult> TestConnectionAsync(
         MediaSourceDefinition source,
@@ -212,6 +230,8 @@ public sealed class WebDavMediaSourceProvider(
 
             if (response.StatusCode == HttpStatusCode.PartialContent)
             {
+                _knownRangeSupport[source.Id] = true;
+
                 var total = response.Content.Headers.ContentRange?.Length;
                 return new WebDavMediaProbeResult(
                     true,
@@ -229,6 +249,9 @@ public sealed class WebDavMediaSourceProvider(
                             value,
                             "bytes",
                             StringComparison.OrdinalIgnoreCase));
+
+                _knownRangeSupport[source.Id] =
+                    acceptsRanges;
 
                 return new WebDavMediaProbeResult(
                     true,
