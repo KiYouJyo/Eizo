@@ -19,6 +19,7 @@ $repository = Read-Text 'src/Eizo.Bangumi/BangumiRepository.cs'
 $parser = Read-Text 'src/Eizo.Bangumi/BangumiJsonParser.cs'
 $view = Read-Text 'src/Eizo.App/Views/BangumiPublicView.xaml.cs'
 $detail = Read-Text 'src/Eizo.App/Views/BangumiSubjectDetailView.xaml.cs'
+$home = Read-Text 'src/Eizo.App/Views/HomeView.xaml.cs'
 $shell = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
 
 foreach ($required in @(
@@ -94,11 +95,25 @@ foreach ($required in @(
     }
 }
 
+
+foreach ($required in @(
+    'GetCurrentSeasonAsync',
+    'BangumiSubjectRequested',
+    'BangumiSeasonalRequested',
+    'CreateSeasonCard',
+    'Take(8)')) {
+    if (-not $home.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Bangumi home integration contract missing: $required"
+    }
+}
+
 foreach ($required in @(
     'new BangumiPublicView(BangumiPublicPageKind.Calendar)',
     'new BangumiPublicView(BangumiPublicPageKind.Seasonal)',
     'new BangumiPublicView(BangumiPublicPageKind.Discover)',
-    'new BangumiPlaceholderView(BangumiPlaceholderKind.Following)')) {
+    'new BangumiPlaceholderView(BangumiPlaceholderKind.Following)',
+    'view.BangumiSubjectRequested',
+    'view.BangumiSeasonalRequested')) {
     if (-not $shell.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi shell routing contract missing: $required"
     }
