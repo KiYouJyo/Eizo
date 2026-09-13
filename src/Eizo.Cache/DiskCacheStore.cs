@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -15,7 +16,10 @@ public sealed class DiskCacheStore
             WriteIndented = true
         };
 
-    private readonly SemaphoreSlim _gate = new(1, 1);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> RootGates =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly SemaphoreSlim _gate;
     private readonly string _rootPath;
     private readonly string _indexPath;
 
@@ -26,6 +30,9 @@ public sealed class DiskCacheStore
         _indexPath = Path.Combine(
             _rootPath,
             "index.json");
+        _gate = RootGates.GetOrAdd(
+            _rootPath,
+            static _ => new SemaphoreSlim(1, 1));
     }
 
     public string RootPath => _rootPath;

@@ -97,6 +97,46 @@ public sealed class DiskCacheStoreTests
     }
 
     [Fact]
+    public async Task StoresSharingRoot_DoNotLoseConcurrentIndexWrites()
+    {
+        var root = CreateTempDirectory();
+
+        try
+        {
+            var first = new DiskCacheStore(root);
+            var second = new DiskCacheStore(root);
+
+            await Task.WhenAll(
+                first.WriteBytesAsync(
+                    CacheCategory.Metadata,
+                    "first",
+                    new byte[16]),
+                second.WriteBytesAsync(
+                    CacheCategory.Subtitles,
+                    "second",
+                    new byte[24]));
+
+            var snapshot =
+                await first.GetSnapshotAsync();
+
+            Assert.Equal(2, snapshot.Entries.Count);
+            Assert.Equal(40L, snapshot.TotalBytes);
+            Assert.Contains(
+                snapshot.Entries,
+                entry => entry.Category ==
+                    CacheCategory.Metadata);
+            Assert.Contains(
+                snapshot.Entries,
+                entry => entry.Category ==
+                    CacheCategory.Subtitles);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task ClearCategory_DoesNotDeleteOtherCategories()
     {
         var root = CreateTempDirectory();
