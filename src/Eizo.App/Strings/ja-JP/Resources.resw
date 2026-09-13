@@ -1004,4 +1004,67 @@
   <data name="Bangumi_ManualLogin" xml:space="preserve"><value>詳細設定：アクセストークン</value></data>
   <data name="Bangumi_BrowserLoginHelp" xml:space="preserve"><value>ブラウザーで Bangumi にログインします。認可後、Eizo が自動的に開きます。手動のアクセストークン入力は詳細設定から利用できます。</value></data>
   <data name="Bangumi_BrowserLoginFailed" xml:space="preserve"><value>ブラウザーを開けませんでした。再試行するか、詳細設定のアクセストークンログインを使用してください。</value></data>
+  <data name="Bangumi_CommunityComments" xml:space="preserve">
+    <value>短評</value>
+  </data>
+  <data name="Bangumi_CommunityReviews" xml:space="preserve">
+    <value>長評</value>
+  </data>
+  <data name="Bangumi_CommunityTopics" xml:space="preserve">
+    <value>ディスカッション</value>
+  </data>
+  <data name="Bangumi_CommunityRelated" xml:space="preserve">
+    <value>関連</value>
+  </data>
+  <data name="Bangumi_CommunityRecommendations" xml:space="preserve">
+    <value>おすすめ作品</value>
+  </data>
+  <data name="Bangumi_CommunityRelations" xml:space="preserve">
+    <value>関連作品</value>
+  </data>
+  <data name="Bangumi_CommunityLoading" xml:space="preserve">
+    <value>Bangumi コミュニティを読み込んでいます…</value>
+  </data>
+  <data name="Bangumi_CommunityUnavailable" xml:space="preserve">
+    <value>コミュニティ内容を取得できません。Private API が変更中の可能性があります。「Bangumi で開く」は引き続き利用できます。</value>
+  </data>
+  <data name="Bangumi_CommunityNoComments" xml:space="preserve">
+    <value>短評はありません。</value>
+  </data>
+  <data name="Bangumi_CommunityNoReviews" xml:space="preserve">
+    <value>長評はありません。</value>
+  </data>
+  <data name="Bangumi_CommunityNoTopics" xml:space="preserve">
+    <value>ディスカッションはありません。</value>
+  </data>
+  <data name="Bangumi_CommunityNoRelated" xml:space="preserve">
+    <value>おすすめ・関連作品はありません。</value>
+  </data>
+  <data name="Bangumi_CommunityCountFormat" xml:space="preserve">
+    <value>{0} / {1} 件を表示</value>
+  </data>
+  <data name="Bangumi_CommunityRepliesFormat" xml:space="preserve">
+    <value>返信 {0} 件</value>
+  </data>
+  <data name="Bangumi_CommunityRecommendationCountFormat" xml:space="preserve">
+    <value>おすすめ {0} 人</value>
+  </data>
+  <data name="Bangumi_CommunitySimilarityFormat" xml:space="preserve">
+    <value>類似度 {0:P0}</value>
+  </data>
+  <data name="Bangumi_CollectionWish" xml:space="preserve">
+    <value>見たい</value>
+  </data>
+  <data name="Bangumi_CollectionDone" xml:space="preserve">
+    <value>見た</value>
+  </data>
+  <data name="Bangumi_CollectionDoing" xml:space="preserve">
+    <value>見てる</value>
+  </data>
+  <data name="Bangumi_CollectionOnHold" xml:space="preserve">
+    <value>積み</value>
+  </data>
+  <data name="Bangumi_CollectionDropped" xml:space="preserve">
+    <value>切った</value>
+  </data>
 </root>
