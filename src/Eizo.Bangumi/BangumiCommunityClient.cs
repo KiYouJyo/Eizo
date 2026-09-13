@@ -97,8 +97,7 @@ internal sealed class BangumiCommunityClient
     public Task<string> GetBlogEntryAsync(
         int entryId,
         string? accessToken,
-        CancellationToken cancellationToken,
-        string? extraQuery = null)
+        CancellationToken cancellationToken)
     {
         if (entryId <= 0)
             throw new ArgumentOutOfRangeException(nameof(entryId));
@@ -150,7 +149,8 @@ internal sealed class BangumiCommunityClient
         int offset,
         int maximumLimit,
         string? accessToken,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? extraQuery = null)
     {
         if (subjectId <= 0)
             throw new ArgumentOutOfRangeException(nameof(subjectId));
