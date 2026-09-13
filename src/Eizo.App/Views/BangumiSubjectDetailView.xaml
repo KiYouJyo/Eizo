@@ -126,9 +126,17 @@
                  Margin="0,2,0,0">
             <PivotItem x:Name="CommentsTab">
               <StackPanel Spacing="10">
-                <TextBlock x:Name="CommentsStatusText"
-                           Style="{StaticResource MetadataText}"
-                           TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="10">
+                  <TextBlock x:Name="CommentsStatusText"
+                             Style="{StaticResource MetadataText}"
+                             TextWrapping="Wrap"
+                             VerticalAlignment="Center" />
+                  <ComboBox x:Name="CommentsFilterCombo"
+                            Grid.Column="1"
+                            MinWidth="128"
+                            SelectionChanged="CommentsFilterCombo_SelectionChanged" />
+                </Grid>
                 <ItemsControl x:Name="CommentsList">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
