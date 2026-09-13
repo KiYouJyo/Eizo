@@ -26,6 +26,8 @@ $reviewView = Read-Text 'src/Eizo.App/Views/BangumiReviewDetailView.xaml.cs'
 $topicView = Read-Text 'src/Eizo.App/Views/BangumiTopicDetailView.xaml.cs'
 $reviewXaml = Read-Text 'src/Eizo.App/Views/BangumiReviewDetailView.xaml'
 $topicXaml = Read-Text 'src/Eizo.App/Views/BangumiTopicDetailView.xaml'
+$animeBlogsView = Read-Text 'src/Eizo.App/Views/BangumiAnimeBlogsView.xaml.cs'
+$animeBlogsXaml = Read-Text 'src/Eizo.App/Views/BangumiAnimeBlogsView.xaml'
 $turnstile = Read-Text 'src/Eizo.App/Views/BangumiTurnstileDialogService.cs'
 $shell = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
 
@@ -41,6 +43,7 @@ foreach ($required in @(
     'p1/blogs/{entryId}',
     'p1/blogs/{entryId}/comments',
     'p1/subjects/-/topics/{topicId}',
+    'p1/channels/{type}/blogs',
     'AuthenticationHeaderValue')) {
     if (-not $client.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi private community client contract missing: $required"
@@ -56,6 +59,7 @@ foreach ($required in @(
     'GetBlogEntryAsync',
     'GetBlogCommentsAsync',
     'GetSubjectTopicAsync',
+    'GetChannelBlogsAsync',
     'CreateBlogEntryAsync',
     'CreateSubjectTopicAsync',
     'CreateSubjectCommentAsync',
@@ -79,6 +83,8 @@ foreach ($required in @(
     'ParseBlogEntry',
     'ParseBlogComments',
     'ParseTopicDetail',
+    'ParseChannelBlogs',
+    'BangumiChannelBlog',
     'BangumiCommunityPage',
     'BangumiBlogDetail',
     'BangumiTopicDetail')) {
@@ -151,6 +157,25 @@ foreach ($required in @(
 }
 
 foreach ($required in @(
+    'GetChannelBlogsAsync',
+    'AnimeSubjectType = 2',
+    'BlogRequested?.Invoke',
+    'https://bgm.tv/anime/blog')) {
+    if (-not $animeBlogsView.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Bangumi Anime Blogs view contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'BlogsList',
+    'LoadMoreButton',
+    'OpenBangumiButton')) {
+    if (-not $animeBlogsXaml.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Bangumi Anime Blogs XAML contract missing: $required"
+    }
+}
+
+foreach ($required in @(
     'https://next.bgm.tv/p1/turnstile',
     'eizo://bangumi-turnstile-callback',
     'IsAvailableAsync',
@@ -196,7 +221,9 @@ foreach ($required in @(
     'OpenBangumiReview',
     'OpenBangumiTopic',
     'new BangumiReviewDetailView',
-    'new BangumiTopicDetailView')) {
+    'new BangumiTopicDetailView',
+    'new BangumiAnimeBlogsView',
+    'OpenBangumiChannelBlog')) {
     if (-not $shell.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi in-app community navigation contract missing: $required"
     }
