@@ -92,9 +92,9 @@ $requiredMappings = @(
     'case "bangumi-seasonal":',
     'case "bangumi-discover":',
     'case "bangumi-following":',
-    'new BangumiPlaceholderView(BangumiPlaceholderKind.Calendar)',
-    'new BangumiPlaceholderView(BangumiPlaceholderKind.Seasonal)',
-    'new BangumiPlaceholderView(BangumiPlaceholderKind.Discover)',
+    'new BangumiPublicView(BangumiPublicPageKind.Calendar)',
+    'new BangumiPublicView(BangumiPublicPageKind.Seasonal)',
+    'new BangumiPublicView(BangumiPublicPageKind.Discover)',
     'new BangumiPlaceholderView(BangumiPlaceholderKind.Following)'
 )
 
