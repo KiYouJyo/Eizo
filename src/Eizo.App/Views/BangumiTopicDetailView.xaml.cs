@@ -41,7 +41,7 @@ public sealed partial class BangumiTopicDetailView : UserControl
         ReplyButton.Content = T("Bangumi_Publish");
         ReplyInputBox.PlaceholderText =
             T("Bangumi_WriteReplyPlaceholder");
-        ReplyComposerBorder.IsEnabled =
+        ReplyInputBox.IsEnabled =
             _account.IsConnected;
         UpdateReplyComposerState();
         TitleText.Text = topic.Title;
@@ -96,7 +96,7 @@ public sealed partial class BangumiTopicDetailView : UserControl
 
         try
         {
-            ReplyComposerBorder.IsEnabled =
+            ReplyInputBox.IsEnabled =
                 _account.IsConnected;
             UpdateReplyComposerState();
 
