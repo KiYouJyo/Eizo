@@ -159,4 +159,95 @@ public sealed class BangumiJsonParserTests
         Assert.Equal(expectedYear, shifted.Year);
         Assert.Equal(expectedMonth, shifted.StartMonth);
     }
+    [Fact]
+    public void UserProfile_MapsIdentityAndAvatar()
+    {
+        const string json = """
+        {
+          "id": 42,
+          "username": "eizo-user",
+          "nickname": "Eizo User",
+          "user_group": 10,
+          "avatar": {
+            "large": "https://lain.bgm.tv/l.jpg",
+            "medium": "https://lain.bgm.tv/m.jpg",
+            "small": "https://lain.bgm.tv/s.jpg"
+          },
+          "sign": "hello"
+        }
+        """;
+
+        var profile =
+            BangumiJsonParser.ParseUserProfile(json);
+
+        Assert.Equal(42, profile.Id);
+        Assert.Equal("eizo-user", profile.UserName);
+        Assert.Equal("Eizo User", profile.NickName);
+        Assert.Equal("hello", profile.Sign);
+        Assert.Equal(
+            "https://lain.bgm.tv/m.jpg",
+            profile.AvatarMedium);
+    }
+
+    [Fact]
+    public void UserCollection_MapsWatchingProgressAndSlimSubject()
+    {
+        const string json = """
+        {
+          "total": 2,
+          "limit": 50,
+          "offset": 0,
+          "data": [
+            {
+              "subject_id": 100,
+              "subject_type": 2,
+              "rate": 8,
+              "type": 3,
+              "tags": [],
+              "ep_status": 6,
+              "vol_status": 0,
+              "updated_at": "2026-09-13T09:00:00+08:00",
+              "private": false,
+              "subject": {
+                "id": 100,
+                "type": 2,
+                "name": "Watching Anime",
+                "name_cn": "在看动画",
+                "short_summary": "summary",
+                "date": "2026-07-01",
+                "images": {
+                  "large": "https://lain.bgm.tv/a.jpg",
+                  "common": "",
+                  "medium": "",
+                  "small": "",
+                  "grid": ""
+                },
+                "volumes": 0,
+                "eps": 12,
+                "collection_total": 1234,
+                "score": 7.9,
+                "rank": 321,
+                "tags": []
+              }
+            }
+          ]
+        }
+        """;
+
+        var page =
+            BangumiJsonParser.ParseUserCollectionPage(json);
+        var item = Assert.Single(page.Items);
+
+        Assert.Equal(2, page.Total);
+        Assert.Equal(BangumiCollectionType.Doing, item.Type);
+        Assert.Equal(6, item.EpisodeStatus);
+        Assert.Equal(8, item.Rate);
+        Assert.False(item.IsPrivate);
+        Assert.Equal(100, item.Subject.Id);
+        Assert.Equal("在看动画", item.Subject.ChineseTitle);
+        Assert.Equal(12, item.Subject.EpisodeCount);
+        Assert.Equal(1234, item.Subject.CollectionTotal);
+        Assert.Equal(7.9, item.Subject.Score, 3);
+    }
+
 }
