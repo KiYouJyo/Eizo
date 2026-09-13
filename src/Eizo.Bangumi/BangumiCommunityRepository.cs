@@ -12,6 +12,46 @@ public sealed class BangumiCommunityRepository
 
     public static BangumiCommunityRepository Default { get; } = new();
 
+    public async Task<int> CreateBlogEntryAsync(
+        int subjectId,
+        string title,
+        string content,
+        IReadOnlyList<string>? tags,
+        bool isPublic,
+        string turnstileToken,
+        string accessToken,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.CreateBlogEntryAsync(
+            subjectId,
+            title,
+            content,
+            tags,
+            isPublic,
+            turnstileToken,
+            accessToken,
+            cancellationToken);
+        return ParseCreatedId(payload);
+    }
+
+    public async Task<int> CreateSubjectTopicAsync(
+        int subjectId,
+        string title,
+        string content,
+        string turnstileToken,
+        string accessToken,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = await _client.CreateSubjectTopicAsync(
+            subjectId,
+            title,
+            content,
+            turnstileToken,
+            accessToken,
+            cancellationToken);
+        return ParseCreatedId(payload);
+    }
+
     public async Task<int> CreateSubjectCommentAsync(
         int subjectId,
         string comment,
