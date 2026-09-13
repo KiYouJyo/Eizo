@@ -37,8 +37,12 @@ public sealed partial class BangumiReviewDetailView : UserControl
         OpenSubjectButton.Content = T("Bangumi_BackToSubject");
         OpenBangumiButton.Content = T("Bangumi_OpenOnBangumi");
         CommentsTitle.Text = T("Bangumi_ReviewComments");
-        ReplyButton.Content = T("Bangumi_WriteReply");
-        ReplyButton.IsEnabled = false;
+        ReplyButton.Content = T("Bangumi_Publish");
+        ReplyInputBox.PlaceholderText =
+            T("Bangumi_WriteReplyPlaceholder");
+        ReplyComposerBorder.IsEnabled =
+            _account.IsConnected;
+        UpdateReplyComposerState();
         TitleText.Text = review.Title;
         AuthorText.Text = FirstNonEmpty(
             review.User.NickName,
@@ -88,9 +92,9 @@ public sealed partial class BangumiReviewDetailView : UserControl
 
         try
         {
-            ReplyButton.IsEnabled =
-                _account.IsConnected &&
-                await BangumiTurnstileDialogService.IsAvailableAsync();
+            ReplyComposerBorder.IsEnabled =
+                _account.IsConnected;
+            UpdateReplyComposerState();
 
             var accessToken = _account.GetAccessTokenForRequest();
             var detailTask = _community.GetBlogEntryAsync(
@@ -224,11 +228,7 @@ public sealed partial class BangumiReviewDetailView : UserControl
             return;
         }
 
-        var content =
-            await BangumiCommunityWriteDialogService
-                .PromptReplyAsync(
-                    XamlRoot,
-                    T("Bangumi_WriteReviewReplyTitle"));
+        var content = ReplyInputBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(content))
             return;
 
@@ -261,6 +261,7 @@ public sealed partial class BangumiReviewDetailView : UserControl
                     _loadCancellation?.Token ??
                     CancellationToken.None);
 
+            ReplyInputBox.Text = string.Empty;
             _comments.Clear();
             foreach (var reply in FlattenReplies(comments))
                 _comments.Add(reply);
@@ -281,10 +282,21 @@ public sealed partial class BangumiReviewDetailView : UserControl
         }
         finally
         {
-            ReplyButton.IsEnabled =
-                _account.IsConnected &&
-                await BangumiTurnstileDialogService.IsAvailableAsync();
+            UpdateReplyComposerState();
         }
+    }
+
+    private void ReplyInputBox_TextChanged(
+        object sender,
+        TextChangedEventArgs e) =>
+        UpdateReplyComposerState();
+
+    private void UpdateReplyComposerState()
+    {
+        ReplyButton.IsEnabled =
+            _account.IsConnected &&
+            !string.IsNullOrWhiteSpace(
+                ReplyInputBox.Text);
     }
 
     private void OpenSubjectButton_Click(
