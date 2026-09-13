@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.4.4",
-    "packageVersion": "0.4.4.0",
+    "version": "0.4.5",
+    "packageVersion": "0.4.5.0",
     "title": {
-      "zh-CN": "Bangumi 浏览器登录",
-      "ja-JP": "Bangumi ブラウザーログイン",
-      "en-US": "Bangumi Browser Sign-in"
+      "zh-CN": "Bangumi 社区",
+      "ja-JP": "Bangumi コミュニティ",
+      "en-US": "Bangumi Community"
     }
   },
   "channels": {
     "github": {
-      "publish": true
+      "publish": false
     }
   }
 }
