@@ -1103,4 +1103,49 @@
   <data name="Bangumi_CommunityAllComments" xml:space="preserve">
     <value>All comments</value>
   </data>
+  <data name="Bangumi_WriteComment" xml:space="preserve">
+    <value>Post comment</value>
+  </data>
+  <data name="Bangumi_WriteCommentTitle" xml:space="preserve">
+    <value>Post a Bangumi comment</value>
+  </data>
+  <data name="Bangumi_WriteCommentPlaceholder" xml:space="preserve">
+    <value>Write your short comment…</value>
+  </data>
+  <data name="Bangumi_WriteCollectionState" xml:space="preserve">
+    <value>Collection state</value>
+  </data>
+  <data name="Bangumi_WriteRating" xml:space="preserve">
+    <value>Rating (0–10)</value>
+  </data>
+  <data name="Bangumi_WriteCollectionWarning" xml:space="preserve">
+    <value>Posting a short comment also updates this title's collection state and rating.</value>
+  </data>
+  <data name="Bangumi_WriteReply" xml:space="preserve">
+    <value>Reply</value>
+  </data>
+  <data name="Bangumi_WriteReplyPlaceholder" xml:space="preserve">
+    <value>Write your reply…</value>
+  </data>
+  <data name="Bangumi_WriteReviewReplyTitle" xml:space="preserve">
+    <value>Reply to review</value>
+  </data>
+  <data name="Bangumi_WriteTopicReplyTitle" xml:space="preserve">
+    <value>Reply to discussion</value>
+  </data>
+  <data name="Bangumi_Publish" xml:space="preserve">
+    <value>Publish</value>
+  </data>
+  <data name="Bangumi_CommunitySignInToInteract" xml:space="preserve">
+    <value>Sign in to Bangumi before using community interactions.</value>
+  </data>
+  <data name="Bangumi_CommunityWriteFailed" xml:space="preserve">
+    <value>Submission failed. Try again later or use the Bangumi website.</value>
+  </data>
+  <data name="Bangumi_TurnstileTitle" xml:space="preserve">
+    <value>Bangumi verification</value>
+  </data>
+  <data name="Bangumi_TurnstileUnavailable" xml:space="preserve">
+    <value>Bangumi has not yet allowed Eizo's Turnstile callback, so write actions are currently unavailable.</value>
+  </data>
 </root>
