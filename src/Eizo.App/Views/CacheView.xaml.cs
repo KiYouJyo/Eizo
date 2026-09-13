@@ -104,6 +104,8 @@ public sealed partial class CacheView : UserControl
                 await CacheRuntime.Store.GetSnapshotAsync();
 
             ApplySnapshot(snapshot);
+            ApplyDiagnostics(
+                WebDavCacheDiagnostics.Snapshot());
             CacheStatusText.Visibility =
                 Visibility.Collapsed;
         }
@@ -247,6 +249,35 @@ public sealed partial class CacheView : UserControl
             _items.Count == 0
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+    }
+
+    private void ApplyDiagnostics(
+        WebDavCacheDiagnosticsSnapshot diagnostics)
+    {
+        HitRateValue.Text =
+            diagnostics.TotalBlockResolutions == 0
+                ? "—"
+                : diagnostics.HitRate.ToString(
+                    "P1",
+                    CultureInfo.CurrentCulture);
+
+        MemoryHitsValue.Text =
+            diagnostics.MemoryHits.ToString(
+                "N0",
+                CultureInfo.CurrentCulture);
+
+        DiskHitsValue.Text =
+            diagnostics.DiskHits.ToString(
+                "N0",
+                CultureInfo.CurrentCulture);
+
+        RangeDownloadsValue.Text =
+            diagnostics.RangeDownloads.ToString(
+                "N0",
+                CultureInfo.CurrentCulture) +
+            " · " +
+            FormatBytes(
+                diagnostics.DownloadedBytes);
     }
 
     private string FormatCategory(
@@ -449,6 +480,14 @@ public sealed partial class CacheView : UserControl
         PageSubtitle.Text = T("Cache_Subtitle");
         OverviewTitle.Text = T("Cache_Overview");
         ClearCacheButton.Content = T("Cache_Clear");
+        DiagnosticsTitle.Text = T("Cache_Diagnostics");
+        DiagnosticsDescription.Text =
+            T("Cache_DiagnosticsDescription");
+        HitRateLabel.Text = T("Cache_HitRate");
+        MemoryHitsLabel.Text = T("Cache_MemoryHits");
+        DiskHitsLabel.Text = T("Cache_DiskHits");
+        RangeDownloadsLabel.Text =
+            T("Cache_RangeDownloads");
         PolicyTitle.Text = T("Cache_Policy");
         AutoCleanupTitle.Text = T("Cache_AutoCleanup");
         AutoCleanupDescription.Text =

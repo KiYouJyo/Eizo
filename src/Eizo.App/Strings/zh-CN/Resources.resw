@@ -1221,4 +1221,23 @@
   <data name="Cache_ClearConfirmPrimary" xml:space="preserve">
     <value>清理</value>
   </data>
+
+  <data name="Cache_Diagnostics" xml:space="preserve">
+    <value>WebDAV 缓存诊断</value>
+  </data>
+  <data name="Cache_DiagnosticsDescription" xml:space="preserve">
+    <value>当前应用会话中的媒体分块命中与下载情况。</value>
+  </data>
+  <data name="Cache_HitRate" xml:space="preserve">
+    <value>缓存命中率</value>
+  </data>
+  <data name="Cache_MemoryHits" xml:space="preserve">
+    <value>内存命中</value>
+  </data>
+  <data name="Cache_DiskHits" xml:space="preserve">
+    <value>磁盘命中</value>
+  </data>
+  <data name="Cache_RangeDownloads" xml:space="preserve">
+    <value>Range 下载</value>
+  </data>
 </root>

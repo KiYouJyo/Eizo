@@ -1221,4 +1221,23 @@
   <data name="Cache_ClearConfirmPrimary" xml:space="preserve">
     <value>削除</value>
   </data>
+
+  <data name="Cache_Diagnostics" xml:space="preserve">
+    <value>WebDAV キャッシュ診断</value>
+  </data>
+  <data name="Cache_DiagnosticsDescription" xml:space="preserve">
+    <value>現在のアプリ セッションにおけるメディアブロックのヒットとダウンロード状況です。</value>
+  </data>
+  <data name="Cache_HitRate" xml:space="preserve">
+    <value>キャッシュヒット率</value>
+  </data>
+  <data name="Cache_MemoryHits" xml:space="preserve">
+    <value>メモリヒット</value>
+  </data>
+  <data name="Cache_DiskHits" xml:space="preserve">
+    <value>ディスクヒット</value>
+  </data>
+  <data name="Cache_RangeDownloads" xml:space="preserve">
+    <value>Range ダウンロード</value>
+  </data>
 </root>

@@ -73,6 +73,51 @@
         </Border>
 
         <Border Style="{StaticResource SettingsSectionCardStyle}">
+          <StackPanel Spacing="12">
+            <StackPanel Spacing="2">
+              <TextBlock x:Name="DiagnosticsTitle"
+                         Style="{StaticResource SectionTitleText}" />
+              <TextBlock x:Name="DiagnosticsDescription"
+                         Style="{StaticResource MetadataText}" />
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,*"
+                  RowDefinitions="Auto,Auto"
+                  ColumnSpacing="24"
+                  RowSpacing="12">
+              <StackPanel Spacing="2">
+                <TextBlock x:Name="HitRateLabel"
+                           Style="{StaticResource MetadataText}" />
+                <TextBlock x:Name="HitRateValue"
+                           Style="{StaticResource CardTitleText}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1"
+                          Spacing="2">
+                <TextBlock x:Name="MemoryHitsLabel"
+                           Style="{StaticResource MetadataText}" />
+                <TextBlock x:Name="MemoryHitsValue"
+                           Style="{StaticResource CardTitleText}" />
+              </StackPanel>
+              <StackPanel Grid.Row="1"
+                          Spacing="2">
+                <TextBlock x:Name="DiskHitsLabel"
+                           Style="{StaticResource MetadataText}" />
+                <TextBlock x:Name="DiskHitsValue"
+                           Style="{StaticResource CardTitleText}" />
+              </StackPanel>
+              <StackPanel Grid.Row="1"
+                          Grid.Column="1"
+                          Spacing="2">
+                <TextBlock x:Name="RangeDownloadsLabel"
+                           Style="{StaticResource MetadataText}" />
+                <TextBlock x:Name="RangeDownloadsValue"
+                           Style="{StaticResource CardTitleText}" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource SettingsSectionCardStyle}">
           <StackPanel Spacing="14">
             <TextBlock x:Name="PolicyTitle"
                        Style="{StaticResource SectionTitleText}" />

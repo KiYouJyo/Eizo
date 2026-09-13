@@ -225,6 +225,7 @@ internal sealed class WebDavCachedRandomAccessSource
                 blockIndex,
                 out var memoryHit))
         {
+            WebDavCacheDiagnostics.RecordMemoryHit();
             return memoryHit;
         }
 
@@ -243,6 +244,7 @@ internal sealed class WebDavCachedRandomAccessSource
                     blockIndex,
                     out memoryHit))
             {
+                WebDavCacheDiagnostics.RecordMemoryHit();
                 return memoryHit;
             }
 
@@ -281,6 +283,7 @@ internal sealed class WebDavCachedRandomAccessSource
             if (cached is not null &&
                 cached.Length == expected)
             {
+                WebDavCacheDiagnostics.RecordDiskHit();
                 RememberMemoryBlock(
                     blockIndex,
                     cached);
@@ -300,6 +303,9 @@ internal sealed class WebDavCachedRandomAccessSource
                 throw new IOException(
                     $"WebDAV returned {bytes.Length} bytes for a {expected}-byte media block.");
             }
+
+            WebDavCacheDiagnostics.RecordRangeDownload(
+                bytes.LongLength);
 
             await global::Eizo.CacheRuntime.Store.WriteBytesAsync(
                 CacheCategory.Media,

@@ -1221,4 +1221,23 @@
   <data name="Cache_ClearConfirmPrimary" xml:space="preserve">
     <value>Clear</value>
   </data>
+
+  <data name="Cache_Diagnostics" xml:space="preserve">
+    <value>WebDAV cache diagnostics</value>
+  </data>
+  <data name="Cache_DiagnosticsDescription" xml:space="preserve">
+    <value>Media-block hits and downloads for the current app session.</value>
+  </data>
+  <data name="Cache_HitRate" xml:space="preserve">
+    <value>Cache hit rate</value>
+  </data>
+  <data name="Cache_MemoryHits" xml:space="preserve">
+    <value>Memory hits</value>
+  </data>
+  <data name="Cache_DiskHits" xml:space="preserve">
+    <value>Disk hits</value>
+  </data>
+  <data name="Cache_RangeDownloads" xml:space="preserve">
+    <value>Range downloads</value>
+  </data>
 </root>
