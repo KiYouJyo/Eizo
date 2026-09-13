@@ -351,7 +351,11 @@ public sealed partial class MainWindow : Window
                 return view;
             }
             case "bangumi-following":
-                return new BangumiPlaceholderView(BangumiPlaceholderKind.Following);
+            {
+                var view = new BangumiFollowingView();
+                WireBangumiFollowingView(view);
+                return view;
+            }
             case "categories":
             {
                 var view = new CatalogView();
@@ -417,6 +421,12 @@ public sealed partial class MainWindow : Window
     }
 
     private void WireBangumiPublicView(BangumiPublicView view)
+    {
+        view.SubjectRequested += (_, subject) =>
+            OpenBangumiSubject(subject);
+    }
+
+    private void WireBangumiFollowingView(BangumiFollowingView view)
     {
         view.SubjectRequested += (_, subject) =>
             OpenBangumiSubject(subject);
