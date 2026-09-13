@@ -45,3 +45,17 @@ public sealed record BangumiRelatedSubjectViewModel(
     string Title,
     string Subtitle,
     string MetaLine);
+
+public sealed record BangumiReplyViewModel(
+    BangumiCommunityReply Reply,
+    BitmapImage? Avatar,
+    string UserName,
+    string Content,
+    string MetaLine,
+    string ReactionText,
+    string Indent);
+
+public sealed record BangumiCommunityDetailHeaderViewModel(
+    BitmapImage? Avatar,
+    string UserName,
+    string MetaLine);
