@@ -26,6 +26,7 @@ $reviewView = Read-Text 'src/Eizo.App/Views/BangumiReviewDetailView.xaml.cs'
 $topicView = Read-Text 'src/Eizo.App/Views/BangumiTopicDetailView.xaml.cs'
 $reviewXaml = Read-Text 'src/Eizo.App/Views/BangumiReviewDetailView.xaml'
 $topicXaml = Read-Text 'src/Eizo.App/Views/BangumiTopicDetailView.xaml'
+$communityText = Read-Text 'src/Eizo.App/Models/BangumiCommunityText.cs'
 $animeBlogsView = Read-Text 'src/Eizo.App/Views/BangumiAnimeBlogsView.xaml.cs'
 $animeBlogsXaml = Read-Text 'src/Eizo.App/Views/BangumiAnimeBlogsView.xaml'
 $turnstile = Read-Text 'src/Eizo.App/Views/BangumiTurnstileDialogService.cs'
@@ -119,12 +120,25 @@ foreach ($required in @(
 }
 
 foreach ($required in @(
+    'ParseContentBlocks',
+    'https://lain.bgm.tv/pic/photo/l/',
+    'BarePhotoPathRegex')) {
+    if (-not $communityText.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Bangumi blog content rendering contract missing: $required"
+    }
+}
+
+foreach ($required in @(
     'GetBlogEntryAsync',
     'GetBlogCommentsAsync',
     'BangumiCommunityText.ToPlainText',
     'https://bgm.tv/blog/',
     'ReplyButton_Click',
     'ReplyInputBox_TextChanged',
+    'CommentReplyButton_Click',
+    'CancelReplyTargetButton_Click',
+    'RenderContent',
+    'ParseContentBlocks',
     'CreateBlogCommentAsync')) {
     if (-not $reviewView.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi review detail contract missing: $required"
@@ -146,8 +160,11 @@ foreach ($required in @(
 
 foreach ($required in @(
     'ReplyComposerBorder',
+    'ReplyTargetPanel',
+    'ReplyTargetText',
     'ReplyInputBox',
-    'ReplyButton')) {
+    'ReplyButton',
+    'ContentBlocksPanel')) {
     if (-not $reviewXaml.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi review inline composer contract missing: $required"
     }
