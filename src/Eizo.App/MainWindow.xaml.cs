@@ -451,6 +451,10 @@ public sealed partial class MainWindow : Window
             new BangumiSubjectDetailView(subject);
         view.SubjectRequested += (_, relatedSubject) =>
             OpenBangumiSubject(relatedSubject);
+        view.ReviewRequested += (_, review) =>
+            OpenBangumiReview(review, subject);
+        view.TopicRequested += (_, topic) =>
+            OpenBangumiTopic(topic, subject);
 
         var state = new ShellTabState(
             key,
@@ -458,6 +462,80 @@ public sealed partial class MainWindow : Window
             pageKey: null,
             title,
             "\uE8B2",
+            view,
+            navItem: null,
+            PreferredTabWidth)
+        {
+            MediaTitle = title
+        };
+
+        AddTab(state, select: true);
+    }
+
+    private void OpenBangumiReview(
+        Eizo.Bangumi.BangumiSubjectReview review,
+        Eizo.Bangumi.BangumiSubjectCard subject)
+    {
+        var key = "bangumi-review:" + review.EntryId;
+        if (_tabs.TryGetValue(key, out var existing))
+        {
+            SelectTab(existing.Key);
+            return;
+        }
+
+        var title = string.IsNullOrWhiteSpace(review.Title)
+            ? T("Bangumi_ReviewDetailPageTitle")
+            : review.Title;
+
+        var view = new BangumiReviewDetailView(
+            review,
+            subject);
+        view.SubjectRequested += (_, requestedSubject) =>
+            OpenBangumiSubject(requestedSubject);
+
+        var state = new ShellTabState(
+            key,
+            ShellTabKind.Detail,
+            pageKey: null,
+            title,
+            "\uE8A5",
+            view,
+            navItem: null,
+            PreferredTabWidth)
+        {
+            MediaTitle = title
+        };
+
+        AddTab(state, select: true);
+    }
+
+    private void OpenBangumiTopic(
+        Eizo.Bangumi.BangumiSubjectTopic topic,
+        Eizo.Bangumi.BangumiSubjectCard subject)
+    {
+        var key = "bangumi-topic:" + topic.Id;
+        if (_tabs.TryGetValue(key, out var existing))
+        {
+            SelectTab(existing.Key);
+            return;
+        }
+
+        var title = string.IsNullOrWhiteSpace(topic.Title)
+            ? T("Bangumi_TopicDetailPageTitle")
+            : topic.Title;
+
+        var view = new BangumiTopicDetailView(
+            topic,
+            subject);
+        view.SubjectRequested += (_, requestedSubject) =>
+            OpenBangumiSubject(requestedSubject);
+
+        var state = new ShellTabState(
+            key,
+            ShellTabKind.Detail,
+            pageKey: null,
+            title,
+            "\uE8F2",
             view,
             navItem: null,
             PreferredTabWidth)
