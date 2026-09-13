@@ -1004,4 +1004,67 @@
   <data name="Bangumi_ManualLogin" xml:space="preserve"><value>高级：Access Token 登录</value></data>
   <data name="Bangumi_BrowserLoginHelp" xml:space="preserve"><value>在浏览器中登录 Bangumi，授权后 Eizo 将自动打开。手动输入 Access Token 保留在“高级”选项中。</value></data>
   <data name="Bangumi_BrowserLoginFailed" xml:space="preserve"><value>无法打开浏览器。请重试或使用高级 Access Token 登录。</value></data>
+  <data name="Bangumi_CommunityComments" xml:space="preserve">
+    <value>短评</value>
+  </data>
+  <data name="Bangumi_CommunityReviews" xml:space="preserve">
+    <value>长评</value>
+  </data>
+  <data name="Bangumi_CommunityTopics" xml:space="preserve">
+    <value>讨论</value>
+  </data>
+  <data name="Bangumi_CommunityRelated" xml:space="preserve">
+    <value>关联</value>
+  </data>
+  <data name="Bangumi_CommunityRecommendations" xml:space="preserve">
+    <value>推荐作品</value>
+  </data>
+  <data name="Bangumi_CommunityRelations" xml:space="preserve">
+    <value>关联条目</value>
+  </data>
+  <data name="Bangumi_CommunityLoading" xml:space="preserve">
+    <value>正在读取 Bangumi 社区内容…</value>
+  </data>
+  <data name="Bangumi_CommunityUnavailable" xml:space="preserve">
+    <value>暂时无法读取该社区内容。Private API 可能正在变更；你仍可使用“在 Bangumi 中打开”。</value>
+  </data>
+  <data name="Bangumi_CommunityNoComments" xml:space="preserve">
+    <value>暂无短评。</value>
+  </data>
+  <data name="Bangumi_CommunityNoReviews" xml:space="preserve">
+    <value>暂无长评。</value>
+  </data>
+  <data name="Bangumi_CommunityNoTopics" xml:space="preserve">
+    <value>暂无讨论。</value>
+  </data>
+  <data name="Bangumi_CommunityNoRelated" xml:space="preserve">
+    <value>暂无推荐或关联条目。</value>
+  </data>
+  <data name="Bangumi_CommunityCountFormat" xml:space="preserve">
+    <value>已显示 {0} / {1}</value>
+  </data>
+  <data name="Bangumi_CommunityRepliesFormat" xml:space="preserve">
+    <value>{0} 回复</value>
+  </data>
+  <data name="Bangumi_CommunityRecommendationCountFormat" xml:space="preserve">
+    <value>{0} 人推荐</value>
+  </data>
+  <data name="Bangumi_CommunitySimilarityFormat" xml:space="preserve">
+    <value>相似度 {0:P0}</value>
+  </data>
+  <data name="Bangumi_CollectionWish" xml:space="preserve">
+    <value>想看</value>
+  </data>
+  <data name="Bangumi_CollectionDone" xml:space="preserve">
+    <value>看过</value>
+  </data>
+  <data name="Bangumi_CollectionDoing" xml:space="preserve">
+    <value>在看</value>
+  </data>
+  <data name="Bangumi_CollectionOnHold" xml:space="preserve">
+    <value>搁置</value>
+  </data>
+  <data name="Bangumi_CollectionDropped" xml:space="preserve">
+    <value>抛弃</value>
+  </data>
 </root>
