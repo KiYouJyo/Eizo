@@ -126,7 +126,7 @@
                  Margin="0,2,0,0">
             <PivotItem x:Name="CommentsTab">
               <StackPanel Spacing="10">
-                <Grid ColumnDefinitions="*,Auto"
+                <Grid ColumnDefinitions="*,Auto,Auto"
                       ColumnSpacing="10">
                   <TextBlock x:Name="CommentsStatusText"
                              Style="{StaticResource MetadataText}"
@@ -136,6 +136,9 @@
                             Grid.Column="1"
                             MinWidth="128"
                             SelectionChanged="CommentsFilterCombo_SelectionChanged" />
+                  <Button x:Name="PublishCommentButton"
+                          Grid.Column="2"
+                          Click="PublishCommentButton_Click" />
                 </Grid>
                 <ItemsControl x:Name="CommentsList">
                   <ItemsControl.ItemTemplate>
