@@ -49,6 +49,34 @@ try {
         }
     }
 
+    $reviewsBody = $client.GetStringAsync(
+        "p1/subjects/$SubjectId/reviews?limit=1&offset=0").GetAwaiter().GetResult() |
+        ConvertFrom-Json
+    if ($reviewsBody.data.Count -gt 0) {
+        $entryID = [int]$reviewsBody.data[0].entry.id
+        $blog = $client.GetStringAsync("p1/blogs/$entryID").GetAwaiter().GetResult() |
+            ConvertFrom-Json
+        $blogComments = $client.GetStringAsync("p1/blogs/$entryID/comments").GetAwaiter().GetResult() |
+            ConvertFrom-Json
+        if ($null -eq $blog.id -or $null -eq $blogComments) {
+            throw 'Bangumi blog detail smoke failed.'
+        }
+        Write-Host "Blog detail PASS: entry=$entryID comments=$($blogComments.Count)"
+    }
+
+    $topicsBody = $client.GetStringAsync(
+        "p1/subjects/$SubjectId/topics?limit=1&offset=0").GetAwaiter().GetResult() |
+        ConvertFrom-Json
+    if ($topicsBody.data.Count -gt 0) {
+        $topicID = [int]$topicsBody.data[0].id
+        $topic = $client.GetStringAsync("p1/subjects/-/topics/$topicID").GetAwaiter().GetResult() |
+            ConvertFrom-Json
+        if ($null -eq $topic.id -or $null -eq $topic.replies) {
+            throw 'Bangumi topic detail smoke failed.'
+        }
+        Write-Host "Topic detail PASS: topic=$topicID replies=$($topic.replies.Count)"
+    }
+
     Write-Host (
         'Bangumi community API LIVE PASS: ' +
         ($resources | ForEach-Object {
