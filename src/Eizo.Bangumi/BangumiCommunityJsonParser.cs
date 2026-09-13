@@ -126,6 +126,114 @@ internal static class BangumiCommunityJsonParser
                 ?? []);
     }
 
+    public static BangumiBlogDetail ParseBlogEntry(string json)
+    {
+        var entry = JsonSerializer.Deserialize<BlogEntryDto>(
+            json,
+            SerializerOptions)
+            ?? throw new JsonException(
+                "Bangumi blog response was empty.");
+
+        if (entry.User is null)
+        {
+            throw new JsonException(
+                "Bangumi blog response did not include an author.");
+        }
+
+        return new BangumiBlogDetail(
+            entry.Id,
+            ToUser(entry.User),
+            entry.Title ?? string.Empty,
+            entry.Content ?? string.Empty,
+            entry.Tags ?? [],
+            entry.Views,
+            entry.Replies,
+            FromUnixSeconds(entry.CreatedAt),
+            FromUnixSeconds(entry.UpdatedAt),
+            entry.IsPublic);
+    }
+
+    public static IReadOnlyList<BangumiCommunityReply>
+        ParseBlogComments(string json)
+    {
+        var comments =
+            JsonSerializer.Deserialize<List<CommentDto>>(
+                json,
+                SerializerOptions)
+            ?? [];
+
+        return comments
+            .Where(static item => item.User is not null)
+            .Select(ToReply)
+            .ToArray();
+    }
+
+    public static BangumiTopicDetail ParseTopicDetail(string json)
+    {
+        var topic = JsonSerializer.Deserialize<TopicDetailDto>(
+            json,
+            SerializerOptions)
+            ?? throw new JsonException(
+                "Bangumi topic response was empty.");
+
+        if (topic.Creator is null ||
+            topic.Subject is null)
+        {
+            throw new JsonException(
+                "Bangumi topic response was incomplete.");
+        }
+
+        var posts = topic.Replies?
+            .Where(static item => item.Creator is not null)
+            .Select(ToReply)
+            .ToArray()
+            ?? [];
+
+        var rootPost =
+            posts.Length > 0
+                ? posts[0]
+                : null;
+        var replies =
+            posts.Length > 1
+                ? posts[1..]
+                : [];
+
+        return new BangumiTopicDetail(
+            topic.Id,
+            ToUser(topic.Creator),
+            ToCard(topic.Subject),
+            topic.Title ?? string.Empty,
+            FromUnixSeconds(topic.CreatedAt),
+            FromUnixSeconds(topic.UpdatedAt),
+            rootPost,
+            replies);
+    }
+
+    private static BangumiCommunityReply ToReply(CommentBaseDto item) =>
+        new(
+            item.Id,
+            item.User is null
+                ? EmptyUser()
+                : ToUser(item.User),
+            item.Content ?? string.Empty,
+            FromUnixSeconds(item.CreatedAt),
+            CountReactions(item.Reactions),
+            item.Replies?
+                .Where(static reply => reply.User is not null)
+                .Select(ToReply)
+                .ToArray()
+                ?? []);
+
+    private static BangumiCommunityUser EmptyUser() =>
+        new(
+            0,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            null,
+            null,
+            null);
+
     private static PagedDto<T> DeserializePage<T>(string json) =>
         JsonSerializer.Deserialize<PagedDto<T>>(
             json,
@@ -186,6 +294,88 @@ internal static class BangumiCommunityJsonParser
         params string?[] values) =>
         values.FirstOrDefault(static value =>
             !string.IsNullOrWhiteSpace(value));
+
+    private sealed class BlogEntryDto
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("user")]
+        public SlimUserDto? User { get; set; }
+
+        [JsonPropertyName("title")]
+        public string? Title { get; set; }
+
+        [JsonPropertyName("content")]
+        public string? Content { get; set; }
+
+        [JsonPropertyName("tags")]
+        public List<string>? Tags { get; set; }
+
+        [JsonPropertyName("views")]
+        public int Views { get; set; }
+
+        [JsonPropertyName("replies")]
+        public int Replies { get; set; }
+
+        [JsonPropertyName("createdAt")]
+        public long CreatedAt { get; set; }
+
+        [JsonPropertyName("updatedAt")]
+        public long UpdatedAt { get; set; }
+
+        [JsonPropertyName("public")]
+        public bool IsPublic { get; set; }
+    }
+
+    private sealed class TopicDetailDto
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("creator")]
+        public SlimUserDto? Creator { get; set; }
+
+        [JsonPropertyName("subject")]
+        public SlimSubjectDto? Subject { get; set; }
+
+        [JsonPropertyName("title")]
+        public string? Title { get; set; }
+
+        [JsonPropertyName("createdAt")]
+        public long CreatedAt { get; set; }
+
+        [JsonPropertyName("updatedAt")]
+        public long UpdatedAt { get; set; }
+
+        [JsonPropertyName("replies")]
+        public List<CommentBaseDto>? Replies { get; set; }
+    }
+
+    private sealed class CommentDto : CommentBaseDto
+    {
+    }
+
+    private class CommentBaseDto
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("content")]
+        public string? Content { get; set; }
+
+        [JsonPropertyName("createdAt")]
+        public long CreatedAt { get; set; }
+
+        [JsonPropertyName("user")]
+        public SlimUserDto? User { get; set; }
+
+        [JsonPropertyName("reactions")]
+        public List<ReactionDto>? Reactions { get; set; }
+
+        [JsonPropertyName("replies")]
+        public List<CommentBaseDto>? Replies { get; set; }
+    }
 
     private sealed class PagedDto<T>
     {
