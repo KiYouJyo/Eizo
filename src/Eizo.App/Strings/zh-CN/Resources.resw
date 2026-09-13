@@ -924,4 +924,77 @@
   <data name="Bangumi_SeasonLabelFormat" xml:space="preserve">
     <value>{0} {1}季</value>
   </data>
+
+  <data name="Bangumi_FollowingSubtitle" xml:space="preserve">
+    <value>来自 Bangumi 账户的“在看”动画</value>
+  </data>
+  <data name="Bangumi_Connect" xml:space="preserve">
+    <value>连接</value>
+  </data>
+  <data name="Bangumi_Disconnect" xml:space="preserve">
+    <value>断开连接</value>
+  </data>
+  <data name="Bangumi_ConnectAccount" xml:space="preserve">
+    <value>连接 Bangumi 账户</value>
+  </data>
+  <data name="Bangumi_ConnectFailed" xml:space="preserve">
+    <value>连接失败</value>
+  </data>
+  <data name="Bangumi_AccountTokenPlaceholder" xml:space="preserve">
+    <value>粘贴 Bangumi Access Token</value>
+  </data>
+  <data name="Bangumi_AccountTokenHelp" xml:space="preserve">
+    <value>Eizo 采用无服务器方式连接 Bangumi。请在 Bangumi 官方页面生成 Access Token，再粘贴到这里。Token 仅保存在 Windows Credential Locker 中，不写入 Eizo 设置文件或日志。</value>
+  </data>
+  <data name="Bangumi_OpenTokenPage" xml:space="preserve">
+    <value>打开 Bangumi Access Token 页面</value>
+  </data>
+  <data name="Bangumi_AccountTokenRequired" xml:space="preserve">
+    <value>请输入 Access Token。</value>
+  </data>
+  <data name="Bangumi_AccountTokenInvalid" xml:space="preserve">
+    <value>无法使用该 Access Token 获取 Bangumi 账户信息。请确认 Token 有效后重试。</value>
+  </data>
+  <data name="Bangumi_DisconnectConfirm" xml:space="preserve">
+    <value>断开后会从 Windows Credential Locker 删除此 Bangumi Access Token。不会修改你的 Bangumi 收藏数据。</value>
+  </data>
+  <data name="Bangumi_AccountNotConnected" xml:space="preserve">
+    <value>尚未连接 Bangumi</value>
+  </data>
+  <data name="Bangumi_AccountNotConnectedDescription" xml:space="preserve">
+    <value>连接后可在 Eizo 中查看“我的追番”。</value>
+  </data>
+  <data name="Bangumi_FollowingConnectPrompt" xml:space="preserve">
+    <value>连接 Bangumi 账户后，这里会显示你当前“在看”的动画。</value>
+  </data>
+  <data name="Bangumi_AccountChecking" xml:space="preserve">
+    <value>正在检查 Bangumi 账户…</value>
+  </data>
+  <data name="Bangumi_AccountCheckingDescription" xml:space="preserve">
+    <value>正在验证已保存的 Access Token。</value>
+  </data>
+  <data name="Bangumi_AccountNetworkError" xml:space="preserve">
+    <value>暂时无法读取 Bangumi 账户数据。已保存的 Token 不会被删除。</value>
+  </data>
+  <data name="Bangumi_FollowingEmpty" xml:space="preserve">
+    <value>当前没有“在看”的动画。</value>
+  </data>
+  <data name="Bangumi_FollowingCountFormat" xml:space="preserve">
+    <value>已显示 {0} / {1} 部在看动画</value>
+  </data>
+  <data name="Bangumi_Watching" xml:space="preserve">
+    <value>在看</value>
+  </data>
+  <data name="Bangumi_SettingsSection" xml:space="preserve">
+    <value>Bangumi</value>
+  </data>
+  <data name="Bangumi_Account" xml:space="preserve">
+    <value>Bangumi 账户</value>
+  </data>
+  <data name="Bangumi_AccountSettingsDescription" xml:space="preserve">
+    <value>使用 Bangumi 官方 Access Token 连接账户。当前版本仅读取账户和“在看”收藏，不写入收藏或观看进度。</value>
+  </data>
+  <data name="Bangumi_AccountConnectedFormat" xml:space="preserve">
+    <value>已连接：{0} (@{1})</value>
+  </data>
 </root>
