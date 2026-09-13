@@ -81,8 +81,15 @@
                 Margin="0,4"
                 Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
-        <TextBlock x:Name="RepliesTitle"
-                   Style="{StaticResource SectionTitleText}" />
+        <Grid ColumnDefinitions="*,Auto"
+              ColumnSpacing="10">
+          <TextBlock x:Name="RepliesTitle"
+                     Style="{StaticResource SectionTitleText}"
+                     VerticalAlignment="Center" />
+          <Button x:Name="ReplyButton"
+                  Grid.Column="1"
+                  Click="ReplyButton_Click" />
+        </Grid>
 
         <TextBlock x:Name="RepliesStatusText"
                    Style="{StaticResource MetadataText}"
