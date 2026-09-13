@@ -2,7 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Grid Padding="24,16,24,32"
-        RowDefinitions="Auto,Auto,Auto,*"
+        RowDefinitions="Auto,Auto,Auto,*,Auto"
         HorizontalAlignment="Stretch"
         UseLayoutRounding="True">
     <Grid ColumnDefinitions="*,Auto"
@@ -57,6 +57,52 @@
           </DataTemplate>
         </ListView.ItemTemplate>
       </ListView>
+
+      <StackPanel x:Name="SeasonControls"
+                  Visibility="Collapsed"
+                  Orientation="Horizontal"
+                  Spacing="8">
+        <Button x:Name="PreviousSeasonButton"
+                Width="36"
+                Height="34"
+                Click="PreviousSeasonButton_Click">
+          <FontIcon Glyph="&#xE76B;"
+                    FontSize="12" />
+        </Button>
+        <Border MinWidth="156"
+                Height="34"
+                Padding="14,0"
+                CornerRadius="6"
+                Background="{ThemeResource ControlFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1">
+          <TextBlock x:Name="SelectedSeasonText"
+                     VerticalAlignment="Center"
+                     HorizontalAlignment="Center"
+                     FontWeight="SemiBold" />
+        </Border>
+        <Button x:Name="NextSeasonButton"
+                Width="36"
+                Height="34"
+                Click="NextSeasonButton_Click">
+          <FontIcon Glyph="&#xE76C;"
+                    FontSize="12" />
+        </Button>
+        <Button x:Name="CurrentSeasonButton"
+                Height="34"
+                Click="CurrentSeasonButton_Click" />
+      </StackPanel>
+
+      <StackPanel x:Name="DiscoverControls"
+                  Visibility="Collapsed"
+                  Orientation="Horizontal"
+                  Spacing="8">
+        <ComboBox x:Name="DiscoverScopeCombo"
+                  Width="196"
+                  Height="34"
+                  SelectedIndex="0"
+                  SelectionChanged="DiscoverScopeCombo_SelectionChanged" />
+      </StackPanel>
 
       <ProgressRing x:Name="LoadingRing"
                     Grid.Column="1"
@@ -196,5 +242,14 @@
         </DataTemplate>
       </GridView.ItemTemplate>
     </GridView>
+
+    <Button x:Name="LoadMoreButton"
+            Grid.Row="4"
+            Margin="0,8,0,0"
+            HorizontalAlignment="Center"
+            MinWidth="132"
+            Height="36"
+            Visibility="Collapsed"
+            Click="LoadMoreButton_Click" />
   </Grid>
 </UserControl>
