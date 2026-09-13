@@ -997,4 +997,7 @@
   <data name="Bangumi_AccountConnectedFormat" xml:space="preserve">
     <value>已连接：{0} (@{1})</value>
   </data>
+  <data name="Bangumi_AccountConnectNetworkError" xml:space="preserve">
+    <value>暂时无法连接 Bangumi。请检查网络后重试；Access Token 尚未保存。</value>
+  </data>
 </root>
