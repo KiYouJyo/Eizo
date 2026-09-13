@@ -94,6 +94,8 @@ public sealed partial class BangumiSubjectDetailView : UserControl
             T("Bangumi_CommunityRelations");
         CommentsLoadMoreButton.Content =
             T("Bangumi_LoadMore");
+        PublishCommentButton.Content =
+            T("Bangumi_WriteComment");
         ReviewsLoadMoreButton.Content =
             T("Bangumi_LoadMore");
         TopicsLoadMoreButton.Content =
@@ -223,6 +225,9 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         bool reset,
         CancellationToken cancellationToken)
     {
+        PublishCommentButton.IsEnabled =
+            _account.IsConnected;
+
         if (_account.IsConnected)
         {
             var profile = await _account.GetProfileAsync(
@@ -525,6 +530,74 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         finally
         {
             CommentsFilterCombo.IsEnabled = true;
+        }
+    }
+
+    private async void PublishCommentButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var token = _account.GetAccessTokenForRequest();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            CommentsStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+            return;
+        }
+
+        var draft =
+            await BangumiCommunityWriteDialogService
+                .PromptSubjectCommentAsync(XamlRoot);
+        if (draft is null)
+            return;
+
+        var turnstile =
+            await BangumiTurnstileDialogService.AcquireAsync(
+                XamlRoot);
+        if (string.IsNullOrWhiteSpace(turnstile))
+        {
+            CommentsStatusText.Text =
+                T("Bangumi_TurnstileUnavailable");
+            return;
+        }
+
+        PublishCommentButton.IsEnabled = false;
+        try
+        {
+            await _community.CreateSubjectCommentAsync(
+                _subjectId,
+                draft.Comment,
+                draft.Type,
+                draft.Rate,
+                turnstile,
+                token,
+                _loadCancellation?.Token ??
+                CancellationToken.None);
+
+            _commentsFilter = draft.Type;
+            _suppressCommentsFilterChanged = true;
+            CommentsFilterCombo.SelectedIndex =
+                (int)draft.Type;
+            _suppressCommentsFilterChanged = false;
+
+            _commentsOffset = 0;
+            await LoadCommentsPageAsync(
+                append: false,
+                _loadCancellation?.Token ??
+                CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            CommentsStatusText.Text =
+                T("Bangumi_CommunityWriteFailed");
+        }
+        finally
+        {
+            PublishCommentButton.IsEnabled =
+                _account.IsConnected;
         }
     }
 
