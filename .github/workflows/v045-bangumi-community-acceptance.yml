@@ -3,7 +3,7 @@ name: Eizo v0.4.5 Bangumi community acceptance
 on:
   push:
     branches:
-      - "codex/eizo-0.4.5-oauth"
+      - "feat/v0.4.5-bangumi-community"
   workflow_dispatch:
 
 permissions:
