@@ -163,7 +163,7 @@ internal static class BangumiCommunityJsonParser
             ?? [];
 
         return comments
-            .Where(static item => item.User is not null)
+            .Where(static item => ResolveReplyUser(item) is not null)
             .Select(ToReply)
             .ToArray();
     }
@@ -184,7 +184,7 @@ internal static class BangumiCommunityJsonParser
         }
 
         var posts = topic.Replies?
-            .Where(static item => item.Creator is not null)
+            .Where(static item => ResolveReplyUser(item) is not null)
             .Select(ToReply)
             .ToArray()
             ?? [];
@@ -209,20 +209,26 @@ internal static class BangumiCommunityJsonParser
             replies);
     }
 
-    private static BangumiCommunityReply ToReply(CommentBaseDto item) =>
-        new(
+    private static BangumiCommunityReply ToReply(CommentBaseDto item)
+    {
+        var user = ResolveReplyUser(item);
+        return new BangumiCommunityReply(
             item.Id,
-            item.User is null
+            user is null
                 ? EmptyUser()
-                : ToUser(item.User),
+                : ToUser(user),
             item.Content ?? string.Empty,
             FromUnixSeconds(item.CreatedAt),
             CountReactions(item.Reactions),
             item.Replies?
-                .Where(static reply => reply.User is not null)
+                .Where(static reply => ResolveReplyUser(reply) is not null)
                 .Select(ToReply)
                 .ToArray()
                 ?? []);
+    }
+
+    private static SlimUserDto? ResolveReplyUser(CommentBaseDto item) =>
+        item.User ?? item.Creator;
 
     private static BangumiCommunityUser EmptyUser() =>
         new(
@@ -369,6 +375,9 @@ internal static class BangumiCommunityJsonParser
 
         [JsonPropertyName("user")]
         public SlimUserDto? User { get; set; }
+
+        [JsonPropertyName("creator")]
+        public SlimUserDto? Creator { get; set; }
 
         [JsonPropertyName("reactions")]
         public List<ReactionDto>? Reactions { get; set; }
