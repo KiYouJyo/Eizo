@@ -19,7 +19,7 @@ $repository = Read-Text 'src/Eizo.Bangumi/BangumiRepository.cs'
 $parser = Read-Text 'src/Eizo.Bangumi/BangumiJsonParser.cs'
 $view = Read-Text 'src/Eizo.App/Views/BangumiPublicView.xaml.cs'
 $detail = Read-Text 'src/Eizo.App/Views/BangumiSubjectDetailView.xaml.cs'
-$home = Read-Text 'src/Eizo.App/Views/HomeView.xaml.cs'
+$homeView = Read-Text 'src/Eizo.App/Views/HomeView.xaml.cs'
 $shell = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
 
 foreach ($required in @(
@@ -102,7 +102,7 @@ foreach ($required in @(
     'BangumiSeasonalRequested',
     'CreateSeasonCard',
     'Take(8)')) {
-    if (-not $home.Contains($required, [StringComparison]::Ordinal)) {
+    if (-not $homeView.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi home integration contract missing: $required"
     }
 }
