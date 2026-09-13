@@ -24,7 +24,8 @@ $view = Read-Text 'src/Eizo.App/Views/BangumiSubjectDetailView.xaml.cs'
 $xaml = Read-Text 'src/Eizo.App/Views/BangumiSubjectDetailView.xaml'
 $reviewView = Read-Text 'src/Eizo.App/Views/BangumiReviewDetailView.xaml.cs'
 $topicView = Read-Text 'src/Eizo.App/Views/BangumiTopicDetailView.xaml.cs'
-$writeDialog = Read-Text 'src/Eizo.App/Views/BangumiCommunityWriteDialogService.cs'
+$reviewXaml = Read-Text 'src/Eizo.App/Views/BangumiReviewDetailView.xaml'
+$topicXaml = Read-Text 'src/Eizo.App/Views/BangumiTopicDetailView.xaml'
 $turnstile = Read-Text 'src/Eizo.App/Views/BangumiTurnstileDialogService.cs'
 $shell = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
 
@@ -98,6 +99,7 @@ foreach ($required in @(
     'ReviewRequested?.Invoke',
     'TopicRequested?.Invoke',
     'PublishCommentButton_Click',
+    'CommentInputBox_TextChanged',
     'CommentReactionButton_Click')) {
     if (-not $view.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi subject community UI contract missing: $required"
@@ -110,6 +112,7 @@ foreach ($required in @(
     'BangumiCommunityText.ToPlainText',
     'https://bgm.tv/blog/',
     'ReplyButton_Click',
+    'ReplyInputBox_TextChanged',
     'CreateBlogCommentAsync')) {
     if (-not $reviewView.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi review detail contract missing: $required"
@@ -121,6 +124,7 @@ foreach ($required in @(
     'BangumiCommunityText.ToPlainText',
     'https://bgm.tv/subject/topic/',
     'ReplyButton_Click',
+    'ReplyInputBox_TextChanged',
     'CreateSubjectReplyAsync',
     'ReplyReactionButton_Click')) {
     if (-not $topicView.Contains($required, [StringComparison]::Ordinal)) {
@@ -129,11 +133,14 @@ foreach ($required in @(
 }
 
 foreach ($required in @(
-    'PromptSubjectCommentAsync',
-    'PromptReplyAsync',
-    'Bangumi_WriteCollectionWarning')) {
-    if (-not $writeDialog.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Bangumi community write dialog contract missing: $required"
+    'ReplyComposerBorder',
+    'ReplyInputBox',
+    'ReplyButton')) {
+    if (-not $reviewXaml.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Bangumi review inline composer contract missing: $required"
+    }
+    if (-not $topicXaml.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Bangumi topic inline composer contract missing: $required"
     }
 }
 
@@ -150,6 +157,10 @@ foreach ($required in @(
 foreach ($required in @(
     'CommentsTab',
     'CommentsFilterCombo',
+    'CommentComposerBorder',
+    'CommentInputBox',
+    'CommentCollectionCombo',
+    'CommentRateBox',
     'PublishCommentButton',
     'ReviewsTab',
     'TopicsTab',
