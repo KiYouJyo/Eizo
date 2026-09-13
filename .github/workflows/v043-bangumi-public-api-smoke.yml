@@ -3,7 +3,7 @@ name: Eizo v0.4.3 Bangumi public API smoke
 on:
   push:
     branches:
-      - "feat/v0.4.3-bangumi-public"
+      - "feat/v0.4.3-bangumi-account"
   workflow_dispatch:
 
 permissions:
