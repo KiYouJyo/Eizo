@@ -226,7 +226,8 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         CancellationToken cancellationToken)
     {
         PublishCommentButton.IsEnabled =
-            _account.IsConnected;
+            _account.IsConnected &&
+            await BangumiTurnstileDialogService.IsAvailableAsync();
 
         if (_account.IsConnected)
         {
