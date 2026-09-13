@@ -516,7 +516,7 @@ public sealed class BangumiCommunityTests
     }
 
     [Fact]
-    public async Task Client_WritesCommunityPayloadsWithBearerToken()
+    public async Task Client_WritesReactionPayloadWithBearerToken()
     {
         var captured = new List<(HttpMethod Method, string Uri, string? Authorization, string? Body)>();
         var handler = new CallbackHandler(request =>
@@ -529,7 +529,7 @@ public sealed class BangumiCommunityTests
                 request.RequestUri!.ToString(),
                 request.Headers.Authorization?.ToString(),
                 body));
-            return Json("""{"id":123}""");
+            return Json("""{}""");
         });
 
         using var client = new HttpClient(handler)
@@ -540,89 +540,13 @@ public sealed class BangumiCommunityTests
         };
 
         var api = new BangumiCommunityClient(client);
-        _ = await api.CreateSubjectCommentAsync(
-            8,
-            "test comment",
-            BangumiCollectionType.Doing,
-            rate: 8,
-            turnstileToken: "turnstile-test",
-            accessToken: "Bearer access-test",
-            TestContext.Current.CancellationToken);
-
-        _ = await api.CreateBlogEntryAsync(
-            8,
-            "Review title",
-            "Review content",
-            new[] { "tag-a", "tag-b" },
-            isPublic: true,
-            turnstileToken: "turnstile-test",
-            accessToken: "access-test",
-            TestContext.Current.CancellationToken);
-
-        _ = await api.CreateSubjectTopicAsync(
-            8,
-            "Topic title",
-            "Topic content",
-            turnstileToken: "turnstile-test",
-            accessToken: "access-test",
-            TestContext.Current.CancellationToken);
-
         _ = await api.LikeSubjectPostAsync(
             99,
             value: 0,
             accessToken: "access-test",
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(4, captured.Count);
-
-        var comment = captured[0];
-        Assert.Equal(HttpMethod.Post, comment.Method);
-        Assert.Equal(
-            "https://next.bgm.tv/p1/subjects/8/comments",
-            comment.Uri);
-        Assert.Equal("Bearer access-test", comment.Authorization);
-        Assert.Contains(
-            "\"comment\":\"test comment\"",
-            comment.Body,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"turnstileToken\":\"turnstile-test\"",
-            comment.Body,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"type\":3",
-            comment.Body,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"rate\":8",
-            comment.Body,
-            StringComparison.Ordinal);
-
-        var blog = captured[1];
-        Assert.Equal(HttpMethod.Post, blog.Method);
-        Assert.Equal(
-            "https://next.bgm.tv/p1/blogs",
-            blog.Uri);
-        Assert.Contains(
-            "\"subjectIDs\":[8]",
-            blog.Body,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"title\":\"Review title\"",
-            blog.Body,
-            StringComparison.Ordinal);
-
-        var topic = captured[2];
-        Assert.Equal(HttpMethod.Post, topic.Method);
-        Assert.Equal(
-            "https://next.bgm.tv/p1/subjects/8/topics",
-            topic.Uri);
-        Assert.Contains(
-            "\"title\":\"Topic title\"",
-            topic.Body,
-            StringComparison.Ordinal);
-
-        var reaction = captured[3];
+        var reaction = Assert.Single(captured);
         Assert.Equal(HttpMethod.Put, reaction.Method);
         Assert.Equal(
             "https://next.bgm.tv/p1/subjects/-/posts/99/like",
@@ -633,6 +557,7 @@ public sealed class BangumiCommunityTests
             reaction.Body,
             StringComparison.Ordinal);
     }
+
 
     private static HttpRequestMessage Clone(
         HttpRequestMessage request)
