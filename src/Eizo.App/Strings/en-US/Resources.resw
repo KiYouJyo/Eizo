@@ -1151,4 +1151,28 @@
   <data name="Bangumi_CommentComposerHint" xml:space="preserve">
     <value>Type here directly. Publishing requests Bangumi verification; if Eizo's callback is not yet allowlisted, your draft stays in place.</value>
   </data>
+  <data name="Bangumi_CreateReview" xml:space="preserve">
+    <value>Post review</value>
+  </data>
+  <data name="Bangumi_CreateReviewTitlePlaceholder" xml:space="preserve">
+    <value>Review title</value>
+  </data>
+  <data name="Bangumi_CreateReviewContentPlaceholder" xml:space="preserve">
+    <value>Write your review (Bangumi BBCode supported)…</value>
+  </data>
+  <data name="Bangumi_CreateReviewTagsPlaceholder" xml:space="preserve">
+    <value>Tags, separated by commas</value>
+  </data>
+  <data name="Bangumi_CreateReviewPublic" xml:space="preserve">
+    <value>Public</value>
+  </data>
+  <data name="Bangumi_CreateTopic" xml:space="preserve">
+    <value>Start discussion</value>
+  </data>
+  <data name="Bangumi_CreateTopicTitlePlaceholder" xml:space="preserve">
+    <value>Discussion title</value>
+  </data>
+  <data name="Bangumi_CreateTopicContentPlaceholder" xml:space="preserve">
+    <value>Write your discussion (Bangumi BBCode supported)…</value>
+  </data>
 </root>
