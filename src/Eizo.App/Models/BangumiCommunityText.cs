@@ -15,7 +15,7 @@ internal static partial class BangumiCommunityText
             .Replace("\r", "\n", StringComparison.Ordinal);
 
         value = BreakTagRegex().Replace(value, "\n");
-        value = UrlTagRegex().Replace(value, "$1 ($2)");
+        value = UrlTagRegex().Replace(value, "$2 ($1)");
         value = SimpleUrlTagRegex().Replace(value, "$1");
         value = ImageTagRegex().Replace(value, "$1");
         value = AnyBbCodeTagRegex().Replace(value, string.Empty);
