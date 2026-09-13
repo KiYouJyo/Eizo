@@ -492,19 +492,19 @@ public sealed class BangumiCommunityTests
             comment.Uri);
         Assert.Equal("Bearer access-test", comment.Authorization);
         Assert.Contains(
-            "\\\"comment\\\":\\\"test comment\\\"",
+            "\"comment\":\"test comment\"",
             comment.Body,
             StringComparison.Ordinal);
         Assert.Contains(
-            "\\\"turnstileToken\\\":\\\"turnstile-test\\\"",
+            "\"turnstileToken\":\"turnstile-test\"",
             comment.Body,
             StringComparison.Ordinal);
         Assert.Contains(
-            "\\\"type\\\":3",
+            "\"type\":3",
             comment.Body,
             StringComparison.Ordinal);
         Assert.Contains(
-            "\\\"rate\\\":8",
+            "\"rate\":8",
             comment.Body,
             StringComparison.Ordinal);
 
@@ -515,7 +515,7 @@ public sealed class BangumiCommunityTests
             reaction.Uri);
         Assert.Equal("Bearer access-test", reaction.Authorization);
         Assert.Contains(
-            "\\\"value\\\":0",
+            "\"value\":0",
             reaction.Body,
             StringComparison.Ordinal);
     }
