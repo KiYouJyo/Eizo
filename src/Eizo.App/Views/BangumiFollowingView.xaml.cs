@@ -29,7 +29,6 @@ public sealed partial class BangumiFollowingView : UserControl
 
         Loaded += BangumiFollowingView_Loaded;
         Unloaded += BangumiFollowingView_Unloaded;
-        _account.Changed += BangumiAccount_Changed;
     }
 
     public event EventHandler<BangumiSubjectCard>? SubjectRequested;
@@ -62,6 +61,9 @@ public sealed partial class BangumiFollowingView : UserControl
         object sender,
         RoutedEventArgs e)
     {
+        _account.Changed -= BangumiAccount_Changed;
+        _account.Changed += BangumiAccount_Changed;
+
         await LoadAsync(
             forceProfileRefresh: false,
             append: false);
