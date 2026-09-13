@@ -245,6 +245,7 @@ public sealed partial class MainWindow : Window
     {
         HomeNav.Content = T("Nav_Home");
         BangumiNav.Content = T("Nav_Bangumi");
+        AnimeBlogsNav.Content = T("Nav_AnimeBlogs");
         CalendarNav.Content = T("Nav_BroadcastCalendar");
         SeasonalNav.Content = T("Nav_SeasonalAnime");
         DiscoverNav.Content = T("Nav_RankDiscover");
@@ -330,6 +331,12 @@ public sealed partial class MainWindow : Window
             {
                 var view = new HomeView();
                 WireWorkspaceMediaView(view);
+                return view;
+            }
+            case "bangumi-anime-blogs":
+            {
+                var view = new BangumiAnimeBlogsView();
+                WireBangumiAnimeBlogsView(view);
                 return view;
             }
             case "bangumi-calendar":
@@ -420,6 +427,31 @@ public sealed partial class MainWindow : Window
             await OpenCatalogMediaAsync(item);
     }
 
+    private void WireBangumiAnimeBlogsView(
+        BangumiAnimeBlogsView view)
+    {
+        view.BlogRequested += (_, blog) =>
+            OpenBangumiChannelBlog(blog);
+    }
+
+    private void OpenBangumiChannelBlog(
+        Eizo.Bangumi.BangumiChannelBlog blog)
+    {
+        var review = new Eizo.Bangumi.BangumiSubjectReview(
+            blog.EntryId,
+            blog.User,
+            blog.EntryId,
+            blog.Title,
+            blog.Summary,
+            blog.ReplyCount,
+            blog.CreatedAt,
+            blog.UpdatedAt);
+
+        OpenBangumiReview(
+            review,
+            subject: null);
+    }
+
     private void WireBangumiPublicView(BangumiPublicView view)
     {
         view.SubjectRequested += (_, subject) =>
@@ -474,7 +506,7 @@ public sealed partial class MainWindow : Window
 
     private void OpenBangumiReview(
         Eizo.Bangumi.BangumiSubjectReview review,
-        Eizo.Bangumi.BangumiSubjectCard subject)
+        Eizo.Bangumi.BangumiSubjectCard? subject)
     {
         var key = "bangumi-review:" + review.EntryId;
         if (_tabs.TryGetValue(key, out var existing))
@@ -549,6 +581,7 @@ public sealed partial class MainWindow : Window
     private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch
     {
         "home" => (T("Nav_Home"), "\uE80F"),
+        "bangumi-anime-blogs" => (T("Nav_AnimeBlogs"), "\uE8A5"),
         "bangumi-calendar" => (T("Nav_BroadcastCalendar"), "\uE787"),
         "bangumi-seasonal" => (T("Nav_SeasonalAnime"), "\uE8B2"),
         "bangumi-discover" => (T("Nav_RankDiscover"), "\uE721"),
