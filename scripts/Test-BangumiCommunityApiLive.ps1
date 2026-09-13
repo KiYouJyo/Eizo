@@ -32,7 +32,6 @@ try {
         $relative = "p1/subjects/$SubjectId/$($resource.Name)?limit=$($resource.Limit)&offset=0"
         Write-Host "Probe: https://next.bgm.tv/$relative"
 
-        using namespace System.Net.Http
         $response = $client.GetAsync($relative).GetAwaiter().GetResult()
         try {
             $response.EnsureSuccessStatusCode() | Out-Null
