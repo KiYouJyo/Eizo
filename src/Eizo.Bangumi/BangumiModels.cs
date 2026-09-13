@@ -110,7 +110,8 @@ public sealed record BangumiSubjectComment(
     int Rate,
     string Comment,
     DateTimeOffset? UpdatedAt,
-    int ReactionCount);
+    int ReactionCount,
+    IReadOnlySet<int> ReactionUserIds);
 
 public sealed record BangumiSubjectReview(
     int Id,
@@ -150,6 +151,7 @@ public sealed record BangumiCommunityReply(
     string Content,
     DateTimeOffset? CreatedAt,
     int ReactionCount,
+    IReadOnlySet<int> ReactionUserIds,
     IReadOnlyList<BangumiCommunityReply> Replies);
 
 public sealed record BangumiBlogDetail(
