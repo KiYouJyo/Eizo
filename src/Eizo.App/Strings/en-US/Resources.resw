@@ -1272,4 +1272,7 @@
   <data name="Cache_DeleteVideo" xml:space="preserve">
     <value>Delete</value>
   </data>
+  <data name="Cache_StatusPaused" xml:space="preserve">
+    <value>Paused</value>
+  </data>
 </root>

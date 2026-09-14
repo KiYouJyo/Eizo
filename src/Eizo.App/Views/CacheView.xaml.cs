@@ -191,15 +191,21 @@ public sealed partial class CacheView : UserControl
     private void ApplySnapshot(
         CacheSnapshot snapshot)
     {
-        _items.Clear();
+        var desired =
+            BuildDesiredItems(
+                snapshot);
+
+        ReconcileItems(
+            desired);
 
         var tasks =
             VideoCacheDownloadManager.Default.Snapshot();
 
         _hasActiveDownloads =
             tasks.Any(static task =>
-                task.Status ==
-                VideoCacheDownloadStatus.Downloading);
+                task.Status is
+                    VideoCacheDownloadStatus.Downloading or
+                    VideoCacheDownloadStatus.Paused);
 
         var taskGroupKeys =
             tasks
@@ -243,158 +249,6 @@ public sealed partial class CacheView : UserControl
                     videoGroupKeys.Contains(
                         entry.GroupKey!))
                 .ToArray();
-
-        var shownGroups =
-            new HashSet<string>(
-                StringComparer.Ordinal);
-
-        foreach (var task in tasks
-                     .Where(static task =>
-                         task.Status !=
-                         VideoCacheDownloadStatus.Canceled)
-                     .OrderBy(static task =>
-                         task.Status ==
-                             VideoCacheDownloadStatus.Downloading
-                             ? 0
-                             : task.Status ==
-                                   VideoCacheDownloadStatus.Failed
-                                 ? 1
-                                 : 2)
-                     .ThenByDescending(static task =>
-                         task.UpdatedUtc))
-        {
-            var completed =
-                task.Status ==
-                VideoCacheDownloadStatus.Completed &&
-                !string.IsNullOrWhiteSpace(
-                    task.GroupKey);
-
-            if (completed &&
-                task.GroupKey is { } completedGroup)
-            {
-                shownGroups.Add(
-                    completedGroup);
-            }
-
-            var total =
-                Math.Max(
-                    0,
-                    task.TotalBytes);
-            var completedBytes =
-                Math.Clamp(
-                    task.CompletedBytes,
-                    0,
-                    total > 0
-                        ? total
-                        : long.MaxValue);
-
-            var status =
-                task.Status switch
-                {
-                    VideoCacheDownloadStatus.Completed =>
-                        T("Cache_StatusCompleted"),
-                    VideoCacheDownloadStatus.Failed =>
-                        T("Cache_StatusFailed"),
-                    _ =>
-                        T("Cache_StatusDownloading")
-                };
-
-            var progressText =
-                total > 0
-                    ? FormatBytes(completedBytes) +
-                      " / " +
-                      FormatBytes(total) +
-                      " · " +
-                      task.ProgressPercent.ToString(
-                          "0",
-                          CultureInfo.CurrentCulture) +
-                      "%"
-                    : T("Cache_StatusPreparing");
-
-            _items.Add(
-                new CacheItemModel(
-                    "task:" + task.TaskKey,
-                    task.Title,
-                    task.Source,
-                    total > 0
-                        ? FormatBytes(total)
-                        : "—",
-                    task.UpdatedUtc
-                        .ToLocalTime()
-                        .ToString(
-                            "g",
-                            CultureInfo.CurrentCulture),
-                    completed
-                        ? 100d
-                        : task.ProgressPercent,
-                    progressText,
-                    status,
-                    completed,
-                    task.GroupKey,
-                    task.TaskKey,
-                    completed &&
-                    task.GroupKey is { } groupKey
-                        ? new CachedVideoPlaybackRequest(
-                            groupKey,
-                            task.Title,
-                            task.Source,
-                            total)
-                        : null,
-                    T("Cache_DeleteVideo")));
-        }
-
-        foreach (var group in snapshot.Entries
-                     .Where(static entry =>
-                         entry.Category ==
-                             CacheCategory.Media &&
-                         entry.Pinned &&
-                         !string.IsNullOrWhiteSpace(
-                             entry.GroupKey))
-                     .GroupBy(
-                         static entry =>
-                             entry.GroupKey!,
-                         StringComparer.Ordinal)
-                     .Where(group =>
-                         !shownGroups.Contains(
-                             group.Key)))
-        {
-            var entries =
-                group.ToArray();
-            var newest =
-                entries.Max(
-                    static entry =>
-                        entry.LastAccessedUtc);
-            var first =
-                entries[0];
-            var size =
-                entries.Sum(
-                    static entry =>
-                        entry.SizeBytes);
-
-            _items.Add(
-                new CacheItemModel(
-                    "group:" + group.Key,
-                    first.DisplayName,
-                    first.Source,
-                    FormatBytes(size),
-                    newest
-                        .ToLocalTime()
-                        .ToString(
-                            "g",
-                            CultureInfo.CurrentCulture),
-                    100d,
-                    FormatBytes(size),
-                    T("Cache_StatusCompleted"),
-                    true,
-                    group.Key,
-                    TaskKey: null,
-                    PlaybackRequest: new CachedVideoPlaybackRequest(
-                        group.Key,
-                        first.DisplayName,
-                        first.Source,
-                        size),
-                    DeleteText: T("Cache_DeleteVideo")));
-        }
 
         var videoCacheBytes =
             videoEntries.Sum(
@@ -452,22 +306,234 @@ public sealed partial class CacheView : UserControl
         UpdateActionAvailability();
     }
 
+    private IReadOnlyList<CacheItemModel> BuildDesiredItems(
+        CacheSnapshot snapshot)
+    {
+        var desired =
+            new List<CacheItemModel>();
+
+        var tasks =
+            VideoCacheDownloadManager.Default.Snapshot();
+
+        var shownGroups =
+            new HashSet<string>(
+                StringComparer.Ordinal);
+
+        foreach (var task in tasks.Where(
+                     static task =>
+                         task.Status !=
+                         VideoCacheDownloadStatus.Canceled))
+        {
+            var completed =
+                task.Status ==
+                VideoCacheDownloadStatus.Completed &&
+                !string.IsNullOrWhiteSpace(
+                    task.GroupKey);
+            var paused =
+                task.Status ==
+                VideoCacheDownloadStatus.Paused;
+            var failed =
+                task.Status ==
+                VideoCacheDownloadStatus.Failed;
+
+            if (completed &&
+                task.GroupKey is { } completedGroup)
+            {
+                shownGroups.Add(
+                    completedGroup);
+            }
+
+            var total =
+                Math.Max(
+                    0,
+                    task.TotalBytes);
+            var completedBytes =
+                Math.Clamp(
+                    task.CompletedBytes,
+                    0,
+                    total > 0
+                        ? total
+                        : long.MaxValue);
+
+            var status =
+                task.Status switch
+                {
+                    VideoCacheDownloadStatus.Completed =>
+                        T("Cache_StatusCompleted"),
+                    VideoCacheDownloadStatus.Paused =>
+                        T("Cache_StatusPaused"),
+                    VideoCacheDownloadStatus.Failed =>
+                        T("Cache_StatusFailed"),
+                    _ =>
+                        T("Cache_StatusDownloading")
+                };
+
+            var progressText =
+                total > 0
+                    ? FormatBytes(completedBytes) +
+                      " / " +
+                      FormatBytes(total) +
+                      " · " +
+                      task.ProgressPercent.ToString(
+                          "0",
+                          CultureInfo.CurrentCulture) +
+                      "%"
+                    : T("Cache_StatusPreparing");
+
+            desired.Add(
+                new CacheItemModel(
+                    "task:" + task.TaskKey,
+                    task.Title,
+                    task.Source,
+                    total > 0
+                        ? FormatBytes(total)
+                        : "—",
+                    task.UpdatedUtc
+                        .ToLocalTime()
+                        .ToString(
+                            "g",
+                            CultureInfo.CurrentCulture),
+                    completed
+                        ? 100d
+                        : task.ProgressPercent,
+                    progressText,
+                    status,
+                    completed,
+                    task.GroupKey,
+                    task.TaskKey,
+                    completed &&
+                    task.GroupKey is { } groupKey
+                        ? new CachedVideoPlaybackRequest(
+                            groupKey,
+                            task.Title,
+                            task.Source,
+                            total)
+                        : null,
+                    T("Cache_DeleteVideo"),
+                    paused,
+                    failed));
+        }
+
+        foreach (var group in snapshot.Entries
+                     .Where(static entry =>
+                         entry.Category ==
+                             CacheCategory.Media &&
+                         entry.Pinned &&
+                         !string.IsNullOrWhiteSpace(
+                             entry.GroupKey))
+                     .GroupBy(
+                         static entry =>
+                             entry.GroupKey!,
+                         StringComparer.Ordinal)
+                     .Where(group =>
+                         !shownGroups.Contains(
+                             group.Key)))
+        {
+            var entries =
+                group.ToArray();
+            var newest =
+                entries.Max(
+                    static entry =>
+                        entry.LastAccessedUtc);
+            var first =
+                entries[0];
+            var size =
+                entries.Sum(
+                    static entry =>
+                        entry.SizeBytes);
+
+            desired.Add(
+                new CacheItemModel(
+                    "group:" + group.Key,
+                    first.DisplayName,
+                    first.Source,
+                    FormatBytes(size),
+                    newest
+                        .ToLocalTime()
+                        .ToString(
+                            "g",
+                            CultureInfo.CurrentCulture),
+                    100d,
+                    FormatBytes(size),
+                    T("Cache_StatusCompleted"),
+                    true,
+                    group.Key,
+                    taskKey: null,
+                    playbackRequest: new CachedVideoPlaybackRequest(
+                        group.Key,
+                        first.DisplayName,
+                        first.Source,
+                        size),
+                    deleteText: T("Cache_DeleteVideo")));
+        }
+
+        return desired;
+    }
+
+    private void ReconcileItems(
+        IReadOnlyList<CacheItemModel> desired)
+    {
+        var desiredIds =
+            desired
+                .Select(static item =>
+                    item.Id)
+                .ToHashSet(
+                    StringComparer.Ordinal);
+
+        foreach (var candidate in desired)
+        {
+            var existing =
+                _items.FirstOrDefault(
+                    item =>
+                        string.Equals(
+                            item.Id,
+                            candidate.Id,
+                            StringComparison.Ordinal));
+
+            if (existing is null)
+            {
+                _items.Add(candidate);
+                continue;
+            }
+
+            existing.UpdateFrom(candidate);
+        }
+
+        for (var index =
+                 _items.Count - 1;
+             index >= 0;
+             index--)
+        {
+            if (!desiredIds.Contains(
+                    _items[index].Id))
+            {
+                _items.RemoveAt(index);
+            }
+        }
+    }
+
     private void CacheList_ItemClick(
         object sender,
         ItemClickEventArgs e)
     {
-        if (e.ClickedItem is not CacheItemModel
-            {
-                IsCompleted: true,
-                PlaybackRequest: { } request
-            })
+        if (e.ClickedItem is not CacheItemModel item)
+            return;
+
+        if (item.IsCompleted &&
+            item.PlaybackRequest is { } request)
         {
+            PlaybackRequested?.Invoke(
+                this,
+                request);
             return;
         }
 
-        PlaybackRequested?.Invoke(
-            this,
-            request);
+        if (item.TaskKey is { } taskKey &&
+            !item.IsFailed)
+        {
+            VideoCacheDownloadManager.Default.TogglePause(
+                taskKey);
+        }
     }
 
     private async void ClearApplicationCacheButton_Click(

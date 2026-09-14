@@ -37,7 +37,8 @@ internal sealed class WebDavVideoCacheService
     public async Task<WebDavVideoCacheResult> CacheAsync(
         CatalogMediaItemModel item,
         IProgress<WebDavVideoCacheProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, Task>? waitForResume = null)
     {
         if (item.Location is not
             {
@@ -104,6 +105,13 @@ internal sealed class WebDavVideoCacheService
              blockIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (waitForResume is not null)
+            {
+                await waitForResume(
+                    cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
 
             var expected =
                 WebDavMediaCacheKeys.ExpectedBlockLength(

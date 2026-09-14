@@ -3,9 +3,10 @@ namespace Eizo.Models;
 internal enum VideoCacheDownloadStatus
 {
     Downloading = 0,
-    Completed = 1,
-    Failed = 2,
-    Canceled = 3
+    Paused = 1,
+    Completed = 2,
+    Failed = 3,
+    Canceled = 4
 }
 
 internal sealed record VideoCacheDownloadSnapshot(
@@ -39,6 +40,7 @@ internal sealed class VideoCacheDownloadManager
     private readonly object _sync = new();
     private readonly Dictionary<string, DownloadEntry> _entries =
         new(StringComparer.Ordinal);
+    private long _nextOrder;
 
     public static VideoCacheDownloadManager Default { get; } = new();
 
@@ -49,8 +51,10 @@ internal sealed class VideoCacheDownloadManager
         lock (_sync)
         {
             return _entries.Values
-                .Select(static entry => entry.Snapshot)
-                .OrderByDescending(static item => item.UpdatedUtc)
+                .OrderBy(static entry =>
+                    entry.Order)
+                .Select(static entry =>
+                    entry.Snapshot)
                 .ToArray();
         }
     }
@@ -79,8 +83,9 @@ internal sealed class VideoCacheDownloadManager
                     key,
                     out var existing))
             {
-                if (existing.Snapshot.Status ==
-                    VideoCacheDownloadStatus.Downloading)
+                if (existing.Snapshot.Status is
+                    VideoCacheDownloadStatus.Downloading or
+                    VideoCacheDownloadStatus.Paused)
                 {
                     return existing.Completion;
                 }
@@ -117,7 +122,8 @@ internal sealed class VideoCacheDownloadManager
                     TotalBlocks: 0,
                     Error: null,
                     UpdatedUtc:
-                        DateTimeOffset.UtcNow));
+                        DateTimeOffset.UtcNow),
+                ++_nextOrder);
 
             _entries[key] = entry;
             entry.Completion =
@@ -128,6 +134,65 @@ internal sealed class VideoCacheDownloadManager
 
         RaiseChanged();
         return entry.Completion;
+    }
+
+    public bool TogglePause(
+        string taskKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(taskKey);
+
+        TaskCompletionSource<bool>? resumeSignal = null;
+        var changed = false;
+
+        lock (_sync)
+        {
+            if (!_entries.TryGetValue(
+                    taskKey,
+                    out var entry))
+            {
+                return false;
+            }
+
+            if (entry.Snapshot.Status ==
+                VideoCacheDownloadStatus.Downloading)
+            {
+                entry.ResumeSignal =
+                    new TaskCompletionSource<bool>(
+                        TaskCreationOptions.RunContinuationsAsynchronously);
+                entry.Snapshot =
+                    entry.Snapshot with
+                    {
+                        Status =
+                            VideoCacheDownloadStatus.Paused,
+                        UpdatedUtc =
+                            DateTimeOffset.UtcNow
+                    };
+                changed = true;
+            }
+            else if (entry.Snapshot.Status ==
+                     VideoCacheDownloadStatus.Paused)
+            {
+                resumeSignal =
+                    entry.ResumeSignal;
+                entry.ResumeSignal = null;
+                entry.Snapshot =
+                    entry.Snapshot with
+                    {
+                        Status =
+                            VideoCacheDownloadStatus.Downloading,
+                        UpdatedUtc =
+                            DateTimeOffset.UtcNow
+                    };
+                changed = true;
+            }
+        }
+
+        resumeSignal?.TrySetResult(true);
+
+        if (changed)
+            RaiseChanged();
+
+        return changed;
     }
 
     public async Task DeleteTaskAsync(
@@ -146,6 +211,7 @@ internal sealed class VideoCacheDownloadManager
             return;
 
         entry.Cancellation.Cancel();
+        ReleasePause(entry);
 
         try
         {
@@ -196,10 +262,13 @@ internal sealed class VideoCacheDownloadManager
                         groupKey,
                         StringComparison.Ordinal))
                 .ToArray();
-        }
 
-        foreach (var entry in matching)
-            entry.Cancellation.Cancel();
+            foreach (var entry in matching)
+            {
+                entry.Cancellation.Cancel();
+                ReleasePause(entry);
+            }
+        }
 
         foreach (var entry in matching)
         {
@@ -273,7 +342,11 @@ internal sealed class VideoCacheDownloadManager
                 await WebDavVideoCacheService.Default.CacheAsync(
                     item,
                     progress,
-                    entry.Cancellation.Token);
+                    entry.Cancellation.Token,
+                    cancellationToken =>
+                        WaitForResumeAsync(
+                            entry,
+                            cancellationToken));
 
             Update(
                 entry,
@@ -325,6 +398,34 @@ internal sealed class VideoCacheDownloadManager
         }
     }
 
+    private async Task WaitForResumeAsync(
+        DownloadEntry entry,
+        CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            Task? waitTask;
+
+            lock (_sync)
+            {
+                if (entry.Snapshot.Status !=
+                    VideoCacheDownloadStatus.Paused)
+                {
+                    return;
+                }
+
+                waitTask =
+                    entry.ResumeSignal?.Task;
+            }
+
+            if (waitTask is null)
+                return;
+
+            await waitTask.WaitAsync(
+                cancellationToken);
+        }
+    }
+
     private void UpdateProgress(
         DownloadEntry entry,
         WebDavVideoCacheProgress progress) =>
@@ -335,7 +436,10 @@ internal sealed class VideoCacheDownloadManager
                 GroupKey =
                     progress.GroupKey,
                 Status =
-                    VideoCacheDownloadStatus.Downloading,
+                    snapshot.Status ==
+                    VideoCacheDownloadStatus.Paused
+                        ? VideoCacheDownloadStatus.Paused
+                        : VideoCacheDownloadStatus.Downloading,
                 CompletedBytes =
                     progress.CompletedBytes,
                 TotalBytes =
@@ -362,6 +466,15 @@ internal sealed class VideoCacheDownloadManager
         RaiseChanged();
     }
 
+    private void ReleasePause(
+        DownloadEntry entry)
+    {
+        var signal =
+            entry.ResumeSignal;
+        entry.ResumeSignal = null;
+        signal?.TrySetResult(true);
+    }
+
     private void RaiseChanged() =>
         Changed?.Invoke(
             this,
@@ -377,14 +490,20 @@ internal sealed class VideoCacheDownloadManager
     private sealed class DownloadEntry
     {
         public DownloadEntry(
-            VideoCacheDownloadSnapshot snapshot)
+            VideoCacheDownloadSnapshot snapshot,
+            long order)
         {
             Snapshot = snapshot;
+            Order = order;
         }
 
         public VideoCacheDownloadSnapshot Snapshot { get; set; }
 
+        public long Order { get; }
+
         public CancellationTokenSource Cancellation { get; } = new();
+
+        public TaskCompletionSource<bool>? ResumeSignal { get; set; }
 
         public Task Completion { get; set; } =
             Task.CompletedTask;

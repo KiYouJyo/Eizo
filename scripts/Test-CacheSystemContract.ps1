@@ -75,8 +75,18 @@ Assert-Contains $detailCode 'VideoCacheDownloadManager.Default.StartAsync' 'Epis
 Assert-Contains $downloadManager 'WebDavVideoCacheProgress' 'Video download manager does not consume block-level progress.'
 Assert-Contains $downloadManager 'DeleteTaskAsync' 'Downloading video tasks cannot be canceled and deleted.'
 Assert-Contains $downloadManager 'DeleteGroupAsync' 'Completed video-cache groups cannot be deleted.'
+Assert-Contains $downloadManager 'TogglePause' 'Video-cache downloads cannot be paused/resumed.'
+Assert-Contains $downloadManager 'VideoCacheDownloadStatus.Paused' 'Paused download state is missing.'
+Assert-Contains $webDavVideoCache 'waitForResume' 'Block download loop does not honor the pause gate.'
 Assert-Contains $cacheCode 'VideoCacheDownloadManager.Default.Snapshot' 'Cache page does not merge live download tasks.'
 Assert-Contains $cacheCode 'PlaybackRequested' 'Cache page does not expose completed-card playback.'
+Assert-Contains $cacheCode 'existing.UpdateFrom(candidate)' 'Cache cards are rebuilt instead of updated in place.'
+Assert-Contains $cacheCode 'VideoCacheDownloadManager.Default.TogglePause' 'Clicking an active cache card does not pause/resume it.'
+if ($cacheCode.Contains('_items.Clear()', [StringComparison]::Ordinal)) {
+    throw 'Cache page still clears the whole item collection during progress updates.'
+}
+Assert-Contains $cacheView 'SectionCardStyle' 'Video-cache rows are not rendered as filled rounded cards.'
+Assert-Contains $cacheView 'Mode=OneWay' 'Video-cache card bindings are not live.'
 Assert-Contains $cachedPlayback 'IPlaybackRandomAccessSource' 'Completed video cache does not expose a cache-only playback source.'
 Assert-Contains $cachedPlayback 'CacheRuntime.Store.ReadBytesAsync' 'Completed video playback does not read from local cache blocks.'
 Assert-Contains $mainWindow 'PlaybackSource.FromRandomAccess' 'WebDAV playback is not wired to the cache-backed random-access source.'

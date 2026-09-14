@@ -3,6 +3,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:models="using:Eizo.Models"
              xmlns:controls="using:Eizo.Controls">
+  <UserControl.Resources>
+    <Style x:Key="CacheCardListItemStyle"
+           TargetType="ListViewItem">
+      <Setter Property="HorizontalContentAlignment"
+              Value="Stretch" />
+      <Setter Property="Padding"
+              Value="0" />
+      <Setter Property="Margin"
+              Value="0,0,0,10" />
+      <Setter Property="Background"
+              Value="Transparent" />
+    </Style>
+  </UserControl.Resources>
   <ScrollViewer Background="Transparent"
                 HorizontalScrollMode="Disabled"
                 HorizontalScrollBarVisibility="Disabled"
@@ -216,16 +229,15 @@
                     SelectionMode="None"
                     IsItemClickEnabled="True"
                     ItemClick="CacheList_ItemClick"
-                    ItemContainerStyle="{StaticResource SourceListItemStyle}">
+                    ItemContainerStyle="{StaticResource CacheCardListItemStyle}">
             <ListView.ItemTemplate>
               <DataTemplate x:DataType="models:CacheItemModel">
-                <Grid MinHeight="88"
-                      Padding="4,8"
-                      ColumnDefinitions="*,Auto"
-                      ColumnSpacing="20">
-                  <Grid.ContextFlyout>
+                <Border Style="{StaticResource SectionCardStyle}"
+                        MinHeight="96"
+                        Padding="16">
+                  <Border.ContextFlyout>
                     <MenuFlyout>
-                      <MenuFlyoutItem Text="{x:Bind DeleteText}"
+                      <MenuFlyoutItem Text="{x:Bind DeleteText, Mode=OneWay}"
                                       Tag="{x:Bind Id}"
                                       Click="DeleteCacheItem_Click">
                         <MenuFlyoutItem.Icon>
@@ -233,41 +245,44 @@
                         </MenuFlyoutItem.Icon>
                       </MenuFlyoutItem>
                     </MenuFlyout>
-                  </Grid.ContextFlyout>
+                  </Border.ContextFlyout>
 
-                  <StackPanel Spacing="6"
-                              VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind Title}"
-                               Style="{StaticResource CardTitleText}"
-                               TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{x:Bind Source}"
-                               Style="{StaticResource MetadataText}"
-                               TextTrimming="CharacterEllipsis" />
-                    <ProgressBar Value="{x:Bind ProgressPercent}"
-                                 Minimum="0"
-                                 Maximum="100"
-                                 Height="5" />
-                    <TextBlock Text="{x:Bind ProgressText}"
-                               Style="{StaticResource MetadataText}"
-                               TextTrimming="CharacterEllipsis" />
-                  </StackPanel>
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="20">
+                    <StackPanel Spacing="7"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{x:Bind Title, Mode=OneWay}"
+                                 Style="{StaticResource CardTitleText}"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{x:Bind Source, Mode=OneWay}"
+                                 Style="{StaticResource MetadataText}"
+                                 TextTrimming="CharacterEllipsis" />
+                      <ProgressBar Value="{x:Bind ProgressPercent, Mode=OneWay}"
+                                   Minimum="0"
+                                   Maximum="100"
+                                   Height="5" />
+                      <TextBlock Text="{x:Bind ProgressText, Mode=OneWay}"
+                                 Style="{StaticResource MetadataText}"
+                                 TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
 
-                  <StackPanel Grid.Column="1"
-                              MinWidth="110"
-                              VerticalAlignment="Center"
-                              HorizontalAlignment="Right"
-                              Spacing="4">
-                    <TextBlock Text="{x:Bind Status}"
-                               Style="{StaticResource BodyText}"
-                               HorizontalAlignment="Right" />
-                    <TextBlock Text="{x:Bind Size}"
-                               Style="{StaticResource MetadataText}"
-                               HorizontalAlignment="Right" />
-                    <TextBlock Text="{x:Bind LastAccessed}"
-                               Style="{StaticResource MetadataText}"
-                               HorizontalAlignment="Right" />
-                  </StackPanel>
-                </Grid>
+                    <StackPanel Grid.Column="1"
+                                MinWidth="120"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Right"
+                                Spacing="4">
+                      <TextBlock Text="{x:Bind Status, Mode=OneWay}"
+                                 Style="{StaticResource BodyText}"
+                                 HorizontalAlignment="Right" />
+                      <TextBlock Text="{x:Bind Size, Mode=OneWay}"
+                                 Style="{StaticResource MetadataText}"
+                                 HorizontalAlignment="Right" />
+                      <TextBlock Text="{x:Bind LastAccessed, Mode=OneWay}"
+                                 Style="{StaticResource MetadataText}"
+                                 HorizontalAlignment="Right" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
               </DataTemplate>
             </ListView.ItemTemplate>
           </ListView>
