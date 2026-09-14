@@ -43,6 +43,24 @@ public sealed record BangumiSubjectDetail(
     IReadOnlyList<string> MetaTags,
     IReadOnlyList<string> Tags);
 
+
+public sealed record BangumiCreditPerson(
+    int Id,
+    string Name,
+    string Relation,
+    string? ImageUrl);
+
+public sealed record BangumiCharacterCredit(
+    int Id,
+    string Name,
+    string Relation,
+    string? ImageUrl,
+    IReadOnlyList<BangumiCreditPerson> Actors);
+
+public sealed record BangumiSubjectCredits(
+    IReadOnlyList<BangumiCharacterCredit> Characters,
+    IReadOnlyList<BangumiCreditPerson> Staff);
+
 public sealed record BangumiLoadResult<T>(
     T Value,
     bool IsFromCache,
