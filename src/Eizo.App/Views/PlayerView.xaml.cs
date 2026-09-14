@@ -304,6 +304,7 @@ public sealed partial class PlayerView : UserControl
         try
         {
             engine.Volume = _volume;
+            ApplyPlaybackRatePreference(engine);
         }
         catch (Exception exception)
         { PlaybackTrace.Write("view", "control", "error", exception.GetType().Name); }
@@ -342,7 +343,8 @@ public sealed partial class PlayerView : UserControl
         {
             if (e.CurrentState == PlaybackState.Ended)
             {
-                if (_queueIndex >= 0 &&
+                if (AppSettingsStore.Current.AutoPlayNextEpisode &&
+                    _queueIndex >= 0 &&
                     _queueIndex < _queueItems.Count - 1)
                 {
                     _ = SwitchQueueItemAsync(
@@ -500,6 +502,10 @@ public sealed partial class PlayerView : UserControl
                     await engine.PauseAsync(token);
 
                 await engine.Tracks.RefreshAsync(token);
+                await ApplyTrackPreferencesAsync(
+                    engine,
+                    queueItem?.CatalogItem,
+                    token);
                 await engine.Navigation.RefreshAsync(token);
                 await engine.Diagnostics.RefreshAsync(token);
             },
@@ -584,12 +590,39 @@ public sealed partial class PlayerView : UserControl
         ExternalSubtitleCandidate? automaticPrimaryCandidate = null;
 
         // External subtitles are rendered by Eizo's WinUI overlay rather than
-        // registered with LibVLC. This keeps ASS/SRT/VTT/SSA typography
-        // consistent with the second-subtitle renderer.
+        // registered with LibVLC. Prefer the remembered semantic track for this
+        // title, then the global subtitle language, then the existing first-match
+        // fallback. Never persist or match LibVLC track IDs across episodes.
+        var settings = AppSettingsStore.Current;
+        var remembered = settings.RememberSubtitleTrack
+            ? PlaybackTrackPreferenceStore.GetSubtitlePreference(
+                catalogItem)
+            : null;
+
         if (engine.Tracks.SelectedSubtitleTrackId is null &&
-            candidates.Count > 0)
+            candidates.Count > 0 &&
+            !string.Equals(
+                remembered?.Kind,
+                "off",
+                StringComparison.OrdinalIgnoreCase))
         {
-            automaticPrimaryCandidate = candidates[0];
+            automaticPrimaryCandidate =
+                remembered is { Kind: "external" }
+                    ? FindExternalSubtitleCandidate(
+                        candidates,
+                        remembered.Language)
+                    : null;
+
+            if (automaticPrimaryCandidate is null &&
+                settings.PreferredSubtitleLanguage != "auto")
+            {
+                automaticPrimaryCandidate =
+                    FindExternalSubtitleCandidate(
+                        candidates,
+                        settings.PreferredSubtitleLanguage);
+            }
+
+            automaticPrimaryCandidate ??= candidates[0];
 
             try
             {
@@ -631,6 +664,9 @@ public sealed partial class PlayerView : UserControl
             {
                 _primarySubtitleUri = automaticPrimaryCandidate.Uri;
                 _primarySubtitleDocument = automaticPrimaryDocument;
+                RememberPrimarySubtitlePreference(
+                    automaticPrimaryCandidate,
+                    catalogItem);
                 UpdatePrimarySubtitle(_lastKnownPosition);
             }
 
@@ -899,6 +935,9 @@ public sealed partial class PlayerView : UserControl
                 }
 
                 _primarySubtitleDocument = document;
+                RememberPrimarySubtitlePreference(
+                    candidate,
+                    CurrentQueueItem?.CatalogItem);
                 UpdatePrimarySubtitle(_lastKnownPosition);
                 QueueTrackUiUpdate();
                 UpdateControlAvailability();
@@ -937,6 +976,11 @@ public sealed partial class PlayerView : UserControl
                         selected,
                         token),
                 latest: true);
+
+            RememberPrimarySubtitlePreference(
+                engine.Tracks,
+                selected,
+                CurrentQueueItem?.CatalogItem);
         }
         catch
         {
@@ -1438,6 +1482,10 @@ public sealed partial class PlayerView : UserControl
         try
         {
             await RunOperationAsync(engine, "subtitle", async token => await engine.Tracks.SelectSubtitleTrackAsync(trackId, token), latest: true);
+            RememberPrimarySubtitlePreference(
+                engine.Tracks,
+                trackId,
+                CurrentQueueItem?.CatalogItem);
         }
         catch
         {
@@ -1655,6 +1703,14 @@ public sealed partial class PlayerView : UserControl
         try
         {
             engine.PlaybackRate = rate;
+            if (AppSettingsStore.Current.RememberPlaybackRate)
+            {
+                AppSettingsStore.Update(settings =>
+                    settings with
+                    {
+                        LastPlaybackRate = rate
+                    });
+            }
         }
         catch
         {
@@ -2731,6 +2787,233 @@ public sealed partial class PlayerView : UserControl
         return string.IsNullOrWhiteSpace(text)
             ? $"#{track.Id}"
             : text;
+    }
+
+    private static void ApplyPlaybackRatePreference(
+        IPlaybackEngine engine)
+    {
+        var settings = AppSettingsStore.Current;
+        var rate = settings.RememberPlaybackRate
+            ? settings.LastPlaybackRate
+            : settings.DefaultPlaybackRate;
+
+        engine.PlaybackRate =
+            Math.Clamp(rate, 0.5d, 2d);
+    }
+
+    private static async Task ApplyTrackPreferencesAsync(
+        IPlaybackEngine engine,
+        CatalogMediaItemModel? catalogItem,
+        CancellationToken cancellationToken)
+    {
+        var settings = AppSettingsStore.Current;
+        var tracks = engine.Tracks;
+
+        if (settings.PreferredAudioLanguage != "auto")
+        {
+            var audio = tracks.AudioTracks.FirstOrDefault(track =>
+                TrackMatchesLanguage(
+                    track.Language,
+                    track.Name,
+                    settings.PreferredAudioLanguage));
+
+            if (audio is not null &&
+                tracks.SelectedAudioTrackId != audio.Id)
+            {
+                await tracks.SelectAudioTrackAsync(
+                    audio.Id,
+                    cancellationToken);
+            }
+        }
+
+        SubtitleTrackPreference? remembered = null;
+        if (settings.RememberSubtitleTrack)
+        {
+            remembered =
+                PlaybackTrackPreferenceStore.GetSubtitlePreference(
+                    catalogItem);
+
+            if (string.Equals(
+                    remembered?.Kind,
+                    "off",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                await tracks.SelectSubtitleTrackAsync(
+                    null,
+                    cancellationToken);
+                return;
+            }
+
+            if (string.Equals(
+                    remembered?.Kind,
+                    "internal",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var rememberedTrack =
+                    tracks.SubtitleTracks.FirstOrDefault(track =>
+                        SubtitleTrackMatchesPreference(
+                            track.Language,
+                            track.Name,
+                            remembered));
+
+                if (rememberedTrack is not null)
+                {
+                    await tracks.SelectSubtitleTrackAsync(
+                        rememberedTrack.Id,
+                        cancellationToken);
+                    return;
+                }
+            }
+        }
+
+        if (settings.PreferredSubtitleLanguage == "auto")
+            return;
+
+        var subtitle = tracks.SubtitleTracks.FirstOrDefault(track =>
+            TrackMatchesLanguage(
+                track.Language,
+                track.Name,
+                settings.PreferredSubtitleLanguage));
+
+        if (subtitle is not null &&
+            tracks.SelectedSubtitleTrackId != subtitle.Id)
+        {
+            await tracks.SelectSubtitleTrackAsync(
+                subtitle.Id,
+                cancellationToken);
+        }
+    }
+
+    private static bool SubtitleTrackMatchesPreference(
+        string? language,
+        string? name,
+        SubtitleTrackPreference preference)
+    {
+        var preferredLanguage =
+            PlaybackTrackPreferenceStore.NormalizeLanguage(
+                preference.Language);
+
+        if (!string.IsNullOrWhiteSpace(preferredLanguage) &&
+            TrackMatchesLanguage(
+                language,
+                name,
+                preferredLanguage))
+        {
+            if (string.IsNullOrWhiteSpace(preference.Name) ||
+                string.IsNullOrWhiteSpace(name))
+            {
+                return true;
+            }
+
+            return name.Contains(
+                       preference.Name,
+                       StringComparison.CurrentCultureIgnoreCase) ||
+                   preference.Name.Contains(
+                       name,
+                       StringComparison.CurrentCultureIgnoreCase);
+        }
+
+        return !string.IsNullOrWhiteSpace(preference.Name) &&
+               !string.IsNullOrWhiteSpace(name) &&
+               string.Equals(
+                   preference.Name,
+                   name,
+                   StringComparison.CurrentCultureIgnoreCase);
+    }
+
+    private static bool TrackMatchesLanguage(
+        string? language,
+        string? name,
+        string preferredLanguage)
+    {
+        var preferred =
+            PlaybackTrackPreferenceStore.NormalizeLanguage(
+                preferredLanguage);
+        if (string.IsNullOrWhiteSpace(preferred))
+            return false;
+
+        return string.Equals(
+                   PlaybackTrackPreferenceStore.NormalizeLanguage(
+                       language),
+                   preferred,
+                   StringComparison.Ordinal) ||
+               string.Equals(
+                   PlaybackTrackPreferenceStore.NormalizeLanguage(
+                       name),
+                   preferred,
+                   StringComparison.Ordinal);
+    }
+
+    private static ExternalSubtitleCandidate? FindExternalSubtitleCandidate(
+        IReadOnlyList<ExternalSubtitleCandidate> candidates,
+        string? language)
+    {
+        var preferred =
+            PlaybackTrackPreferenceStore.NormalizeLanguage(
+                language);
+        if (string.IsNullOrWhiteSpace(preferred))
+            return null;
+
+        return candidates.FirstOrDefault(candidate =>
+            string.Equals(
+                PlaybackTrackPreferenceStore.NormalizeLanguage(
+                    candidate.Language),
+                preferred,
+                StringComparison.Ordinal) ||
+            string.Equals(
+                PlaybackTrackPreferenceStore.NormalizeLanguage(
+                    candidate.DisplayName),
+                preferred,
+                StringComparison.Ordinal));
+    }
+
+    private static void RememberPrimarySubtitlePreference(
+        IPlaybackTrackController tracks,
+        int? selectedTrackId,
+        CatalogMediaItemModel? catalogItem)
+    {
+        if (!AppSettingsStore.Current.RememberSubtitleTrack)
+            return;
+
+        if (selectedTrackId is null)
+        {
+            PlaybackTrackPreferenceStore.SaveSubtitlePreference(
+                catalogItem,
+                new SubtitleTrackPreference(
+                    "off",
+                    null,
+                    null));
+            return;
+        }
+
+        var track = tracks.SubtitleTracks.FirstOrDefault(
+            value => value.Id == selectedTrackId.Value);
+        if (track is null)
+            return;
+
+        PlaybackTrackPreferenceStore.SaveSubtitlePreference(
+            catalogItem,
+            new SubtitleTrackPreference(
+                "internal",
+                PlaybackTrackPreferenceStore.NormalizeLanguage(
+                    track.Language ?? track.Name),
+                track.Name));
+    }
+
+    private static void RememberPrimarySubtitlePreference(
+        ExternalSubtitleCandidate candidate,
+        CatalogMediaItemModel? catalogItem)
+    {
+        if (!AppSettingsStore.Current.RememberSubtitleTrack)
+            return;
+
+        PlaybackTrackPreferenceStore.SaveSubtitlePreference(
+            catalogItem,
+            new SubtitleTrackPreference(
+                "external",
+                PlaybackTrackPreferenceStore.NormalizeLanguage(
+                    candidate.Language ?? candidate.DisplayName),
+                null));
     }
 
     private static string FormatTime(TimeSpan value)
