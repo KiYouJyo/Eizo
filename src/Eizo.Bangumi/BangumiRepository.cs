@@ -219,6 +219,58 @@ public sealed class BangumiRepository
             cancellationToken);
     }
 
+    public async Task<BangumiLoadResult<BangumiSubjectCredits>>
+        GetSubjectCreditsAsync(
+            int subjectId,
+            bool forceRefresh = false,
+            CancellationToken cancellationToken = default)
+    {
+        if (subjectId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(subjectId));
+
+        var charactersTask = GetCachedAsync(
+            $"subject-characters:{subjectId}",
+            SubjectCacheLifetime,
+            ct => _client.GetSubjectCharactersAsync(
+                subjectId,
+                ct),
+            BangumiJsonParser.ParseSubjectCharacters,
+            forceRefresh,
+            cancellationToken);
+
+        var personsTask = GetCachedAsync(
+            $"subject-persons:{subjectId}",
+            SubjectCacheLifetime,
+            ct => _client.GetSubjectPersonsAsync(
+                subjectId,
+                ct),
+            BangumiJsonParser.ParseSubjectPersons,
+            forceRefresh,
+            cancellationToken);
+
+        await Task.WhenAll(
+            charactersTask,
+            personsTask);
+
+        var characters = await charactersTask;
+        var persons = await personsTask;
+
+        return new BangumiLoadResult<BangumiSubjectCredits>(
+            new BangumiSubjectCredits(
+                characters.Value,
+                persons.Value),
+            IsFromCache:
+                characters.IsFromCache &&
+                persons.IsFromCache,
+            IsStale:
+                characters.IsStale ||
+                persons.IsStale,
+            FetchedAtUtc:
+                characters.FetchedAtUtc < persons.FetchedAtUtc
+                    ? characters.FetchedAtUtc
+                    : persons.FetchedAtUtc);
+    }
+
     public async Task<BangumiUserProfile> GetMyselfAsync(
         string accessToken,
         CancellationToken cancellationToken = default)
