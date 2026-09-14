@@ -52,6 +52,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-TmdbSeasonStage2Contract.ps1
 
+      - name: Validate Eizo 0.5.3 TMDB details contract
+        shell: pwsh
+        run: ./scripts/Test-TmdbDetailsStage2Contract.ps1
+
       - name: Validate Bangumi public integration contract
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1

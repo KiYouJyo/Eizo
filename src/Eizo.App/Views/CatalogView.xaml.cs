@@ -766,10 +766,14 @@ public sealed partial class CatalogView : UserControl
                         metadata.OriginCountryCodes),
                 metadata?.ProductionStatus ?? string.Empty,
                 metadata?.OriginalLanguage ?? string.Empty,
-                metadata?.Cast.Count.ToString(
-                    CultureInfo.InvariantCulture) ?? string.Empty,
-                metadata?.Crew.Count.ToString(
-                    CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata is null
+                    ? string.Empty
+                    : metadata.Cast.Count.ToString(
+                        CultureInfo.InvariantCulture),
+                metadata is null
+                    ? string.Empty
+                    : metadata.Crew.Count.ToString(
+                        CultureInfo.InvariantCulture),
                 recognition?.RuntimeVersion ?? string.Empty,
                 source,
                 item.SourceTitle,
