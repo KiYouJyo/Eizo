@@ -610,6 +610,109 @@ public sealed class MediaMetadataServiceTests
     }
 
     [Fact]
+    public async Task EnrichAsync_ManualBindingResolvesExactTmdbSubjectWhenSearchIsEmpty()
+    {
+        using var cache = new TempDirectory();
+        var handler = new RecordingHandler(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+
+            if (path.EndsWith("/search/tv", StringComparison.Ordinal))
+            {
+                return Json("""{"results":[]}""");
+            }
+
+            if (path.EndsWith("/tv/1396", StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "id": 1396,
+                  "name": "Breaking Bad",
+                  "original_name": "Breaking Bad",
+                  "overview": "Bound exact subject.",
+                  "first_air_date": "2008-01-20",
+                  "number_of_episodes": 62,
+                  "poster_path": "/poster.jpg",
+                  "backdrop_path": "/backdrop.jpg",
+                  "episode_run_time": [47],
+                  "status": "Ended",
+                  "original_language": "en",
+                  "origin_country": ["US"],
+                  "genres": [{"id": 18, "name": "Drama"}],
+                  "production_companies": [],
+                  "credits": {"cast": [], "crew": []},
+                  "external_ids": {
+                    "imdb_id": "tt0903747"
+                  }
+                }
+                """);
+            }
+
+            if (path.EndsWith(
+                    "/tv/1396/season/1",
+                    StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "id": 3572,
+                  "name": "Season 1",
+                  "season_number": 1,
+                  "episodes": [
+                    {
+                      "id": 62085,
+                      "episode_number": 1,
+                      "name": "Pilot",
+                      "air_date": "2008-01-20",
+                      "still_path": "/pilot.jpg"
+                    }
+                  ]
+                }
+                """);
+            }
+
+            return new HttpResponseMessage(
+                HttpStatusCode.NotFound);
+        });
+
+        var service = new MediaMetadataService(
+            new MediaMetadataServiceOptions(
+                EnableBangumi: false,
+                TmdbReadAccessToken: "test-token",
+                CacheDirectory: cache.Path,
+                EnableArtworkProviders: false),
+            tmdbHttpClient: new HttpClient(handler));
+
+        var binding = new MediaIdentityBindingHint(
+            "eizo:local:breaking-bad",
+            "tmdb",
+            new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["tmdb"] = "1396",
+            },
+            IsManual: true);
+
+        var result = await service.EnrichAsync(
+            Recognition("Completely Different Search Text", 2008, 1),
+            binding,
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.True(result.IsResolved);
+        Assert.Equal("tmdb", result.Provider);
+        Assert.Equal("1396", result.ProviderSubjectId);
+        Assert.Equal("62085", result.ProviderEpisodeId);
+        Assert.Equal(
+            "ManualIdentityBinding",
+            result.RoutingReason);
+        Assert.Equal("tmdb", result.IdentityBindingProvider);
+        Assert.True(result.IdentityBindingManual);
+        Assert.Equal(
+            "Bound exact subject.",
+            result.Overview);
+    }
+
+    [Fact]
     public async Task EnrichAsync_DoesNotCallNetworkForAmbiguousRecognition()
     {
         using var cache = new TempDirectory();

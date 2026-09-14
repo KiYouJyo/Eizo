@@ -770,7 +770,7 @@ public sealed class MediaMetadataService
         }
 
         var subjectKind =
-            request.MediaKind == RecognitionContracts.MediaKind.Movie
+            request.RecognitionMediaKind == RecognitionContracts.MediaKind.Movie
                 ? Core.MetadataSubjectKind.Movie
                 : Core.MetadataSubjectKind.Series;
         var id = new Core.MetadataProviderItemId(
