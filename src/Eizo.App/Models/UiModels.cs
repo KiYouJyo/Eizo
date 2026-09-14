@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace Eizo.Models;
 
@@ -10,6 +11,15 @@ public sealed record MediaCardModel(
     string Meta,
     double Progress = 0,
     string? ExternalKey = null);
+
+public sealed record HomeContinueCardModel(
+    CatalogMediaItemModel MediaItem,
+    string Title,
+    string NativeTitle,
+    string Meta,
+    double Progress,
+    BitmapImage? Artwork);
+
 
 public sealed class SourceItemModel : INotifyPropertyChanged
 {
