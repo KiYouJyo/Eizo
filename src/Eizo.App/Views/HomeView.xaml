@@ -14,7 +14,7 @@
               <FontIcon Glyph="&#xE8B9;"
                         FontSize="30"
                         Opacity="0.18" />
-              <Image Source="{x:Bind Artwork}"
+              <Image Source="{Binding ArtworkUrl}"
                      Stretch="UniformToFill" />
             </Grid>
           </Border>
