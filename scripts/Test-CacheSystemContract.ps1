@@ -85,6 +85,7 @@ Assert-Contains $cacheCode 'VideoCacheDownloadManager.Default.Snapshot' 'Cache p
 Assert-Contains $cacheCode 'PlaybackRequested' 'Cache page does not expose completed-card playback.'
 Assert-Contains $cacheCode 'existing.UpdateFrom(candidate)' 'Cache cards are rebuilt instead of updated in place.'
 Assert-Contains $cacheCode 'VideoCacheDownloadManager.Default.TogglePause' 'Clicking an active cache card does not pause/resume it.'
+Assert-Contains $cacheCode 'ResolveCachedEpisodeLabel' 'Legacy completed video-cache cards cannot recover episode numbers from the media catalog.'
 if ($cacheCode.Contains('_items.Clear()', [StringComparison]::Ordinal)) {
     throw 'Cache page still clears the whole item collection during progress updates.'
 }

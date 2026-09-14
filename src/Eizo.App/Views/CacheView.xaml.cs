@@ -441,12 +441,16 @@ public sealed partial class CacheView : UserControl
                 entries.Sum(
                     static entry =>
                         entry.SizeBytes);
+            var episodeLabel =
+                ResolveCachedEpisodeLabel(
+                    group.Key,
+                    first.Source);
 
             desired.Add(
                 new CacheItemModel(
                     "group:" + group.Key,
                     first.DisplayName,
-                    first.Source,
+                    episodeLabel,
                     FormatBytes(size),
                     newest
                         .ToLocalTime()
@@ -462,12 +466,75 @@ public sealed partial class CacheView : UserControl
                     playbackRequest: new CachedVideoPlaybackRequest(
                         group.Key,
                         first.DisplayName,
-                        first.Source,
+                        episodeLabel,
                         size),
                     deleteText: T("Cache_DeleteVideo")));
         }
 
         return desired;
+    }
+
+    private string ResolveCachedEpisodeLabel(
+        string groupKey,
+        string fallback)
+    {
+        if (!WebDavMediaCacheKeys.TryParseGroupKey(
+                groupKey,
+                out var sourceId,
+                out var mediaUri) ||
+            mediaUri is null)
+        {
+            return fallback;
+        }
+
+        var item =
+            MediaCatalogStore.Default
+                .SnapshotForSource(sourceId)
+                .FirstOrDefault(candidate =>
+                {
+                    if (candidate.Location is not
+                        {
+                            Kind: MediaLocationKind.RemoteUri
+                        } location ||
+                        !Uri.TryCreate(
+                            location.Locator,
+                            UriKind.Absolute,
+                            out var locator))
+                    {
+                        return false;
+                    }
+
+                    return Uri.Compare(
+                               locator,
+                               mediaUri,
+                               UriComponents.AbsoluteUri,
+                               UriFormat.SafeUnescaped,
+                               StringComparison.OrdinalIgnoreCase) ==
+                           0;
+                });
+
+        if (item?.Recognition?.EpisodeNumber is not
+            { } episodeNumber)
+        {
+            return fallback;
+        }
+
+        var number =
+            episodeNumber ==
+            decimal.Truncate(episodeNumber)
+                ? decimal.Truncate(episodeNumber)
+                    .ToString(
+                        CultureInfo.CurrentCulture)
+                : episodeNumber.ToString(
+                    "0.##",
+                    CultureInfo.CurrentCulture);
+
+        return _localization.CurrentLanguage switch
+        {
+            "ja-JP" => $"第{number}話",
+            "en-US" => $"Episode {number}",
+            _ => $"第 {number} 集",
+        };
     }
 
     private void ReconcileItems(
