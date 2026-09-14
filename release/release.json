@@ -1,17 +1,17 @@
 {
-  "schemaVersion": 1,
-  "product": {
-    "version": "0.4.6",
-    "packageVersion": "0.4.6.0",
-    "title": {
-      "zh-CN": "缓存系统",
-      "ja-JP": "キャッシュシステム",
-      "en-US": "Cache System"
+    "schemaVersion": 1,
+    "product": {
+        "version": "0.4.6",
+        "packageVersion": "0.4.6.0",
+        "title": {
+            "zh-CN": "缓存系统",
+            "ja-JP": "キャッシュシステム",
+            "en-US": "Cache System"
+        }
+    },
+    "channels": {
+        "github": {
+            "publish": true
+        }
     }
-  },
-  "channels": {
-    "github": {
-      "publish": true
-    }
-  }
 }

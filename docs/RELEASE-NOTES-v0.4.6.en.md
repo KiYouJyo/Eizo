@@ -1,3 +1,5 @@
+[简体中文](RELEASE-NOTES-v0.4.6.md) | [日本語](RELEASE-NOTES-v0.4.6.ja.md) | English
+
 # Eizo v0.4.6
 
 ## Cache System

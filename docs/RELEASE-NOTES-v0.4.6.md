@@ -1,3 +1,5 @@
+简体中文 | [日本語](RELEASE-NOTES-v0.4.6.ja.md) | [English](RELEASE-NOTES-v0.4.6.en.md)
+
 # Eizo v0.4.6
 
 ## 缓存系统

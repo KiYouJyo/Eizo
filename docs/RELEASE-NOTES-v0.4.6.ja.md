@@ -1,3 +1,5 @@
+[简体中文](RELEASE-NOTES-v0.4.6.md) | 日本語 | [English](RELEASE-NOTES-v0.4.6.en.md)
+
 # Eizo v0.4.6
 
 ## キャッシュシステム
