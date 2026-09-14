@@ -320,6 +320,62 @@ public sealed class BangumiRepositoryTests
     }
 
     [Fact]
+    public async Task UserCollection_ReadsRequestedCollectionType()
+    {
+        const string token = "secret-test-token";
+        string? collectionUri = null;
+
+        var handler = new CallbackHandler(request =>
+        {
+            collectionUri = request.RequestUri!.ToString();
+            return JsonResponse("""
+            {
+              "total": 0,
+              "limit": 50,
+              "offset": 0,
+              "data": []
+            }
+            """);
+        });
+
+        var cacheRoot = CreateTempDirectory();
+        try
+        {
+            using var client = CreateClient(handler);
+            var repository = new BangumiRepository(
+                new BangumiApiClient(client),
+                new BangumiCacheStore(cacheRoot));
+
+            var result = await repository.GetUserCollectionAsync(
+                token,
+                "eizo-user",
+                BangumiCollectionType.Dropped,
+                cancellationToken:
+                    TestContext.Current.CancellationToken);
+
+            Assert.Empty(result.Items);
+            Assert.Contains(
+                "subject_type=2",
+                collectionUri,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "type=5",
+                collectionUri,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "limit=50",
+                collectionUri,
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(
+                cacheRoot,
+                recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task SearchAnime_UsesGlobalSubjectSearchAndAnimeFilter()
     {
         HttpMethod? method = null;
