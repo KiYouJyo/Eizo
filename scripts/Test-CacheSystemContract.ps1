@@ -48,7 +48,7 @@ Assert-Contains $cacheView 'ClearApplicationCacheButton_Click' 'One-click app-ca
 Assert-Contains $cacheView 'x:Name="ApplicationCacheValue"' 'App cache is not summarized as a single item.'
 Assert-Contains $cacheView 'x:Name="VideoCacheTitle"' 'Video cache is not the primary cache-content list.'
 Assert-Contains $cacheView 'ItemClick="CacheList_ItemClick"' 'Completed video-cache cards are not clickable.'
-Assert-Contains $cacheView '<Grid.ContextFlyout>' 'Video-cache cards do not expose a right-click context menu.'
+Assert-Contains $cacheView '<Border.ContextFlyout>' 'Video-cache cards do not expose a right-click context menu.'
 Assert-Contains $cacheView 'DeleteCacheItem_Click' 'Video-cache context menu is missing delete.'
 Assert-Contains $cacheCode 'CacheRuntime.Store.GetSnapshotAsync' 'Cache page does not read the unified cache store.'
 Assert-Contains $cacheCode 'CacheRuntime.EnforcePolicyAsync' 'Cache page does not apply the cache policy.'
