@@ -56,6 +56,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-TmdbDetailsStage2Contract.ps1
 
+      - name: Validate Eizo 0.5.4 Provider Router contract
+        shell: pwsh
+        run: ./scripts/Test-ProviderRouterStage3Contract.ps1
+
       - name: Validate Bangumi public integration contract
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1
