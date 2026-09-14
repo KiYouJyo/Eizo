@@ -540,11 +540,17 @@ public sealed partial class PlayerView : UserControl
                 return;
             }
 
-            await TryPromoteSelectedEmbeddedSubtitleAsync(
-                engine,
-                source,
-                session,
-                session.Token);
+            // Remote random-access media is intentionally not auto-extracted.
+            // Walking subtitle samples can compete with the active WebDAV stream;
+            // users can still explicitly select a supported embedded text track.
+            if (source.RandomAccessSource is null)
+            {
+                await TryPromoteSelectedEmbeddedSubtitleAsync(
+                    engine,
+                    source,
+                    session,
+                    session.Token);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -565,6 +571,7 @@ public sealed partial class PlayerView : UserControl
         CatalogMediaItemModel? catalogItem,
         CancellationToken token)
     {
+        var selectionGeneration = _primarySubtitleGeneration;
         IReadOnlyList<ExternalSubtitleCandidate> candidates;
 
         try
@@ -634,7 +641,9 @@ public sealed partial class PlayerView : UserControl
 
             _externalSubtitles = candidates;
 
-            if (_primarySubtitleUri is null &&
+            if (selectionGeneration == _primarySubtitleGeneration &&
+                _primarySubtitleUri is null &&
+                _primaryEmbeddedSubtitleTrackId is null &&
                 automaticPrimaryCandidate is not null &&
                 automaticPrimaryDocument is not null)
             {
