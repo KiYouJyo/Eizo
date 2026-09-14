@@ -132,14 +132,12 @@ public sealed partial class HomeView : UserControl
                     subject?.NativeTitle ?? item.SecondaryTitle,
                     BuildContinueMeta(item),
                     entry.ProgressPercent,
-                    CreateArtwork(
-                        FirstNonEmpty(
-                            item.Metadata?.EpisodeThumbnailUrl,
-                            subject?.Metadata?.BackdropUrl,
-                            item.Metadata?.BackdropUrl,
-                            subject?.Metadata?.PosterUrl,
-                            item.Metadata?.PosterUrl),
-                        decodePixelWidth: 560));
+                    FirstNonEmpty(
+                        item.Metadata?.EpisodeThumbnailUrl,
+                        subject?.Metadata?.BackdropUrl,
+                        item.Metadata?.BackdropUrl,
+                        subject?.Metadata?.PosterUrl,
+                        item.Metadata?.PosterUrl));
             })
             .ToArray();
 
