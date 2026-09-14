@@ -1393,4 +1393,10 @@
   <data name="Settings_SubtitleStyle" xml:space="preserve">
     <value>字幕位置与背景</value>
   </data>
+  <data name="Settings_PreferredSecondarySubtitleLanguage" xml:space="preserve">
+    <value>首选第二字幕语言</value>
+  </data>
+  <data name="Settings_PreferredSecondarySubtitleLanguageDescription" xml:space="preserve">
+    <value>选择第二字幕的首选语言；设为自动时不会主动开启第二字幕。</value>
+  </data>
 </root>
