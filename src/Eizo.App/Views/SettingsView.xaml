@@ -64,6 +64,7 @@
                   SelectedIndex="0"
                   IsItemClickEnabled="True"
                   SelectionMode="Single"
+                  SelectionChanged="SettingsSectionList_SelectionChanged"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
                   ScrollViewer.HorizontalScrollMode="Auto"
                   ScrollViewer.VerticalScrollBarVisibility="Disabled"
@@ -81,6 +82,9 @@
           </ListView.ItemTemplate>
         </ListView>
 
+
+        <StackPanel x:Name="GeneralSettingsPanel"
+                    Spacing="18">
         <Border Style="{StaticResource SettingsSectionCardStyle}">
           <StackPanel Spacing="14">
             <TextBlock x:Name="LanguageSectionTitle"
@@ -179,7 +183,346 @@
             </Border>
           </StackPanel>
         </Border>
+        </StackPanel>
 
+        <StackPanel x:Name="MetadataSettingsPanel"
+                    Spacing="18"
+                    Visibility="Collapsed">
+          <Border Style="{StaticResource SettingsSectionCardStyle}">
+            <StackPanel Spacing="14">
+              <TextBlock x:Name="MetadataAutomationSectionTitle"
+                         Style="{StaticResource SectionTitleText}" />
+              <Border Style="{StaticResource SettingsInnerCardStyle}">
+                <StackPanel>
+                  <Grid Padding="14"
+                        MinHeight="72"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="MetadataAutoScrapeLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="MetadataAutoScrapeDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="MetadataAutoScrapeToggle"
+                                  Grid.Column="1"
+                                  Width="44"
+                                  MinWidth="44"
+                                  OnContent=""
+                                  OffContent=""
+                                  HorizontalAlignment="Right"
+                                  Toggled="MetadataAutoScrapeToggle_Toggled" />
+                  </Grid>
+                  <Border Height="1"
+                          Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                  <Grid Padding="14"
+                        MinHeight="72"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="MetadataArtworkLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="MetadataArtworkDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="MetadataArtworkToggle"
+                                  Grid.Column="1"
+                                  Width="44"
+                                  MinWidth="44"
+                                  OnContent=""
+                                  OffContent=""
+                                  HorizontalAlignment="Right"
+                                  Toggled="MetadataArtworkToggle_Toggled" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <Border Style="{StaticResource SettingsSectionCardStyle}">
+            <StackPanel Spacing="14">
+              <TextBlock x:Name="MetadataMaintenanceSectionTitle"
+                         Style="{StaticResource SectionTitleText}" />
+              <Border Style="{StaticResource SettingsInnerCardStyle}">
+                <StackPanel>
+                  <Grid Padding="14"
+                        MinHeight="76"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="MetadataRescrapeLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="MetadataRescrapeDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Button x:Name="MetadataRescrapeButton"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            Click="MetadataRescrapeButton_Click" />
+                  </Grid>
+                  <Border Height="1"
+                          Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                  <Grid Padding="14"
+                        MinHeight="76"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="MetadataClearCacheLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="MetadataClearCacheDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Button x:Name="MetadataClearCacheButton"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            Click="MetadataClearCacheButton_Click" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+              <TextBlock x:Name="MetadataActionStatusText"
+                         Style="{StaticResource MetadataText}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <StackPanel x:Name="PlaybackSettingsPanel"
+                    Spacing="18"
+                    Visibility="Collapsed">
+          <Border Style="{StaticResource SettingsSectionCardStyle}">
+            <StackPanel Spacing="14">
+              <TextBlock x:Name="PlaybackBehaviorSectionTitle"
+                         Style="{StaticResource SectionTitleText}" />
+              <Border Style="{StaticResource SettingsInnerCardStyle}">
+                <StackPanel>
+                  <Grid Padding="14"
+                        MinHeight="72"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="AutoPlayNextLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="AutoPlayNextDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="AutoPlayNextToggle"
+                                  Grid.Column="1"
+                                  Width="44"
+                                  MinWidth="44"
+                                  OnContent=""
+                                  OffContent=""
+                                  HorizontalAlignment="Right"
+                                  Toggled="AutoPlayNextToggle_Toggled" />
+                  </Grid>
+                  <Border Height="1"
+                          Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                  <Grid Padding="14"
+                        MinHeight="72"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="RememberPlaybackRateLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="RememberPlaybackRateDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="RememberPlaybackRateToggle"
+                                  Grid.Column="1"
+                                  Width="44"
+                                  MinWidth="44"
+                                  OnContent=""
+                                  OffContent=""
+                                  HorizontalAlignment="Right"
+                                  Toggled="RememberPlaybackRateToggle_Toggled" />
+                  </Grid>
+                  <Border Height="1"
+                          Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                  <Grid Padding="14"
+                        MinHeight="72"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="DefaultPlaybackRateLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="DefaultPlaybackRateDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ComboBox x:Name="DefaultPlaybackRateCombo"
+                              Grid.Column="1"
+                              Width="150"
+                              HorizontalAlignment="Right"
+                              controls:TransientComboBoxTheme.Apply="True"
+                              SelectionChanged="DefaultPlaybackRateCombo_SelectionChanged" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <Border Style="{StaticResource SettingsSectionCardStyle}">
+            <StackPanel Spacing="14">
+              <TextBlock x:Name="PlaybackTracksSectionTitle"
+                         Style="{StaticResource SectionTitleText}" />
+              <Border Style="{StaticResource SettingsInnerCardStyle}">
+                <StackPanel>
+                  <Grid Padding="14"
+                        MinHeight="72"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="PreferredAudioLanguageLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="PreferredAudioLanguageDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ComboBox x:Name="PreferredAudioLanguageCombo"
+                              Grid.Column="1"
+                              Width="180"
+                              HorizontalAlignment="Right"
+                              controls:TransientComboBoxTheme.Apply="True"
+                              SelectionChanged="PreferredAudioLanguageCombo_SelectionChanged" />
+                  </Grid>
+                  <Border Height="1"
+                          Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                  <Grid Padding="14"
+                        MinHeight="72"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="PreferredSubtitleLanguageLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="PreferredSubtitleLanguageDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ComboBox x:Name="PreferredSubtitleLanguageCombo"
+                              Grid.Column="1"
+                              Width="180"
+                              HorizontalAlignment="Right"
+                              controls:TransientComboBoxTheme.Apply="True"
+                              SelectionChanged="PreferredSubtitleLanguageCombo_SelectionChanged" />
+                  </Grid>
+                  <Border Height="1"
+                          Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                  <Grid Padding="14"
+                        MinHeight="72"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="RememberSubtitleTrackLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="RememberSubtitleTrackDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="RememberSubtitleTrackToggle"
+                                  Grid.Column="1"
+                                  Width="44"
+                                  MinWidth="44"
+                                  OnContent=""
+                                  OffContent=""
+                                  HorizontalAlignment="Right"
+                                  Toggled="RememberSubtitleTrackToggle_Toggled" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Border>
+
+          <Border Style="{StaticResource SettingsSectionCardStyle}"
+                  Margin="0,0,0,24">
+            <StackPanel Spacing="14">
+              <TextBlock x:Name="SubtitleStyleSectionTitle"
+                         Style="{StaticResource SectionTitleText}" />
+              <Border Style="{StaticResource SettingsInnerCardStyle}">
+                <StackPanel>
+                  <Grid Padding="14"
+                        MinHeight="78"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,300">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="PrimarySubtitlePositionSettingsLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="PrimarySubtitlePositionSettingsValue"
+                                 Style="{StaticResource SettingsDescriptionStyle}" />
+                    </StackPanel>
+                    <Slider x:Name="PrimarySubtitlePositionSettingsSlider"
+                            Grid.Column="1"
+                            Minimum="0"
+                            Maximum="90"
+                            StepFrequency="1"
+                            ValueChanged="PrimarySubtitlePositionSettingsSlider_ValueChanged" />
+                  </Grid>
+                  <Border Height="1"
+                          Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                  <Grid Padding="14"
+                        MinHeight="78"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,300">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="SecondarySubtitlePositionSettingsLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="SecondarySubtitlePositionSettingsValue"
+                                 Style="{StaticResource SettingsDescriptionStyle}" />
+                    </StackPanel>
+                    <Slider x:Name="SecondarySubtitlePositionSettingsSlider"
+                            Grid.Column="1"
+                            Minimum="0"
+                            Maximum="90"
+                            StepFrequency="1"
+                            ValueChanged="SecondarySubtitlePositionSettingsSlider_ValueChanged" />
+                  </Grid>
+                  <Border Height="1"
+                          Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                  <Grid Padding="14"
+                        MinHeight="78"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,300">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="PrimarySubtitleOpacitySettingsLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="PrimarySubtitleOpacitySettingsValue"
+                                 Style="{StaticResource SettingsDescriptionStyle}" />
+                    </StackPanel>
+                    <Slider x:Name="PrimarySubtitleOpacitySettingsSlider"
+                            Grid.Column="1"
+                            Minimum="0"
+                            Maximum="100"
+                            StepFrequency="1"
+                            ValueChanged="PrimarySubtitleOpacitySettingsSlider_ValueChanged" />
+                  </Grid>
+                  <Border Height="1"
+                          Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                  <Grid Padding="14"
+                        MinHeight="78"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,300">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="SecondarySubtitleOpacitySettingsLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="SecondarySubtitleOpacitySettingsValue"
+                                 Style="{StaticResource SettingsDescriptionStyle}" />
+                    </StackPanel>
+                    <Slider x:Name="SecondarySubtitleOpacitySettingsSlider"
+                            Grid.Column="1"
+                            Minimum="0"
+                            Maximum="100"
+                            StepFrequency="1"
+                            ValueChanged="SecondarySubtitleOpacitySettingsSlider_ValueChanged" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </Border>
+        </StackPanel>
       </StackPanel>
     </Grid>
   </ScrollViewer>
