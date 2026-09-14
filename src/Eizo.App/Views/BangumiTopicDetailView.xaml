@@ -1,0 +1,142 @@
+<UserControl x:Class="Eizo.Views.BangumiTopicDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ScrollViewer Background="Transparent"
+                HorizontalScrollMode="Disabled"
+                HorizontalScrollBarVisibility="Disabled"
+                HorizontalContentAlignment="Stretch">
+    <Grid Padding="24,16,24,32"
+          RowDefinitions="Auto,16,*"
+          HorizontalAlignment="Stretch">
+      <Grid ColumnDefinitions="*,Auto"
+            ColumnSpacing="10">
+        <TextBlock x:Name="PageTitle"
+                   Style="{StaticResource PageTitleText}"
+                   TextWrapping="Wrap" />
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="8">
+          <ProgressRing x:Name="LoadingRing"
+                        Width="22"
+                        Height="22"
+                        IsActive="False"
+                        Visibility="Collapsed"
+                        VerticalAlignment="Center" />
+          <Button x:Name="OpenSubjectButton"
+                  Click="OpenSubjectButton_Click" />
+          <Button x:Name="OpenBangumiButton"
+                  Click="OpenBangumiButton_Click" />
+        </StackPanel>
+      </Grid>
+
+      <StackPanel Grid.Row="2"
+                  Spacing="14"
+                  MaxWidth="960"
+                  HorizontalAlignment="Stretch">
+        <TextBlock x:Name="SubjectText"
+                   Style="{StaticResource MetadataText}"
+                   TextWrapping="Wrap" />
+
+        <TextBlock x:Name="TitleText"
+                   FontSize="28"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap" />
+
+        <TextBlock x:Name="StatusText"
+                   Style="{StaticResource MetadataText}"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                   TextWrapping="Wrap" />
+
+        <Border Height="1"
+                Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+        <Grid ColumnDefinitions="Auto,*"
+              ColumnSpacing="12">
+          <Border Width="48"
+                  Height="48"
+                  CornerRadius="24"
+                  Background="{ThemeResource EizoSelectionBrush}">
+            <Grid>
+              <FontIcon Glyph="&#xE77B;"
+                        FontSize="20"
+                        Opacity="0.28" />
+              <Image x:Name="AuthorAvatar"
+                     Stretch="UniformToFill" />
+            </Grid>
+          </Border>
+          <StackPanel Grid.Column="1"
+                      Spacing="4">
+            <TextBlock x:Name="AuthorText"
+                       FontWeight="SemiBold" />
+            <TextBlock x:Name="RootMetaText"
+                       Style="{StaticResource MetadataText}" />
+            <TextBlock x:Name="RootContentText"
+                       Style="{StaticResource BodyText}"
+                       TextWrapping="Wrap"
+                       IsTextSelectionEnabled="True" />
+          </StackPanel>
+        </Grid>
+
+        <Border Height="1"
+                Margin="0,4"
+                Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+        <TextBlock x:Name="RepliesTitle"
+                   Style="{StaticResource SectionTitleText}" />
+
+        <TextBlock x:Name="RepliesStatusText"
+                   Style="{StaticResource MetadataText}"
+                   TextWrapping="Wrap" />
+
+        <ItemsControl x:Name="RepliesList">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Grid Margin="{Binding Indent}"
+                    ColumnDefinitions="Auto,*"
+                    ColumnSpacing="10">
+                <Border Width="38"
+                        Height="38"
+                        CornerRadius="19"
+                        Background="{ThemeResource EizoSelectionBrush}">
+                  <Grid>
+                    <FontIcon Glyph="&#xE77B;"
+                              FontSize="16"
+                              Opacity="0.28" />
+                    <Image Source="{Binding Avatar}"
+                           Stretch="UniformToFill" />
+                  </Grid>
+                </Border>
+                <Border Grid.Column="1"
+                        Padding="10"
+                        Margin="0,0,0,8"
+                        CornerRadius="8"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                  <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{Binding UserName}"
+                                 FontWeight="SemiBold" />
+                      <Button Grid.Column="1"
+                              Padding="8,2"
+                              Content="{Binding ReactionText}"
+                              IsEnabled="{Binding CanReact}"
+                              Tag="{Binding}"
+                              Click="ReplyReactionButton_Click" />
+                    </Grid>
+                    <TextBlock Text="{Binding Content}"
+                               Style="{StaticResource BodyText}"
+                               TextWrapping="Wrap"
+                               IsTextSelectionEnabled="True" />
+                    <TextBlock Text="{Binding MetaLine}"
+                               Style="{StaticResource MetadataText}" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

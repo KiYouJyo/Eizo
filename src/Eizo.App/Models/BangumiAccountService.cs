@@ -35,6 +35,9 @@ internal sealed class BangumiAccountService
     public BangumiUserProfile? CachedProfile =>
         _profile;
 
+    internal string? GetAccessTokenForRequest() =>
+        _credentials.GetAccessToken();
+
     public async Task<BangumiUserProfile> ConnectAsync(
         string accessToken,
         CancellationToken cancellationToken = default)

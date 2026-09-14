@@ -44,6 +44,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-BangumiAccountIntegration.ps1
 
+      - name: Validate Bangumi community integration contract
+        shell: pwsh
+        run: ./scripts/Test-BangumiCommunityIntegration.ps1
+
       - name: Validate Bangumi OAuth relay and activation
         shell: pwsh
         run: ./scripts/Test-BangumiOAuthIntegration.ps1

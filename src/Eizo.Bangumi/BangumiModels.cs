@@ -84,3 +84,105 @@ public sealed record BangumiUserCollectionPage(
     public bool HasMore =>
         Offset + Items.Count < Total;
 }
+
+public sealed record BangumiCommunityUser(
+    int Id,
+    string UserName,
+    string NickName,
+    string Sign,
+    string? AvatarLarge,
+    string? AvatarMedium,
+    string? AvatarSmall);
+
+public sealed record BangumiCommunityPage<T>(
+    int Total,
+    int Offset,
+    IReadOnlyList<T> Items)
+{
+    public bool HasMore =>
+        Offset + Items.Count < Total;
+}
+
+public sealed record BangumiSubjectComment(
+    int Id,
+    BangumiCommunityUser User,
+    BangumiCollectionType Type,
+    int Rate,
+    string Comment,
+    DateTimeOffset? UpdatedAt,
+    int ReactionCount,
+    IReadOnlySet<int> ReactionUserIds);
+
+public sealed record BangumiSubjectReview(
+    int Id,
+    BangumiCommunityUser User,
+    int EntryId,
+    string Title,
+    string Summary,
+    int ReplyCount,
+    DateTimeOffset? CreatedAt,
+    DateTimeOffset? UpdatedAt);
+
+public sealed record BangumiChannelBlog(
+    int EntryId,
+    int Type,
+    BangumiCommunityUser User,
+    string Title,
+    string Summary,
+    int ReplyCount,
+    bool IsPublic,
+    DateTimeOffset? CreatedAt,
+    DateTimeOffset? UpdatedAt);
+
+public sealed record BangumiSubjectTopic(
+    int Id,
+    BangumiCommunityUser User,
+    string Title,
+    int ReplyCount,
+    DateTimeOffset? CreatedAt,
+    DateTimeOffset? UpdatedAt);
+
+public sealed record BangumiSubjectRecommendation(
+    BangumiSubjectCard Subject,
+    double Similarity,
+    int Count);
+
+public sealed record BangumiSubjectRelation(
+    BangumiSubjectCard Subject,
+    int RelationId,
+    string RelationEnglish,
+    string RelationChinese,
+    string RelationJapanese,
+    string RelationDescription,
+    int Order);
+
+public sealed record BangumiCommunityReply(
+    int Id,
+    BangumiCommunityUser User,
+    string Content,
+    DateTimeOffset? CreatedAt,
+    int ReactionCount,
+    IReadOnlySet<int> ReactionUserIds,
+    IReadOnlyList<BangumiCommunityReply> Replies);
+
+public sealed record BangumiBlogDetail(
+    int EntryId,
+    BangumiCommunityUser User,
+    string Title,
+    string Content,
+    IReadOnlyList<string> Tags,
+    int ViewCount,
+    int ReplyCount,
+    DateTimeOffset? CreatedAt,
+    DateTimeOffset? UpdatedAt,
+    bool IsPublic);
+
+public sealed record BangumiTopicDetail(
+    int TopicId,
+    BangumiCommunityUser User,
+    BangumiSubjectCard Subject,
+    string Title,
+    DateTimeOffset? CreatedAt,
+    DateTimeOffset? UpdatedAt,
+    BangumiCommunityReply? RootPost,
+    IReadOnlyList<BangumiCommunityReply> Replies);

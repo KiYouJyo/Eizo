@@ -1,0 +1,26 @@
+name: Eizo v0.4.5 Bangumi community API smoke
+
+on:
+  push:
+    branches:
+      - "feat/v0.4.5-bangumi-community"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v045-bangumi-community-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  community-api:
+    name: Probe Bangumi community API
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Probe read-only community endpoints
+        shell: pwsh
+        run: ./scripts/Test-BangumiCommunityApiLive.ps1

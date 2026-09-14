@@ -1004,4 +1004,190 @@
   <data name="Bangumi_ManualLogin" xml:space="preserve"><value>詳細設定：アクセストークン</value></data>
   <data name="Bangumi_BrowserLoginHelp" xml:space="preserve"><value>ブラウザーで Bangumi にログインします。認可後、Eizo が自動的に開きます。手動のアクセストークン入力は詳細設定から利用できます。</value></data>
   <data name="Bangumi_BrowserLoginFailed" xml:space="preserve"><value>ブラウザーを開けませんでした。再試行するか、詳細設定のアクセストークンログインを使用してください。</value></data>
+  <data name="Bangumi_CommunityComments" xml:space="preserve">
+    <value>短評</value>
+  </data>
+  <data name="Bangumi_CommunityReviews" xml:space="preserve">
+    <value>長評</value>
+  </data>
+  <data name="Bangumi_CommunityTopics" xml:space="preserve">
+    <value>ディスカッション</value>
+  </data>
+  <data name="Bangumi_CommunityRelated" xml:space="preserve">
+    <value>関連</value>
+  </data>
+  <data name="Bangumi_CommunityRecommendations" xml:space="preserve">
+    <value>おすすめ作品</value>
+  </data>
+  <data name="Bangumi_CommunityRelations" xml:space="preserve">
+    <value>関連作品</value>
+  </data>
+  <data name="Bangumi_CommunityLoading" xml:space="preserve">
+    <value>Bangumi コミュニティを読み込んでいます…</value>
+  </data>
+  <data name="Bangumi_CommunityUnavailable" xml:space="preserve">
+    <value>コミュニティ内容を取得できません。Private API が変更中の可能性があります。「Bangumi で開く」は引き続き利用できます。</value>
+  </data>
+  <data name="Bangumi_CommunityNoComments" xml:space="preserve">
+    <value>短評はありません。</value>
+  </data>
+  <data name="Bangumi_CommunityNoReviews" xml:space="preserve">
+    <value>長評はありません。</value>
+  </data>
+  <data name="Bangumi_CommunityNoTopics" xml:space="preserve">
+    <value>ディスカッションはありません。</value>
+  </data>
+  <data name="Bangumi_CommunityNoRelated" xml:space="preserve">
+    <value>おすすめ・関連作品はありません。</value>
+  </data>
+  <data name="Bangumi_CommunityCountFormat" xml:space="preserve">
+    <value>{0} / {1} 件を表示</value>
+  </data>
+  <data name="Bangumi_CommunityRepliesFormat" xml:space="preserve">
+    <value>返信 {0} 件</value>
+  </data>
+  <data name="Bangumi_CommunityRecommendationCountFormat" xml:space="preserve">
+    <value>おすすめ {0} 人</value>
+  </data>
+  <data name="Bangumi_CommunitySimilarityFormat" xml:space="preserve">
+    <value>類似度 {0:P0}</value>
+  </data>
+  <data name="Bangumi_CollectionWish" xml:space="preserve">
+    <value>見たい</value>
+  </data>
+  <data name="Bangumi_CollectionDone" xml:space="preserve">
+    <value>見た</value>
+  </data>
+  <data name="Bangumi_CollectionDoing" xml:space="preserve">
+    <value>見てる</value>
+  </data>
+  <data name="Bangumi_CollectionOnHold" xml:space="preserve">
+    <value>積み</value>
+  </data>
+  <data name="Bangumi_CollectionDropped" xml:space="preserve">
+    <value>切った</value>
+  </data>
+  <data name="Bangumi_ReviewDetailPageTitle" xml:space="preserve">
+    <value>Bangumi 長評</value>
+  </data>
+  <data name="Bangumi_TopicDetailPageTitle" xml:space="preserve">
+    <value>Bangumi ディスカッション</value>
+  </data>
+  <data name="Bangumi_BackToSubject" xml:space="preserve">
+    <value>作品に戻る</value>
+  </data>
+  <data name="Bangumi_ReviewComments" xml:space="preserve">
+    <value>コメント</value>
+  </data>
+  <data name="Bangumi_TopicReplies" xml:space="preserve">
+    <value>返信</value>
+  </data>
+  <data name="Bangumi_CommunityViewsFormat" xml:space="preserve">
+    <value>閲覧 {0}</value>
+  </data>
+  <data name="Bangumi_CommunityLoadedCountFormat" xml:space="preserve">
+    <value>{0} 件を読み込み済み</value>
+  </data>
+  <data name="Bangumi_ReviewNoComments" xml:space="preserve">
+    <value>コメントはありません。</value>
+  </data>
+  <data name="Bangumi_TopicNoReplies" xml:space="preserve">
+    <value>返信はありません。</value>
+  </data>
+  <data name="Bangumi_CommunityContentUnavailable" xml:space="preserve">
+    <value>本文を取得できません。</value>
+  </data>
+  <data name="Bangumi_UnknownUser" xml:space="preserve">
+    <value>不明なユーザー</value>
+  </data>
+  <data name="Bangumi_CommunityAllComments" xml:space="preserve">
+    <value>すべての短評</value>
+  </data>
+  <data name="Bangumi_WriteComment" xml:space="preserve">
+    <value>短評を投稿</value>
+  </data>
+  <data name="Bangumi_WriteCommentTitle" xml:space="preserve">
+    <value>Bangumi に短評を投稿</value>
+  </data>
+  <data name="Bangumi_WriteCommentPlaceholder" xml:space="preserve">
+    <value>短評を入力…</value>
+  </data>
+  <data name="Bangumi_WriteCollectionState" xml:space="preserve">
+    <value>コレクション状態</value>
+  </data>
+  <data name="Bangumi_WriteRating" xml:space="preserve">
+    <value>評価（0–10）</value>
+  </data>
+  <data name="Bangumi_WriteCollectionWarning" xml:space="preserve">
+    <value>短評を投稿すると、この作品のコレクション状態と評価も更新されます。</value>
+  </data>
+  <data name="Bangumi_WriteReply" xml:space="preserve">
+    <value>返信</value>
+  </data>
+  <data name="Bangumi_WriteReplyPlaceholder" xml:space="preserve">
+    <value>返信を入力…</value>
+  </data>
+  <data name="Bangumi_WriteReviewReplyTitle" xml:space="preserve">
+    <value>長評に返信</value>
+  </data>
+  <data name="Bangumi_WriteTopicReplyTitle" xml:space="preserve">
+    <value>ディスカッションに返信</value>
+  </data>
+  <data name="Bangumi_Publish" xml:space="preserve">
+    <value>投稿</value>
+  </data>
+  <data name="Bangumi_CommunitySignInToInteract" xml:space="preserve">
+    <value>コミュニティ操作には Bangumi へのログインが必要です。</value>
+  </data>
+  <data name="Bangumi_CommunityWriteFailed" xml:space="preserve">
+    <value>送信に失敗しました。後でもう一度試すか、Bangumi の Web ページで操作してください。</value>
+  </data>
+  <data name="Bangumi_TurnstileTitle" xml:space="preserve">
+    <value>Bangumi 人間確認</value>
+  </data>
+  <data name="Bangumi_TurnstileUnavailable" xml:space="preserve">
+    <value>Bangumi がまだ Eizo の Turnstile コールバックを許可していないため、書き込み機能は現在利用できません。</value>
+  </data>
+  <data name="Bangumi_CommentComposerHint" xml:space="preserve">
+    <value>ここに直接入力できます。投稿時に Bangumi の人間確認を行い、Eizo のコールバックが未許可の場合も下書きは残ります。</value>
+  </data>
+  <data name="Bangumi_CreateReview" xml:space="preserve">
+    <value>長評を投稿</value>
+  </data>
+  <data name="Bangumi_CreateReviewTitlePlaceholder" xml:space="preserve">
+    <value>長評タイトル</value>
+  </data>
+  <data name="Bangumi_CreateReviewContentPlaceholder" xml:space="preserve">
+    <value>長評本文を入力（Bangumi BBCode 対応）…</value>
+  </data>
+  <data name="Bangumi_CreateReviewTagsPlaceholder" xml:space="preserve">
+    <value>タグ（カンマ区切り）</value>
+  </data>
+  <data name="Bangumi_CreateReviewPublic" xml:space="preserve">
+    <value>公開</value>
+  </data>
+  <data name="Bangumi_CreateTopic" xml:space="preserve">
+    <value>ディスカッションを作成</value>
+  </data>
+  <data name="Bangumi_CreateTopicTitlePlaceholder" xml:space="preserve">
+    <value>ディスカッションタイトル</value>
+  </data>
+  <data name="Bangumi_CreateTopicContentPlaceholder" xml:space="preserve">
+    <value>本文を入力（Bangumi BBCode 対応）…</value>
+  </data>
+  <data name="Nav_AnimeBlogs" xml:space="preserve">
+    <value>アニメログ</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsSubtitle" xml:space="preserve">
+    <value>Bangumi アニメチャンネルの最新ログ・レビュー。</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsEmpty" xml:space="preserve">
+    <value>アニメログはありません。</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsCountFormat" xml:space="preserve">
+    <value>{0} / {1} 件を表示</value>
+  </data>
+  <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
+    <value>{0} に返信中</value>
+  </data>
 </root>

@@ -1004,4 +1004,190 @@
   <data name="Bangumi_ManualLogin" xml:space="preserve"><value>Advanced: Access Token</value></data>
   <data name="Bangumi_BrowserLoginHelp" xml:space="preserve"><value>Sign in on Bangumi in your browser. Eizo will reopen after authorization. Access Token entry remains available under Advanced.</value></data>
   <data name="Bangumi_BrowserLoginFailed" xml:space="preserve"><value>The browser could not be opened. Try again or use Advanced Access Token sign-in.</value></data>
+  <data name="Bangumi_CommunityComments" xml:space="preserve">
+    <value>Short comments</value>
+  </data>
+  <data name="Bangumi_CommunityReviews" xml:space="preserve">
+    <value>Reviews</value>
+  </data>
+  <data name="Bangumi_CommunityTopics" xml:space="preserve">
+    <value>Discussions</value>
+  </data>
+  <data name="Bangumi_CommunityRelated" xml:space="preserve">
+    <value>Related</value>
+  </data>
+  <data name="Bangumi_CommunityRecommendations" xml:space="preserve">
+    <value>Recommendations</value>
+  </data>
+  <data name="Bangumi_CommunityRelations" xml:space="preserve">
+    <value>Related titles</value>
+  </data>
+  <data name="Bangumi_CommunityLoading" xml:space="preserve">
+    <value>Loading Bangumi community content…</value>
+  </data>
+  <data name="Bangumi_CommunityUnavailable" xml:space="preserve">
+    <value>This community section is temporarily unavailable. Bangumi's Private API may have changed; Open on Bangumi is still available.</value>
+  </data>
+  <data name="Bangumi_CommunityNoComments" xml:space="preserve">
+    <value>No short comments yet.</value>
+  </data>
+  <data name="Bangumi_CommunityNoReviews" xml:space="preserve">
+    <value>No reviews yet.</value>
+  </data>
+  <data name="Bangumi_CommunityNoTopics" xml:space="preserve">
+    <value>No discussions yet.</value>
+  </data>
+  <data name="Bangumi_CommunityNoRelated" xml:space="preserve">
+    <value>No recommendations or related titles.</value>
+  </data>
+  <data name="Bangumi_CommunityCountFormat" xml:space="preserve">
+    <value>Showing {0} of {1}</value>
+  </data>
+  <data name="Bangumi_CommunityRepliesFormat" xml:space="preserve">
+    <value>{0} replies</value>
+  </data>
+  <data name="Bangumi_CommunityRecommendationCountFormat" xml:space="preserve">
+    <value>Recommended by {0}</value>
+  </data>
+  <data name="Bangumi_CommunitySimilarityFormat" xml:space="preserve">
+    <value>Similarity {0:P0}</value>
+  </data>
+  <data name="Bangumi_CollectionWish" xml:space="preserve">
+    <value>Wish</value>
+  </data>
+  <data name="Bangumi_CollectionDone" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="Bangumi_CollectionDoing" xml:space="preserve">
+    <value>Watching</value>
+  </data>
+  <data name="Bangumi_CollectionOnHold" xml:space="preserve">
+    <value>On hold</value>
+  </data>
+  <data name="Bangumi_CollectionDropped" xml:space="preserve">
+    <value>Dropped</value>
+  </data>
+  <data name="Bangumi_ReviewDetailPageTitle" xml:space="preserve">
+    <value>Bangumi Review</value>
+  </data>
+  <data name="Bangumi_TopicDetailPageTitle" xml:space="preserve">
+    <value>Bangumi Discussion</value>
+  </data>
+  <data name="Bangumi_BackToSubject" xml:space="preserve">
+    <value>Back to title</value>
+  </data>
+  <data name="Bangumi_ReviewComments" xml:space="preserve">
+    <value>Comments</value>
+  </data>
+  <data name="Bangumi_TopicReplies" xml:space="preserve">
+    <value>Replies</value>
+  </data>
+  <data name="Bangumi_CommunityViewsFormat" xml:space="preserve">
+    <value>{0} views</value>
+  </data>
+  <data name="Bangumi_CommunityLoadedCountFormat" xml:space="preserve">
+    <value>Loaded {0}</value>
+  </data>
+  <data name="Bangumi_ReviewNoComments" xml:space="preserve">
+    <value>No comments yet.</value>
+  </data>
+  <data name="Bangumi_TopicNoReplies" xml:space="preserve">
+    <value>No replies yet.</value>
+  </data>
+  <data name="Bangumi_CommunityContentUnavailable" xml:space="preserve">
+    <value>Content is currently unavailable.</value>
+  </data>
+  <data name="Bangumi_UnknownUser" xml:space="preserve">
+    <value>Unknown user</value>
+  </data>
+  <data name="Bangumi_CommunityAllComments" xml:space="preserve">
+    <value>All comments</value>
+  </data>
+  <data name="Bangumi_WriteComment" xml:space="preserve">
+    <value>Post comment</value>
+  </data>
+  <data name="Bangumi_WriteCommentTitle" xml:space="preserve">
+    <value>Post a Bangumi comment</value>
+  </data>
+  <data name="Bangumi_WriteCommentPlaceholder" xml:space="preserve">
+    <value>Write your short comment…</value>
+  </data>
+  <data name="Bangumi_WriteCollectionState" xml:space="preserve">
+    <value>Collection state</value>
+  </data>
+  <data name="Bangumi_WriteRating" xml:space="preserve">
+    <value>Rating (0–10)</value>
+  </data>
+  <data name="Bangumi_WriteCollectionWarning" xml:space="preserve">
+    <value>Posting a short comment also updates this title's collection state and rating.</value>
+  </data>
+  <data name="Bangumi_WriteReply" xml:space="preserve">
+    <value>Reply</value>
+  </data>
+  <data name="Bangumi_WriteReplyPlaceholder" xml:space="preserve">
+    <value>Write your reply…</value>
+  </data>
+  <data name="Bangumi_WriteReviewReplyTitle" xml:space="preserve">
+    <value>Reply to review</value>
+  </data>
+  <data name="Bangumi_WriteTopicReplyTitle" xml:space="preserve">
+    <value>Reply to discussion</value>
+  </data>
+  <data name="Bangumi_Publish" xml:space="preserve">
+    <value>Publish</value>
+  </data>
+  <data name="Bangumi_CommunitySignInToInteract" xml:space="preserve">
+    <value>Sign in to Bangumi before using community interactions.</value>
+  </data>
+  <data name="Bangumi_CommunityWriteFailed" xml:space="preserve">
+    <value>Submission failed. Try again later or use the Bangumi website.</value>
+  </data>
+  <data name="Bangumi_TurnstileTitle" xml:space="preserve">
+    <value>Bangumi verification</value>
+  </data>
+  <data name="Bangumi_TurnstileUnavailable" xml:space="preserve">
+    <value>Bangumi has not yet allowed Eizo's Turnstile callback, so write actions are currently unavailable.</value>
+  </data>
+  <data name="Bangumi_CommentComposerHint" xml:space="preserve">
+    <value>Type here directly. Publishing requests Bangumi verification; if Eizo's callback is not yet allowlisted, your draft stays in place.</value>
+  </data>
+  <data name="Bangumi_CreateReview" xml:space="preserve">
+    <value>Post review</value>
+  </data>
+  <data name="Bangumi_CreateReviewTitlePlaceholder" xml:space="preserve">
+    <value>Review title</value>
+  </data>
+  <data name="Bangumi_CreateReviewContentPlaceholder" xml:space="preserve">
+    <value>Write your review (Bangumi BBCode supported)…</value>
+  </data>
+  <data name="Bangumi_CreateReviewTagsPlaceholder" xml:space="preserve">
+    <value>Tags, separated by commas</value>
+  </data>
+  <data name="Bangumi_CreateReviewPublic" xml:space="preserve">
+    <value>Public</value>
+  </data>
+  <data name="Bangumi_CreateTopic" xml:space="preserve">
+    <value>Start discussion</value>
+  </data>
+  <data name="Bangumi_CreateTopicTitlePlaceholder" xml:space="preserve">
+    <value>Discussion title</value>
+  </data>
+  <data name="Bangumi_CreateTopicContentPlaceholder" xml:space="preserve">
+    <value>Write your discussion (Bangumi BBCode supported)…</value>
+  </data>
+  <data name="Nav_AnimeBlogs" xml:space="preserve">
+    <value>Anime Blogs</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsSubtitle" xml:space="preserve">
+    <value>Latest blogs and reviews from Bangumi's anime channel.</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsEmpty" xml:space="preserve">
+    <value>No anime blogs are available.</value>
+  </data>
+  <data name="Bangumi_AnimeBlogsCountFormat" xml:space="preserve">
+    <value>Showing {0} of {1} blogs</value>
+  </data>
+  <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
+    <value>Replying to {0}</value>
+  </data>
 </root>
