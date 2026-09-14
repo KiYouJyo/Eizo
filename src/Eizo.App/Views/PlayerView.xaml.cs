@@ -1082,6 +1082,8 @@ public sealed partial class PlayerView : UserControl
         {
             _isUpdatingTrackSelections = false;
         }
+
+        UpdateControlAvailability();
     }
 
     private static string BuildTrackListKey(IEnumerable<int> ids) =>
