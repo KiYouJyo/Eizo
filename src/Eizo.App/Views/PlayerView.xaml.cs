@@ -551,6 +551,17 @@ public sealed partial class PlayerView : UserControl
                     session,
                     session.Token);
             }
+            else if (engine.Tracks.SelectedSubtitleTrackId is int remoteSelectedId)
+            {
+                var remoteTrack = engine.Tracks.SubtitleTracks
+                    .FirstOrDefault(track => track.Id == remoteSelectedId);
+
+                PlaybackFallbackDiagnostics.Write(
+                    "remote-auto-promotion-skipped",
+                    source,
+                    remoteTrack,
+                    "Automatic embedded extraction is disabled for RandomAccess playback.");
+            }
         }
         catch (OperationCanceledException)
         {
@@ -711,6 +722,11 @@ public sealed partial class PlayerView : UserControl
                 "embedded-subtitle",
                 "overlay-unsupported",
                 $"{track.Id}:{track.Language}:{track.Codec}:{Path.GetExtension(source.Uri.AbsolutePath)}:random={source.RandomAccessSource is not null}");
+            PlaybackFallbackDiagnostics.Write(
+                "overlay-unsupported",
+                source,
+                track,
+                $"extension={Path.GetExtension(source.Uri.AbsolutePath)}");
             return;
         }
 
@@ -745,6 +761,11 @@ public sealed partial class PlayerView : UserControl
                 "embedded-subtitle",
                 "parse-empty",
                 $"{track.Id}:{track.Language}:{track.Codec}:{Path.GetExtension(source.Uri.AbsolutePath)}");
+            PlaybackFallbackDiagnostics.Write(
+                "parse-empty",
+                source,
+                track,
+                $"extension={Path.GetExtension(source.Uri.AbsolutePath)}");
             return;
         }
 
@@ -829,6 +850,10 @@ public sealed partial class PlayerView : UserControl
                 "embedded-subtitle",
                 "promoted",
                 $"{track.Id}:{track.Language}:{track.Codec}");
+            PlaybackFallbackDiagnostics.Write(
+                "promoted",
+                source,
+                track);
         });
     }
 
