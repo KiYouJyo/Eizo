@@ -29,31 +29,21 @@ public sealed record CatalogMediaItemModel(
     public bool IsParsed => !string.IsNullOrWhiteSpace(ParsedTitle);
 
     public string DisplayTitle =>
-        Metadata is { IsResolved: true, CanonicalTitle.Length: > 0 } metadata
-            ? metadata.CanonicalTitle!
-            : IsParsed
-                ? ParsedTitle!
-                : SourceTitle;
+        MediaTitleDisplayResolver.ResolvePrimary(
+            Metadata,
+            IsParsed
+                ? ParsedTitle
+                : SourceTitle,
+            SourceTitle);
 
-    public string SecondaryTitle
-    {
-        get
-        {
-            if (Metadata is { IsResolved: true } metadata &&
-                !string.IsNullOrWhiteSpace(metadata.OriginalTitle) &&
-                !string.Equals(
-                    metadata.OriginalTitle,
-                    DisplayTitle,
-                    StringComparison.CurrentCultureIgnoreCase))
-            {
-                return metadata.OriginalTitle!;
-            }
-
-            return IsParsed && !string.IsNullOrWhiteSpace(NativeTitle)
-                ? NativeTitle!
-                : SourceTitle;
-        }
-    }
+    public string SecondaryTitle =>
+        MediaTitleDisplayResolver.ResolveSecondary(
+            Metadata,
+            DisplayTitle,
+            IsParsed && !string.IsNullOrWhiteSpace(NativeTitle)
+                ? NativeTitle
+                : null,
+            SourceTitle);
 
     public string? LocalPath =>
         Location is { Kind: MediaLocationKind.LocalFile }
