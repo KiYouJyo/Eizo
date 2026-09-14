@@ -159,28 +159,16 @@ internal static class CatalogSubjectAggregator
                 !string.IsNullOrWhiteSpace(value.ReleaseDate))
             .FirstOrDefault();
 
-        var title = !string.IsNullOrWhiteSpace(identity.TitleHint)
-            ? identity.TitleHint
-            : metadata?.CanonicalTitle;
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            title = representative.Recognition?.Title;
-        }
+        var title = MediaTitleDisplayResolver.ResolvePrimary(
+            metadata,
+            identity.TitleHint,
+            representative.Recognition?.Title,
+            representative.DisplayTitle);
 
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            title = representative.DisplayTitle;
-        }
-
-        var nativeTitle = metadata?.OriginalTitle;
-        if (string.IsNullOrWhiteSpace(nativeTitle) ||
-            string.Equals(
-                nativeTitle,
-                title,
-                StringComparison.CurrentCultureIgnoreCase))
-        {
-            nativeTitle = representative.SecondaryTitle;
-        }
+        var nativeTitle = MediaTitleDisplayResolver.ResolveSecondary(
+            metadata,
+            title,
+            representative.SecondaryTitle);
 
         var category = CatalogCategoryClassifier.ResolveSubject(
             identity,
