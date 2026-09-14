@@ -682,7 +682,7 @@ public sealed partial class PlayerView : UserControl
             // Cue-indexed extraction performs sparse WebDAV range reads only:
             // metadata, Cues, and referenced subtitle blocks. It never walks the
             // video payload and therefore remains safe alongside active playback.
-            budget.CancelAfter(TimeSpan.FromSeconds(12));
+            budget.CancelAfter(TimeSpan.FromSeconds(20));
 
             return await MatroskaCueSubtitleService.LoadDocumentAsync(
                 source,
