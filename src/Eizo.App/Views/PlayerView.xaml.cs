@@ -1561,16 +1561,16 @@ public sealed partial class PlayerView : UserControl
             _primarySubtitleUri is null &&
             _engine?.Tracks.SelectedSubtitleTrackId is not null;
 
-        PrimarySubtitlePositionLabel.IsEnabled =
-            primaryExternalOverlayActive;
-        PrimarySubtitlePositionValueText.IsEnabled =
-            primaryExternalOverlayActive;
+        PrimarySubtitlePositionLabel.Opacity =
+            primaryExternalOverlayActive ? 1d : 0.5d;
+        PrimarySubtitlePositionValueText.Opacity =
+            primaryExternalOverlayActive ? 1d : 0.5d;
         PrimarySubtitlePositionSlider.IsEnabled =
             primaryExternalOverlayActive;
-        PrimarySubtitleOpacityLabel.IsEnabled =
-            primaryExternalOverlayActive;
-        PrimarySubtitleOpacityValueText.IsEnabled =
-            primaryExternalOverlayActive;
+        PrimarySubtitleOpacityLabel.Opacity =
+            primaryExternalOverlayActive ? 1d : 0.5d;
+        PrimarySubtitleOpacityValueText.Opacity =
+            primaryExternalOverlayActive ? 1d : 0.5d;
         PrimarySubtitleOpacitySlider.IsEnabled =
             primaryExternalOverlayActive;
 
@@ -1583,16 +1583,16 @@ public sealed partial class PlayerView : UserControl
             hasEngineAndSource &&
             _secondarySubtitleUri is not null;
 
-        SecondarySubtitlePositionLabel.IsEnabled =
-            secondaryOverlayActive;
-        SecondarySubtitlePositionValueText.IsEnabled =
-            secondaryOverlayActive;
+        SecondarySubtitlePositionLabel.Opacity =
+            secondaryOverlayActive ? 1d : 0.5d;
+        SecondarySubtitlePositionValueText.Opacity =
+            secondaryOverlayActive ? 1d : 0.5d;
         SecondarySubtitlePositionSlider.IsEnabled =
             secondaryOverlayActive;
-        SecondarySubtitleOpacityLabel.IsEnabled =
-            secondaryOverlayActive;
-        SecondarySubtitleOpacityValueText.IsEnabled =
-            secondaryOverlayActive;
+        SecondarySubtitleOpacityLabel.Opacity =
+            secondaryOverlayActive ? 1d : 0.5d;
+        SecondarySubtitleOpacityValueText.Opacity =
+            secondaryOverlayActive ? 1d : 0.5d;
         SecondarySubtitleOpacitySlider.IsEnabled =
             secondaryOverlayActive;
 
