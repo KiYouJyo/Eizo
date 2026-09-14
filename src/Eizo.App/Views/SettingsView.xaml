@@ -417,6 +417,26 @@
                         ColumnSpacing="24"
                         ColumnDefinitions="*,Auto">
                     <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="PreferredSecondarySubtitleLanguageLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="PreferredSecondarySubtitleLanguageDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ComboBox x:Name="PreferredSecondarySubtitleLanguageCombo"
+                              Grid.Column="1"
+                              Width="180"
+                              HorizontalAlignment="Right"
+                              controls:TransientComboBoxTheme.Apply="True"
+                              SelectionChanged="PreferredSecondarySubtitleLanguageCombo_SelectionChanged" />
+                  </Grid>
+                  <Border Height="1"
+                          Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                  <Grid Padding="14"
+                        MinHeight="72"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
                       <TextBlock x:Name="RememberSubtitleTrackLabel"
                                  Style="{StaticResource SettingsRowLabelStyle}" />
                       <TextBlock x:Name="RememberSubtitleTrackDescription"
