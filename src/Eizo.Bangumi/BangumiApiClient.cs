@@ -126,6 +126,24 @@ internal sealed class BangumiApiClient
                 $"v0/subjects/{subjectId}"),
             cancellationToken);
 
+    public Task<string> GetSubjectCharactersAsync(
+        int subjectId,
+        CancellationToken cancellationToken) =>
+        GetStringAsync(
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"v0/subjects/{subjectId}/characters"),
+            cancellationToken);
+
+    public Task<string> GetSubjectPersonsAsync(
+        int subjectId,
+        CancellationToken cancellationToken) =>
+        GetStringAsync(
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"v0/subjects/{subjectId}/persons"),
+            cancellationToken);
+
     public Task<string> GetMyselfAsync(
         string accessToken,
         CancellationToken cancellationToken) =>
@@ -226,7 +244,7 @@ internal sealed class BangumiApiClient
             new MediaTypeWithQualityHeaderValue("application/json"));
         client.DefaultRequestHeaders.TryAddWithoutValidation(
             "User-Agent",
-            "KiYouJyo/Eizo/0.4.5 (Windows) (https://github.com/KiYouJyo/Eizo)");
+            "KiYouJyo/Eizo/0.4.7 (Windows) (https://github.com/KiYouJyo/Eizo)");
         return client;
     }
 
