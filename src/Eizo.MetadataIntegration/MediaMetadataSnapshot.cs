@@ -114,6 +114,12 @@ public sealed record MediaMetadataSnapshot(
 
     public bool IdentityBindingManual { get; init; }
 
+    public string? RefreshState { get; init; }
+
+    public DateTimeOffset? LastRefreshAttemptUtc { get; init; }
+
+    public List<MetadataProviderErrorSnapshot> RefreshErrors { get; init; } = [];
+
     public List<string> SearchTitles { get; init; } = [];
 
     public int CandidateCount { get; init; }

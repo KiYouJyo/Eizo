@@ -569,12 +569,15 @@ public sealed class MediaCatalogStore
             if (previous.TryGetValue(ItemKey(item), out var existing) &&
                 CanReuseMetadata(existing, item))
             {
+                var reusedMetadata =
+                    MediaMetadataRefreshPolicy.MarkReused(
+                        existing.Metadata!);
                 discovered[i] = item with
                 {
-                    Metadata = existing.Metadata,
+                    Metadata = reusedMetadata,
                     Media = MediaModelProjection.Project(
                         item.Recognition,
-                        existing.Metadata,
+                        reusedMetadata,
                         existing.Media),
                 };
             }
@@ -626,12 +629,18 @@ public sealed class MediaCatalogStore
             var recognition = entry.Item.Recognition!;
             var binding = IdentityBindings.GetHint(
                 entry.Item.Media?.Id);
-            var metadata = await EnrichMetadataWithTransportRetryAsync(
-                    metadataService,
-                    recognition,
-                    binding,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            var candidateMetadata =
+                await EnrichMetadataWithTransportRetryAsync(
+                        metadataService,
+                        recognition,
+                        binding,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            var metadata = MediaMetadataRefreshPolicy.Select(
+                entry.Item.Metadata,
+                candidateMetadata,
+                forceRefresh,
+                DateTimeOffset.UtcNow);
 
             if (metadata is not null)
             {
@@ -810,25 +819,8 @@ public sealed class MediaCatalogStore
 
     private static bool IsTransportMetadataFailure(
         MediaMetadataSnapshot metadata) =>
-        metadata.Status != MediaMetadataStatus.Resolved &&
-        metadata.Errors.Any(static error =>
-            string.Equals(
-                error.ErrorType,
-                nameof(HttpRequestException),
-                StringComparison.Ordinal) ||
-            string.Equals(
-                error.ErrorType,
-                nameof(TaskCanceledException),
-                StringComparison.Ordinal) ||
-            error.Message.Contains(
-                "429",
-                StringComparison.OrdinalIgnoreCase) ||
-            error.Message.Contains(
-                "503",
-                StringComparison.OrdinalIgnoreCase) ||
-            error.Message.Contains(
-                "timed out",
-                StringComparison.OrdinalIgnoreCase));
+        MediaMetadataRefreshPolicy.IsTransportFailure(
+            metadata);
 
     private static bool CanAttemptMetadata(
         CatalogMediaItemModel item) =>
@@ -1236,7 +1228,7 @@ public sealed class MediaCatalogStore
                     File.ReadAllText(StorePath),
                     SerializerOptions);
 
-            if (document is not { SchemaVersion: 1 or 2 })
+            if (document is not { SchemaVersion: 1 or 2 or 3 })
                 return [];
 
             var items = document.Items ?? [];
@@ -1279,7 +1271,7 @@ public sealed class MediaCatalogStore
                 $"{StorePath}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
 
             var document = new MediaCatalogStoreDocument(
-                SchemaVersion: 2,
+                SchemaVersion: 3,
                 Items: items.ToList());
 
             File.WriteAllText(
