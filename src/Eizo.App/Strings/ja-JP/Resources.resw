@@ -1278,4 +1278,13 @@
   <data name="Cache_StatusPaused" xml:space="preserve">
     <value>一時停止</value>
   </data>
+  <data name="Home_BangumiSearchPlaceholder" xml:space="preserve">
+    <value>Bangumi のアニメ作品を検索</value>
+  </data>
+  <data name="Home_BangumiSearchResultsTitleFormat" xml:space="preserve">
+    <value>「{0}」の Bangumi 検索結果</value>
+  </data>
+  <data name="Home_BangumiSearchResultsCountFormat" xml:space="preserve">
+    <value>{0} / {1} 件を表示</value>
+  </data>
 </root>
