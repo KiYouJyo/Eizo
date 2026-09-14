@@ -126,14 +126,24 @@
                       SelectionMode="None"
                       IsItemClickEnabled="True"
                       ItemClick="EpisodeList_ItemClick"
-                      ItemContainerStyle="{StaticResource SourceListItemStyle}">
+                      Padding="0,2,0,0">
+              <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem"
+                       BasedOn="{StaticResource SourceListItemStyle}">
+                  <Setter Property="Margin"
+                          Value="0,0,0,8" />
+                </Style>
+              </ListView.ItemContainerStyle>
               <ListView.ItemTemplate>
                 <DataTemplate x:DataType="models:EpisodeDisplayItemModel">
-                  <Grid Height="88"
-                        ColumnDefinitions="118,48,*,52"
-                        ColumnSpacing="10">
-                    <Border CornerRadius="7"
-                            Background="{ThemeResource EizoSelectionBrush}">
+                  <Grid Height="100"
+                        ColumnDefinitions="132,48,*,52"
+                        ColumnSpacing="12">
+                    <Border Width="132"
+                            Height="74"
+                            CornerRadius="7"
+                            Background="{ThemeResource EizoSelectionBrush}"
+                            VerticalAlignment="Center">
                       <Grid>
                         <FontIcon Glyph="&#xE8B9;"
                                   FontSize="24"
@@ -161,9 +171,13 @@
                       <TextBlock Text="{x:Bind NativeTitle}"
                                  Style="{StaticResource MetadataText}"
                                  TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{x:Bind PlaybackText}"
+                                 Style="{StaticResource MetadataText}"
+                                 TextTrimming="CharacterEllipsis" />
                       <ProgressBar Value="{x:Bind Progress}"
                                    Maximum="100"
-                                   Height="3" />
+                                   Height="3"
+                                   Margin="0,2,0,0" />
                     </StackPanel>
 
                     <Button Grid.Column="3"
