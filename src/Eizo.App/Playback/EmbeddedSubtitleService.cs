@@ -24,8 +24,12 @@ internal static class EmbeddedSubtitleService
         PlaybackSource? source,
         SubtitleTrackInfo track)
     {
-        if (source is null || BitmapCodecs.Contains(track.Codec ?? string.Empty))
+        if (source is null ||
+            BitmapCodecs.Contains(track.Codec ?? string.Empty) ||
+            (source.RandomAccessSource is null && !source.Uri.IsFile))
+        {
             return false;
+        }
 
         var extension = Path.GetExtension(
             Uri.UnescapeDataString(source.Uri.AbsolutePath));
