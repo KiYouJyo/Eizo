@@ -36,7 +36,9 @@ if ($catalogXaml -match '<Border[^>]+Margin="4,4,4,8"') {
 
 foreach ($required in @(
     'CatalogSubjectAggregator.Build(snapshot)',
-    'CreateArtwork(metadata?.PosterUrl',
+    'CatalogSubjectPresentation.Create(subject)',
+    'CreateArtwork(',
+    'presentation.PosterUrl',
     'CreateArtwork(item.Metadata?.PosterUrl',
     'MediaLocationKind.RemoteUri',
     'MediaLocationKind.LocalFile',
@@ -65,8 +67,9 @@ foreach ($required in @(
 }
 
 foreach ($required in @(
-    'ApplyPoster(metadata?.PosterUrl)',
-    'ApplyBackdrop(metadata?.BackdropUrl)',
+    'CatalogSubjectPresentation.Create(_subject)',
+    'ApplyPoster(presentation.PosterUrl)',
+    'ApplyBackdrop(presentation.BackdropUrl)',
     'EpisodeThumbnailUrl',
     'RebuildEpisodeList()',
     'MediaPlayRequested?.Invoke')) {
@@ -89,4 +92,4 @@ foreach ($required in @(
     }
 }
 
-Write-Host 'Eizo v0.4.1 library aggregation and ordering UI contract PASS.'
+Write-Host 'Eizo v0.5.10 library aggregation and unified presentation UI contract PASS.'
