@@ -1,12 +1,12 @@
 {
     "schemaVersion": 1,
     "product": {
-        "version": "0.5.7",
-        "packageVersion": "0.5.7.0",
+        "version": "0.5.8",
+        "packageVersion": "0.5.8.0",
         "title": {
-            "zh-CN": "跨数据源身份绑定",
-            "ja-JP": "クロスプロバイダー識別バインド",
-            "en-US": "Cross-provider Identity Bindings"
+            "zh-CN": "扫描与刮削持久化链",
+            "ja-JP": "スキャン・メタデータ永続化",
+            "en-US": "Scan & Metadata Persistence Pipeline"
         }
     },
     "channels": {

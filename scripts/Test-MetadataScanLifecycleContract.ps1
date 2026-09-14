@@ -107,20 +107,29 @@ if ($recognitionRefresh -notmatch 'Metadata\s*=\s*null') {
 $scanRunStart = $scanCoordinator.IndexOf('private async Task<MediaScanSnapshot> RunAsync(')
 $metadataRunStart = $scanCoordinator.IndexOf('private async Task<MediaScanSnapshot> RunMetadataAsync(')
 if ($scanRunStart -lt 0 -or $metadataRunStart -le $scanRunStart) {
-    throw 'Metadata source-operation contract violation: scan and scrape runners must be separate.'
+    throw 'Metadata source-operation contract violation: scan runner and explicit re-scrape runner must both remain available.'
 }
 
 $scanRun = $scanCoordinator.Substring(
     $scanRunStart,
     $metadataRunStart - $scanRunStart)
-if ($scanRun -match [regex]::Escape('_metadataService.Value')) {
-    throw 'Metadata source-operation contract violation: discovery scan must not invoke Metadata.'
+foreach ($required in @(
+    'MetadataAutoScrapeOnScan',
+    '_metadataService.Value',
+    'ScanSourceAsync(',
+    'metadataService,')) {
+    if ($scanRun -notmatch [regex]::Escape($required)) {
+        throw "Metadata source-operation contract violation: automatic source scan must perform optional Metadata before the single commit: $required"
+    }
+}
+if ($scanRun -match [regex]::Escape('StartMetadataAsync(')) {
+    throw 'Metadata source-operation contract violation: automatic source scan must not launch a second post-commit Metadata job.'
 }
 
 $metadataRun = $scanCoordinator.Substring($metadataRunStart)
 if ($metadataRun -notmatch [regex]::Escape('ScrapeSourceMetadataAsync(') -or
     $metadataRun -notmatch [regex]::Escape('_metadataService.Value')) {
-    throw 'Metadata source-operation contract violation: scrape runner must invoke the Metadata pipeline.'
+    throw 'Metadata source-operation contract violation: explicit re-scrape runner must invoke the Metadata pipeline.'
 }
 
 if ($sourcesView -notmatch '_sourceItems' -or
@@ -153,4 +162,4 @@ foreach ($column in @(
     }
 }
 
-Write-Host 'Eizo v0.3.7 independent scan/scrape lifecycle and unified diagnostics contract PASS.'
+Write-Host 'Eizo v0.5.8 single-commit scan + explicit re-scrape lifecycle and unified diagnostics contract PASS.'
