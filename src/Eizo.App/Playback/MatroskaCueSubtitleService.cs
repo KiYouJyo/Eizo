@@ -1198,6 +1198,12 @@ internal static class MatroskaCueSubtitleService
         WebDavCachedRandomAccessSource source,
         long length)
     {
+        private const int WindowSize = 64 * 1024;
+
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<
+            long,
+            Task<byte[]>> _windows = new();
+
         internal long Length { get; } = length;
 
         internal async Task<int> ReadAsync(
@@ -1205,10 +1211,84 @@ internal static class MatroskaCueSubtitleService
             Memory<byte> buffer,
             CancellationToken cancellationToken)
         {
+            if (offset < 0 || offset >= Length || buffer.Length == 0)
+                return 0;
+
+            // Small EBML header / subtitle-block reads are by far the dominant
+            // workload. Reading one aligned 64 KiB window turns the previous
+            // header+payload pair of HTTP requests into a single reusable range
+            // request without falling back to the 4 MiB playback cache.
+            if (buffer.Length <= WindowSize)
+            {
+                var windowStart =
+                    offset / WindowSize * WindowSize;
+                var windowOffset =
+                    checked((int)(offset - windowStart));
+
+                if (windowOffset + buffer.Length <= WindowSize)
+                {
+                    var window = await GetWindowAsync(
+                        windowStart,
+                        cancellationToken);
+
+                    if (windowOffset >= window.Length)
+                        return 0;
+
+                    var count = Math.Min(
+                        buffer.Length,
+                        window.Length - windowOffset);
+
+                    window.AsMemory(
+                        windowOffset,
+                        count).CopyTo(buffer);
+
+                    return count;
+                }
+            }
+
             return await source.ReadSparseAsync(
                 offset,
                 buffer,
                 cancellationToken);
+        }
+
+        private Task<byte[]> GetWindowAsync(
+            long windowStart,
+            CancellationToken cancellationToken)
+        {
+            return _windows.GetOrAdd(
+                windowStart,
+                _ => LoadWindowAsync(
+                    windowStart,
+                    cancellationToken));
+        }
+
+        private async Task<byte[]> LoadWindowAsync(
+            long windowStart,
+            CancellationToken cancellationToken)
+        {
+            var requested = checked(
+                (int)Math.Min(
+                    WindowSize,
+                    Length - windowStart));
+
+            if (requested <= 0)
+                return [];
+
+            var buffer = new byte[requested];
+            var read = await source.ReadSparseAsync(
+                windowStart,
+                buffer,
+                cancellationToken);
+
+            if (read == buffer.Length)
+                return buffer;
+
+            if (read <= 0)
+                return [];
+
+            Array.Resize(ref buffer, read);
+            return buffer;
         }
 
         internal async Task<bool> ReadExactAsync(
