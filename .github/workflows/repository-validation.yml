@@ -60,6 +60,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-ProviderRouterStage3Contract.ps1
 
+      - name: Validate Eizo 0.5.5 field-level merge contract
+        shell: pwsh
+        run: ./scripts/Test-FieldMergeStage3Contract.ps1
+
       - name: Validate Bangumi public integration contract
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1

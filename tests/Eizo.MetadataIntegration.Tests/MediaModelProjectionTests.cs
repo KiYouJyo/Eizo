@@ -92,6 +92,49 @@ public sealed class MediaModelProjectionTests
     }
 
     [Fact]
+    public void ScopedExternalIdProjectionPrefersMergedProviderDictionaries()
+    {
+        var metadata = Metadata(
+            provider: "bangumi",
+            id: "400602",
+            contentKind: "Animation",
+            externalIds: new Dictionary<string, string>
+            {
+                ["bangumi"] = "400602",
+                ["tmdb"] = "209867",
+            }) with
+        {
+            ProviderSeasonId = "legacy-season",
+            ProviderEpisodeId = "legacy-episode",
+            SeasonExternalIds = new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["tmdb"] = "3572",
+            },
+            EpisodeExternalIds = new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["bangumi"] = "ep-1",
+                ["tmdb"] = "62085",
+            },
+        };
+
+        var season =
+            MediaModelProjection.ProjectSeasonExternalIds(
+                metadata);
+        var episode =
+            MediaModelProjection.ProjectEpisodeExternalIds(
+                metadata);
+
+        Assert.Equal("3572", season["tmdb"]);
+        Assert.Equal("ep-1", episode["bangumi"]);
+        Assert.Equal("62085", episode["tmdb"]);
+        Assert.DoesNotContain(
+            "legacy-episode",
+            episode.Values);
+    }
+
+    [Fact]
     public void EpisodeExternalIdsUseExactProviderEpisodeIdentity()
     {
         var metadata = Metadata(
