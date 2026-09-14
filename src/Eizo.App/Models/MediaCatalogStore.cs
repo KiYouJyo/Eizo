@@ -24,6 +24,8 @@ public sealed class MediaCatalogStore
         };
 
     private static readonly MediaRecognitionService RecognitionService = new();
+    private static readonly MediaIdentityBindingStore IdentityBindings =
+        MediaIdentityBindingStore.Default;
 
     private static readonly TimeSpan[] MetadataTransportRetryDelays =
     [
@@ -622,9 +624,12 @@ public sealed class MediaCatalogStore
             }
 
             var recognition = entry.Item.Recognition!;
+            var binding = IdentityBindings.GetHint(
+                entry.Item.Media?.Id);
             var metadata = await EnrichMetadataWithTransportRetryAsync(
                     metadataService,
                     recognition,
+                    binding,
                     cancellationToken)
                 .ConfigureAwait(false);
 
@@ -638,6 +643,13 @@ public sealed class MediaCatalogStore
                         metadata,
                         entry.Item.Media),
                 };
+
+                if (metadata.IsResolved)
+                {
+                    IdentityBindings.UpsertAutomatic(
+                        entry.Item.Media?.Id,
+                        metadata);
+                }
 
                 switch (metadata.Status)
                 {
@@ -696,6 +708,7 @@ public sealed class MediaCatalogStore
     private static async Task<MediaMetadataSnapshot?> EnrichMetadataWithTransportRetryAsync(
         MediaMetadataService metadataService,
         MediaRecognitionSnapshot recognition,
+        MediaIdentityBindingHint? binding,
         CancellationToken cancellationToken)
     {
         MediaMetadataSnapshot? last = null;
@@ -709,7 +722,10 @@ public sealed class MediaCatalogStore
             try
             {
                 last = await metadataService
-                    .EnrichAsync(recognition, cancellationToken)
+                    .EnrichAsync(
+                        recognition,
+                        binding,
+                        cancellationToken)
                     .ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -877,6 +893,72 @@ public sealed class MediaCatalogStore
 
         Changed?.Invoke(this, EventArgs.Empty);
         return discovered.Length;
+    }
+
+    public void SetManualIdentityBinding(
+        string eizoMediaId,
+        string provider,
+        string providerSubjectId,
+        bool makePrimary = true)
+    {
+        IdentityBindings.SetManual(
+            eizoMediaId,
+            provider,
+            providerSubjectId,
+            makePrimary);
+        InvalidateMetadataForMedia(eizoMediaId);
+    }
+
+    public void ClearManualIdentityBinding(
+        string eizoMediaId,
+        string provider,
+        bool removeExternalId = false)
+    {
+        IdentityBindings.ClearManual(
+            eizoMediaId,
+            provider,
+            removeExternalId);
+        InvalidateMetadataForMedia(eizoMediaId);
+    }
+
+    public MediaIdentityBindingHint? GetIdentityBinding(
+        string eizoMediaId) =>
+        IdentityBindings.GetHint(eizoMediaId);
+
+    private void InvalidateMetadataForMedia(
+        string eizoMediaId)
+    {
+        var changed = false;
+        lock (_sync)
+        {
+            for (var index = 0; index < _items.Count; index++)
+            {
+                var item = _items[index];
+                if (!string.Equals(
+                        item.Media?.Id,
+                        eizoMediaId,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                _items[index] = item with
+                {
+                    Metadata = null,
+                    Media = MediaModelProjection.Project(
+                        item.Recognition,
+                        metadata: null,
+                        item.Media),
+                };
+                changed = true;
+            }
+
+            if (changed)
+                SaveCore(_items);
+        }
+
+        if (changed)
+            Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public void RemoveSourceItems(string sourceId)

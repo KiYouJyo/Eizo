@@ -110,6 +110,10 @@ public sealed record MediaMetadataSnapshot(
 
     public string? MergeProfile { get; init; }
 
+    public string? IdentityBindingProvider { get; init; }
+
+    public bool IdentityBindingManual { get; init; }
+
     public List<string> SearchTitles { get; init; } = [];
 
     public int CandidateCount { get; init; }
