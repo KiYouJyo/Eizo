@@ -662,7 +662,7 @@ public sealed partial class PlayerView : UserControl
         PlaybackSource source,
         SubtitleTrackInfo track) =>
         MatroskaCueSubtitleService.CanRenderAsOverlay(source, track) ||
-        CanRenderEmbeddedSubtitleAsOverlay(source, track);
+        EmbeddedSubtitleService.CanRenderAsOverlay(source, track);
 
     private static async Task<SubtitleDocument?>
         LoadEmbeddedSubtitleDocumentAsync(
