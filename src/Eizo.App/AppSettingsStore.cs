@@ -31,7 +31,8 @@ internal sealed record AppSettings(
     double LastPlaybackRate = 1d,
     bool RememberSubtitleTrack = true,
     string PreferredAudioLanguage = "auto",
-    string PreferredSubtitleLanguage = "auto");
+    string PreferredSubtitleLanguage = "auto",
+    string PreferredSecondarySubtitleLanguage = "auto");
 
 internal static class AppSettingsStore
 {
@@ -148,7 +149,10 @@ internal static class AppSettingsStore
                         loaded.PreferredAudioLanguage),
                 PreferredSubtitleLanguage =
                     NormalizeLanguagePreference(
-                        loaded.PreferredSubtitleLanguage)
+                        loaded.PreferredSubtitleLanguage),
+                PreferredSecondarySubtitleLanguage =
+                    NormalizeLanguagePreference(
+                        loaded.PreferredSecondarySubtitleLanguage)
             };
         }
         catch (IOException)
