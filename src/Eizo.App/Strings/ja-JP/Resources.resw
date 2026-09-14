@@ -247,6 +247,9 @@
   <data name="Playback_PrimarySubtitleOpacity" xml:space="preserve">
     <value>第1字幕の背景不透明度</value>
   </data>
+  <data name="Playback_NativeSubtitleStyleManagedByEngine" xml:space="preserve">
+    <value>内蔵字幕は再生エンジンで描画されます。位置と背景の設定は外部字幕にのみ適用されます。</value>
+  </data>
   <data name="Playback_SecondarySubtitleOpacity" xml:space="preserve">
     <value>第2字幕の背景不透明度</value>
   </data>
