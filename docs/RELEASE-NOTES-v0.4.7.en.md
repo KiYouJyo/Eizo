@@ -13,7 +13,7 @@ Eizo 0.4.7 reduces Settings to three focused pages—General, Metadata, and Play
 - Removes text-only rules such as the former Japanese-media display card; title selection is handled internally according to the app language.
 - Metadata adds automatic post-scan scraping, artwork enrichment, whole-library rescraping, and Metadata cache cleanup.
 - Automatic scraping preserves the established independent pipeline: scan first, then start a separate Metadata job.
-- Playback adds auto-play next episode, remembered playback rate, default rate, preferred audio language, and preferred subtitle language.
+- Playback adds auto-play next episode, remembered playback rate, default rate, preferred audio language, preferred subtitle language, and preferred second subtitle language.
 - Subtitle memory is semantic and title-scoped: embedded/external type, language, and name characteristics are stored instead of unstable per-episode Track IDs.
 - Resolved titles use Provider + SubjectId as the preference key; unresolved media falls back to Recognition title/year.
 - Primary/secondary subtitle positions and background opacity are editable from Settings and share the same persisted values used by the player.
