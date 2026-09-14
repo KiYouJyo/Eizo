@@ -33,10 +33,7 @@ $pin = Get-Content -LiteralPath $pinPath -Raw | ConvertFrom-Json
 $commit = [string]$pin.commit
 $version = [string]$pin.version
 $repository = [string]$pin.repository
-$patchPath = Join-Path $repoRoot ([string]$pin.patch)
-if (-not (Test-Path -LiteralPath $patchPath -PathType Leaf)) { throw "Playback patch is missing: $patchPath" }
-$patchHash = (Get-FileHash -LiteralPath $patchPath -Algorithm SHA256).Hash
-$sourceStamp = "$commit/$version/$patchHash"
+$sourceStamp = "$commit/$version"
 
 if ([string]::IsNullOrWhiteSpace($commit) -or
     [string]::IsNullOrWhiteSpace($version) -or
@@ -106,11 +103,11 @@ if ($dependencyCheckoutCreated) {
 else {
     $dependencyDiff = & git -C $dependencyRoot status --porcelain
     if ($dependencyDiff) {
-        & git -C $dependencyRoot apply --reverse --check $patchPath
-        if ($LASTEXITCODE -ne 0) { throw 'Dependency has local changes beyond the saved patch. Preserve them before restoring.' }
-        & git -C $dependencyRoot apply --reverse $patchPath
-        if ($LASTEXITCODE -ne 0) { throw 'Could not reverse the saved dependency patch.' }
-        if (& git -C $dependencyRoot status --porcelain) { throw 'Dependency still has local changes; refusing checkout.' }
+        Write-Host 'Resetting generated Eizo.Playback dependency checkout.'
+        & git -C $dependencyRoot reset --hard HEAD
+        if ($LASTEXITCODE -ne 0) { throw 'Could not reset the generated dependency checkout.' }
+        & git -C $dependencyRoot clean -fd
+        if ($LASTEXITCODE -ne 0) { throw 'Could not clean the generated dependency checkout.' }
     }
 
     & git -C $dependencyRoot checkout --detach $commit
@@ -119,10 +116,6 @@ else {
     }
 }
 
-& git -C $dependencyRoot apply --check $patchPath
-if ($LASTEXITCODE -ne 0) { throw 'Playback patch does not apply to the pinned commit.' }
-& git -C $dependencyRoot apply $patchPath
-if ($LASTEXITCODE -ne 0) { throw 'Playback patch failed.' }
 New-Item -ItemType Directory -Force -Path $feedRoot | Out-Null
 
 $solution = Join-Path $dependencyRoot 'Eizo.Playback.slnx'

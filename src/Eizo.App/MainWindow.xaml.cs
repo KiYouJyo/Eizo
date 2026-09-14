@@ -390,7 +390,11 @@ public sealed partial class MainWindow : Window
             case "sources":
                 return new SourcesView();
             case "cache":
-                return new CacheView();
+            {
+                var view = new CacheView();
+                WireCacheView(view);
+                return view;
+            }
             case "about":
                 return new AboutView();
             case "settings":
@@ -425,6 +429,98 @@ public sealed partial class MainWindow : Window
 
         view.MediaRequested += async (_, item) =>
             await OpenCatalogMediaAsync(item);
+    }
+
+    private void WireCacheView(
+        CacheView view)
+    {
+        view.PlaybackRequested += (_, request) =>
+            OpenCachedVideo(request);
+    }
+
+    private void OpenCachedVideo(
+        CachedVideoPlaybackRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (!WebDavMediaCacheKeys.TryParseGroupKey(
+                request.GroupKey,
+                out var sourceId,
+                out var mediaUri) ||
+            mediaUri is null ||
+            request.SizeBytes <= 0)
+        {
+            return;
+        }
+
+        var key =
+            "cached-media:" +
+            request.GroupKey;
+
+        if (_tabs.TryGetValue(
+                key,
+                out var existing))
+        {
+            SelectTab(existing.Key);
+            return;
+        }
+
+        var playbackSource =
+            PlaybackSource.FromRandomAccess(
+                mediaUri,
+                new CachedVideoRandomAccessSource(
+                    request.GroupKey,
+                    request.SizeBytes),
+                request.Title);
+
+        var item =
+            new CatalogMediaItemModel(
+                request.Title,
+                request.Title,
+                NativeTitle: null,
+                Category: null,
+                Meta: string.Empty,
+                Location: new MediaLocationModel(
+                    sourceId,
+                    MediaLocationKind.RemoteUri,
+                    mediaUri.AbsoluteUri,
+                    request.SizeBytes));
+
+        var queue =
+            new PlaybackQueueItemModel[]
+            {
+                new(
+                    0,
+                    "1",
+                    request.Title,
+                    request.Title,
+                    request.Source,
+                    playbackSource,
+                    item)
+            };
+
+        var state = new ShellTabState(
+            key,
+            ShellTabKind.Detail,
+            pageKey: null,
+            request.Title,
+            "\uE768",
+            new PlayerView(
+                request.Title,
+                request.Title,
+                playbackSource,
+                queue,
+                initialQueueIndex: 0),
+            navItem: null,
+            PreferredTabWidth)
+        {
+            MediaTitle = request.Title,
+            Episode = request.Title
+        };
+
+        AddTab(
+            state,
+            select: true);
     }
 
     private void WireBangumiAnimeBlogsView(
@@ -685,12 +781,16 @@ public sealed partial class MainWindow : Window
                      UriKind.Absolute,
                      out var remoteUri))
         {
+            WebDavMediaSourceProvider? webDavProvider = null;
+            WebDavMediaProbeResult? probe = null;
+
             if (MediaSourceProviderRegistry.TryGet(
                     MediaSourceKind.WebDav,
                     out var provider) &&
-                provider is WebDavMediaSourceProvider webDavProvider)
+                provider is WebDavMediaSourceProvider resolvedProvider)
             {
-                var probe = await webDavProvider.ProbeMediaAsync(
+                webDavProvider = resolvedProvider;
+                probe = await webDavProvider.ProbeMediaAsync(
                     webDavSource,
                     remoteUri);
 
@@ -703,20 +803,41 @@ public sealed partial class MainWindow : Window
                 }
             }
 
-            var credential =
-                MediaCredentialStore.Default.GetWebDav(
-                    webDavSource);
+            if (webDavProvider is not null &&
+                probe is
+                {
+                    SupportsRanges: true,
+                    ContentLength: > 0
+                })
+            {
+                playbackSource =
+                    PlaybackSource.FromRandomAccess(
+                        remoteUri,
+                        new WebDavCachedRandomAccessSource(
+                            webDavProvider,
+                            webDavSource,
+                            remoteUri,
+                            item.DisplayTitle,
+                            probe),
+                        item.DisplayTitle);
+            }
+            else
+            {
+                var credential =
+                    MediaCredentialStore.Default.GetWebDav(
+                        webDavSource);
 
-            var access = credential is null
-                ? null
-                : new PlaybackNetworkAccess(
-                    credential.UserName,
-                    credential.Password);
+                var access = credential is null
+                    ? null
+                    : new PlaybackNetworkAccess(
+                        credential.UserName,
+                        credential.Password);
 
-            playbackSource = PlaybackSource.FromUri(
-                remoteUri,
-                item.DisplayTitle,
-                access);
+                playbackSource = PlaybackSource.FromUri(
+                    remoteUri,
+                    item.DisplayTitle,
+                    access);
+            }
         }
         else
         {
@@ -900,6 +1021,25 @@ public sealed partial class MainWindow : Window
             } webDavSource)
         {
             return null;
+        }
+
+        if (MediaSourceProviderRegistry.TryGet(
+                MediaSourceKind.WebDav,
+                out var provider) &&
+            provider is WebDavMediaSourceProvider webDavProvider &&
+            webDavProvider.TryGetKnownRangeSupport(
+                webDavSource.Id,
+                out var supportsRanges) &&
+            supportsRanges)
+        {
+            return PlaybackSource.FromRandomAccess(
+                remoteUri,
+                new WebDavCachedRandomAccessSource(
+                    webDavProvider,
+                    webDavSource,
+                    remoteUri,
+                    item.DisplayTitle),
+                item.DisplayTitle);
         }
 
         var credential =

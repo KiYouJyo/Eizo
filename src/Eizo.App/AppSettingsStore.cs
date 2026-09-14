@@ -18,7 +18,11 @@ internal sealed record AppSettings(
     double PrimarySubtitleVerticalPosition = 12d,
     double SecondarySubtitleVerticalPosition = 24d,
     double PrimarySubtitleBackgroundOpacity = 70d,
-    double SecondarySubtitleBackgroundOpacity = 70d);
+    double SecondarySubtitleBackgroundOpacity = 70d,
+    bool CacheAutoCleanup = true,
+    long CacheLimitBytes = 32L * 1024 * 1024 * 1024,
+    long RemotePrecacheBytes = 256L * 1024 * 1024,
+    bool PreserveOfflineCache = true);
 
 internal static class AppSettingsStore
 {
@@ -49,7 +53,44 @@ internal static class AppSettingsStore
         try
         {
             if (!File.Exists(SettingsPath)) return new AppSettings();
-            return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath)) ?? new AppSettings();
+
+            var json = File.ReadAllText(SettingsPath);
+            var loaded =
+                JsonSerializer.Deserialize<AppSettings>(json) ??
+                new AppSettings();
+
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            return loaded with
+            {
+                CacheAutoCleanup =
+                    root.TryGetProperty(
+                        nameof(AppSettings.CacheAutoCleanup),
+                        out _)
+                        ? loaded.CacheAutoCleanup
+                        : true,
+                CacheLimitBytes =
+                    root.TryGetProperty(
+                        nameof(AppSettings.CacheLimitBytes),
+                        out _) &&
+                    loaded.CacheLimitBytes > 0
+                        ? loaded.CacheLimitBytes
+                        : 32L * 1024 * 1024 * 1024,
+                RemotePrecacheBytes =
+                    root.TryGetProperty(
+                        nameof(AppSettings.RemotePrecacheBytes),
+                        out _) &&
+                    loaded.RemotePrecacheBytes > 0
+                        ? loaded.RemotePrecacheBytes
+                        : 256L * 1024 * 1024,
+                PreserveOfflineCache =
+                    root.TryGetProperty(
+                        nameof(AppSettings.PreserveOfflineCache),
+                        out _)
+                        ? loaded.PreserveOfflineCache
+                        : true
+            };
         }
         catch (IOException)
         {

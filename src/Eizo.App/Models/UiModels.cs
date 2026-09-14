@@ -125,4 +125,132 @@ public sealed record EpisodeItemModel(
     string Status,
     double Progress = 0,
     CatalogMediaItemModel? MediaItem = null);
-public sealed record CacheItemModel(string Title, string Source, string Size, string LastAccessed);
+public sealed record CachedVideoPlaybackRequest(
+    string GroupKey,
+    string Title,
+    string Source,
+    long SizeBytes);
+
+public sealed class CacheItemModel : INotifyPropertyChanged
+{
+    private string _title;
+    private string _source;
+    private string _size;
+    private string _lastAccessed;
+    private double _progressPercent;
+    private string _progressText;
+    private string _status;
+    private bool _isCompleted;
+    private bool _isPaused;
+    private bool _isFailed;
+    private string? _groupKey;
+    private string? _taskKey;
+    private CachedVideoPlaybackRequest? _playbackRequest;
+    private string _deleteText;
+    private string _speedText;
+    private bool _isDownloading;
+
+    public CacheItemModel(
+        string id,
+        string title,
+        string source,
+        string size,
+        string lastAccessed,
+        double progressPercent = 100,
+        string progressText = "",
+        string status = "",
+        bool isCompleted = false,
+        string? groupKey = null,
+        string? taskKey = null,
+        CachedVideoPlaybackRequest? playbackRequest = null,
+        string deleteText = "",
+        bool isPaused = false,
+        bool isFailed = false,
+        string speedText = "",
+        bool isDownloading = false)
+    {
+        Id = id;
+        _title = title;
+        _source = source;
+        _size = size;
+        _lastAccessed = lastAccessed;
+        _progressPercent = progressPercent;
+        _progressText = progressText;
+        _status = status;
+        _isCompleted = isCompleted;
+        _groupKey = groupKey;
+        _taskKey = taskKey;
+        _playbackRequest = playbackRequest;
+        _deleteText = deleteText;
+        _isPaused = isPaused;
+        _isFailed = isFailed;
+        _speedText = speedText;
+        _isDownloading = isDownloading;
+    }
+
+    public string Id { get; }
+    public string Title { get => _title; private set => Set(ref _title, value); }
+    public string Source { get => _source; private set => Set(ref _source, value); }
+    public string Size { get => _size; private set => Set(ref _size, value); }
+    public string LastAccessed { get => _lastAccessed; private set => Set(ref _lastAccessed, value); }
+    public double ProgressPercent { get => _progressPercent; private set => Set(ref _progressPercent, value); }
+    public string ProgressText { get => _progressText; private set => Set(ref _progressText, value); }
+    public string Status { get => _status; private set => Set(ref _status, value); }
+    public bool IsCompleted { get => _isCompleted; private set => Set(ref _isCompleted, value); }
+    public bool IsPaused { get => _isPaused; private set => Set(ref _isPaused, value); }
+    public bool IsFailed { get => _isFailed; private set => Set(ref _isFailed, value); }
+    public string? GroupKey { get => _groupKey; private set => Set(ref _groupKey, value); }
+    public string? TaskKey { get => _taskKey; private set => Set(ref _taskKey, value); }
+    public CachedVideoPlaybackRequest? PlaybackRequest { get => _playbackRequest; private set => Set(ref _playbackRequest, value); }
+    public string DeleteText { get => _deleteText; private set => Set(ref _deleteText, value); }
+    public string SpeedText { get => _speedText; private set => Set(ref _speedText, value); }
+    public bool IsDownloading { get => _isDownloading; private set => Set(ref _isDownloading, value); }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public void UpdateFrom(CacheItemModel value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+
+        if (!string.Equals(
+                Id,
+                value.Id,
+                StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                "Cache item IDs must match.",
+                nameof(value));
+        }
+
+        Title = value.Title;
+        Source = value.Source;
+        Size = value.Size;
+        LastAccessed = value.LastAccessed;
+        ProgressPercent = value.ProgressPercent;
+        ProgressText = value.ProgressText;
+        Status = value.Status;
+        IsCompleted = value.IsCompleted;
+        IsPaused = value.IsPaused;
+        IsFailed = value.IsFailed;
+        GroupKey = value.GroupKey;
+        TaskKey = value.TaskKey;
+        PlaybackRequest = value.PlaybackRequest;
+        DeleteText = value.DeleteText;
+        SpeedText = value.SpeedText;
+        IsDownloading = value.IsDownloading;
+    }
+
+    private void Set<T>(
+        ref T field,
+        T value,
+        [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+            return;
+
+        field = value;
+        PropertyChanged?.Invoke(
+            this,
+            new PropertyChangedEventArgs(propertyName));
+    }
+}

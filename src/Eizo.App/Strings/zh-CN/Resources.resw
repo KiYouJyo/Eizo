@@ -416,13 +416,13 @@
     <value>密码</value>
   </data>
   <data name="Cache_Subtitle" xml:space="preserve">
-    <value>管理远程播放缓存与离线内容。</value>
+    <value>管理媒体、封面与网络数据缓存。</value>
   </data>
   <data name="Cache_Overview" xml:space="preserve">
     <value>缓存总览</value>
   </data>
   <data name="Cache_OverviewLimit" xml:space="preserve">
-    <value>已使用 / 32 GB 上限</value>
+    <value>已使用 / {0} 上限</value>
   </data>
   <data name="Cache_Clear" xml:space="preserve">
     <value>清理缓存</value>
@@ -1189,5 +1189,90 @@
   </data>
   <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
     <value>正在回复 {0}</value>
+  </data>
+
+  <data name="Cache_Limit" xml:space="preserve">
+    <value>缓存容量上限</value>
+  </data>
+  <data name="Cache_LimitDescription" xml:space="preserve">
+    <value>达到上限后，自动清理会按最近最少使用顺序释放空间。</value>
+  </data>
+  <data name="Cache_CategoryMedia" xml:space="preserve">
+    <value>媒体</value>
+  </data>
+  <data name="Cache_CategoryArtwork" xml:space="preserve">
+    <value>封面</value>
+  </data>
+  <data name="Cache_CategoryMetadata" xml:space="preserve">
+    <value>数据</value>
+  </data>
+  <data name="Cache_Empty" xml:space="preserve">
+    <value>当前没有缓存内容。</value>
+  </data>
+  <data name="Cache_StatusError" xml:space="preserve">
+    <value>无法读取缓存状态。</value>
+  </data>
+  <data name="Cache_ClearConfirmTitle" xml:space="preserve">
+    <value>清理全部缓存？</value>
+  </data>
+  <data name="Cache_ClearConfirmBody" xml:space="preserve">
+    <value>将删除媒体、封面和网络数据缓存。之后需要时会重新下载。</value>
+  </data>
+  <data name="Cache_ClearConfirmPrimary" xml:space="preserve">
+    <value>清理</value>
+  </data>
+
+  <data name="Cache_Diagnostics" xml:space="preserve">
+    <value>WebDAV 缓存诊断</value>
+  </data>
+  <data name="Cache_DiagnosticsDescription" xml:space="preserve">
+    <value>当前应用会话中的媒体分块命中与下载情况。</value>
+  </data>
+  <data name="Cache_HitRate" xml:space="preserve">
+    <value>缓存命中率</value>
+  </data>
+  <data name="Cache_MemoryHits" xml:space="preserve">
+    <value>内存命中</value>
+  </data>
+  <data name="Cache_DiskHits" xml:space="preserve">
+    <value>磁盘命中</value>
+  </data>
+  <data name="Cache_RangeDownloads" xml:space="preserve">
+    <value>Range 下载</value>
+  </data>
+
+  <data name="Cache_VideoCache" xml:space="preserve">
+    <value>视频缓存</value>
+  </data>
+  <data name="Cache_VideoCacheEmpty" xml:space="preserve">
+    <value>还没有缓存视频。可以在剧集详情页点击最右侧的缓存按钮下载。</value>
+  </data>
+  <data name="Cache_ApplicationCache" xml:space="preserve">
+    <value>应用缓存</value>
+  </data>
+  <data name="Cache_ApplicationCacheDescription" xml:space="preserve">
+    <value>Bangumi、字幕、元数据以及播放时产生的临时缓存统一计入这里。</value>
+  </data>
+  <data name="Cache_ClearApplicationCache" xml:space="preserve">
+    <value>清理应用缓存</value>
+  </data>
+
+  <data name="Cache_StatusDownloading" xml:space="preserve">
+    <value>下载中</value>
+  </data>
+  <data name="Cache_StatusCompleted" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="Cache_StatusFailed" xml:space="preserve">
+    <value>下载失败</value>
+  </data>
+  <data name="Cache_StatusPreparing" xml:space="preserve">
+    <value>正在准备下载…</value>
+  </data>
+  <data name="Cache_DeleteVideo" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Cache_StatusPaused" xml:space="preserve">
+    <value>已暂停</value>
   </data>
 </root>

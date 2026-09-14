@@ -110,7 +110,10 @@ foreach ($required in @(
 foreach ($required in @(
     'ParseContentBlocks',
     'https://lain.bgm.tv/pic/photo/l/',
-    'BarePhotoPathRegex')) {
+    'BarePhotoPathRegex',
+    'PhotoTagRegex',
+    'PhotoEqualsTagRegex',
+    'HtmlImageTagRegex')) {
     if (-not $communityText.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi blog content rendering contract missing: $required"
     }

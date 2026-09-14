@@ -93,6 +93,8 @@ public partial class App : Application
         {
             _window = MainWindow = new MainWindow();
 
+            _ = CacheRuntime.RunStartupMaintenanceAsync();
+
             ActivatePendingRedirectedWindow();
             _window.Activate();
             _ = ProcessPendingBangumiAuthAsync();

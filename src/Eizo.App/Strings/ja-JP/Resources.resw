@@ -416,13 +416,13 @@
     <value>パスワード</value>
   </data>
   <data name="Cache_Subtitle" xml:space="preserve">
-    <value>リモート再生キャッシュとオフラインコンテンツを管理します。</value>
+    <value>ダウンロード済み動画と、アプリが自動生成するキャッシュを管理します。</value>
   </data>
   <data name="Cache_Overview" xml:space="preserve">
     <value>キャッシュ概要</value>
   </data>
   <data name="Cache_OverviewLimit" xml:space="preserve">
-    <value>使用中 / 上限 32 GB</value>
+    <value>使用中 / 上限 {0}</value>
   </data>
   <data name="Cache_Clear" xml:space="preserve">
     <value>キャッシュを削除</value>
@@ -1189,5 +1189,90 @@
   </data>
   <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
     <value>{0} に返信中</value>
+  </data>
+
+  <data name="Cache_Limit" xml:space="preserve">
+    <value>キャッシュ上限</value>
+  </data>
+  <data name="Cache_LimitDescription" xml:space="preserve">
+    <value>上限に達すると、最終アクセスが古い項目から自動的に削除します。</value>
+  </data>
+  <data name="Cache_CategoryMedia" xml:space="preserve">
+    <value>メディア</value>
+  </data>
+  <data name="Cache_CategoryArtwork" xml:space="preserve">
+    <value>アートワーク</value>
+  </data>
+  <data name="Cache_CategoryMetadata" xml:space="preserve">
+    <value>データ</value>
+  </data>
+  <data name="Cache_Empty" xml:space="preserve">
+    <value>現在キャッシュされている内容はありません。</value>
+  </data>
+  <data name="Cache_StatusError" xml:space="preserve">
+    <value>キャッシュ状態を読み取れませんでした。</value>
+  </data>
+  <data name="Cache_ClearConfirmTitle" xml:space="preserve">
+    <value>すべてのキャッシュを削除しますか？</value>
+  </data>
+  <data name="Cache_ClearConfirmBody" xml:space="preserve">
+    <value>メディア、アートワーク、ネットワークデータのキャッシュを削除します。必要になった場合は再度ダウンロードされます。</value>
+  </data>
+  <data name="Cache_ClearConfirmPrimary" xml:space="preserve">
+    <value>削除</value>
+  </data>
+
+  <data name="Cache_Diagnostics" xml:space="preserve">
+    <value>WebDAV キャッシュ診断</value>
+  </data>
+  <data name="Cache_DiagnosticsDescription" xml:space="preserve">
+    <value>現在のアプリ セッションにおけるメディアブロックのヒットとダウンロード状況です。</value>
+  </data>
+  <data name="Cache_HitRate" xml:space="preserve">
+    <value>キャッシュヒット率</value>
+  </data>
+  <data name="Cache_MemoryHits" xml:space="preserve">
+    <value>メモリヒット</value>
+  </data>
+  <data name="Cache_DiskHits" xml:space="preserve">
+    <value>ディスクヒット</value>
+  </data>
+  <data name="Cache_RangeDownloads" xml:space="preserve">
+    <value>Range ダウンロード</value>
+  </data>
+
+  <data name="Cache_VideoCache" xml:space="preserve">
+    <value>動画キャッシュ</value>
+  </data>
+  <data name="Cache_VideoCacheEmpty" xml:space="preserve">
+    <value>キャッシュ済み動画はありません。エピソード詳細の右端にあるキャッシュボタンからダウンロードできます。</value>
+  </data>
+  <data name="Cache_ApplicationCache" xml:space="preserve">
+    <value>アプリキャッシュ</value>
+  </data>
+  <data name="Cache_ApplicationCacheDescription" xml:space="preserve">
+    <value>Bangumi、字幕、メタデータ、再生中に生成される一時キャッシュをまとめて管理します。</value>
+  </data>
+  <data name="Cache_ClearApplicationCache" xml:space="preserve">
+    <value>アプリキャッシュを削除</value>
+  </data>
+
+  <data name="Cache_StatusDownloading" xml:space="preserve">
+    <value>ダウンロード中</value>
+  </data>
+  <data name="Cache_StatusCompleted" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="Cache_StatusFailed" xml:space="preserve">
+    <value>ダウンロード失敗</value>
+  </data>
+  <data name="Cache_StatusPreparing" xml:space="preserve">
+    <value>ダウンロードを準備中…</value>
+  </data>
+  <data name="Cache_DeleteVideo" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="Cache_StatusPaused" xml:space="preserve">
+    <value>一時停止</value>
   </data>
 </root>

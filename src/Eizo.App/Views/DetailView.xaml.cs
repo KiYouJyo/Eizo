@@ -274,26 +274,12 @@ public sealed partial class DetailView : UserControl
             ? FormatEpisodeNumber(value)
             : "-";
 
-        var sourceStatus = episode.SourceCount > 1
-            ? L(
-                $"{episode.SourceCount} 个版本",
-                $"{episode.SourceCount} バージョン",
-                $"{episode.SourceCount} versions")
-            : episode.PrimaryItem.Location?.Kind switch
-            {
-                MediaLocationKind.RemoteUri =>
-                    L("网盘", "リモート", "Remote"),
-                MediaLocationKind.LocalFile =>
-                    L("本地", "ローカル", "Local"),
-                _ => string.Empty,
-            };
-
         return new EpisodeDisplayItemModel(
             number,
             episode.Title,
             episode.NativeTitle,
             string.Empty,
-            sourceStatus,
+            string.Empty,
             0,
             episode.PrimaryItem,
             CreateRemoteImage(
@@ -305,6 +291,62 @@ public sealed partial class DetailView : UserControl
         value == decimal.Truncate(value)
             ? decimal.Truncate(value).ToString(CultureInfo.CurrentCulture)
             : value.ToString("0.##", CultureInfo.CurrentCulture);
+
+    private async void CacheEpisodeButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button
+            {
+                Tag: EpisodeDisplayItemModel episode
+            } button ||
+            episode.MediaItem is not { } item ||
+            !WebDavVideoCacheService.Default.CanCache(item))
+        {
+            return;
+        }
+
+        var episodeLabel =
+            episode.Number == "-"
+                ? episode.Title
+                : L(
+                    $"第 {episode.Number} 集",
+                    $"第{episode.Number}話",
+                    $"Episode {episode.Number}");
+
+        button.IsEnabled = false;
+        button.Content =
+            new ProgressRing
+            {
+                Width = 18,
+                Height = 18,
+                IsActive = true
+            };
+
+        try
+        {
+            await VideoCacheDownloadManager.Default.StartAsync(
+                item,
+                episodeLabel);
+
+            button.Content =
+                new FontIcon
+                {
+                    Glyph = "\uE73E",
+                    FontSize = 15
+                };
+        }
+        catch
+        {
+            button.Content =
+                new FontIcon
+                {
+                    Glyph = "\uE896",
+                    FontSize = 15
+                };
+            button.IsEnabled = true;
+        }
+    }
 
     private void EpisodeList_ItemClick(
         object sender,

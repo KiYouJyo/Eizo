@@ -12,9 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/Eizo.Bangumi/Eizo.Bangumi.csproj" />
-    <Compile Include="../../src/Eizo.App/Models/BangumiCommunityText.cs"
-             Link="BangumiCommunityText.cs" />
+    <ProjectReference Include="../../src/Eizo.Cache/Eizo.Cache.csproj" />
   </ItemGroup>
 
   <ItemGroup>

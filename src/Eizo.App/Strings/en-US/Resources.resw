@@ -416,13 +416,13 @@
     <value>Password</value>
   </data>
   <data name="Cache_Subtitle" xml:space="preserve">
-    <value>Manage remote playback cache and offline content.</value>
+    <value>Manage downloaded videos and cache data generated automatically by Eizo.</value>
   </data>
   <data name="Cache_Overview" xml:space="preserve">
     <value>Cache overview</value>
   </data>
   <data name="Cache_OverviewLimit" xml:space="preserve">
-    <value>used / 32 GB limit</value>
+    <value>used / {0} limit</value>
   </data>
   <data name="Cache_Clear" xml:space="preserve">
     <value>Clear cache</value>
@@ -1189,5 +1189,90 @@
   </data>
   <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
     <value>Replying to {0}</value>
+  </data>
+
+  <data name="Cache_Limit" xml:space="preserve">
+    <value>Cache limit</value>
+  </data>
+  <data name="Cache_LimitDescription" xml:space="preserve">
+    <value>When the limit is reached, automatic cleanup frees the least recently used entries first.</value>
+  </data>
+  <data name="Cache_CategoryMedia" xml:space="preserve">
+    <value>Media</value>
+  </data>
+  <data name="Cache_CategoryArtwork" xml:space="preserve">
+    <value>Artwork</value>
+  </data>
+  <data name="Cache_CategoryMetadata" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="Cache_Empty" xml:space="preserve">
+    <value>There is no cached content yet.</value>
+  </data>
+  <data name="Cache_StatusError" xml:space="preserve">
+    <value>Could not read the cache status.</value>
+  </data>
+  <data name="Cache_ClearConfirmTitle" xml:space="preserve">
+    <value>Clear all cache?</value>
+  </data>
+  <data name="Cache_ClearConfirmBody" xml:space="preserve">
+    <value>This removes media, artwork, and network-data cache. Eizo will download it again when needed.</value>
+  </data>
+  <data name="Cache_ClearConfirmPrimary" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+
+  <data name="Cache_Diagnostics" xml:space="preserve">
+    <value>WebDAV cache diagnostics</value>
+  </data>
+  <data name="Cache_DiagnosticsDescription" xml:space="preserve">
+    <value>Media-block hits and downloads for the current app session.</value>
+  </data>
+  <data name="Cache_HitRate" xml:space="preserve">
+    <value>Cache hit rate</value>
+  </data>
+  <data name="Cache_MemoryHits" xml:space="preserve">
+    <value>Memory hits</value>
+  </data>
+  <data name="Cache_DiskHits" xml:space="preserve">
+    <value>Disk hits</value>
+  </data>
+  <data name="Cache_RangeDownloads" xml:space="preserve">
+    <value>Range downloads</value>
+  </data>
+
+  <data name="Cache_VideoCache" xml:space="preserve">
+    <value>Video cache</value>
+  </data>
+  <data name="Cache_VideoCacheEmpty" xml:space="preserve">
+    <value>No videos are cached yet. Use the cache button at the right of an episode card to download it.</value>
+  </data>
+  <data name="Cache_ApplicationCache" xml:space="preserve">
+    <value>App cache</value>
+  </data>
+  <data name="Cache_ApplicationCacheDescription" xml:space="preserve">
+    <value>Bangumi, subtitles, metadata, and temporary playback cache are grouped here.</value>
+  </data>
+  <data name="Cache_ClearApplicationCache" xml:space="preserve">
+    <value>Clear app cache</value>
+  </data>
+
+  <data name="Cache_StatusDownloading" xml:space="preserve">
+    <value>Downloading</value>
+  </data>
+  <data name="Cache_StatusCompleted" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="Cache_StatusFailed" xml:space="preserve">
+    <value>Download failed</value>
+  </data>
+  <data name="Cache_StatusPreparing" xml:space="preserve">
+    <value>Preparing download…</value>
+  </data>
+  <data name="Cache_DeleteVideo" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Cache_StatusPaused" xml:space="preserve">
+    <value>Paused</value>
   </data>
 </root>
