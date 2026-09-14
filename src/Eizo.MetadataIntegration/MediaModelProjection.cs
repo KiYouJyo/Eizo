@@ -55,6 +55,28 @@ public static class MediaModelProjection
             externalIds);
     }
 
+    public static Dictionary<string, string> ProjectEpisodeExternalIds(
+        MediaMetadataSnapshot? metadata)
+    {
+        if (metadata is not
+            {
+                IsResolved: true,
+                Provider.Length: > 0,
+                ProviderEpisodeId.Length: > 0,
+            })
+        {
+            return new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        return new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase)
+        {
+            [MediaExternalIds.NormalizeProvider(metadata.Provider)] =
+                metadata.ProviderEpisodeId,
+        };
+    }
+
     private static MediaFormat ResolveFormat(
         MediaRecognitionSnapshot? recognition,
         MediaMetadataSnapshot? metadata)

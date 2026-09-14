@@ -308,7 +308,11 @@ internal static class CatalogSubjectAggregator
                     MediaCatalogStore.ItemKey(episode.PrimaryItem),
                     episode.SeasonNumber,
                     episode.EpisodeNumber,
-                    episode.IsSpecial))
+                    episode.IsSpecial,
+                    SeasonExternalIds: null,
+                    EpisodeExternalIds:
+                        MediaModelProjection.ProjectEpisodeExternalIds(
+                            episode.PrimaryItem.Metadata)))
             .ToArray();
 
         return EizoMediaHierarchy.BuildSeries(media, seeds);

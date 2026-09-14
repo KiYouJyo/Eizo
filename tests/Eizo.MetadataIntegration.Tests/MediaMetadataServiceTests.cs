@@ -460,6 +460,100 @@ public sealed class MediaMetadataServiceTests
     }
 
     [Fact]
+    public async Task EnrichAsync_TmdbCarriesExactSeriesEpisodeIdentityAndStill()
+    {
+        using var cache = new TempDirectory();
+        var handler = new RecordingHandler(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+
+            if (path.EndsWith("/search/tv", StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "results": [
+                    {
+                      "id": 1396,
+                      "name": "Breaking Bad",
+                      "original_name": "Breaking Bad",
+                      "first_air_date": "2008-01-20",
+                      "popularity": 100.0,
+                      "genre_ids": [18]
+                    }
+                  ]
+                }
+                """);
+            }
+
+            if (path.EndsWith("/tv/1396", StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "id": 1396,
+                  "name": "Breaking Bad",
+                  "original_name": "Breaking Bad",
+                  "overview": "A chemistry teacher turns to crime.",
+                  "first_air_date": "2008-01-20",
+                  "number_of_episodes": 62,
+                  "poster_path": "/poster.jpg",
+                  "backdrop_path": "/backdrop.jpg",
+                  "genres": [{"id": 18, "name": "Drama"}],
+                  "external_ids": {
+                    "imdb_id": "tt0903747",
+                    "tvdb_id": 81189
+                  }
+                }
+                """);
+            }
+
+            if (path.EndsWith("/tv/1396/season/1", StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "episodes": [
+                    {
+                      "id": 62085,
+                      "episode_number": 1,
+                      "name": "Pilot",
+                      "overview": "Walter White begins his transformation.",
+                      "air_date": "2008-01-20",
+                      "still_path": "/pilot.jpg"
+                    }
+                  ]
+                }
+                """);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var service = new MediaMetadataService(
+            new MediaMetadataServiceOptions(
+                EnableBangumi: false,
+                TmdbReadAccessToken: "test-token",
+                CacheDirectory: cache.Path,
+                EnableArtworkProviders: false),
+            bangumiHttpClient: null,
+            tmdbHttpClient: new HttpClient(handler));
+
+        var result = await service.EnrichAsync(
+            Recognition("Breaking Bad", 2008, 1),
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(MediaMetadataStatus.Resolved, result.Status);
+        Assert.Equal("tmdb", result.Provider);
+        Assert.Equal("1396", result.ProviderSubjectId);
+        Assert.Equal("62085", result.ProviderEpisodeId);
+        Assert.Equal(1, result.EpisodeSeasonNumber);
+        Assert.Equal(1m, result.EpisodeNumber);
+        Assert.Equal("Pilot", result.EpisodeTitle);
+        Assert.EndsWith("/pilot.jpg", result.EpisodeThumbnailUrl);
+        Assert.Equal("1396", result.ExternalIds["tmdb"]);
+        Assert.Equal("tt0903747", result.ExternalIds["imdb"]);
+    }
+
+    [Fact]
     public async Task EnrichAsync_DoesNotCallNetworkForAmbiguousRecognition()
     {
         using var cache = new TempDirectory();

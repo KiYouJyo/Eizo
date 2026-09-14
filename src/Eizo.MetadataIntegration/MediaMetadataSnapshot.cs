@@ -53,6 +53,10 @@ public sealed record MediaMetadataSnapshot(
 
     public string? ContentKind { get; init; }
 
+    public int? EpisodeSeasonNumber { get; init; }
+
+    public string? ProviderEpisodeId { get; init; }
+
     public List<string> SearchTitles { get; init; } = [];
 
     public int CandidateCount { get; init; }
