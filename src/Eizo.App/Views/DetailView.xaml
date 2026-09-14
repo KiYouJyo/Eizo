@@ -219,19 +219,23 @@
                        TextWrapping="Wrap"
                        Visibility="Collapsed" />
 
-            <ItemsControl x:Name="CharactersList">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <ItemsWrapGrid Orientation="Horizontal"
-                                 ItemWidth="184" />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
+            <ItemsRepeater x:Name="CharactersList"
+                           HorizontalAlignment="Stretch">
+              <ItemsRepeater.Layout>
+                <UniformGridLayout Orientation="Horizontal"
+                                   MinItemWidth="176"
+                                   MinItemHeight="104"
+                                   MinColumnSpacing="10"
+                                   MinRowSpacing="10"
+                                   MaximumRowsOrColumns="2"
+                                   ItemsJustification="SpaceBetween"
+                                   ItemsStretch="Fill" />
+              </ItemsRepeater.Layout>
+              <ItemsRepeater.ItemTemplate>
                 <DataTemplate>
-                  <Border Width="176"
-                          MinHeight="104"
-                          Margin="0,0,8,8"
+                  <Border MinHeight="104"
                           Padding="10"
+                          HorizontalAlignment="Stretch"
                           CornerRadius="8"
                           Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                           BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -270,8 +274,8 @@
                     </Grid>
                   </Border>
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+              </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
 
             <Border Height="1"
                     Margin="0,4,0,0"
