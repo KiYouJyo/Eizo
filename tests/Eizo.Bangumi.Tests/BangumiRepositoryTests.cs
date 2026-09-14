@@ -319,4 +319,86 @@ public sealed class BangumiRepositoryTests
         }
     }
 
+    [Fact]
+    public async Task SearchAnime_UsesGlobalSubjectSearchAndAnimeFilter()
+    {
+        HttpMethod? method = null;
+        string? requestUri = null;
+        string? requestBody = null;
+
+        var handler = new CallbackHandler(request =>
+        {
+            method = request.Method;
+            requestUri = request.RequestUri!.ToString();
+            requestBody = request.Content is null
+                ? null
+                : request.Content.ReadAsStringAsync()
+                    .GetAwaiter()
+                    .GetResult();
+
+            return JsonResponse("""
+            {
+              "total": 1,
+              "limit": 10,
+              "offset": 0,
+              "data": [
+                {
+                  "id": 123,
+                  "type": 2,
+                  "name": "Sousou no Frieren",
+                  "name_cn": "葬送的芙莉莲",
+                  "summary": "",
+                  "date": "2023-09-29",
+                  "platform": "TV",
+                  "images": {
+                    "large": "https://lain.bgm.tv/frieren.jpg"
+                  },
+                  "eps": 28,
+                  "total_episodes": 28,
+                  "rating": {
+                    "rank": 10,
+                    "score": 9.0
+                  },
+                  "collection": {
+                    "wish": 1,
+                    "collect": 2,
+                    "doing": 3,
+                    "on_hold": 0,
+                    "dropped": 0
+                  }
+                }
+              ]
+            }
+            """);
+        });
+
+        using var client = CreateClient(handler);
+        var repository = new BangumiRepository(
+            new BangumiApiClient(client),
+            new BangumiCacheStore(CreateTempDirectory()));
+
+        var result = await repository.SearchAnimeAsync(
+            "芙莉莲",
+            limit: 10,
+            cancellationToken:
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpMethod.Post, method);
+        Assert.Contains(
+            "/v0/search/subjects?limit=10&offset=0",
+            requestUri,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "\"keyword\":\"芙莉莲\"",
+            requestBody,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "\"type\":[2]",
+            requestBody,
+            StringComparison.Ordinal);
+        Assert.Single(result.Items);
+        Assert.Equal(123, result.Items[0].Id);
+    }
+
+
 }
