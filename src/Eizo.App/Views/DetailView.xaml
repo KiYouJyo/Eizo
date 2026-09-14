@@ -202,111 +202,104 @@
 
         <Border Grid.Column="1"
                 Style="{StaticResource SectionCardStyle}">
-          <StackPanel Spacing="14">
-            <TextBlock x:Name="InfoTitle"
+          <StackPanel Spacing="16">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock x:Name="CastTitle"
+                         Style="{StaticResource SectionTitleText}" />
+              <ProgressRing x:Name="CreditsLoadingRing"
+                            Grid.Column="1"
+                            Width="20"
+                            Height="20"
+                            IsActive="False"
+                            Visibility="Collapsed" />
+            </Grid>
+
+            <TextBlock x:Name="CreditsStatusText"
+                       Style="{StaticResource MetadataText}"
+                       TextWrapping="Wrap"
+                       Visibility="Collapsed" />
+
+            <ItemsControl x:Name="CharactersList">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <ItemsWrapGrid Orientation="Horizontal"
+                                 ItemWidth="184" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Width="176"
+                          MinHeight="104"
+                          Margin="0,0,8,8"
+                          Padding="10"
+                          CornerRadius="8"
+                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                          BorderThickness="1">
+                    <Grid ColumnDefinitions="58,*"
+                          ColumnSpacing="10">
+                      <Border Width="56"
+                              Height="56"
+                              CornerRadius="28"
+                              Background="{ThemeResource EizoSelectionBrush}"
+                              VerticalAlignment="Top">
+                        <Grid>
+                          <FontIcon Glyph="&#xE77B;"
+                                    FontSize="22"
+                                    Opacity="0.24"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                          <Image Source="{Binding Image}"
+                                 Stretch="UniformToFill" />
+                        </Grid>
+                      </Border>
+                      <StackPanel Grid.Column="1"
+                                  Spacing="3">
+                        <TextBlock Text="{Binding Name}"
+                                   Style="{StaticResource CardTitleText}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Relation}"
+                                   Style="{StaticResource MetadataText}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding ActorText}"
+                                   Style="{StaticResource MetadataText}"
+                                   TextWrapping="Wrap"
+                                   MaxLines="2"
+                                   TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border Height="1"
+                    Margin="0,4,0,0"
+                    Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+            <TextBlock x:Name="StaffTitle"
                        Style="{StaticResource SectionTitleText}" />
 
-            <StackPanel Spacing="0">
-              <Grid MinHeight="44"
-                    ColumnDefinitions="112,*"
-                    ColumnSpacing="14">
-                <TextBlock x:Name="MediaTypeInfoLabel"
-                           Style="{StaticResource MetadataText}"
-                           VerticalAlignment="Center" />
-                <TextBlock x:Name="MediaTypeInfoValue"
-                           Grid.Column="1"
-                           Style="{StaticResource BodyText}"
-                           VerticalAlignment="Center"
-                           TextWrapping="Wrap" />
-              </Grid>
-              <Border Height="1"
-                      Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-              <Grid MinHeight="44"
-                    ColumnDefinitions="112,*"
-                    ColumnSpacing="14">
-                <TextBlock x:Name="ReleaseDateInfoLabel"
-                           Style="{StaticResource MetadataText}"
-                           VerticalAlignment="Center" />
-                <TextBlock x:Name="ReleaseDateInfoValue"
-                           Grid.Column="1"
-                           Style="{StaticResource BodyText}"
-                           VerticalAlignment="Center"
-                           TextWrapping="Wrap" />
-              </Grid>
-              <Border Height="1"
-                      Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-              <Grid x:Name="TotalEpisodesInfoRow"
-                    MinHeight="44"
-                    ColumnDefinitions="112,*"
-                    ColumnSpacing="14">
-                <TextBlock x:Name="TotalEpisodesInfoLabel"
-                           Style="{StaticResource MetadataText}"
-                           VerticalAlignment="Center" />
-                <TextBlock x:Name="TotalEpisodesInfoValue"
-                           Grid.Column="1"
-                           Style="{StaticResource BodyText}"
-                           VerticalAlignment="Center"
-                           TextWrapping="Wrap" />
-              </Grid>
-              <Border x:Name="TotalEpisodesInfoDivider"
-                      Height="1"
-                      Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-              <Grid MinHeight="44"
-                    ColumnDefinitions="112,*"
-                    ColumnSpacing="14">
-                <TextBlock x:Name="LocalEpisodesInfoLabel"
-                           Style="{StaticResource MetadataText}"
-                           VerticalAlignment="Center" />
-                <TextBlock x:Name="LocalEpisodesInfoValue"
-                           Grid.Column="1"
-                           Style="{StaticResource BodyText}"
-                           VerticalAlignment="Center"
-                           TextWrapping="Wrap" />
-              </Grid>
-              <Border Height="1"
-                      Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-              <Grid MinHeight="44"
-                    ColumnDefinitions="112,*"
-                    ColumnSpacing="14">
-                <TextBlock x:Name="MediaSourcesInfoLabel"
-                           Style="{StaticResource MetadataText}"
-                           VerticalAlignment="Center" />
-                <TextBlock x:Name="MediaSourcesInfoValue"
-                           Grid.Column="1"
-                           Style="{StaticResource BodyText}"
-                           VerticalAlignment="Center"
-                           TextWrapping="Wrap" />
-              </Grid>
-              <Border Height="1"
-                      Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-              <Grid MinHeight="44"
-                    ColumnDefinitions="112,*"
-                    ColumnSpacing="14">
-                <TextBlock x:Name="MetadataProviderInfoLabel"
-                           Style="{StaticResource MetadataText}"
-                           VerticalAlignment="Center" />
-                <TextBlock x:Name="MetadataProviderInfoValue"
-                           Grid.Column="1"
-                           Style="{StaticResource BodyText}"
-                           VerticalAlignment="Center"
-                           TextWrapping="Wrap" />
-              </Grid>
-            </StackPanel>
-
-            <StackPanel x:Name="ExternalIdsSection"
-                        Spacing="10"
-                        Margin="0,8,0,0">
-              <TextBlock x:Name="ExternalIdsTitle"
-                         Style="{StaticResource SectionTitleText}" />
-              <TextBlock x:Name="ExternalIdsText"
-                         Style="{StaticResource MetadataText}"
-                         TextWrapping="Wrap" />
-            </StackPanel>
+            <ItemsControl x:Name="StaffList">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid MinHeight="42"
+                        ColumnDefinitions="104,*"
+                        ColumnSpacing="12">
+                    <TextBlock Text="{Binding Relation}"
+                               Style="{StaticResource MetadataText}"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Name}"
+                               Style="{StaticResource BodyText}"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </StackPanel>
         </Border>
       </Grid>
