@@ -8,12 +8,12 @@ namespace Eizo.MetadataIntegration;
 
 public sealed record MediaMetadataServiceOptions(
     bool EnableBangumi = true,
-    string BangumiUserAgent = "KiYouJyo/Eizo/0.4.7 (https://github.com/KiYouJyo/Eizo)",
+    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.0 (https://github.com/KiYouJyo/Eizo)",
     string PreferredLanguage = "zh-CN",
     string? TmdbReadAccessToken = null,
     string? CacheDirectory = null,
     bool EnableArtworkProviders = true,
-    string AniListUserAgent = "KiYouJyo/Eizo/0.4.7 (https://github.com/KiYouJyo/Eizo)");
+    string AniListUserAgent = "KiYouJyo/Eizo/0.5.0 (https://github.com/KiYouJyo/Eizo)");
 
 public sealed class MediaMetadataService
 {
