@@ -108,9 +108,10 @@ public sealed class MediaMetadataServiceTests
     }
 
     [Fact]
-    public async Task EnrichAsync_FillsMissingAnimeBackdropFromAniList()
+    public async Task EnrichAsync_DoesNotCallAniListWhenRoadmapSkipsIt()
     {
         using var cache = new TempDirectory();
+        var aniListCalls = 0;
 
         var bangumiHandler = new RecordingHandler(request =>
         {
@@ -183,37 +184,10 @@ public sealed class MediaMetadataServiceTests
                 HttpStatusCode.NotFound);
         });
 
-        var aniListHandler = new RecordingHandler(request =>
+        var aniListHandler = new RecordingHandler(_ =>
         {
-            Assert.Equal(
-                "graphql.anilist.co",
-                request.RequestUri!.Host);
-
-            return Json("""
-                {
-                  "data": {
-                    "Page": {
-                      "media": [
-                        {
-                          "id": 154587,
-                          "title": {
-                            "romaji": "Sousou no Frieren",
-                            "english": "Frieren: Beyond Journey's End",
-                            "native": "葬送のフリーレン"
-                          },
-                          "synonyms": ["葬送的芙莉莲"],
-                          "startDate": { "year": 2023 },
-                          "bannerImage": "https://img.anilist.co/banner/frieren.jpg",
-                          "coverImage": {
-                            "extraLarge": "https://img.anilist.co/cover/frieren.jpg"
-                          },
-                          "popularity": 500000
-                        }
-                      ]
-                    }
-                  }
-                }
-                """);
+            aniListCalls++;
+            return Json("""{"data":{"Page":{"media":[]}}}""");
         });
 
         var service = new MediaMetadataService(
@@ -235,9 +209,8 @@ public sealed class MediaMetadataServiceTests
         Assert.Equal(
             MediaMetadataStatus.Resolved,
             result.Status);
-        Assert.Equal(
-            "https://img.anilist.co/banner/frieren.jpg",
-            result.BackdropUrl);
+        Assert.Equal(0, aniListCalls);
+        Assert.Null(result.BackdropUrl);
         Assert.Equal(
             "https://example.test/frieren-poster.jpg",
             result.PosterUrl);
