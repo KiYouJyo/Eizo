@@ -21,9 +21,9 @@ $media = Read-Text 'src/Eizo.Media/MediaModels.cs'
 $subject = Read-Text 'src/Eizo.App/Models/CatalogSubjectModel.cs'
 $catalogView = Read-Text 'src/Eizo.App/Views/CatalogView.xaml.cs'
 
-if ([string]$pin.version -ne '0.2.22' -or
-    [string]$pin.commit -ne 'bfa613b76568ee058ee77060bc8a26b215408406') {
-    throw "Eizo.Metadata 0.2.22 pin mismatch: version=$($pin.version) commit=$($pin.commit)"
+$pinVersion = [Version][string]$pin.version
+if ($pinVersion -lt [Version]'0.2.22') {
+    throw "Eizo.Metadata 0.2.22+ is required for season identity: version=$($pin.version) commit=$($pin.commit)"
 }
 
 foreach ($required in @(

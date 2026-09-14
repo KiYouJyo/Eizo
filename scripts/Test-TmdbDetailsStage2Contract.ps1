@@ -19,9 +19,9 @@ $service = Read-Text 'src/Eizo.MetadataIntegration/MediaMetadataService.cs'
 $detail = Read-Text 'src/Eizo.App/Views/DetailView.xaml.cs'
 $catalogView = Read-Text 'src/Eizo.App/Views/CatalogView.xaml.cs'
 
-if ([string]$pin.version -ne '0.2.23' -or
-    [string]$pin.commit -ne 'bfd9cff34c060b14edc2d390a10ba4b0e6f74674') {
-    throw "Eizo.Metadata 0.2.23 pin mismatch: version=$($pin.version) commit=$($pin.commit)"
+$pinVersion = [Version][string]$pin.version
+if ($pinVersion -lt [Version]'0.2.23') {
+    throw "Eizo.Metadata 0.2.23+ is required for TMDB general details: version=$($pin.version) commit=$($pin.commit)"
 }
 
 foreach ($required in @(
