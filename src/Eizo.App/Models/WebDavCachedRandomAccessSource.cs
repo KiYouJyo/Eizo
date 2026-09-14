@@ -73,6 +73,42 @@ internal sealed class WebDavCachedRandomAccessSource
             CanSeek: true);
     }
 
+    internal async ValueTask<int> ReadSparseAsync(
+        long offset,
+        Memory<byte> buffer,
+        CancellationToken cancellationToken = default)
+    {
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+
+        if (buffer.Length == 0)
+            return 0;
+
+        var probe = await EnsureProbeAsync(cancellationToken);
+        var length = probe.ContentLength ??
+            throw new IOException("The WebDAV media length is unknown.");
+
+        if (offset >= length)
+            return 0;
+
+        var requested = checked(
+            (int)Math.Min(buffer.Length, length - offset));
+
+        var bytes = await _provider.DownloadRangeAsync(
+            _source,
+            _mediaUri,
+            offset,
+            requested,
+            cancellationToken);
+
+        if (bytes.Length == 0)
+            return 0;
+
+        var count = Math.Min(bytes.Length, requested);
+        bytes.AsMemory(0, count).CopyTo(buffer);
+        return count;
+    }
+
     public async ValueTask<int> ReadAsync(
         long offset,
         Memory<byte> buffer,
