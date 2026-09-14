@@ -198,57 +198,6 @@ public sealed partial class DetailView : UserControl
 
         if (_subject.IsMovieSubject)
         {
-            TotalEpisodesInfoRow.Visibility = Visibility.Collapsed;
-            TotalEpisodesInfoDivider.Visibility = Visibility.Collapsed;
-            LocalEpisodesInfoLabel.Text =
-                L("本地影片", "ローカル作品", "Local films");
-        }
-        else
-        {
-            TotalEpisodesInfoRow.Visibility = Visibility.Visible;
-            TotalEpisodesInfoDivider.Visibility = Visibility.Visible;
-            LocalEpisodesInfoLabel.Text =
-                L("本地集数", "ローカル話数", "Local episodes");
-
-            var totalEpisodes =
-                metadata?.EpisodeCount is > 0
-                    ? metadata.EpisodeCount.Value
-                    : _subject.EpisodeCount;
-            TotalEpisodesInfoValue.Text =
-                totalEpisodes.ToString(CultureInfo.CurrentCulture);
-        }
-
-        LocalEpisodesInfoValue.Text =
-            _subject.EpisodeCount.ToString(
-                CultureInfo.CurrentCulture);
-        MediaSourcesInfoValue.Text =
-            ResolveMediaSourceSummary(_subject.Items);
-        MetadataProviderInfoValue.Text =
-            FormatMetadataProvider(provider);
-
-        var externalIds = metadata?.ExternalIds
-            .Where(pair =>
-                !IsSameProviderIdentifier(
-                    pair.Key,
-                    pair.Value,
-                    provider,
-                    subjectId))
-            .OrderBy(static pair => pair.Key)
-            .ToArray() ?? [];
-
-        ExternalIdsSection.Visibility =
-            externalIds.Length > 0
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-        ExternalIdsText.Text = externalIds.Length > 0
-            ? string.Join(
-                Environment.NewLine,
-                externalIds.Select(pair =>
-                    $"{FormatMetadataProvider(pair.Key)}: {pair.Value}"))
-            : string.Empty;
-
-        if (_subject.IsMovieSubject)
-        {
             SeasonComboBox.ItemsSource = Array.Empty<SeasonOption>();
             SeasonComboBox.SelectedIndex = -1;
             SeasonComboBox.Visibility = Visibility.Collapsed;
