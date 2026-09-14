@@ -91,6 +91,12 @@ public sealed record MediaMetadataSnapshot(
 
     public List<MediaPersonCreditSnapshot> Crew { get; init; } = [];
 
+    public string? RoutingPrimaryProvider { get; init; }
+
+    public List<string> RoutingFallbackProviders { get; init; } = [];
+
+    public string? RoutingReason { get; init; }
+
     public List<string> SearchTitles { get; init; } = [];
 
     public int CandidateCount { get; init; }

@@ -26,6 +26,8 @@ public sealed class MediaMetadataService
     private static readonly HttpClient SharedAniListHttpClient = CreateHttpClient();
 
     private readonly Core.MetadataResolver? _resolver;
+    private readonly IReadOnlyDictionary<string, Core.MetadataResolver>
+        _providerResolvers;
     private readonly Core.MetadataArtworkResolver? _artworkResolver;
     private readonly Core.IMetadataProvider? _tmdbProvider;
     private readonly string _preferredLanguage;
@@ -59,6 +61,13 @@ public sealed class MediaMetadataService
         var fileCache = new Core.FileMetadataCache(cacheRoot);
         var memoryCache = new Core.MemoryMetadataCache();
         var providers = new List<Core.IMetadataProvider>();
+        var providerResolvers =
+            new Dictionary<string, Core.MetadataResolver>(
+                StringComparer.OrdinalIgnoreCase);
+        var resolverOptions =
+            new Core.MetadataResolverOptions(
+                AutoResolveThreshold,
+                MinimumLead);
         var artworkProviders =
             new List<Core.IMetadataArtworkProvider>();
 
@@ -91,10 +100,15 @@ public sealed class MediaMetadataService
                 fileCache,
                 Core.MetadataCachePolicy.Default);
 
-            providers.Add(new Core.CachedMetadataProvider(
+            var cachedBangumi = new Core.CachedMetadataProvider(
                 persistentBangumi,
                 memoryCache,
-                Core.MetadataCachePolicy.Default));
+                Core.MetadataCachePolicy.Default);
+            providers.Add(cachedBangumi);
+            providerResolvers["bangumi"] =
+                new Core.MetadataResolver(
+                    [cachedBangumi],
+                    resolverOptions);
         }
 
         if (!string.IsNullOrWhiteSpace(options.TmdbReadAccessToken))
@@ -115,6 +129,10 @@ public sealed class MediaMetadataService
                 memoryCache,
                 Core.MetadataCachePolicy.Default);
             providers.Add(_tmdbProvider);
+            providerResolvers["tmdb"] =
+                new Core.MetadataResolver(
+                    [_tmdbProvider],
+                    resolverOptions);
 
             if (options.EnableArtworkProviders)
             {
@@ -130,13 +148,12 @@ public sealed class MediaMetadataService
             }
         }
 
+        _providerResolvers = providerResolvers;
         _resolver = providers.Count == 0
             ? null
             : new Core.MetadataResolver(
                 providers,
-                new Core.MetadataResolverOptions(
-                    AutoResolveThreshold,
-                    MinimumLead));
+                resolverOptions);
 
         _artworkResolver = artworkProviders.Count == 0
             ? null
@@ -193,11 +210,36 @@ public sealed class MediaMetadataService
         var providerRequest = request.ForProviderSearch();
 
         Core.MetadataEnrichmentResult result;
+        MediaProviderRoute route;
         try
         {
-            result = await _resolver
-                .EnrichAsync(request, cancellationToken)
+            var aggregateResolution = await _resolver
+                .ResolveAsync(request, cancellationToken)
                 .ConfigureAwait(false);
+            route = MediaProviderRouter.Choose(
+                aggregateResolution);
+
+            result = await EnrichWithRouteAsync(
+                    request,
+                    route,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            var combinedErrors = aggregateResolution.ProviderErrors
+                .Concat(result.ProviderErrors)
+                .Distinct()
+                .ToArray();
+
+            result = result with
+            {
+                Resolution = result.Resolution with
+                {
+                    Candidates =
+                        aggregateResolution.Candidates,
+                    ProviderErrors = combinedErrors,
+                },
+                ProviderErrors = combinedErrors,
+            };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -223,7 +265,8 @@ public sealed class MediaMetadataService
             result.Resolution.Best is null ||
             result.Subject is null)
         {
-            return WithResolutionDiagnostics(
+            return WithRouteDiagnostics(
+                WithResolutionDiagnostics(
                 new MediaMetadataSnapshot(
                     RuntimeVersion,
                     recognition.RuntimeVersion,
@@ -252,7 +295,8 @@ public sealed class MediaMetadataService
                     DateTimeOffset.UtcNow),
                 providerRequest,
                 result.Resolution,
-                result.Subject);
+                result.Subject),
+                route);
         }
 
         var subject = result.Subject;
@@ -392,7 +436,8 @@ public sealed class MediaMetadataService
             }
         }
 
-        return WithResolutionDiagnostics(
+        return WithRouteDiagnostics(
+            WithResolutionDiagnostics(
             new MediaMetadataSnapshot(
                 RuntimeVersion,
                 recognition.RuntimeVersion,
@@ -468,7 +513,8 @@ public sealed class MediaMetadataService
             },
             providerRequest,
             result.Resolution,
-            subject);
+            subject),
+            route);
     }
 
     public static MetadataRuntimeIdentity ProbeRuntime()
@@ -494,6 +540,53 @@ public sealed class MediaMetadataService
             providerPath,
             status);
     }
+
+    private async Task<Core.MetadataEnrichmentResult>
+        EnrichWithRouteAsync(
+            Core.MetadataSearchRequest request,
+            MediaProviderRoute route,
+            CancellationToken cancellationToken)
+    {
+        foreach (var provider in route.EnumerateProviders())
+        {
+            if (!_providerResolvers.TryGetValue(
+                    provider,
+                    out var resolver))
+            {
+                continue;
+            }
+
+            var candidate = await resolver
+                .EnrichAsync(
+                    request,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (candidate.Resolution.IsResolved &&
+                candidate.Resolution.Best is not null &&
+                candidate.Subject is not null)
+            {
+                return candidate;
+            }
+        }
+
+        return await _resolver!
+            .EnrichAsync(
+                request,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static MediaMetadataSnapshot WithRouteDiagnostics(
+        MediaMetadataSnapshot snapshot,
+        MediaProviderRoute route) =>
+        snapshot with
+        {
+            RoutingPrimaryProvider =
+                route.PrimaryProvider,
+            RoutingFallbackProviders =
+                route.FallbackProviders.ToList(),
+            RoutingReason = route.Reason,
+        };
 
     private static MediaMetadataSnapshot BuildFailure(
         HostRecognition.MediaRecognitionSnapshot recognition,
