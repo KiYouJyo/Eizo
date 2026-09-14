@@ -80,6 +80,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-RealContentUiV059Contract.ps1
 
+      - name: Validate Eizo 0.5.10 real-content presentation contract
+        shell: pwsh
+        run: ./scripts/Test-RealContentPresentationV0510Contract.ps1
+
       - name: Validate Bangumi public integration contract
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1
