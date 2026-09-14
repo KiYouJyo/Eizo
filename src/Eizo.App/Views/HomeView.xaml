@@ -225,7 +225,8 @@
                 Click="SearchResultsLoadMoreButton_Click" />
       </Grid>
 
-      <Border Grid.Row="4"
+      <Border x:Name="HeroPanel"
+              Grid.Row="4"
               MinHeight="250"
               CornerRadius="10"
               Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -297,7 +298,8 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Row="6"
+      <Grid x:Name="ContinueHeader"
+            Grid.Row="6"
             ColumnDefinitions="*,Auto">
         <TextBlock x:Name="ContinueTitle"
                    Style="{StaticResource SectionTitleText}" />
@@ -315,7 +317,8 @@
             ColumnSpacing="12"
             RowSpacing="12" />
 
-      <Grid Grid.Row="10"
+      <Grid x:Name="SeasonHeader"
+            Grid.Row="10"
             ColumnDefinitions="*,Auto,Auto"
             ColumnSpacing="8">
         <StackPanel Spacing="2">
