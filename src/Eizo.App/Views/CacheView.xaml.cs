@@ -104,8 +104,6 @@ public sealed partial class CacheView : UserControl
                 await CacheRuntime.Store.GetSnapshotAsync();
 
             ApplySnapshot(snapshot);
-            ApplyDiagnostics(
-                WebDavCacheDiagnostics.Snapshot());
             CacheStatusText.Visibility =
                 Visibility.Collapsed;
         }
@@ -127,16 +125,17 @@ public sealed partial class CacheView : UserControl
     {
         _items.Clear();
 
-        var groupedEntryIds =
-            new HashSet<string>(
-                StringComparer.Ordinal);
+        var videoEntries =
+            snapshot.Entries
+                .Where(static entry =>
+                    entry.Category ==
+                        CacheCategory.Media &&
+                    entry.Pinned &&
+                    !string.IsNullOrWhiteSpace(
+                        entry.GroupKey))
+                .ToArray();
 
-        foreach (var group in snapshot.Entries
-                     .Where(static entry =>
-                         entry.Category ==
-                             CacheCategory.Media &&
-                         !string.IsNullOrWhiteSpace(
-                             entry.GroupKey))
+        foreach (var group in videoEntries
                      .GroupBy(
                          static entry =>
                              entry.GroupKey!,
@@ -165,31 +164,17 @@ public sealed partial class CacheView : UserControl
                         .ToString(
                             "g",
                             CultureInfo.CurrentCulture)));
-
-            foreach (var entry in entries)
-                groupedEntryIds.Add(entry.Id);
         }
 
-        foreach (var entry in snapshot.Entries)
-        {
-            if (groupedEntryIds.Contains(
-                    entry.Id))
-            {
-                continue;
-            }
-
-            _items.Add(
-                new CacheItemModel(
-                    entry.Id,
-                    entry.DisplayName,
-                    entry.Source,
-                    FormatBytes(entry.SizeBytes),
-                    entry.LastAccessedUtc
-                        .ToLocalTime()
-                        .ToString(
-                            "g",
-                            CultureInfo.CurrentCulture)));
-        }
+        var videoCacheBytes =
+            videoEntries.Sum(
+                static entry =>
+                    entry.SizeBytes);
+        var applicationCacheBytes =
+            Math.Max(
+                0,
+                snapshot.TotalBytes -
+                videoCacheBytes);
 
         var limit =
             Math.Max(
@@ -218,32 +203,16 @@ public sealed partial class CacheView : UserControl
                 CultureInfo.CurrentCulture) +
             "%";
 
-        MediaSizeText.Text =
-            FormatCategory(
-                "Cache_CategoryMedia",
-                GetCategoryBytes(
-                    snapshot,
-                    CacheCategory.Media));
-
-        ArtworkSizeText.Text =
-            FormatCategory(
-                "Cache_CategoryArtwork",
-                GetCategoryBytes(
-                    snapshot,
-                    CacheCategory.Artwork));
-
-        MetadataSizeText.Text =
-            FormatCategory(
-                "Cache_CategoryMetadata",
-                GetCategoryBytes(
-                    snapshot,
-                    CacheCategory.Metadata) +
-                GetCategoryBytes(
-                    snapshot,
-                    CacheCategory.Subtitles) +
-                GetCategoryBytes(
-                    snapshot,
-                    CacheCategory.Other));
+        VideoCacheSizeText.Text =
+            T("Cache_VideoCache") +
+            " " +
+            FormatBytes(videoCacheBytes);
+        ApplicationCacheSizeText.Text =
+            T("Cache_ApplicationCache") +
+            " " +
+            FormatBytes(applicationCacheBytes);
+        ApplicationCacheValue.Text =
+            FormatBytes(applicationCacheBytes);
 
         EmptyStateText.Visibility =
             _items.Count == 0
@@ -251,82 +220,18 @@ public sealed partial class CacheView : UserControl
                 : Visibility.Collapsed;
     }
 
-    private void ApplyDiagnostics(
-        WebDavCacheDiagnosticsSnapshot diagnostics)
-    {
-        HitRateValue.Text =
-            diagnostics.TotalBlockResolutions == 0
-                ? "—"
-                : diagnostics.HitRate.ToString(
-                    "P1",
-                    CultureInfo.CurrentCulture);
-
-        MemoryHitsValue.Text =
-            diagnostics.MemoryHits.ToString(
-                "N0",
-                CultureInfo.CurrentCulture);
-
-        DiskHitsValue.Text =
-            diagnostics.DiskHits.ToString(
-                "N0",
-                CultureInfo.CurrentCulture);
-
-        RangeDownloadsValue.Text =
-            diagnostics.RangeDownloads.ToString(
-                "N0",
-                CultureInfo.CurrentCulture) +
-            " · " +
-            FormatBytes(
-                diagnostics.DownloadedBytes);
-    }
-
-    private string FormatCategory(
-        string key,
-        long bytes) =>
-        T(key) +
-        " " +
-        FormatBytes(bytes);
-
-    private static long GetCategoryBytes(
-        CacheSnapshot snapshot,
-        CacheCategory category) =>
-        snapshot.CategoryBytes.TryGetValue(
-            category,
-            out var bytes)
-            ? bytes
-            : 0;
-
-    private async void ClearCacheButton_Click(
+    private async void ClearApplicationCacheButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (_busy ||
-            XamlRoot is null)
-        {
+        if (_busy)
             return;
-        }
-
-        var dialog = new ContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = T("Cache_ClearConfirmTitle"),
-            Content = T("Cache_ClearConfirmBody"),
-            PrimaryButtonText = T("Cache_ClearConfirmPrimary"),
-            CloseButtonText = T("Common_Cancel"),
-            DefaultButton = ContentDialogButton.Close
-        };
-
-        if (await dialog.ShowAsync() !=
-            ContentDialogResult.Primary)
-        {
-            return;
-        }
 
         SetBusy(true);
         try
         {
             await CacheRuntime.Store.ClearAsync(
-                preservePinned: false);
+                preservePinned: true);
         }
         finally
         {
@@ -359,7 +264,8 @@ public sealed partial class CacheView : UserControl
                     StringComparison.Ordinal))
             {
                 await CacheRuntime.Store.ClearGroupAsync(
-                    id[groupPrefix.Length..]);
+                    id[groupPrefix.Length..],
+                    preservePinned: false);
             }
             else
             {
@@ -466,7 +372,7 @@ public sealed partial class CacheView : UserControl
     {
         _busy = busy;
 
-        ClearCacheButton.IsEnabled = !busy;
+        ClearApplicationCacheButton.IsEnabled = !busy;
         AutoCleanupToggle.IsEnabled = !busy;
         CacheLimitCombo.IsEnabled = !busy;
         PrecacheSizeCombo.IsEnabled = !busy;
@@ -479,15 +385,14 @@ public sealed partial class CacheView : UserControl
         PageTitle.Text = T("Nav_Cache");
         PageSubtitle.Text = T("Cache_Subtitle");
         OverviewTitle.Text = T("Cache_Overview");
-        ClearCacheButton.Content = T("Cache_Clear");
-        DiagnosticsTitle.Text = T("Cache_Diagnostics");
-        DiagnosticsDescription.Text =
-            T("Cache_DiagnosticsDescription");
-        HitRateLabel.Text = T("Cache_HitRate");
-        MemoryHitsLabel.Text = T("Cache_MemoryHits");
-        DiskHitsLabel.Text = T("Cache_DiskHits");
-        RangeDownloadsLabel.Text =
-            T("Cache_RangeDownloads");
+
+        ApplicationCacheTitle.Text =
+            T("Cache_ApplicationCache");
+        ApplicationCacheDescription.Text =
+            T("Cache_ApplicationCacheDescription");
+        ClearApplicationCacheButton.Content =
+            T("Cache_ClearApplicationCache");
+
         PolicyTitle.Text = T("Cache_Policy");
         AutoCleanupTitle.Text = T("Cache_AutoCleanup");
         AutoCleanupDescription.Text =
@@ -501,8 +406,11 @@ public sealed partial class CacheView : UserControl
         KeepOfflineTitle.Text = T("Cache_KeepOffline");
         KeepOfflineDescription.Text =
             T("Cache_KeepOfflineDescription");
-        ContentsTitle.Text = T("Cache_Contents");
-        EmptyStateText.Text = T("Cache_Empty");
+
+        VideoCacheTitle.Text =
+            T("Cache_VideoCache");
+        EmptyStateText.Text =
+            T("Cache_VideoCacheEmpty");
     }
 
     private static int FindClosestIndex(

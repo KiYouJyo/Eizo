@@ -135,6 +135,13 @@ internal static partial class BangumiCommunityText
 
         var target = WebUtility.HtmlDecode(value).Trim();
 
+        if (target.StartsWith(
+                "//",
+                StringComparison.Ordinal))
+        {
+            target = "https:" + target;
+        }
+
         if (Uri.TryCreate(
                 target,
                 UriKind.Absolute,

@@ -7,7 +7,6 @@ namespace Eizo.Models;
 internal sealed class WebDavCachedRandomAccessSource
     : IPlaybackRandomAccessSource
 {
-    private const int BlockSize = 4 * 1024 * 1024;
     private const int MemoryBlockLimit = 4;
     private const int GlobalMaintenanceWriteInterval = 8;
 
@@ -56,7 +55,10 @@ internal sealed class WebDavCachedRandomAccessSource
             })
         {
             _probe = initialProbe;
-            _groupKey = BuildGroupKey(initialProbe);
+            _groupKey = WebDavMediaCacheKeys.BuildGroupKey(
+                _source,
+                _mediaUri,
+                initialProbe);
         }
     }
 
@@ -107,12 +109,12 @@ internal sealed class WebDavCachedRandomAccessSource
 
             var blockIndex =
                 position /
-                BlockSize;
+                WebDavMediaCacheKeys.BlockSize;
             var blockOffset =
                 checked(
                     (int)(
                         position %
-                        BlockSize));
+                        WebDavMediaCacheKeys.BlockSize));
 
             var block =
                 await GetBlockAsync(
@@ -207,7 +209,10 @@ internal sealed class WebDavCachedRandomAccessSource
             }
 
             _probe = probe;
-            _groupKey = BuildGroupKey(probe);
+            _groupKey = WebDavMediaCacheKeys.BuildGroupKey(
+                _source,
+                _mediaUri,
+                probe);
             return probe;
         }
         finally
@@ -255,7 +260,7 @@ internal sealed class WebDavCachedRandomAccessSource
             var start =
                 checked(
                     blockIndex *
-                    (long)BlockSize);
+                    (long)WebDavMediaCacheKeys.BlockSize);
 
             if (start >= length)
                 return [];
@@ -263,14 +268,17 @@ internal sealed class WebDavCachedRandomAccessSource
             var expected =
                 checked(
                     (int)Math.Min(
-                        BlockSize,
+                        WebDavMediaCacheKeys.BlockSize,
                         length - start));
 
             var groupKey =
                 _groupKey ??
-                BuildGroupKey(probe);
+                WebDavMediaCacheKeys.BuildGroupKey(
+                    _source,
+                    _mediaUri,
+                    probe);
             var cacheKey =
-                BuildBlockKey(
+                WebDavMediaCacheKeys.BuildBlockKey(
                     groupKey,
                     blockIndex);
 
@@ -365,7 +373,7 @@ internal sealed class WebDavCachedRandomAccessSource
             0;
         var start =
             blockIndex *
-            (long)BlockSize;
+            (long)WebDavMediaCacheKeys.BlockSize;
 
         if (start >= length ||
             _memoryBlocks.ContainsKey(blockIndex) ||
@@ -426,34 +434,4 @@ internal sealed class WebDavCachedRandomAccessSource
         }
     }
 
-    private string BuildGroupKey(
-        WebDavMediaProbeResult probe)
-    {
-        var version =
-            !string.IsNullOrWhiteSpace(
-                probe.EntityTag)
-                ? "etag:" + probe.EntityTag
-                : probe.LastModified is { } modified
-                    ? "modified:" +
-                      modified.UtcDateTime.Ticks.ToString(
-                          System.Globalization.CultureInfo.InvariantCulture)
-                    : "length:" +
-                      probe.ContentLength?.ToString(
-                          System.Globalization.CultureInfo.InvariantCulture);
-
-        return string.Join(
-            ":",
-            "webdav-media",
-            _source.Id,
-            _mediaUri.AbsoluteUri,
-            version);
-    }
-
-    private static string BuildBlockKey(
-        string groupKey,
-        long blockIndex) =>
-        groupKey +
-        ":block:" +
-        blockIndex.ToString(
-            System.Globalization.CultureInfo.InvariantCulture);
 }

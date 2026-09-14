@@ -1240,4 +1240,20 @@
   <data name="Cache_RangeDownloads" xml:space="preserve">
     <value>Range 下载</value>
   </data>
+
+  <data name="Cache_VideoCache" xml:space="preserve">
+    <value>视频缓存</value>
+  </data>
+  <data name="Cache_VideoCacheEmpty" xml:space="preserve">
+    <value>还没有缓存视频。可以在剧集详情页点击最右侧的缓存按钮下载。</value>
+  </data>
+  <data name="Cache_ApplicationCache" xml:space="preserve">
+    <value>应用缓存</value>
+  </data>
+  <data name="Cache_ApplicationCacheDescription" xml:space="preserve">
+    <value>Bangumi、字幕、元数据以及播放时产生的临时缓存统一计入这里。</value>
+  </data>
+  <data name="Cache_ClearApplicationCache" xml:space="preserve">
+    <value>清理应用缓存</value>
+  </data>
 </root>

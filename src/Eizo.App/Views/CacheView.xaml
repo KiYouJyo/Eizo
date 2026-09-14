@@ -8,8 +8,7 @@
                 HorizontalScrollBarVisibility="Disabled"
                 HorizontalContentAlignment="Stretch"
                 VerticalScrollBarVisibility="Auto">
-    <Grid x:Name="CacheRoot"
-          Padding="24,16,24,32"
+    <Grid Padding="24,16,24,32"
           HorizontalAlignment="Stretch"
           UseLayoutRounding="True">
       <StackPanel Spacing="18"
@@ -18,12 +17,12 @@
           <TextBlock x:Name="PageTitle"
                      Style="{StaticResource PageTitleText}" />
           <TextBlock x:Name="PageSubtitle"
-                     Style="{StaticResource MetadataText}" />
+                     Style="{StaticResource MetadataText}"
+                     TextWrapping="Wrap" />
         </StackPanel>
 
         <Border Style="{StaticResource SettingsSectionCardStyle}">
-          <Grid ColumnDefinitions="*,Auto"
-                RowDefinitions="Auto,Auto,Auto">
+          <Grid RowDefinitions="Auto,Auto,Auto">
             <StackPanel>
               <TextBlock x:Name="OverviewTitle"
                          Style="{StaticResource SectionTitleText}" />
@@ -39,82 +38,51 @@
               </StackPanel>
             </StackPanel>
 
-            <Button x:Name="ClearCacheButton"
-                    Grid.Column="1"
-                    VerticalAlignment="Top"
-                    Style="{StaticResource CompactActionButton}"
-                    Click="ClearCacheButton_Click" />
-
             <ProgressBar x:Name="CacheUsageProgress"
                          Grid.Row="1"
-                         Grid.ColumnSpan="2"
                          Value="0"
                          Maximum="100"
                          Height="6"
                          Margin="0,12,0,8" />
 
             <Grid Grid.Row="2"
-                  Grid.ColumnSpan="2"
-                  ColumnDefinitions="*,*,*,Auto"
+                  ColumnDefinitions="*,*,Auto"
                   ColumnSpacing="16">
-              <TextBlock x:Name="MediaSizeText"
+              <TextBlock x:Name="VideoCacheSizeText"
                          Style="{StaticResource MetadataText}" />
-              <TextBlock x:Name="ArtworkSizeText"
+              <TextBlock x:Name="ApplicationCacheSizeText"
                          Grid.Column="1"
                          Style="{StaticResource MetadataText}" />
-              <TextBlock x:Name="MetadataSizeText"
-                         Grid.Column="2"
-                         Style="{StaticResource MetadataText}" />
               <TextBlock x:Name="UsagePercentText"
-                         Grid.Column="3"
+                         Grid.Column="2"
                          Style="{StaticResource MetadataText}" />
             </Grid>
           </Grid>
         </Border>
 
         <Border Style="{StaticResource SettingsSectionCardStyle}">
-          <StackPanel Spacing="12">
-            <StackPanel Spacing="2">
-              <TextBlock x:Name="DiagnosticsTitle"
+          <Grid ColumnDefinitions="*,Auto"
+                ColumnSpacing="24">
+            <StackPanel Spacing="3"
+                        VerticalAlignment="Center">
+              <TextBlock x:Name="ApplicationCacheTitle"
                          Style="{StaticResource SectionTitleText}" />
-              <TextBlock x:Name="DiagnosticsDescription"
-                         Style="{StaticResource MetadataText}" />
+              <TextBlock x:Name="ApplicationCacheDescription"
+                         Style="{StaticResource MetadataText}"
+                         TextWrapping="Wrap" />
             </StackPanel>
-
-            <Grid ColumnDefinitions="*,*"
-                  RowDefinitions="Auto,Auto"
-                  ColumnSpacing="24"
-                  RowSpacing="12">
-              <StackPanel Spacing="2">
-                <TextBlock x:Name="HitRateLabel"
-                           Style="{StaticResource MetadataText}" />
-                <TextBlock x:Name="HitRateValue"
-                           Style="{StaticResource CardTitleText}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1"
-                          Spacing="2">
-                <TextBlock x:Name="MemoryHitsLabel"
-                           Style="{StaticResource MetadataText}" />
-                <TextBlock x:Name="MemoryHitsValue"
-                           Style="{StaticResource CardTitleText}" />
-              </StackPanel>
-              <StackPanel Grid.Row="1"
-                          Spacing="2">
-                <TextBlock x:Name="DiskHitsLabel"
-                           Style="{StaticResource MetadataText}" />
-                <TextBlock x:Name="DiskHitsValue"
-                           Style="{StaticResource CardTitleText}" />
-              </StackPanel>
-              <StackPanel Grid.Row="1"
-                          Grid.Column="1"
-                          Spacing="2">
-                <TextBlock x:Name="RangeDownloadsLabel"
-                           Style="{StaticResource MetadataText}" />
-                <TextBlock x:Name="RangeDownloadsValue"
-                           Style="{StaticResource CardTitleText}" />
-              </StackPanel>
-            </Grid>
-          </StackPanel>
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="12"
+                        VerticalAlignment="Center">
+              <TextBlock x:Name="ApplicationCacheValue"
+                         Style="{StaticResource CardTitleText}"
+                         VerticalAlignment="Center" />
+              <Button x:Name="ClearApplicationCacheButton"
+                      Style="{StaticResource CompactActionButton}"
+                      Click="ClearApplicationCacheButton_Click" />
+            </StackPanel>
+          </Grid>
         </Border>
 
         <Border Style="{StaticResource SettingsSectionCardStyle}">
@@ -231,7 +199,7 @@
 
         <StackPanel Spacing="10"
                     Margin="0,0,0,24">
-          <TextBlock x:Name="ContentsTitle"
+          <TextBlock x:Name="VideoCacheTitle"
                      Style="{StaticResource SectionTitleText}" />
 
           <TextBlock x:Name="EmptyStateText"

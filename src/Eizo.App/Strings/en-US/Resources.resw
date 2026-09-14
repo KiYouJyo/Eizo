@@ -416,7 +416,7 @@
     <value>Password</value>
   </data>
   <data name="Cache_Subtitle" xml:space="preserve">
-    <value>Manage media, artwork, and network data cache.</value>
+    <value>Manage downloaded videos and cache data generated automatically by Eizo.</value>
   </data>
   <data name="Cache_Overview" xml:space="preserve">
     <value>Cache overview</value>
@@ -1239,5 +1239,21 @@
   </data>
   <data name="Cache_RangeDownloads" xml:space="preserve">
     <value>Range downloads</value>
+  </data>
+
+  <data name="Cache_VideoCache" xml:space="preserve">
+    <value>Video cache</value>
+  </data>
+  <data name="Cache_VideoCacheEmpty" xml:space="preserve">
+    <value>No videos are cached yet. Use the cache button at the right of an episode card to download it.</value>
+  </data>
+  <data name="Cache_ApplicationCache" xml:space="preserve">
+    <value>App cache</value>
+  </data>
+  <data name="Cache_ApplicationCacheDescription" xml:space="preserve">
+    <value>Bangumi, subtitles, metadata, and temporary playback cache are grouped here.</value>
+  </data>
+  <data name="Cache_ClearApplicationCache" xml:space="preserve">
+    <value>Clear app cache</value>
   </data>
 </root>

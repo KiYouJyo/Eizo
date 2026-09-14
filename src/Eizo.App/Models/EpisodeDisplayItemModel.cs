@@ -10,4 +10,9 @@ public sealed record EpisodeDisplayItemModel(
     string Status,
     double Progress = 0,
     CatalogMediaItemModel? MediaItem = null,
-    ImageSource? Thumbnail = null);
+    ImageSource? Thumbnail = null)
+{
+    public bool CanCache =>
+        MediaItem?.Location?.Kind ==
+        MediaLocationKind.RemoteUri;
+}

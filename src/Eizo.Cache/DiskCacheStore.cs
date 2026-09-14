@@ -659,6 +659,50 @@ public sealed class DiskCacheStore
         }
     }
 
+    public async Task<int> SetGroupPinnedAsync(
+        string groupKey,
+        bool pinned,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(groupKey);
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var index = LoadIndexCore();
+            var changed = 0;
+
+            foreach (var pair in index.Entries.ToArray())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var entry = pair.Value;
+                if (!string.Equals(entry.GroupKey, groupKey, StringComparison.Ordinal) ||
+                    entry.Pinned == pinned)
+                {
+                    continue;
+                }
+
+                index.Entries[pair.Key] = entry with
+                {
+                    Pinned = pinned
+                };
+                changed++;
+            }
+
+            if (changed > 0)
+            {
+                await SaveIndexCoreAsync(index, cancellationToken);
+            }
+
+            return changed;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<bool> SetPinnedAsync(
         string id,
         bool pinned,

@@ -254,6 +254,52 @@ public sealed class DiskCacheStoreTests
     }
 
     [Fact]
+    public async Task SetGroupPinned_PinsEveryBlockInDownloadedMedia()
+    {
+        var root = CreateTempDirectory();
+
+        try
+        {
+            var store = new DiskCacheStore(root);
+
+            for (var index = 0;
+                 index < 3;
+                 index++)
+            {
+                await store.WriteBytesAsync(
+                    CacheCategory.Media,
+                    "episode:block:" + index,
+                    new byte[8],
+                    new CacheWriteOptions(
+                        "Episode",
+                        "WebDAV",
+                        ".blk",
+                        GroupKey: "episode"));
+            }
+
+            var changed =
+                await store.SetGroupPinnedAsync(
+                    "episode",
+                    pinned: true);
+
+            Assert.Equal(3, changed);
+
+            var snapshot =
+                await store.GetSnapshotAsync();
+
+            Assert.Equal(3, snapshot.Entries.Count);
+            Assert.All(
+                snapshot.Entries,
+                static entry =>
+                    Assert.True(entry.Pinned));
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task ClearCategory_DoesNotDeleteOtherCategories()
     {
         var root = CreateTempDirectory();

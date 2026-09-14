@@ -130,7 +130,7 @@
               <ListView.ItemTemplate>
                 <DataTemplate x:DataType="models:EpisodeDisplayItemModel">
                   <Grid Height="88"
-                        ColumnDefinitions="118,48,*,112"
+                        ColumnDefinitions="118,48,*,52"
                         ColumnSpacing="10">
                     <Border CornerRadius="7"
                             Background="{ThemeResource EizoSelectionBrush}">
@@ -166,17 +166,19 @@
                                    Height="3" />
                     </StackPanel>
 
-                    <StackPanel Grid.Column="3"
-                                VerticalAlignment="Center"
-                                Spacing="3">
-                      <TextBlock Text="{x:Bind Duration}"
-                                 Style="{StaticResource MetadataText}"
-                                 HorizontalAlignment="Right" />
-                      <TextBlock Text="{x:Bind Status}"
-                                 Style="{StaticResource MetadataText}"
-                                 HorizontalAlignment="Right"
-                                 TextWrapping="Wrap" />
-                    </StackPanel>
+                    <Button Grid.Column="3"
+                            Tag="{x:Bind MediaItem}"
+                            Click="CacheEpisodeButton_Click"
+                            IsEnabled="{x:Bind CanCache}"
+                            Width="38"
+                            Height="38"
+                            MinWidth="38"
+                            Padding="0"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                      <FontIcon Glyph="&#xE896;"
+                                FontSize="15" />
+                    </Button>
                   </Grid>
                 </DataTemplate>
               </ListView.ItemTemplate>

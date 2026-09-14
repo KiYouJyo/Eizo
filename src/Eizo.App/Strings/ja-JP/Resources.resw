@@ -416,7 +416,7 @@
     <value>パスワード</value>
   </data>
   <data name="Cache_Subtitle" xml:space="preserve">
-    <value>メディア、アートワーク、ネットワークデータのキャッシュを管理します。</value>
+    <value>ダウンロード済み動画と、アプリが自動生成するキャッシュを管理します。</value>
   </data>
   <data name="Cache_Overview" xml:space="preserve">
     <value>キャッシュ概要</value>
@@ -1239,5 +1239,21 @@
   </data>
   <data name="Cache_RangeDownloads" xml:space="preserve">
     <value>Range ダウンロード</value>
+  </data>
+
+  <data name="Cache_VideoCache" xml:space="preserve">
+    <value>動画キャッシュ</value>
+  </data>
+  <data name="Cache_VideoCacheEmpty" xml:space="preserve">
+    <value>キャッシュ済み動画はありません。エピソード詳細の右端にあるキャッシュボタンからダウンロードできます。</value>
+  </data>
+  <data name="Cache_ApplicationCache" xml:space="preserve">
+    <value>アプリキャッシュ</value>
+  </data>
+  <data name="Cache_ApplicationCacheDescription" xml:space="preserve">
+    <value>Bangumi、字幕、メタデータ、再生中に生成される一時キャッシュをまとめて管理します。</value>
+  </data>
+  <data name="Cache_ClearApplicationCache" xml:space="preserve">
+    <value>アプリキャッシュを削除</value>
   </data>
 </root>
