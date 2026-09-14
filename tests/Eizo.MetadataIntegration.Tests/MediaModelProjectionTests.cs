@@ -69,6 +69,29 @@ public sealed class MediaModelProjectionTests
     }
 
     [Fact]
+    public void SeasonExternalIdsUseExactProviderSeasonIdentity()
+    {
+        var metadata = Metadata(
+            provider: "tmdb",
+            id: "1396",
+            contentKind: "LiveAction",
+            externalIds: new Dictionary<string, string>
+            {
+                ["tmdb"] = "1396",
+            }) with
+        {
+            ProviderSeasonId = "3572",
+            ProviderEpisodeId = "62085",
+        };
+
+        var ids = MediaModelProjection.ProjectSeasonExternalIds(metadata);
+
+        Assert.Equal("3572", ids["tmdb"]);
+        Assert.DoesNotContain("1396", ids.Values);
+        Assert.DoesNotContain("62085", ids.Values);
+    }
+
+    [Fact]
     public void EpisodeExternalIdsUseExactProviderEpisodeIdentity()
     {
         var metadata = Metadata(

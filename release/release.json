@@ -1,12 +1,12 @@
 {
     "schemaVersion": 1,
     "product": {
-        "version": "0.5.1",
-        "packageVersion": "0.5.1.0",
+        "version": "0.5.2",
+        "packageVersion": "0.5.2.0",
         "title": {
-            "zh-CN": "TMDB 核心影视身份",
-            "ja-JP": "TMDB コア映像アイデンティティ",
-            "en-US": "TMDB Core Media Identity"
+            "zh-CN": "TMDB 季级身份与内容",
+            "ja-JP": "TMDB シーズン識別とコンテンツ",
+            "en-US": "TMDB Season Identity & Content"
         }
     },
     "channels": {

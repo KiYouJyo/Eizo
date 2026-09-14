@@ -8,12 +8,12 @@ namespace Eizo.MetadataIntegration;
 
 public sealed record MediaMetadataServiceOptions(
     bool EnableBangumi = true,
-    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.1 (https://github.com/KiYouJyo/Eizo)",
+    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.2 (https://github.com/KiYouJyo/Eizo)",
     string PreferredLanguage = "zh-CN",
     string? TmdbReadAccessToken = null,
     string? CacheDirectory = null,
     bool EnableArtworkProviders = true,
-    string AniListUserAgent = "KiYouJyo/Eizo/0.5.1 (https://github.com/KiYouJyo/Eizo)");
+    string AniListUserAgent = "KiYouJyo/Eizo/0.5.2 (https://github.com/KiYouJyo/Eizo)");
 
 public sealed class MediaMetadataService
 {
@@ -432,6 +432,11 @@ public sealed class MediaMetadataService
                         ? 0
                         : 1),
                 ProviderEpisodeId = episode?.ProviderEpisodeId,
+                ProviderSeasonId = episode?.ProviderSeasonId,
+                SeasonTitle = episode?.SeasonTitle,
+                SeasonOverview = episode?.SeasonOverview,
+                SeasonAirDate = episode?.SeasonAirDate?.ToString("yyyy-MM-dd"),
+                SeasonPosterUrl = episode?.SeasonPosterUrl,
             },
             providerRequest,
             result.Resolution,

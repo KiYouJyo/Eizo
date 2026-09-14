@@ -510,6 +510,12 @@ public sealed class MediaMetadataServiceTests
             {
                 return Json("""
                 {
+                  "id": 3572,
+                  "name": "Season 1",
+                  "overview": "The first season.",
+                  "air_date": "2008-01-20",
+                  "poster_path": "/season1.jpg",
+                  "season_number": 1,
                   "episodes": [
                     {
                       "id": 62085,
@@ -544,8 +550,13 @@ public sealed class MediaMetadataServiceTests
         Assert.Equal(MediaMetadataStatus.Resolved, result.Status);
         Assert.Equal("tmdb", result.Provider);
         Assert.Equal("1396", result.ProviderSubjectId);
+        Assert.Equal("3572", result.ProviderSeasonId);
         Assert.Equal("62085", result.ProviderEpisodeId);
         Assert.Equal(1, result.EpisodeSeasonNumber);
+        Assert.Equal("Season 1", result.SeasonTitle);
+        Assert.Equal("The first season.", result.SeasonOverview);
+        Assert.Equal("2008-01-20", result.SeasonAirDate);
+        Assert.EndsWith("/season1.jpg", result.SeasonPosterUrl);
         Assert.Equal(1m, result.EpisodeNumber);
         Assert.Equal("Pilot", result.EpisodeTitle);
         Assert.EndsWith("/pilot.jpg", result.EpisodeThumbnailUrl);

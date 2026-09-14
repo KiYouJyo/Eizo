@@ -55,7 +55,16 @@ public sealed record EizoSeason(
     string Id,
     int? Number,
     Dictionary<string, string> ExternalIds,
-    List<EizoEpisode> Episodes);
+    List<EizoEpisode> Episodes)
+{
+    public string? Title { get; init; }
+
+    public string? Overview { get; init; }
+
+    public string? AirDate { get; init; }
+
+    public string? PosterUrl { get; init; }
+}
 
 public sealed record EizoEpisode(
     string Id,
@@ -70,7 +79,11 @@ public sealed record EizoHierarchyEpisodeSeed(
     decimal? EpisodeNumber,
     bool IsSpecial,
     Dictionary<string, string>? SeasonExternalIds = null,
-    Dictionary<string, string>? EpisodeExternalIds = null);
+    Dictionary<string, string>? EpisodeExternalIds = null,
+    string? SeasonTitle = null,
+    string? SeasonOverview = null,
+    string? SeasonAirDate = null,
+    string? SeasonPosterUrl = null);
 
 public static class MediaExternalIds
 {
@@ -272,8 +285,23 @@ public static class EizoMediaHierarchy
             seasonId,
             seasonNumber,
             seasonExternalIds,
-            episodes);
+            episodes)
+        {
+            Title = FirstNonEmpty(
+                items.Select(static item => item.Seed.SeasonTitle)),
+            Overview = FirstNonEmpty(
+                items.Select(static item => item.Seed.SeasonOverview)),
+            AirDate = FirstNonEmpty(
+                items.Select(static item => item.Seed.SeasonAirDate)),
+            PosterUrl = FirstNonEmpty(
+                items.Select(static item => item.Seed.SeasonPosterUrl)),
+        };
     }
+
+    private static string? FirstNonEmpty(
+        IEnumerable<string?> values) =>
+        values.FirstOrDefault(
+            static value => !string.IsNullOrWhiteSpace(value));
 
     private static string ResolveEpisodeKey(
         EizoHierarchyEpisodeSeed seed,

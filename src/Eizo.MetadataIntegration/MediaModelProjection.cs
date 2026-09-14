@@ -55,6 +55,28 @@ public static class MediaModelProjection
             externalIds);
     }
 
+    public static Dictionary<string, string> ProjectSeasonExternalIds(
+        MediaMetadataSnapshot? metadata)
+    {
+        if (metadata is not
+            {
+                IsResolved: true,
+                Provider.Length: > 0,
+                ProviderSeasonId.Length: > 0,
+            })
+        {
+            return new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        return new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase)
+        {
+            [MediaExternalIds.NormalizeProvider(metadata.Provider)] =
+                metadata.ProviderSeasonId,
+        };
+    }
+
     public static Dictionary<string, string> ProjectEpisodeExternalIds(
         MediaMetadataSnapshot? metadata)
     {
