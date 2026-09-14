@@ -372,32 +372,49 @@ public sealed class BangumiRepositoryTests
             """);
         });
 
-        using var client = CreateClient(handler);
-        var repository = new BangumiRepository(
-            new BangumiApiClient(client),
-            new BangumiCacheStore(CreateTempDirectory()));
+        var cacheRoot = CreateTempDirectory();
+        try
+        {
+            using var client = CreateClient(handler);
+            var repository = new BangumiRepository(
+                new BangumiApiClient(client),
+                new BangumiCacheStore(cacheRoot));
 
-        var result = await repository.SearchAnimeAsync(
-            "芙莉莲",
-            limit: 10,
-            cancellationToken:
-                TestContext.Current.CancellationToken);
+            var result = await repository.SearchAnimeAsync(
+                "芙莉莲",
+                limit: 10,
+                cancellationToken:
+                    TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpMethod.Post, method);
-        Assert.Contains(
-            "/v0/search/subjects?limit=10&offset=0",
-            requestUri,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"keyword\":\"芙莉莲\"",
-            requestBody,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"type\":[2]",
-            requestBody,
-            StringComparison.Ordinal);
-        Assert.Single(result.Items);
-        Assert.Equal(123, result.Items[0].Id);
+            Assert.Equal(HttpMethod.Post, method);
+            Assert.Contains(
+                "/v0/search/subjects?limit=10&offset=0",
+                requestUri,
+                StringComparison.Ordinal);
+
+            using var requestJson =
+                System.Text.Json.JsonDocument.Parse(
+                    requestBody!);
+            var root = requestJson.RootElement;
+
+            Assert.Equal(
+                "芙莉莲",
+                root.GetProperty("keyword").GetString());
+            Assert.Equal(
+                2,
+                root.GetProperty("filter")
+                    .GetProperty("type")[0]
+                    .GetInt32());
+
+            Assert.Single(result.Items);
+            Assert.Equal(123, result.Items[0].Id);
+        }
+        finally
+        {
+            Directory.Delete(
+                cacheRoot,
+                recursive: true);
+        }
     }
 
 
