@@ -1287,4 +1287,110 @@
   <data name="Home_BangumiSearchResultsCountFormat" xml:space="preserve">
     <value>Showing {0} of {1} results</value>
   </data>
+
+  <data name="Settings_MetadataAutomation" xml:space="preserve">
+    <value>Automation</value>
+  </data>
+  <data name="Settings_MetadataAutoScrape" xml:space="preserve">
+    <value>Scrape during scan</value>
+  </data>
+  <data name="Settings_MetadataAutoScrapeDescription" xml:space="preserve">
+    <value>Identify titles and fetch metadata while scanning a media source.</value>
+  </data>
+  <data name="Settings_MetadataArtwork" xml:space="preserve">
+    <value>Fill missing artwork</value>
+  </data>
+  <data name="Settings_MetadataArtworkDescription" xml:space="preserve">
+    <value>Allow Metadata artwork providers to fill missing posters and backdrops.</value>
+  </data>
+  <data name="Settings_MetadataMaintenance" xml:space="preserve">
+    <value>Maintenance</value>
+  </data>
+  <data name="Settings_MetadataRescrape" xml:space="preserve">
+    <value>Rescrape library</value>
+  </data>
+  <data name="Settings_MetadataRescrapeDescription" xml:space="preserve">
+    <value>Refresh recognition and metadata for the current library without rediscovering files.</value>
+  </data>
+  <data name="Settings_MetadataRescrapeButton" xml:space="preserve">
+    <value>Rescrape</value>
+  </data>
+  <data name="Settings_MetadataClearCache" xml:space="preserve">
+    <value>Clear metadata cache</value>
+  </data>
+  <data name="Settings_MetadataClearCacheDescription" xml:space="preserve">
+    <value>Delete local Metadata provider caches without removing media sources or playback history.</value>
+  </data>
+  <data name="Settings_MetadataClearCacheButton" xml:space="preserve">
+    <value>Clear cache</value>
+  </data>
+  <data name="Settings_MetadataNoMedia" xml:space="preserve">
+    <value>There is no media to rescrape in the current library.</value>
+  </data>
+  <data name="Settings_MetadataRescrapeRunningFormat" xml:space="preserve">
+    <value>Rescraping: {0}</value>
+  </data>
+  <data name="Settings_MetadataRescrapeCompleteFormat" xml:space="preserve">
+    <value>Rescrape complete. Processed {0} media items.</value>
+  </data>
+  <data name="Settings_MetadataRescrapePartialFormat" xml:space="preserve">
+    <value>Rescrape complete. Processed {0} media items; {1} sources did not complete.</value>
+  </data>
+  <data name="Settings_MetadataBusy" xml:space="preserve">
+    <value>A media scan or scrape is in progress. Clear the cache after it finishes.</value>
+  </data>
+  <data name="Settings_MetadataClearingCache" xml:space="preserve">
+    <value>Clearing metadata cache…</value>
+  </data>
+  <data name="Settings_MetadataCacheCleared" xml:space="preserve">
+    <value>Metadata cache cleared.</value>
+  </data>
+  <data name="Settings_PlaybackBehavior" xml:space="preserve">
+    <value>Playback behavior</value>
+  </data>
+  <data name="Settings_AutoPlayNext" xml:space="preserve">
+    <value>Auto-play next episode</value>
+  </data>
+  <data name="Settings_AutoPlayNextDescription" xml:space="preserve">
+    <value>Move to the next queued episode when the current episode ends.</value>
+  </data>
+  <data name="Settings_RememberPlaybackRate" xml:space="preserve">
+    <value>Remember playback speed</value>
+  </data>
+  <data name="Settings_RememberPlaybackRateDescription" xml:space="preserve">
+    <value>Reuse a manually selected playback speed for later videos.</value>
+  </data>
+  <data name="Settings_DefaultPlaybackRate" xml:space="preserve">
+    <value>Default playback speed</value>
+  </data>
+  <data name="Settings_DefaultPlaybackRateDescription" xml:space="preserve">
+    <value>Initial speed for new videos when remembered speed is not used.</value>
+  </data>
+  <data name="Settings_TracksAndSubtitles" xml:space="preserve">
+    <value>Audio and subtitles</value>
+  </data>
+  <data name="Settings_PreferredAudioLanguage" xml:space="preserve">
+    <value>Preferred audio language</value>
+  </data>
+  <data name="Settings_PreferredAudioLanguageDescription" xml:space="preserve">
+    <value>Prefer a matching audio track when opening a video; keep the file default when no match exists.</value>
+  </data>
+  <data name="Settings_PreferredSubtitleLanguage" xml:space="preserve">
+    <value>Preferred subtitle language</value>
+  </data>
+  <data name="Settings_PreferredSubtitleLanguageDescription" xml:space="preserve">
+    <value>Prefer a matching subtitle language when no title-specific subtitle preference is remembered.</value>
+  </data>
+  <data name="Settings_RememberSubtitleTrack" xml:space="preserve">
+    <value>Remember subtitle per title</value>
+  </data>
+  <data name="Settings_RememberSubtitleTrackDescription" xml:space="preserve">
+    <value>Remember the primary subtitle type and language per title without persisting unstable per-episode track IDs.</value>
+  </data>
+  <data name="Settings_LanguageAuto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Settings_SubtitleStyle" xml:space="preserve">
+    <value>Subtitle position and background</value>
+  </data>
 </root>
