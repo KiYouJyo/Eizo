@@ -1,3 +1,4 @@
+using Eizo.Media;
 using Eizo.MetadataIntegration;
 using Eizo.Recognition;
 
@@ -24,7 +25,8 @@ public sealed record CatalogMediaItemModel(
     string Meta,
     MediaLocationModel? Location = null,
     MediaRecognitionSnapshot? Recognition = null,
-    MediaMetadataSnapshot? Metadata = null)
+    MediaMetadataSnapshot? Metadata = null,
+    EizoMedia? Media = null)
 {
     public bool IsParsed => !string.IsNullOrWhiteSpace(ParsedTitle);
 

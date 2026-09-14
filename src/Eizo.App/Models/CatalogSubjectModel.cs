@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Eizo.Media;
 using Eizo.MetadataIntegration;
 
 namespace Eizo.Models;
@@ -50,6 +51,7 @@ public sealed record CatalogSubjectModel(
             StringComparison.OrdinalIgnoreCase) ||
         Items.Count > 0 &&
         Items.All(static item =>
+            item.Media?.Format == MediaFormat.Movie ||
             string.Equals(
                 item.Recognition?.MediaKind,
                 "Movie",
@@ -289,10 +291,12 @@ internal static class CatalogSubjectAggregator
         var metadata = primary.Metadata;
         var recognition = primary.Recognition;
 
-        var isMovie = string.Equals(
-            recognition?.MediaKind,
-            "Movie",
-            StringComparison.OrdinalIgnoreCase);
+        var isMovie =
+            primary.Media?.Format == MediaFormat.Movie ||
+            string.Equals(
+                recognition?.MediaKind,
+                "Movie",
+                StringComparison.OrdinalIgnoreCase);
 
         string? title;
         string? nativeTitle;
@@ -380,12 +384,18 @@ internal static class CatalogSubjectAggregator
     private static string? ResolveMovieIdentity(
         CatalogMediaItemModel item)
     {
-        if (!string.Equals(
+        if (item.Media?.Format != MediaFormat.Movie &&
+            !string.Equals(
                 item.Recognition?.MediaKind,
                 "Movie",
                 StringComparison.OrdinalIgnoreCase))
         {
             return null;
+        }
+
+        if (item.Media is { Format: MediaFormat.Movie, Id.Length: > 0 } media)
+        {
+            return media.Id;
         }
 
         if (item.Metadata is
@@ -436,6 +446,24 @@ internal static class CatalogCategoryClassifier
         if (item.Category is { } explicitCategory)
         {
             return explicitCategory;
+        }
+
+        if (item.Media is { } media)
+        {
+            if (media.Domain == MediaContentDomain.Animation)
+                return MediaCategoryKind.Anime;
+
+            if (media.Domain is
+                MediaContentDomain.LiveAction or
+                MediaContentDomain.Documentary)
+            {
+                return media.Format == MediaFormat.Movie
+                    ? MediaCategoryKind.Movies
+                    : MediaCategoryKind.Series;
+            }
+
+            if (media.Format == MediaFormat.Movie)
+                return MediaCategoryKind.Movies;
         }
 
         return Map(MediaLibraryGrouping.Classify(

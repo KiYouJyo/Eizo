@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using Eizo.Media;
 using Eizo.MetadataIntegration;
 using Eizo.Recognition;
 
@@ -123,6 +124,9 @@ public sealed class MediaCatalogStore
                             // Metadata snapshot would expose a known-invalid
                             // runtime pairing until the next enrichment pass.
                             Metadata = null,
+                            Media = MediaModelProjection.Project(
+                                recognition,
+                                metadata: null),
                         };
                     }
 
@@ -218,7 +222,14 @@ public sealed class MediaCatalogStore
                 var existing = _items[index];
                 if (CanReuseMetadata(existing, item))
                 {
-                    item = item with { Metadata = existing.Metadata };
+                    item = item with
+                    {
+                        Metadata = existing.Metadata,
+                        Media = MediaModelProjection.Project(
+                            item.Recognition,
+                            existing.Metadata,
+                            existing.Media),
+                    };
                 }
 
                 if (existing != item)
@@ -559,6 +570,10 @@ public sealed class MediaCatalogStore
                 discovered[i] = item with
                 {
                     Metadata = existing.Metadata,
+                    Media = MediaModelProjection.Project(
+                        item.Recognition,
+                        existing.Metadata,
+                        existing.Media),
                 };
             }
         }
@@ -618,6 +633,10 @@ public sealed class MediaCatalogStore
                 discovered[entry.Index] = entry.Item with
                 {
                     Metadata = metadata,
+                    Media = MediaModelProjection.Project(
+                        recognition,
+                        metadata,
+                        entry.Item.Media),
                 };
 
                 switch (metadata.Status)
@@ -926,7 +945,10 @@ public sealed class MediaCatalogStore
                 entry.Locator!,
                 entry.SizeBytes,
                 entry.ModifiedUtc),
-            Recognition: recognition);
+            Recognition: recognition,
+            Media: MediaModelProjection.Project(
+                recognition,
+                metadata: null));
     }
 
     private static CatalogMediaItemModel CreateLocalItem(
@@ -950,7 +972,10 @@ public sealed class MediaCatalogStore
                 fileInfo.FullName,
                 fileInfo.Length,
                 fileInfo.LastWriteTimeUtc),
-            Recognition: recognition);
+            Recognition: recognition,
+            Media: MediaModelProjection.Project(
+                recognition,
+                metadata: null));
     }
 
     private static string BuildRecognitionMeta(
@@ -1129,9 +1154,25 @@ public sealed class MediaCatalogStore
                     File.ReadAllText(StorePath),
                     SerializerOptions);
 
-            return document is { SchemaVersion: 1 }
-                ? document.Items ?? []
-                : [];
+            if (document is not { SchemaVersion: 1 or 2 })
+                return [];
+
+            var items = document.Items ?? [];
+            for (var index = 0; index < items.Count; index++)
+            {
+                var item = items[index];
+                if (item.Media is null && item.Recognition is not null)
+                {
+                    items[index] = item with
+                    {
+                        Media = MediaModelProjection.Project(
+                            item.Recognition,
+                            item.Metadata),
+                    };
+                }
+            }
+
+            return items;
         }
         catch (IOException)
         {
@@ -1156,7 +1197,7 @@ public sealed class MediaCatalogStore
                 $"{StorePath}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp";
 
             var document = new MediaCatalogStoreDocument(
-                SchemaVersion: 1,
+                SchemaVersion: 2,
                 Items: items.ToList());
 
             File.WriteAllText(
