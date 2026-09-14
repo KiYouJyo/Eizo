@@ -8,12 +8,12 @@ namespace Eizo.MetadataIntegration;
 
 public sealed record MediaMetadataServiceOptions(
     bool EnableBangumi = true,
-    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.6 (https://github.com/KiYouJyo/Eizo)",
+    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.7 (https://github.com/KiYouJyo/Eizo)",
     string PreferredLanguage = "zh-CN",
     string? TmdbReadAccessToken = null,
     string? CacheDirectory = null,
     bool EnableArtworkProviders = true,
-    string AniListUserAgent = "KiYouJyo/Eizo/0.5.6 (https://github.com/KiYouJyo/Eizo)");
+    string AniListUserAgent = "KiYouJyo/Eizo/0.5.7 (https://github.com/KiYouJyo/Eizo)");
 
 public sealed class MediaMetadataService
 {
@@ -27,6 +27,8 @@ public sealed class MediaMetadataService
     private readonly Core.MetadataResolver? _resolver;
     private readonly IReadOnlyDictionary<string, Core.MetadataResolver>
         _providerResolvers;
+    private readonly IReadOnlyDictionary<string, Core.IMetadataProvider>
+        _providers;
     private readonly Core.MetadataArtworkResolver? _artworkResolver;
     private readonly Core.IMetadataProvider? _tmdbProvider;
     private readonly string _preferredLanguage;
@@ -63,6 +65,9 @@ public sealed class MediaMetadataService
         var providerResolvers =
             new Dictionary<string, Core.MetadataResolver>(
                 StringComparer.OrdinalIgnoreCase);
+        var providerMap =
+            new Dictionary<string, Core.IMetadataProvider>(
+                StringComparer.OrdinalIgnoreCase);
         var resolverOptions =
             new Core.MetadataResolverOptions(
                 AutoResolveThreshold,
@@ -91,6 +96,7 @@ public sealed class MediaMetadataService
                 memoryCache,
                 Core.MetadataCachePolicy.Default);
             providers.Add(cachedBangumi);
+            providerMap["bangumi"] = cachedBangumi;
             providerResolvers["bangumi"] =
                 new Core.MetadataResolver(
                     [cachedBangumi],
@@ -115,6 +121,7 @@ public sealed class MediaMetadataService
                 memoryCache,
                 Core.MetadataCachePolicy.Default);
             providers.Add(_tmdbProvider);
+            providerMap["tmdb"] = _tmdbProvider;
             providerResolvers["tmdb"] =
                 new Core.MetadataResolver(
                     [_tmdbProvider],
@@ -135,6 +142,7 @@ public sealed class MediaMetadataService
         }
 
         _providerResolvers = providerResolvers;
+        _providers = providerMap;
         _resolver = providers.Count == 0
             ? null
             : new Core.MetadataResolver(
@@ -151,8 +159,17 @@ public sealed class MediaMetadataService
 
     public bool IsAvailable => _resolver is not null;
 
+    public Task<MediaMetadataSnapshot?> EnrichAsync(
+        HostRecognition.MediaRecognitionSnapshot recognition,
+        CancellationToken cancellationToken = default) =>
+        EnrichAsync(
+            recognition,
+            binding: null,
+            cancellationToken);
+
     public async Task<MediaMetadataSnapshot?> EnrichAsync(
         HostRecognition.MediaRecognitionSnapshot recognition,
+        MediaIdentityBindingHint? binding,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(recognition);
@@ -205,9 +222,31 @@ public sealed class MediaMetadataService
             route = MediaProviderRouter.Choose(
                 aggregateResolution);
 
+            if (binding is not null &&
+                !string.IsNullOrWhiteSpace(
+                    binding.PrimaryProvider) &&
+                binding.ExternalIds.ContainsKey(
+                    binding.PrimaryProvider))
+            {
+                route = new MediaProviderRoute(
+                    binding.PrimaryProvider,
+                    route.EnumerateProviders()
+                        .Where(provider =>
+                            !string.Equals(
+                                provider,
+                                binding.PrimaryProvider,
+                                StringComparison.OrdinalIgnoreCase))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToArray(),
+                    binding.IsManual
+                        ? "ManualIdentityBinding"
+                        : "PersistedIdentityBinding");
+            }
+
             result = await EnrichWithRouteAsync(
                     request,
                     route,
+                    binding,
                     cancellationToken)
                 .ConfigureAwait(false);
 
@@ -290,6 +329,7 @@ public sealed class MediaMetadataService
                     request,
                     route,
                     result.Subject.Id.Provider,
+                    binding,
                     cancellationToken)
                 .ConfigureAwait(false);
 
@@ -588,6 +628,10 @@ public sealed class MediaMetadataService
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList(),
                 MergeProfile = mergeResult.Profile.ToString(),
+                IdentityBindingProvider =
+                    binding?.PrimaryProvider,
+                IdentityBindingManual =
+                    binding?.IsManual ?? false,
             },
             providerRequest,
             result.Resolution,
@@ -624,6 +668,7 @@ public sealed class MediaMetadataService
             Core.MetadataSearchRequest request,
             MediaProviderRoute route,
             string primaryProvider,
+            MediaIdentityBindingHint? binding,
             CancellationToken cancellationToken)
     {
         var results =
@@ -645,11 +690,29 @@ public sealed class MediaMetadataService
 
             try
             {
-                var candidate = await resolver
-                    .EnrichAsync(
-                        request,
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                Core.MetadataEnrichmentResult candidate;
+                if (binding is not null &&
+                    binding.ExternalIds.TryGetValue(
+                        provider,
+                        out var boundId) &&
+                    !string.IsNullOrWhiteSpace(boundId))
+                {
+                    candidate = await EnrichBoundProviderAsync(
+                            provider,
+                            boundId,
+                            request,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    candidate = await resolver
+                        .EnrichAsync(
+                            request,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                }
+
                 if (candidate.Resolution.IsResolved &&
                     candidate.Subject is not null)
                 {
@@ -672,9 +735,128 @@ public sealed class MediaMetadataService
     }
 
     private async Task<Core.MetadataEnrichmentResult>
+        EnrichBoundProviderAsync(
+            string providerName,
+            string providerSubjectId,
+            Core.MetadataSearchRequest request,
+            CancellationToken cancellationToken)
+    {
+        if (!_providers.TryGetValue(
+                providerName,
+                out var provider))
+        {
+            return new Core.MetadataEnrichmentResult(
+                new Core.MetadataResolution(
+                    Best: null,
+                    IsResolved: false,
+                    Confidence: 0,
+                    Candidates: Array.Empty<Core.MetadataResolutionCandidate>(),
+                    ProviderErrors:
+                    [
+                        new Core.MetadataProviderError(
+                            providerName,
+                            "ProviderUnavailable",
+                            "Bound provider is not configured.")
+                    ]),
+                Subject: null,
+                Episode: null,
+                ProviderErrors:
+                [
+                    new Core.MetadataProviderError(
+                        providerName,
+                        "ProviderUnavailable",
+                        "Bound provider is not configured.")
+                ]);
+        }
+
+        var subjectKind =
+            request.MediaKind == RecognitionContracts.MediaKind.Movie
+                ? Core.MetadataSubjectKind.Movie
+                : Core.MetadataSubjectKind.Series;
+        var id = new Core.MetadataProviderItemId(
+            providerName,
+            providerSubjectId,
+            subjectKind);
+        var subject = await provider
+            .GetSubjectAsync(
+                id,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (subject is null)
+        {
+            return new Core.MetadataEnrichmentResult(
+                new Core.MetadataResolution(
+                    Best: null,
+                    IsResolved: false,
+                    Confidence: 0,
+                    Candidates: Array.Empty<Core.MetadataResolutionCandidate>(),
+                    ProviderErrors: Array.Empty<Core.MetadataProviderError>()),
+                Subject: null,
+                Episode: null,
+                ProviderErrors: Array.Empty<Core.MetadataProviderError>());
+        }
+
+        Core.MetadataEpisode? episode = null;
+        var targetEpisode = request.EpisodeNumber;
+        if (subjectKind == Core.MetadataSubjectKind.Series &&
+            targetEpisode is not null)
+        {
+            var season = request.SeasonNumber ?? 1;
+            var episodes = await provider
+                .GetEpisodesAsync(
+                    id,
+                    season,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            episode = episodes
+                .Where(item =>
+                    item.EpisodeNumber == targetEpisode)
+                .OrderBy(item =>
+                    item.SeasonNumber == season
+                        ? 0
+                        : 1)
+                .FirstOrDefault();
+        }
+
+        var searchCandidate =
+            new Core.MetadataSearchCandidate(
+                id,
+                subject.Titles,
+                subject.ReleaseDate?.Year,
+                ProviderRank: 0)
+            {
+                ContentKind = subject.ContentKind,
+            };
+        var best = new Core.MetadataResolutionCandidate(
+            searchCandidate,
+            Score: 1.0,
+            Evidence:
+            [
+                "IdentityBinding",
+            ]);
+        var resolution = new Core.MetadataResolution(
+            best,
+            IsResolved: true,
+            Confidence: 1.0,
+            Candidates: [best],
+            ProviderErrors: Array.Empty<Core.MetadataProviderError>())
+        {
+            Lead = 1.0,
+        };
+
+        return new Core.MetadataEnrichmentResult(
+            resolution,
+            subject,
+            episode,
+            Array.Empty<Core.MetadataProviderError>());
+    }
+
+    private async Task<Core.MetadataEnrichmentResult>
         EnrichWithRouteAsync(
             Core.MetadataSearchRequest request,
             MediaProviderRoute route,
+            MediaIdentityBindingHint? binding,
             CancellationToken cancellationToken)
     {
         foreach (var provider in route.EnumerateProviders())
@@ -686,11 +868,28 @@ public sealed class MediaMetadataService
                 continue;
             }
 
-            var candidate = await resolver
-                .EnrichAsync(
-                    request,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            Core.MetadataEnrichmentResult candidate;
+            if (binding is not null &&
+                binding.ExternalIds.TryGetValue(
+                    provider,
+                    out var boundId) &&
+                !string.IsNullOrWhiteSpace(boundId))
+            {
+                candidate = await EnrichBoundProviderAsync(
+                        provider,
+                        boundId,
+                        request,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                candidate = await resolver
+                    .EnrichAsync(
+                        request,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
             if (candidate.Resolution.IsResolved &&
                 candidate.Resolution.Best is not null &&
                 candidate.Subject is not null)
