@@ -540,28 +540,11 @@ public sealed partial class PlayerView : UserControl
                 return;
             }
 
-            // Remote random-access media is intentionally not auto-extracted.
-            // Walking subtitle samples can compete with the active WebDAV stream;
-            // users can still explicitly select a supported embedded text track.
-            if (source.RandomAccessSource is null)
-            {
-                await TryPromoteSelectedEmbeddedSubtitleAsync(
-                    engine,
-                    source,
-                    session,
-                    session.Token);
-            }
-            else if (engine.Tracks.SelectedSubtitleTrackId is int remoteSelectedId)
-            {
-                var remoteTrack = engine.Tracks.SubtitleTracks
-                    .FirstOrDefault(track => track.Id == remoteSelectedId);
-
-                PlaybackFallbackDiagnostics.Write(
-                    "remote-auto-promotion-skipped",
-                    source,
-                    remoteTrack,
-                    "Automatic embedded extraction is disabled for RandomAccess playback.");
-            }
+            await TryPromoteSelectedEmbeddedSubtitleAsync(
+                engine,
+                source,
+                session,
+                session.Token);
         }
         catch (OperationCanceledException)
         {
@@ -675,6 +658,12 @@ public sealed partial class PlayerView : UserControl
         });
     }
 
+    private static bool CanRenderEmbeddedSubtitleAsOverlay(
+        PlaybackSource source,
+        SubtitleTrackInfo track) =>
+        MatroskaCueSubtitleService.CanRenderAsOverlay(source, track) ||
+        CanRenderEmbeddedSubtitleAsOverlay(source, track);
+
     private static async Task<SubtitleDocument?>
         LoadEmbeddedSubtitleDocumentAsync(
             PlaybackSource source,
@@ -686,9 +675,22 @@ public sealed partial class PlayerView : UserControl
             CancellationTokenSource.CreateLinkedTokenSource(
                 cancellationToken);
 
-        // Remote subtitle extraction must remain opportunistic. A bounded budget
-        // prevents subtitle parsing from consuming the active WebDAV stream long
-        // enough to degrade playback or seeks.
+        if (MatroskaCueSubtitleService.CanRenderAsOverlay(
+                source,
+                selectedTrack))
+        {
+            // Cue-indexed extraction performs sparse WebDAV range reads only:
+            // metadata, Cues, and referenced subtitle blocks. It never walks the
+            // video payload and therefore remains safe alongside active playback.
+            budget.CancelAfter(TimeSpan.FromSeconds(12));
+
+            return await MatroskaCueSubtitleService.LoadDocumentAsync(
+                source,
+                selectedTrack,
+                subtitleTracks,
+                budget.Token);
+        }
+
         if (source.RandomAccessSource is not null)
             budget.CancelAfter(TimeSpan.FromSeconds(3));
 
@@ -715,7 +717,7 @@ public sealed partial class PlayerView : UserControl
         if (track is null)
             return;
 
-        if (!EmbeddedSubtitleService.CanRenderAsOverlay(source, track))
+        if (!CanRenderEmbeddedSubtitleAsOverlay(source, track))
         {
             PlaybackTrace.Write(
                 "view",
@@ -1133,7 +1135,7 @@ public sealed partial class PlayerView : UserControl
 
         if (item.Tag is SubtitleTrackInfo embeddedTrack &&
             _currentSource is { } source &&
-            EmbeddedSubtitleService.CanRenderAsOverlay(
+            CanRenderEmbeddedSubtitleAsOverlay(
                 source,
                 embeddedTrack))
         {
@@ -1281,7 +1283,7 @@ public sealed partial class PlayerView : UserControl
 
         if (item.Tag is SubtitleTrackInfo embeddedTrack &&
             _currentSource is { } source &&
-            EmbeddedSubtitleService.CanRenderAsOverlay(
+            CanRenderEmbeddedSubtitleAsOverlay(
                 source,
                 embeddedTrack))
         {
@@ -1504,7 +1506,7 @@ public sealed partial class PlayerView : UserControl
                 foreach (var track in engine.Tracks.SubtitleTracks)
                 {
                     if (_primaryEmbeddedSubtitleTrackId == track.Id ||
-                        !EmbeddedSubtitleService.CanRenderAsOverlay(
+                        !CanRenderEmbeddedSubtitleAsOverlay(
                             source,
                             track))
                     {
@@ -1927,7 +1929,7 @@ public sealed partial class PlayerView : UserControl
             _currentSource is { } source &&
             engine.Tracks.SubtitleTracks.Any(track =>
                 track.Id != _primaryEmbeddedSubtitleTrackId &&
-                EmbeddedSubtitleService.CanRenderAsOverlay(
+                CanRenderEmbeddedSubtitleAsOverlay(
                     source,
                     track));
 
