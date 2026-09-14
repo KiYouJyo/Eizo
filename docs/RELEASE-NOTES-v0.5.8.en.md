@@ -1,3 +1,5 @@
+[简体中文](RELEASE-NOTES-v0.5.8.md) | [日本語](RELEASE-NOTES-v0.5.8.ja.md) | English
+
 # Eizo v0.5.8
 
 ## Stage 5: scan, scrape and persistence pipeline close-out

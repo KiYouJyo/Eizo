@@ -1,3 +1,5 @@
+[简体中文](RELEASE-NOTES-v0.5.7.md) | [日本語](RELEASE-NOTES-v0.5.7.ja.md) | English
+
 # Eizo v0.5.7
 
 ## Stage 4: persistent cross-provider identity bindings

@@ -1,3 +1,5 @@
+简体中文 | [日本語](RELEASE-NOTES-v0.5.8.ja.md) | [English](RELEASE-NOTES-v0.5.8.en.md)
+
 # Eizo v0.5.8
 
 ## Stage 5：扫描、刮削与持久化链收口
