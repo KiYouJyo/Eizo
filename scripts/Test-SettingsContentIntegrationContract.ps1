@@ -73,15 +73,25 @@ foreach ($required in @(
 $runStart = $scanCoordinator.IndexOf('private async Task<MediaScanSnapshot> RunAsync(')
 $metadataStart = $scanCoordinator.IndexOf('private async Task<MediaScanSnapshot> RunMetadataAsync(')
 if ($runStart -lt 0 -or $metadataStart -le $runStart) {
-    throw 'Settings integration contract could not locate independent scan/metadata runners.'
+    throw 'Settings integration contract could not locate source-scan and explicit metadata runners.'
 }
 $scanRun = $scanCoordinator.Substring($runStart, $metadataStart - $runStart)
-if ($scanRun -match [regex]::Escape('_metadataService.Value')) {
-    throw 'Auto metadata setting regressed the independent scan/scrape architecture.'
+foreach ($required in @(
+    'MetadataAutoScrapeOnScan',
+    '_metadataService.Value',
+    'ScanSourceAsync(',
+    'metadataService,')) {
+    if ($scanRun -notmatch [regex]::Escape($required)) {
+        throw "Auto metadata setting is not wired into the single-commit source scan: $required"
+    }
 }
-if ($scanRun -notmatch [regex]::Escape('MetadataAutoScrapeOnScan') -or
-    $scanRun -notmatch [regex]::Escape('StartMetadataAsync(')) {
-    throw 'Auto metadata setting does not chain the independent metadata job after scan completion.'
+if ($scanRun -match [regex]::Escape('StartMetadataAsync(')) {
+    throw 'Auto metadata setting must not create a second post-commit metadata job.'
+}
+
+$metadataRun = $scanCoordinator.Substring($metadataStart)
+if ($metadataRun -notmatch [regex]::Escape('ScrapeSourceMetadataAsync(')) {
+    throw 'Manual re-scrape action must remain independent from source discovery.'
 }
 
 foreach ($required in @(
