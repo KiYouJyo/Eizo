@@ -495,13 +495,19 @@ public sealed partial class DetailView : UserControl
 
         if (string.IsNullOrWhiteSpace(thumbnailUrl))
         {
-            thumbnailUrl =
+            var itemBackdrop =
                 episode.PrimaryItem.Metadata?.BackdropUrl;
-        }
+            var subjectBackdrop =
+                _subject?.Metadata?.BackdropUrl;
 
-        if (string.IsNullOrWhiteSpace(thumbnailUrl))
-        {
-            thumbnailUrl = _subject?.Metadata?.BackdropUrl;
+            if (!string.IsNullOrWhiteSpace(itemBackdrop) &&
+                !string.Equals(
+                    itemBackdrop,
+                    subjectBackdrop,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                thumbnailUrl = itemBackdrop;
+            }
         }
 
         return new EpisodeDisplayItemModel(
