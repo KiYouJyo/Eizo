@@ -72,6 +72,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-IdentityBindingStage4Contract.ps1
 
+      - name: Validate Eizo 0.5.8 scan pipeline contract
+        shell: pwsh
+        run: ./scripts/Test-ScanPipelineStage5Contract.ps1
+
       - name: Validate Bangumi public integration contract
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1

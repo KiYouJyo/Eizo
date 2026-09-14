@@ -51,9 +51,11 @@ if (-not $subject.Contains('public string GroupingKey { get; init; } = Key;', [S
     throw 'Catalog subject identity/hierarchy contract is incomplete.'
 }
 
-if (-not $store.Contains('SchemaVersion: 2', [StringComparison]::Ordinal) -or
-    -not $store.Contains('SchemaVersion: 1 or 2', [StringComparison]::Ordinal)) {
-    throw 'Catalog schema v2 migration contract is missing.'
+if (-not ($store.Contains('SchemaVersion: 2', [StringComparison]::Ordinal) -or
+           $store.Contains('SchemaVersion: 3', [StringComparison]::Ordinal)) -or
+    -not ($store.Contains('SchemaVersion: 1 or 2', [StringComparison]::Ordinal) -or
+           $store.Contains('SchemaVersion: 1 or 2 or 3', [StringComparison]::Ordinal))) {
+    throw 'Catalog schema migration contract is missing.'
 }
 
 foreach ($column in @(
