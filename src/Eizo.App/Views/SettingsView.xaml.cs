@@ -249,19 +249,5 @@ public sealed partial class SettingsView : UserControl
         BangumiConnectButton.Content = T("Bangumi_Connect");
         BangumiDisconnectButton.Content = T("Bangumi_Disconnect");
 
-        JapaneseMediaTitle.Text = T("Settings_JapaneseMedia");
-        PreferredTitleLabel.Text = T("Settings_PreferredTitle");
-        PreferredTitleDescription.Text = T("Settings_PreferredTitleDescription");
-        PreferredTitleCombo.ItemsSource = new[]
-        {
-            "简体中文",
-            "日本語",
-            "English"
-        };
-
-        JapaneseTitleLabel.Text = T("Settings_ShowJapaneseTitle");
-        JapaneseTitleDescription.Text = T("Settings_ShowJapaneseTitleDescription");
-        RomajiLabel.Text = T("Settings_ShowRomaji");
-        RomajiDescription.Text = T("Settings_ShowRomajiDescription");
     }
 }
