@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace Eizo.Models;
 
@@ -18,7 +17,7 @@ public sealed record HomeContinueCardModel(
     string NativeTitle,
     string Meta,
     double Progress,
-    BitmapImage? Artwork);
+    string? ArtworkUrl);
 
 
 public sealed class SourceItemModel : INotifyPropertyChanged
