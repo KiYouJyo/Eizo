@@ -19,3 +19,16 @@ The catalog schema moves from 1 to 2. Schema 1 catalogs are loaded and projected
 ## Deferred to later stages
 
 Stage 1 intentionally does not add TMDB or AniList network traffic and does not change the established 0.4.7 detail-page layout. Provider routing, field-level merge rules, TMDB episode stills and Bangumi/AniList enhancement remain later 0.5/0.6 stages.
+
+
+## Catalog hierarchy integration
+
+The second Stage 1 pass projects aggregated catalog subjects into the internal model as well:
+
+- each catalog subject now exposes an EizoMedia identity;
+- non-movie subjects expose an EizoSeries with deterministic EizoSeason and EizoEpisode identities;
+- subject-level ExternalIds keep only provider IDs that are consistent across the aggregated work;
+- provider IDs with different values across seasons are not incorrectly promoted to the series scope;
+- season and episode ExternalIds remain explicit scopes and are only populated when a provider supplies IDs for that exact level.
+
+This keeps provider identity separate from the library hierarchy before TMDB routing is introduced.

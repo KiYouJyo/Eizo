@@ -64,6 +64,14 @@ public sealed record EizoEpisode(
     bool IsSpecial,
     Dictionary<string, string> ExternalIds);
 
+public sealed record EizoHierarchyEpisodeSeed(
+    string Key,
+    int? SeasonNumber,
+    decimal? EpisodeNumber,
+    bool IsSpecial,
+    Dictionary<string, string>? SeasonExternalIds = null,
+    Dictionary<string, string>? EpisodeExternalIds = null);
+
 public static class MediaExternalIds
 {
     public static Dictionary<string, string> Normalize(
@@ -98,6 +106,37 @@ public static class MediaExternalIds
         {
             foreach (var pair in Normalize(set))
                 result[pair.Key] = pair.Value;
+        }
+
+        return result;
+    }
+
+    public static Dictionary<string, string> Common(
+        params IEnumerable<KeyValuePair<string, string>>?[] sets)
+    {
+        var candidates = new Dictionary<string, HashSet<string>>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var set in sets)
+        {
+            foreach (var pair in Normalize(set))
+            {
+                if (!candidates.TryGetValue(pair.Key, out var ids))
+                {
+                    ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    candidates.Add(pair.Key, ids);
+                }
+
+                ids.Add(pair.Value);
+            }
+        }
+
+        var result = new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var candidate in candidates)
+        {
+            if (candidate.Value.Count == 1)
+                result[candidate.Key] = candidate.Value.Single();
         }
 
         return result;
@@ -177,5 +216,90 @@ public static class EizoMediaIdFactory
         return builder.Length == 0
             ? "<unknown>"
             : builder.ToString();
+    }
+}
+
+
+public static class EizoMediaHierarchy
+{
+    public static EizoSeries BuildSeries(
+        EizoMedia media,
+        IEnumerable<EizoHierarchyEpisodeSeed> episodeSeeds)
+    {
+        ArgumentNullException.ThrowIfNull(media);
+        ArgumentNullException.ThrowIfNull(episodeSeeds);
+
+        var indexed = episodeSeeds
+            .Select((seed, index) => (Seed: seed, Index: index))
+            .ToArray();
+
+        var seasons = indexed
+            .GroupBy(
+                static item =>
+                    item.Seed.SeasonNumber ??
+                    (item.Seed.IsSpecial ? 0 : 1))
+            .Select(group => BuildSeason(media, group.Key, group.ToArray()))
+            .OrderBy(static season =>
+                season.Number == 0
+                    ? int.MaxValue
+                    : season.Number ?? 1)
+            .ToList();
+
+        return new EizoSeries(media, seasons);
+    }
+
+    private static EizoSeason BuildSeason(
+        EizoMedia media,
+        int seasonNumber,
+        IReadOnlyList<(EizoHierarchyEpisodeSeed Seed, int Index)> items)
+    {
+        var seasonId = $"{media.Id}:season:{seasonNumber}";
+        var seasonExternalIds = MediaExternalIds.Common(
+            items
+                .Select(static item =>
+                    (IEnumerable<KeyValuePair<string, string>>?)
+                    item.Seed.SeasonExternalIds)
+                .ToArray());
+
+        var episodes = items
+            .Select(item =>
+            {
+                var episodeKey = ResolveEpisodeKey(item.Seed, item.Index);
+                return new EizoEpisode(
+                    $"{seasonId}:episode:{episodeKey}",
+                    seasonNumber,
+                    item.Seed.EpisodeNumber,
+                    item.Seed.IsSpecial,
+                    MediaExternalIds.Normalize(
+                        item.Seed.EpisodeExternalIds));
+            })
+            .OrderBy(static episode =>
+                episode.EpisodeNumber ?? decimal.MaxValue)
+            .ThenBy(static episode => episode.Id, StringComparer.Ordinal)
+            .ToList();
+
+        return new EizoSeason(
+            seasonId,
+            seasonNumber,
+            seasonExternalIds,
+            episodes);
+    }
+
+    private static string ResolveEpisodeKey(
+        EizoHierarchyEpisodeSeed seed,
+        int index)
+    {
+        if (seed.EpisodeNumber is { } number)
+        {
+            var prefix = seed.IsSpecial ? "sp" : "ep";
+            return $"{prefix}-{number.ToString("0.###", CultureInfo.InvariantCulture)}";
+        }
+
+        var normalizedKey = seed.Key?.Trim() ?? string.Empty;
+        if (normalizedKey.Length == 0)
+            normalizedKey = index.ToString(CultureInfo.InvariantCulture);
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedKey));
+        return $"item-{Convert.ToHexString(hash.AsSpan(0, 8)).ToLowerInvariant()}";
     }
 }

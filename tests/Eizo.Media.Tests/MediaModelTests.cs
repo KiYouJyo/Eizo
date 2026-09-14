@@ -38,6 +38,81 @@ public sealed class MediaModelTests
     }
 
     [Fact]
+    public void CommonExternalIdsKeepsSharedProviderAndDropsConflictingEntries()
+    {
+        var common = MediaExternalIds.Common(
+            new Dictionary<string, string>
+            {
+                ["tmdb"] = "1396",
+                ["bangumi"] = "100",
+            },
+            new Dictionary<string, string>
+            {
+                ["tmdb"] = "1396",
+                ["bangumi"] = "200",
+            });
+
+        Assert.Equal("1396", common["tmdb"]);
+        Assert.False(common.ContainsKey("bangumi"));
+    }
+
+    [Fact]
+    public void HierarchyBuilderCreatesStableSeasonAndEpisodeScopes()
+    {
+        var media = new EizoMedia(
+            "eizo:tmdb:1396",
+            MediaFormat.TvSeries,
+            MediaContentDomain.LiveAction,
+            MediaOrigin.Unknown,
+            new Dictionary<string, string>
+            {
+                ["tmdb"] = "1396",
+            });
+
+        var series = EizoMediaHierarchy.BuildSeries(
+            media,
+            [
+                new(
+                    "s1e1",
+                    1,
+                    1,
+                    false,
+                    new Dictionary<string, string>
+                    {
+                        ["tmdb"] = "3572",
+                    },
+                    new Dictionary<string, string>
+                    {
+                        ["tmdb"] = "62085",
+                    }),
+                new(
+                    "s2e1",
+                    2,
+                    1,
+                    false,
+                    new Dictionary<string, string>
+                    {
+                        ["tmdb"] = "3573",
+                    },
+                    new Dictionary<string, string>
+                    {
+                        ["tmdb"] = "62099",
+                    }),
+            ]);
+
+        Assert.Equal(2, series.Seasons.Count);
+        Assert.Equal("3572", series.Seasons[0].ExternalIds["tmdb"]);
+        Assert.Equal("3573", series.Seasons[1].ExternalIds["tmdb"]);
+        Assert.Equal(
+            "62085",
+            series.Seasons[0].Episodes[0].ExternalIds["tmdb"]);
+        Assert.Equal(
+            "62099",
+            series.Seasons[1].Episodes[0].ExternalIds["tmdb"]);
+        Assert.Contains(":season:1:episode:ep-1", series.Seasons[0].Episodes[0].Id);
+    }
+
+    [Fact]
     public void SeriesHierarchyKeepsProviderIdsAtTheirOwnScope()
     {
         var media = new EizoMedia(
