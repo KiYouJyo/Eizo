@@ -7,6 +7,33 @@ function Assert-LastExitCode([string]$message) {
     if ($LASTEXITCODE -ne 0) { throw "$message ($LASTEXITCODE)" }
 }
 
+function Invoke-WebRequestWithRetry(
+    [string]$uri,
+    [string]$outFile,
+    [int]$attempts = 4) {
+    $lastError = $null
+    for ($attempt = 1; $attempt -le $attempts; $attempt++) {
+        try {
+            if (Test-Path -LiteralPath $outFile) {
+                Remove-Item -LiteralPath $outFile -Force
+            }
+            Invoke-WebRequest -Uri $uri -OutFile $outFile -UseBasicParsing
+            if ((Test-Path -LiteralPath $outFile -PathType Leaf) -and
+                (Get-Item -LiteralPath $outFile).Length -gt 0) {
+                return
+            }
+            throw 'Downloaded file is empty.'
+        }
+        catch {
+            $lastError = $_
+            if ($attempt -lt $attempts) {
+                Start-Sleep -Seconds ([Math]::Min(5 * $attempt, 15))
+            }
+        }
+    }
+    throw ("Download failed after {0} attempts: {1}. Last error: {2}" -f $attempts, $uri, $lastError)
+}
+
 function Get-EizoProcesses([string]$installRoot) {
     $root = [IO.Path]::GetFullPath($installRoot)
     return @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
@@ -189,7 +216,7 @@ try {
     Remove-Item -LiteralPath $legacyComponentsRoot -Recurse -Force -ErrorAction SilentlyContinue
 
     $runtimeInstaller = Join-Path $runnerTemp 'WindowsAppRuntimeInstall-x64.exe'
-    Invoke-WebRequest -Uri 'https://aka.ms/windowsappsdk/1.8/1.8.260710003/windowsappruntimeinstall-x64.exe' -OutFile $runtimeInstaller -UseBasicParsing
+    Invoke-WebRequestWithRetry -Uri 'https://aka.ms/windowsappsdk/1.8/1.8.260710003/windowsappruntimeinstall-x64.exe' -OutFile $runtimeInstaller
     $runtimeSignature = Get-AuthenticodeSignature -FilePath $runtimeInstaller
     if (-not $runtimeSignature.SignerCertificate -or $runtimeSignature.Status -ne 'Valid' -or
         $runtimeSignature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
