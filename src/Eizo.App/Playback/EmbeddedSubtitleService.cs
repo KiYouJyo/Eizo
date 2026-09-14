@@ -119,6 +119,7 @@ internal static class EmbeddedSubtitleService
                 reader,
                 target.SampleOffsets[index],
                 target.SampleSizes[index],
+                target.Codec,
                 cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(text) && endUnits > startUnits)
@@ -207,9 +208,10 @@ internal static class EmbeddedSubtitleService
         IRangeReader reader,
         long offset,
         int size,
+        string codec,
         CancellationToken cancellationToken)
     {
-        if (size < 2 || size > MaxSubtitleSampleBytes)
+        if (size <= 0 || size > MaxSubtitleSampleBytes)
             return null;
 
         var data = new byte[size];
@@ -222,14 +224,75 @@ internal static class EmbeddedSubtitleService
             return null;
         }
 
-        var textLength = Math.Min(
-            BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(0, 2)),
-            size - 2);
+        if (codec == "wvtt")
+            return DecodeWebVttSample(data);
 
-        if (textLength <= 0)
+        ReadOnlySpan<byte> textBytes = data;
+
+        // tx3g/QuickTime text samples normally begin with a two-byte big-endian
+        // text length. Some muxers expose the same payload through generic
+        // 'subt'/'sbtl' sample entries, so accept the prefix whenever it is sane
+        // and otherwise fall back to treating the sample as raw text.
+        if (data.Length >= 2)
+        {
+            var declaredLength =
+                BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(0, 2));
+
+            if (declaredLength > 0 &&
+                declaredLength <= data.Length - 2)
+            {
+                textBytes = data.AsSpan(2, declaredLength);
+            }
+        }
+
+        return DecodeSubtitleTextBytes(textBytes);
+    }
+
+    private static string? DecodeWebVttSample(byte[] data)
+    {
+        var texts = new List<string>();
+        var offset = 0;
+
+        while (offset + 8 <= data.Length)
+        {
+            var box = ReadBox(data, offset, data.Length);
+            if (box is null)
+                break;
+
+            if (box.Value.Type == "vttc")
+            {
+                foreach (var child in EnumerateChildren(data, box.Value))
+                {
+                    if (child.Type != "payl" ||
+                        child.DataOffset >= child.End)
+                    {
+                        continue;
+                    }
+
+                    var text = DecodeSubtitleTextBytes(
+                        data.AsSpan(
+                            child.DataOffset,
+                            child.End - child.DataOffset));
+
+                    if (!string.IsNullOrWhiteSpace(text))
+                        texts.Add(text);
+                }
+            }
+
+            offset = box.Value.End;
+        }
+
+        return texts.Count == 0
+            ? null
+            : string.Join(Environment.NewLine, texts);
+    }
+
+    private static string? DecodeSubtitleTextBytes(
+        ReadOnlySpan<byte> textBytes)
+    {
+        if (textBytes.IsEmpty)
             return null;
 
-        var textBytes = data.AsSpan(2, textLength);
         string text;
 
         if (textBytes.Length >= 2 &&
@@ -249,10 +312,14 @@ internal static class EmbeddedSubtitleService
             text = Encoding.UTF8.GetString(textBytes);
         }
 
-        return text
+        text = text
             .Replace("\r\n", "\n", StringComparison.Ordinal)
             .Replace('\r', '\n')
             .Trim('\0', ' ', '\t', '\n');
+
+        return string.IsNullOrWhiteSpace(text)
+            ? null
+            : text;
     }
 
     private static TimeSpan ToTimeSpan(long units, uint timescale)
@@ -457,7 +524,7 @@ internal static class EmbeddedSubtitleService
         }
 
         var codec = ReadSampleEntryCodec(data, stsd.Value);
-        if (codec is not ("tx3g" or "text"))
+        if (codec is not ("tx3g" or "text" or "subt" or "sbtl" or "wvtt"))
             return null;
 
         var (timescale, language) = ReadMediaHeader(data, mdhd.Value);
