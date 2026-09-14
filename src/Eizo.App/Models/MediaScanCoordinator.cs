@@ -17,8 +17,11 @@ public sealed class MediaScanCoordinator
         new(StringComparer.Ordinal);
     private readonly HashSet<string> _metadataJobs =
         new(StringComparer.Ordinal);
+    private Lazy<MediaMetadataService?> _metadataService;
+
     private MediaScanCoordinator()
     {
+        _metadataService = CreateMetadataServiceLazy();
     }
 
     public static MediaScanCoordinator Default { get; } = new();
@@ -97,6 +100,8 @@ public sealed class MediaScanCoordinator
             if (_jobs.TryGetValue(source.Id, out var existing))
                 return existing;
 
+            _metadataService = CreateMetadataServiceLazy();
+
             var mediaCount =
                 MediaCatalogStore.Default.SnapshotForSource(source.Id).Count;
             var started = new MediaScanSnapshot(
@@ -133,14 +138,8 @@ public sealed class MediaScanCoordinator
 
         try
         {
-            var metadataService =
-                AppSettingsStore.Current.MetadataAutoScrapeOnScan
-                    ? CreateMetadataService()
-                    : null;
-
             var count = await MediaCatalogStore.Default.ScanSourceAsync(
                 source,
-                metadataService,
                 progress => UpdateProgress(started, progress),
                 cancellationToken);
 
@@ -206,6 +205,15 @@ public sealed class MediaScanCoordinator
         }
 
         RaiseChanged();
+
+        if (finished.Status == MediaScanStatus.Completed &&
+            AppSettingsStore.Current.MetadataAutoScrapeOnScan)
+        {
+            _ = StartMetadataAsync(
+                source,
+                CancellationToken.None);
+        }
+
         return finished;
     }
 
@@ -221,7 +229,7 @@ public sealed class MediaScanCoordinator
             var processed =
                 await MediaCatalogStore.Default.ScrapeSourceMetadataAsync(
                     source.Id,
-                    CreateMetadataService(),
+                    _metadataService.Value,
                     progress => UpdateProgress(started, progress),
                     cancellationToken);
 
@@ -355,6 +363,11 @@ public sealed class MediaScanCoordinator
             }
         });
     }
+
+    private static Lazy<MediaMetadataService?> CreateMetadataServiceLazy() =>
+        new(
+            CreateMetadataService,
+            LazyThreadSafetyMode.ExecutionAndPublication);
 
     private static MediaMetadataService? CreateMetadataService()
     {
