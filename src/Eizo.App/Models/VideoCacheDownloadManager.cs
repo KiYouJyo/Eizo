@@ -60,7 +60,8 @@ internal sealed class VideoCacheDownloadManager
     }
 
     public Task StartAsync(
-        CatalogMediaItemModel item)
+        CatalogMediaItemModel item,
+        string? displayMeta = null)
     {
         ArgumentNullException.ThrowIfNull(item);
 
@@ -108,8 +109,10 @@ internal sealed class VideoCacheDownloadManager
                 new VideoCacheDownloadSnapshot(
                     key,
                     item.DisplayTitle,
-                    source?.DisplayName ??
-                        item.SourceTitle,
+                    string.IsNullOrWhiteSpace(displayMeta)
+                        ? source?.DisplayName ??
+                          item.SourceTitle
+                        : displayMeta,
                     location.SourceId,
                     location.Locator,
                     GroupKey: null,
@@ -346,7 +349,8 @@ internal sealed class VideoCacheDownloadManager
                     cancellationToken =>
                         WaitForResumeAsync(
                             entry,
-                            cancellationToken));
+                            cancellationToken),
+                    entry.Snapshot.Source);
 
             Update(
                 entry,

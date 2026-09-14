@@ -12,6 +12,8 @@ public sealed record EpisodeDisplayItemModel(
     CatalogMediaItemModel? MediaItem = null,
     ImageSource? Thumbnail = null)
 {
+    public EpisodeDisplayItemModel Self => this;
+
     public bool CanCache =>
         MediaItem?.Location?.Kind ==
         MediaLocationKind.RemoteUri;

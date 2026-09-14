@@ -6,14 +6,22 @@
   <UserControl.Resources>
     <Style x:Key="CacheCardListItemStyle"
            TargetType="ListViewItem">
+      <Setter Property="MinHeight"
+              Value="96" />
       <Setter Property="HorizontalContentAlignment"
               Value="Stretch" />
       <Setter Property="Padding"
-              Value="0" />
+              Value="16" />
       <Setter Property="Margin"
               Value="0,0,0,10" />
       <Setter Property="Background"
-              Value="Transparent" />
+              Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+      <Setter Property="BorderBrush"
+              Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+      <Setter Property="BorderThickness"
+              Value="1" />
+      <Setter Property="CornerRadius"
+              Value="8" />
     </Style>
   </UserControl.Resources>
   <ScrollViewer Background="Transparent"
@@ -232,10 +240,9 @@
                     ItemContainerStyle="{StaticResource CacheCardListItemStyle}">
             <ListView.ItemTemplate>
               <DataTemplate x:DataType="models:CacheItemModel">
-                <Border Style="{StaticResource SectionCardStyle}"
-                        MinHeight="96"
-                        Padding="16">
-                  <Border.ContextFlyout>
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="20">
+                  <Grid.ContextFlyout>
                     <MenuFlyout>
                       <MenuFlyoutItem Text="{x:Bind DeleteText, Mode=OneWay}"
                                       Tag="{x:Bind Id}"
@@ -245,44 +252,41 @@
                         </MenuFlyoutItem.Icon>
                       </MenuFlyoutItem>
                     </MenuFlyout>
-                  </Border.ContextFlyout>
+                  </Grid.ContextFlyout>
 
-                  <Grid ColumnDefinitions="*,Auto"
-                        ColumnSpacing="20">
-                    <StackPanel Spacing="7"
-                                VerticalAlignment="Center">
-                      <TextBlock Text="{x:Bind Title, Mode=OneWay}"
-                                 Style="{StaticResource CardTitleText}"
-                                 TextTrimming="CharacterEllipsis" />
-                      <TextBlock Text="{x:Bind Source, Mode=OneWay}"
-                                 Style="{StaticResource MetadataText}"
-                                 TextTrimming="CharacterEllipsis" />
-                      <ProgressBar Value="{x:Bind ProgressPercent, Mode=OneWay}"
-                                   Minimum="0"
-                                   Maximum="100"
-                                   Height="5" />
-                      <TextBlock Text="{x:Bind ProgressText, Mode=OneWay}"
-                                 Style="{StaticResource MetadataText}"
-                                 TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
+                  <StackPanel Spacing="7"
+                              VerticalAlignment="Center">
+                    <TextBlock Text="{x:Bind Title, Mode=OneWay}"
+                               Style="{StaticResource CardTitleText}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Source, Mode=OneWay}"
+                               Style="{StaticResource MetadataText}"
+                               TextTrimming="CharacterEllipsis" />
+                    <ProgressBar Value="{x:Bind ProgressPercent, Mode=OneWay}"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Height="5" />
+                    <TextBlock Text="{x:Bind ProgressText, Mode=OneWay}"
+                               Style="{StaticResource MetadataText}"
+                               TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
 
-                    <StackPanel Grid.Column="1"
-                                MinWidth="120"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Right"
-                                Spacing="4">
-                      <TextBlock Text="{x:Bind Status, Mode=OneWay}"
-                                 Style="{StaticResource BodyText}"
-                                 HorizontalAlignment="Right" />
-                      <TextBlock Text="{x:Bind Size, Mode=OneWay}"
-                                 Style="{StaticResource MetadataText}"
-                                 HorizontalAlignment="Right" />
-                      <TextBlock Text="{x:Bind LastAccessed, Mode=OneWay}"
-                                 Style="{StaticResource MetadataText}"
-                                 HorizontalAlignment="Right" />
-                    </StackPanel>
-                  </Grid>
-                </Border>
+                  <StackPanel Grid.Column="1"
+                              MinWidth="120"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Right"
+                              Spacing="4">
+                    <TextBlock Text="{x:Bind Status, Mode=OneWay}"
+                               Style="{StaticResource BodyText}"
+                               HorizontalAlignment="Right" />
+                    <TextBlock Text="{x:Bind Size, Mode=OneWay}"
+                               Style="{StaticResource MetadataText}"
+                               HorizontalAlignment="Right" />
+                    <TextBlock Text="{x:Bind LastAccessed, Mode=OneWay}"
+                               Style="{StaticResource MetadataText}"
+                               HorizontalAlignment="Right" />
+                  </StackPanel>
+                </Grid>
               </DataTemplate>
             </ListView.ItemTemplate>
           </ListView>

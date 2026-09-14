@@ -298,12 +298,21 @@ public sealed partial class DetailView : UserControl
     {
         if (sender is not Button
             {
-                Tag: CatalogMediaItemModel item
+                Tag: EpisodeDisplayItemModel episode
             } button ||
+            episode.MediaItem is not { } item ||
             !WebDavVideoCacheService.Default.CanCache(item))
         {
             return;
         }
+
+        var episodeLabel =
+            episode.Number == "-"
+                ? episode.Title
+                : L(
+                    $"第 {episode.Number} 集",
+                    $"第{episode.Number}話",
+                    $"Episode {episode.Number}");
 
         button.IsEnabled = false;
         button.Content =
@@ -317,7 +326,8 @@ public sealed partial class DetailView : UserControl
         try
         {
             await VideoCacheDownloadManager.Default.StartAsync(
-                item);
+                item,
+                episodeLabel);
 
             button.Content =
                 new FontIcon

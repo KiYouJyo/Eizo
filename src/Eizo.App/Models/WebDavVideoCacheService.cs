@@ -38,7 +38,8 @@ internal sealed class WebDavVideoCacheService
         CatalogMediaItemModel item,
         IProgress<WebDavVideoCacheProgress>? progress = null,
         CancellationToken cancellationToken = default,
-        Func<CancellationToken, Task>? waitForResume = null)
+        Func<CancellationToken, Task>? waitForResume = null,
+        string? displayMeta = null)
     {
         if (item.Location is not
             {
@@ -156,7 +157,9 @@ internal sealed class WebDavVideoCacheService
                     bytes,
                     new CacheWriteOptions(
                         item.DisplayTitle,
-                        source.DisplayName,
+                        string.IsNullOrWhiteSpace(displayMeta)
+                            ? source.DisplayName
+                            : displayMeta,
                         ".blk",
                         Pinned: false,
                         GroupKey: groupKey),

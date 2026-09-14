@@ -167,7 +167,7 @@
                     </StackPanel>
 
                     <Button Grid.Column="3"
-                            Tag="{x:Bind MediaItem}"
+                            Tag="{x:Bind Self}"
                             Click="CacheEpisodeButton_Click"
                             IsEnabled="{x:Bind CanCache}"
                             Width="38"
