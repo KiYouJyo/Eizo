@@ -684,11 +684,24 @@ public sealed partial class PlayerView : UserControl
             // video payload and therefore remains safe alongside active playback.
             budget.CancelAfter(TimeSpan.FromSeconds(20));
 
-            return await MatroskaCueSubtitleService.LoadDocumentAsync(
-                source,
-                selectedTrack,
-                subtitleTracks,
-                budget.Token);
+            try
+            {
+                return await MatroskaCueSubtitleService.LoadDocumentAsync(
+                    source,
+                    selectedTrack,
+                    subtitleTracks,
+                    budget.Token);
+            }
+            catch (OperationCanceledException)
+                when (!cancellationToken.IsCancellationRequested)
+            {
+                PlaybackFallbackDiagnostics.Write(
+                    "matroska-cue-extraction-timeout",
+                    source,
+                    selectedTrack,
+                    "budget=20s");
+                return null;
+            }
         }
 
         if (source.RandomAccessSource is not null)
