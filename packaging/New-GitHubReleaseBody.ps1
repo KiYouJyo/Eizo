@@ -40,20 +40,39 @@ $labels = @(
 )
 
 $firstSeparator = $canonicalLines[0].IndexOf(' | ', [StringComparison]::Ordinal)
-if ($firstSeparator -lt 1 -or $labels.Count -ne 2) {
-    throw 'Canonical Release Notes do not have the required language switcher.'
-}
+$hasLanguageSwitcher =
+    $firstSeparator -ge 1 -and
+    $labels.Count -eq 2
 
-$zhLabel = $canonicalLines[0].Substring(0, $firstSeparator)
+if ($hasLanguageSwitcher) {
+    $zhLabel = $canonicalLines[0].Substring(0, $firstSeparator)
+    $jaLabel = $labels[0]
+    $enLabel = $labels[1]
+    $bodyStart = 1
+}
+else {
+    $zhLabel = '简体中文'
+    $jaLabel = '日本語'
+    $enLabel = 'English'
+    $bodyStart = 0
+}
 $repositoryUrl = 'https://github.com/KiYouJyo/Eizo'
 $zhUrl = "$repositoryUrl/blob/$tag/$($relativeFiles[0])"
 $jaUrl = "$repositoryUrl/blob/$tag/$($relativeFiles[1])"
 $enUrl = "$repositoryUrl/blob/$tag/$($relativeFiles[2])"
 
+$bodyLines =
+    if ($bodyStart -lt $canonicalLines.Count) {
+        $canonicalLines[$bodyStart..($canonicalLines.Count - 1)]
+    }
+    else {
+        @()
+    }
+
 $published =
-    "[$zhLabel]($zhUrl) | [$($labels[0])]($jaUrl) | [$($labels[1])]($enUrl)" +
+    "[$zhLabel]($zhUrl) | [$jaLabel]($jaUrl) | [$enLabel]($enUrl)" +
     [Environment]::NewLine +
-    ($canonicalLines[1..($canonicalLines.Count - 1)] -join [Environment]::NewLine)
+    ($bodyLines -join [Environment]::NewLine)
 
 foreach ($url in @($zhUrl, $jaUrl, $enUrl)) {
     if (-not $published.Contains($url)) {

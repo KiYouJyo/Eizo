@@ -4,9 +4,9 @@
         "version": "0.5.8",
         "packageVersion": "0.5.8.0",
         "title": {
-            "zh-CN": "扫描与刮削持久化链",
-            "ja-JP": "スキャン・メタデータ永続化",
-            "en-US": "Scan & Metadata Persistence Pipeline"
+            "zh-CN": "扫描、刮削与持久化链收口",
+            "ja-JP": "スキャン・スクレイプ・永続化基盤",
+            "en-US": "Scan, Scrape & Persistence Close-out"
         }
     },
     "channels": {

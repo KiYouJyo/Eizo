@@ -1,3 +1,5 @@
+[简体中文](RELEASE-NOTES-v0.5.6.md) | [日本語](RELEASE-NOTES-v0.5.6.ja.md) | English
+
 # Eizo v0.5.6
 
 ## Stage 3 / Slice C: content-specific merge profiles

@@ -1,3 +1,5 @@
+简体中文 | [日本語](RELEASE-NOTES-v0.5.7.ja.md) | [English](RELEASE-NOTES-v0.5.7.en.md)
+
 # Eizo v0.5.7
 
 ## Stage 4：跨数据源身份绑定与持久化

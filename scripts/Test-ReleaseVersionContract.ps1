@@ -93,6 +93,25 @@ foreach ($relativePath in @(
     }
 }
 
+$releaseBodyPath = Join-Path ([IO.Path]::GetTempPath()) "Eizo-release-body-$([Guid]::NewGuid().ToString('N')).md"
+try {
+    & (Join-Path $repoRoot 'packaging/New-GitHubReleaseBody.ps1') -Version $version -OutputPath $releaseBodyPath
+    $releaseBody = [IO.File]::ReadAllText($releaseBodyPath, [Text.Encoding]::UTF8)
+
+    foreach ($suffix in @(
+        "docs/RELEASE-NOTES-v$version.md",
+        "docs/RELEASE-NOTES-v$version.ja.md",
+        "docs/RELEASE-NOTES-v$version.en.md")) {
+        $expectedUrl = "https://github.com/KiYouJyo/Eizo/blob/v$version/$suffix"
+        if (-not $releaseBody.Contains($expectedUrl)) {
+            throw "Generated GitHub Release body is missing language URL: $expectedUrl"
+        }
+    }
+}
+finally {
+    Remove-Item -LiteralPath $releaseBodyPath -Force -ErrorAction SilentlyContinue
+}
+
 $currentAcceptanceScript = "scripts/Build-EizoV$($version.Replace('.', '').PadLeft(4,'0'))Acceptance.ps1"
 # Current naming convention is V0311 for 0.3.11 and V042 for 0.4.2.
 $currentAcceptanceScript = "scripts/Build-EizoV0$($version.Split('.')[1])$($version.Split('.')[2])Acceptance.ps1"

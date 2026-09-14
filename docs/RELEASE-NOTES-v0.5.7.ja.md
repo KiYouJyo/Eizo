@@ -1,3 +1,5 @@
+[简体中文](RELEASE-NOTES-v0.5.7.md) | 日本語 | [English](RELEASE-NOTES-v0.5.7.en.md)
+
 # Eizo v0.5.7
 
 ## Stage 4：クロスプロバイダー識別バインド

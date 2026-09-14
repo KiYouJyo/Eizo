@@ -1,3 +1,5 @@
+简体中文 | [日本語](RELEASE-NOTES-v0.5.6.ja.md) | [English](RELEASE-NOTES-v0.5.6.en.md)
+
 # Eizo v0.5.6
 
 ## Stage 3 / Slice C：内容类型合并策略

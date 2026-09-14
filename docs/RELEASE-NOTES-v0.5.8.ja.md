@@ -1,3 +1,5 @@
+[简体中文](RELEASE-NOTES-v0.5.8.md) | 日本語 | [English](RELEASE-NOTES-v0.5.8.en.md)
+
 # Eizo v0.5.8
 
 ## Stage 5：スキャン・メタデータ永続化パイプライン
