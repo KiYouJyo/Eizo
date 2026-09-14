@@ -17,6 +17,7 @@ $store = Read-Text 'src/Eizo.App/Models/MediaCatalogStore.cs'
 $refresh = Read-Text 'src/Eizo.MetadataIntegration/MediaMetadataRefreshPolicy.cs'
 $snapshot = Read-Text 'src/Eizo.MetadataIntegration/MediaMetadataSnapshot.cs'
 $catalogView = Read-Text 'src/Eizo.App/Views/CatalogView.xaml.cs'
+$coordinator = Read-Text 'src/Eizo.App/Models/MediaScanCoordinator.cs'
 
 $scanStart = $store.IndexOf(
     'public async Task<int> ScanSourceAsync(',
@@ -57,6 +58,32 @@ foreach ($required in @(
     if (-not $store.Contains($required, [StringComparison]::Ordinal)) {
         throw "Scan/persistence lifecycle is missing: $required"
     }
+}
+
+foreach ($required in @(
+    'MetadataAutoScrapeOnScan',
+    'var metadataService =',
+    'MediaCatalogStore.Default.ScanSourceAsync(',
+    'metadataService,',
+    'progress => UpdateProgress(started, progress)')) {
+    if (-not $coordinator.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Scan coordinator is not using the single scan-time Metadata pipeline: $required"
+    }
+}
+
+$runAsyncStart = $coordinator.IndexOf(
+    'private async Task<MediaScanSnapshot> RunAsync(',
+    [StringComparison]::Ordinal)
+$runMetadataStart = $coordinator.IndexOf(
+    'private async Task<MediaScanSnapshot> RunMetadataAsync(',
+    [StringComparison]::Ordinal)
+$runAsyncBody = $coordinator.Substring(
+    $runAsyncStart,
+    $runMetadataStart - $runAsyncStart)
+if ($runAsyncBody.Contains(
+        'StartMetadataAsync(',
+        [StringComparison]::Ordinal)) {
+    throw 'Automatic scanning must not launch a second post-commit Metadata job.'
 }
 
 foreach ($required in @(

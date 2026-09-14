@@ -14,3 +14,6 @@
 - Final UI Changed notification remains after the complete source commit, so partial scans do not replace the previous stable library state.
 
 This completes the infrastructure tasks before full real-content integration: media model, TMDB, routing, multi-source merge, content profiles, persistent identities and the stable scan/persistence pipeline.
+
+- Removes the old two-phase coordinator behavior. Auto-scrape now runs inside the same ScanSourceAsync instead of committing discovery first and launching a second Metadata job.
+- Local and WebDAV sources commit once only after Recognition and Metadata processing complete, so the library never switches to a partial intermediate state.

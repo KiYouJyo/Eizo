@@ -11,3 +11,6 @@
 - catalog schema を v3 に更新し、v1/v2/v3 を読み込みます。
 
 これで実コンテンツを全面接続する前の基盤タスクを完了します。
+
+- 自動スクレイプ時の旧 2 段階処理を廃止し、Metadata を同じ ScanSourceAsync 内で完了させます。ファイル一覧を先に Commit してから 2 回目の Metadata Job を起動することはありません。
+- ローカル/WebDAV とも Recognition + Metadata 完了後に 1 回だけ Commit します。

@@ -62,6 +62,9 @@ public sealed class MediaScanCoordinator
             if (_jobs.TryGetValue(source.Id, out var existing))
                 return existing;
 
+            if (AppSettingsStore.Current.MetadataAutoScrapeOnScan)
+                _metadataService = CreateMetadataServiceLazy();
+
             var started = new MediaScanSnapshot(
                 source.Id,
                 MediaScanStatus.Running,
@@ -138,8 +141,14 @@ public sealed class MediaScanCoordinator
 
         try
         {
+            var metadataService =
+                AppSettingsStore.Current.MetadataAutoScrapeOnScan
+                    ? _metadataService.Value
+                    : null;
+
             var count = await MediaCatalogStore.Default.ScanSourceAsync(
                 source,
+                metadataService,
                 progress => UpdateProgress(started, progress),
                 cancellationToken);
 
@@ -205,15 +214,6 @@ public sealed class MediaScanCoordinator
         }
 
         RaiseChanged();
-
-        if (finished.Status == MediaScanStatus.Completed &&
-            AppSettingsStore.Current.MetadataAutoScrapeOnScan)
-        {
-            _ = StartMetadataAsync(
-                source,
-                CancellationToken.None);
-        }
-
         return finished;
     }
 
