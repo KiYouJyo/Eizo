@@ -3,6 +3,7 @@ using Eizo.Cache;
 namespace Eizo.Models;
 
 internal sealed record WebDavVideoCacheProgress(
+    string GroupKey,
     long CompletedBytes,
     long TotalBytes,
     long CompletedBlocks,
@@ -157,6 +158,7 @@ internal sealed class WebDavVideoCacheService
             completedBytes += expected;
             progress?.Report(
                 new WebDavVideoCacheProgress(
+                    groupKey,
                     completedBytes,
                     contentLength,
                     blockIndex + 1,

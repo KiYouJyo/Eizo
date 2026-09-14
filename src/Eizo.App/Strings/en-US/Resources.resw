@@ -1256,4 +1256,20 @@
   <data name="Cache_ClearApplicationCache" xml:space="preserve">
     <value>Clear app cache</value>
   </data>
+
+  <data name="Cache_StatusDownloading" xml:space="preserve">
+    <value>Downloading</value>
+  </data>
+  <data name="Cache_StatusCompleted" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="Cache_StatusFailed" xml:space="preserve">
+    <value>Download failed</value>
+  </data>
+  <data name="Cache_StatusPreparing" xml:space="preserve">
+    <value>Preparing download…</value>
+  </data>
+  <data name="Cache_DeleteVideo" xml:space="preserve">
+    <value>Delete</value>
+  </data>
 </root>

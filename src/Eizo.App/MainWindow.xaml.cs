@@ -390,7 +390,11 @@ public sealed partial class MainWindow : Window
             case "sources":
                 return new SourcesView();
             case "cache":
-                return new CacheView();
+            {
+                var view = new CacheView();
+                WireCacheView(view);
+                return view;
+            }
             case "about":
                 return new AboutView();
             case "settings":
@@ -425,6 +429,98 @@ public sealed partial class MainWindow : Window
 
         view.MediaRequested += async (_, item) =>
             await OpenCatalogMediaAsync(item);
+    }
+
+    private void WireCacheView(
+        CacheView view)
+    {
+        view.PlaybackRequested += (_, request) =>
+            OpenCachedVideo(request);
+    }
+
+    private void OpenCachedVideo(
+        CachedVideoPlaybackRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (!WebDavMediaCacheKeys.TryParseGroupKey(
+                request.GroupKey,
+                out var sourceId,
+                out var mediaUri) ||
+            mediaUri is null ||
+            request.SizeBytes <= 0)
+        {
+            return;
+        }
+
+        var key =
+            "cached-media:" +
+            request.GroupKey;
+
+        if (_tabs.TryGetValue(
+                key,
+                out var existing))
+        {
+            SelectTab(existing.Key);
+            return;
+        }
+
+        var playbackSource =
+            PlaybackSource.FromRandomAccess(
+                mediaUri,
+                new CachedVideoRandomAccessSource(
+                    request.GroupKey,
+                    request.SizeBytes),
+                request.Title);
+
+        var item =
+            new CatalogMediaItemModel(
+                request.Title,
+                request.Title,
+                NativeTitle: null,
+                Category: null,
+                Meta: string.Empty,
+                Location: new MediaLocationModel(
+                    sourceId,
+                    MediaLocationKind.RemoteUri,
+                    mediaUri.AbsoluteUri,
+                    request.SizeBytes));
+
+        var queue =
+            new PlaybackQueueItemModel[]
+            {
+                new(
+                    0,
+                    "1",
+                    request.Title,
+                    request.Title,
+                    request.Source,
+                    playbackSource,
+                    item)
+            };
+
+        var state = new ShellTabState(
+            key,
+            ShellTabKind.Detail,
+            pageKey: null,
+            request.Title,
+            "\uE768",
+            new PlayerView(
+                request.Title,
+                request.Title,
+                playbackSource,
+                queue,
+                initialQueueIndex: 0),
+            navItem: null,
+            PreferredTabWidth)
+        {
+            MediaTitle = request.Title,
+            Episode = request.Title
+        };
+
+        AddTab(
+            state,
+            select: true);
     }
 
     private void WireBangumiAnimeBlogsView(

@@ -214,44 +214,59 @@
 
           <ListView x:Name="CacheList"
                     SelectionMode="None"
+                    IsItemClickEnabled="True"
+                    ItemClick="CacheList_ItemClick"
                     ItemContainerStyle="{StaticResource SourceListItemStyle}">
             <ListView.ItemTemplate>
               <DataTemplate x:DataType="models:CacheItemModel">
-                <Grid MinHeight="64"
-                      ColumnDefinitions="*,Auto,44"
-                      ColumnSpacing="16">
-                  <StackPanel VerticalAlignment="Center"
-                              Spacing="2">
+                <Grid MinHeight="88"
+                      Padding="4,8"
+                      ColumnDefinitions="*,Auto"
+                      ColumnSpacing="20">
+                  <Grid.ContextFlyout>
+                    <MenuFlyout>
+                      <MenuFlyoutItem Text="{x:Bind DeleteText}"
+                                      Tag="{x:Bind Id}"
+                                      Click="DeleteCacheItem_Click">
+                        <MenuFlyoutItem.Icon>
+                          <FontIcon Glyph="&#xE74D;" />
+                        </MenuFlyoutItem.Icon>
+                      </MenuFlyoutItem>
+                    </MenuFlyout>
+                  </Grid.ContextFlyout>
+
+                  <StackPanel Spacing="6"
+                              VerticalAlignment="Center">
                     <TextBlock Text="{x:Bind Title}"
                                Style="{StaticResource CardTitleText}"
                                TextTrimming="CharacterEllipsis" />
                     <TextBlock Text="{x:Bind Source}"
                                Style="{StaticResource MetadataText}"
                                TextTrimming="CharacterEllipsis" />
+                    <ProgressBar Value="{x:Bind ProgressPercent}"
+                                 Minimum="0"
+                                 Maximum="100"
+                                 Height="5" />
+                    <TextBlock Text="{x:Bind ProgressText}"
+                               Style="{StaticResource MetadataText}"
+                               TextTrimming="CharacterEllipsis" />
                   </StackPanel>
 
                   <StackPanel Grid.Column="1"
+                              MinWidth="110"
                               VerticalAlignment="Center"
                               HorizontalAlignment="Right"
-                              Spacing="2">
+                              Spacing="4">
+                    <TextBlock Text="{x:Bind Status}"
+                               Style="{StaticResource BodyText}"
+                               HorizontalAlignment="Right" />
                     <TextBlock Text="{x:Bind Size}"
-                               HorizontalAlignment="Right"
-                               Style="{StaticResource BodyText}" />
+                               Style="{StaticResource MetadataText}"
+                               HorizontalAlignment="Right" />
                     <TextBlock Text="{x:Bind LastAccessed}"
-                               HorizontalAlignment="Right"
-                               Style="{StaticResource MetadataText}" />
+                               Style="{StaticResource MetadataText}"
+                               HorizontalAlignment="Right" />
                   </StackPanel>
-
-                  <Button Grid.Column="2"
-                          Tag="{x:Bind Id}"
-                          Click="DeleteCacheItem_Click"
-                          Width="36"
-                          Height="32"
-                          MinWidth="36"
-                          Padding="0">
-                    <FontIcon Glyph="&#xE74D;"
-                              FontSize="12" />
-                  </Button>
                 </Grid>
               </DataTemplate>
             </ListView.ItemTemplate>

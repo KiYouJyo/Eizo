@@ -1256,4 +1256,20 @@
   <data name="Cache_ClearApplicationCache" xml:space="preserve">
     <value>清理应用缓存</value>
   </data>
+
+  <data name="Cache_StatusDownloading" xml:space="preserve">
+    <value>下载中</value>
+  </data>
+  <data name="Cache_StatusCompleted" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="Cache_StatusFailed" xml:space="preserve">
+    <value>下载失败</value>
+  </data>
+  <data name="Cache_StatusPreparing" xml:space="preserve">
+    <value>正在准备下载…</value>
+  </data>
+  <data name="Cache_DeleteVideo" xml:space="preserve">
+    <value>删除</value>
+  </data>
 </root>

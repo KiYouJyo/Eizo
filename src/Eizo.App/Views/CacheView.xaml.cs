@@ -32,8 +32,12 @@ public sealed partial class CacheView : UserControl
         AppLocalizationService.Default;
     private readonly ObservableCollection<CacheItemModel> _items = [];
 
+    private CacheSnapshot? _lastSnapshot;
+    private DateTimeOffset _lastSnapshotUtc;
     private bool _isSynchronizing;
     private bool _busy;
+    private bool _downloadEventsAttached;
+    private bool _hasActiveDownloads;
 
     public CacheView()
     {
@@ -44,7 +48,10 @@ public sealed partial class CacheView : UserControl
         ApplyText();
 
         Loaded += CacheView_Loaded;
+        Unloaded += CacheView_Unloaded;
     }
+
+    public event EventHandler<CachedVideoPlaybackRequest>? PlaybackRequested;
 
     private string T(string key) =>
         _localization.GetString(key);
@@ -53,10 +60,67 @@ public sealed partial class CacheView : UserControl
         object sender,
         RoutedEventArgs e)
     {
+        AttachDownloadEvents();
         SynchronizePolicyControls();
 
         await CacheRuntime.RunStartupMaintenanceAsync();
         await RefreshAsync();
+    }
+
+    private void CacheView_Unloaded(
+        object sender,
+        RoutedEventArgs e) =>
+        DetachDownloadEvents();
+
+    private void AttachDownloadEvents()
+    {
+        if (_downloadEventsAttached)
+            return;
+
+        VideoCacheDownloadManager.Default.Changed +=
+            DownloadManager_Changed;
+        _downloadEventsAttached = true;
+    }
+
+    private void DetachDownloadEvents()
+    {
+        if (!_downloadEventsAttached)
+            return;
+
+        VideoCacheDownloadManager.Default.Changed -=
+            DownloadManager_Changed;
+        _downloadEventsAttached = false;
+    }
+
+    private void DownloadManager_Changed(
+        object? sender,
+        EventArgs e)
+    {
+        DispatcherQueue.TryEnqueue(
+            () =>
+            {
+                if (_lastSnapshot is not null)
+                    ApplySnapshot(_lastSnapshot);
+
+                var tasks =
+                    VideoCacheDownloadManager.Default.Snapshot();
+                var terminalChanged =
+                    tasks.Any(task =>
+                        task.Status is
+                            VideoCacheDownloadStatus.Completed or
+                            VideoCacheDownloadStatus.Failed or
+                            VideoCacheDownloadStatus.Canceled &&
+                        task.UpdatedUtc >
+                            _lastSnapshotUtc);
+
+                if (terminalChanged ||
+                    DateTimeOffset.UtcNow -
+                    _lastSnapshotUtc >
+                    TimeSpan.FromSeconds(2))
+                {
+                    _ = RefreshAsync();
+                }
+            });
     }
 
     private void SynchronizePolicyControls()
@@ -103,6 +167,10 @@ public sealed partial class CacheView : UserControl
             var snapshot =
                 await CacheRuntime.Store.GetSnapshotAsync();
 
+            _lastSnapshot = snapshot;
+            _lastSnapshotUtc =
+                DateTimeOffset.UtcNow;
+
             ApplySnapshot(snapshot);
             CacheStatusText.Visibility =
                 Visibility.Collapsed;
@@ -125,7 +193,27 @@ public sealed partial class CacheView : UserControl
     {
         _items.Clear();
 
-        var videoEntries =
+        var tasks =
+            VideoCacheDownloadManager.Default.Snapshot();
+
+        _hasActiveDownloads =
+            tasks.Any(static task =>
+                task.Status ==
+                VideoCacheDownloadStatus.Downloading);
+
+        var taskGroupKeys =
+            tasks
+                .Where(static task =>
+                    task.Status !=
+                        VideoCacheDownloadStatus.Canceled &&
+                    !string.IsNullOrWhiteSpace(
+                        task.GroupKey))
+                .Select(static task =>
+                    task.GroupKey!)
+                .ToHashSet(
+                    StringComparer.Ordinal);
+
+        var pinnedGroupKeys =
             snapshot.Entries
                 .Where(static entry =>
                     entry.Category ==
@@ -133,13 +221,142 @@ public sealed partial class CacheView : UserControl
                     entry.Pinned &&
                     !string.IsNullOrWhiteSpace(
                         entry.GroupKey))
+                .Select(static entry =>
+                    entry.GroupKey!)
+                .ToHashSet(
+                    StringComparer.Ordinal);
+
+        var videoGroupKeys =
+            new HashSet<string>(
+                pinnedGroupKeys,
+                StringComparer.Ordinal);
+        videoGroupKeys.UnionWith(
+            taskGroupKeys);
+
+        var videoEntries =
+            snapshot.Entries
+                .Where(entry =>
+                    entry.Category ==
+                        CacheCategory.Media &&
+                    !string.IsNullOrWhiteSpace(
+                        entry.GroupKey) &&
+                    videoGroupKeys.Contains(
+                        entry.GroupKey!))
                 .ToArray();
 
-        foreach (var group in videoEntries
+        var shownGroups =
+            new HashSet<string>(
+                StringComparer.Ordinal);
+
+        foreach (var task in tasks
+                     .Where(static task =>
+                         task.Status !=
+                         VideoCacheDownloadStatus.Canceled)
+                     .OrderBy(static task =>
+                         task.Status ==
+                             VideoCacheDownloadStatus.Downloading
+                             ? 0
+                             : task.Status ==
+                                   VideoCacheDownloadStatus.Failed
+                                 ? 1
+                                 : 2)
+                     .ThenByDescending(static task =>
+                         task.UpdatedUtc))
+        {
+            var completed =
+                task.Status ==
+                VideoCacheDownloadStatus.Completed &&
+                !string.IsNullOrWhiteSpace(
+                    task.GroupKey);
+
+            if (completed &&
+                task.GroupKey is { } completedGroup)
+            {
+                shownGroups.Add(
+                    completedGroup);
+            }
+
+            var total =
+                Math.Max(
+                    0,
+                    task.TotalBytes);
+            var completedBytes =
+                Math.Clamp(
+                    task.CompletedBytes,
+                    0,
+                    total > 0
+                        ? total
+                        : long.MaxValue);
+
+            var status =
+                task.Status switch
+                {
+                    VideoCacheDownloadStatus.Completed =>
+                        T("Cache_StatusCompleted"),
+                    VideoCacheDownloadStatus.Failed =>
+                        T("Cache_StatusFailed"),
+                    _ =>
+                        T("Cache_StatusDownloading")
+                };
+
+            var progressText =
+                total > 0
+                    ? FormatBytes(completedBytes) +
+                      " / " +
+                      FormatBytes(total) +
+                      " · " +
+                      task.ProgressPercent.ToString(
+                          "0",
+                          CultureInfo.CurrentCulture) +
+                      "%"
+                    : T("Cache_StatusPreparing");
+
+            _items.Add(
+                new CacheItemModel(
+                    "task:" + task.TaskKey,
+                    task.Title,
+                    task.Source,
+                    total > 0
+                        ? FormatBytes(total)
+                        : "—",
+                    task.UpdatedUtc
+                        .ToLocalTime()
+                        .ToString(
+                            "g",
+                            CultureInfo.CurrentCulture),
+                    completed
+                        ? 100d
+                        : task.ProgressPercent,
+                    progressText,
+                    status,
+                    completed,
+                    task.GroupKey,
+                    task.TaskKey,
+                    completed &&
+                    task.GroupKey is { } groupKey
+                        ? new CachedVideoPlaybackRequest(
+                            groupKey,
+                            task.Title,
+                            task.Source,
+                            total)
+                        : null,
+                    T("Cache_DeleteVideo")));
+        }
+
+        foreach (var group in snapshot.Entries
+                     .Where(static entry =>
+                         entry.Category ==
+                             CacheCategory.Media &&
+                         entry.Pinned &&
+                         !string.IsNullOrWhiteSpace(
+                             entry.GroupKey))
                      .GroupBy(
                          static entry =>
                              entry.GroupKey!,
-                         StringComparer.Ordinal))
+                         StringComparer.Ordinal)
+                     .Where(group =>
+                         !shownGroups.Contains(
+                             group.Key)))
         {
             var entries =
                 group.ToArray();
@@ -149,21 +366,34 @@ public sealed partial class CacheView : UserControl
                         entry.LastAccessedUtc);
             var first =
                 entries[0];
+            var size =
+                entries.Sum(
+                    static entry =>
+                        entry.SizeBytes);
 
             _items.Add(
                 new CacheItemModel(
                     "group:" + group.Key,
                     first.DisplayName,
                     first.Source,
-                    FormatBytes(
-                        entries.Sum(
-                            static entry =>
-                                entry.SizeBytes)),
+                    FormatBytes(size),
                     newest
                         .ToLocalTime()
                         .ToString(
                             "g",
-                            CultureInfo.CurrentCulture)));
+                            CultureInfo.CurrentCulture),
+                    100d,
+                    FormatBytes(size),
+                    T("Cache_StatusCompleted"),
+                    true,
+                    group.Key,
+                    TaskKey: null,
+                    new CachedVideoPlaybackRequest(
+                        group.Key,
+                        first.DisplayName,
+                        first.Source,
+                        size),
+                    T("Cache_DeleteVideo")));
         }
 
         var videoCacheBytes =
@@ -218,14 +448,37 @@ public sealed partial class CacheView : UserControl
             _items.Count == 0
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+
+        UpdateActionAvailability();
+    }
+
+    private void CacheList_ItemClick(
+        object sender,
+        ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is not CacheItemModel
+            {
+                IsCompleted: true,
+                PlaybackRequest: { } request
+            })
+        {
+            return;
+        }
+
+        PlaybackRequested?.Invoke(
+            this,
+            request);
     }
 
     private async void ClearApplicationCacheButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (_busy)
+        if (_busy ||
+            _hasActiveDownloads)
+        {
             return;
+        }
 
         SetBusy(true);
         try
@@ -246,7 +499,7 @@ public sealed partial class CacheView : UserControl
         RoutedEventArgs e)
     {
         if (_busy ||
-            sender is not Button
+            sender is not FrameworkElement
             {
                 Tag: string id
             })
@@ -257,19 +510,22 @@ public sealed partial class CacheView : UserControl
         SetBusy(true);
         try
         {
+            const string taskPrefix = "task:";
             const string groupPrefix = "group:";
 
             if (id.StartsWith(
-                    groupPrefix,
+                    taskPrefix,
                     StringComparison.Ordinal))
             {
-                await CacheRuntime.Store.ClearGroupAsync(
-                    id[groupPrefix.Length..],
-                    preservePinned: false);
+                await VideoCacheDownloadManager.Default.DeleteTaskAsync(
+                    id[taskPrefix.Length..]);
             }
-            else
+            else if (id.StartsWith(
+                         groupPrefix,
+                         StringComparison.Ordinal))
             {
-                await CacheRuntime.Store.DeleteAsync(id);
+                await VideoCacheDownloadManager.Default.DeleteGroupAsync(
+                    id[groupPrefix.Length..]);
             }
         }
         finally
@@ -372,12 +628,20 @@ public sealed partial class CacheView : UserControl
     {
         _busy = busy;
 
-        ClearApplicationCacheButton.IsEnabled = !busy;
         AutoCleanupToggle.IsEnabled = !busy;
         CacheLimitCombo.IsEnabled = !busy;
         PrecacheSizeCombo.IsEnabled = !busy;
         KeepOfflineToggle.IsEnabled = !busy;
         CacheList.IsEnabled = !busy;
+
+        UpdateActionAvailability();
+    }
+
+    private void UpdateActionAvailability()
+    {
+        ClearApplicationCacheButton.IsEnabled =
+            !_busy &&
+            !_hasActiveDownloads;
     }
 
     private void ApplyText()

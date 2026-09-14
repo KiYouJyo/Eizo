@@ -1256,4 +1256,20 @@
   <data name="Cache_ClearApplicationCache" xml:space="preserve">
     <value>アプリキャッシュを削除</value>
   </data>
+
+  <data name="Cache_StatusDownloading" xml:space="preserve">
+    <value>ダウンロード中</value>
+  </data>
+  <data name="Cache_StatusCompleted" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="Cache_StatusFailed" xml:space="preserve">
+    <value>ダウンロード失敗</value>
+  </data>
+  <data name="Cache_StatusPreparing" xml:space="preserve">
+    <value>ダウンロードを準備中…</value>
+  </data>
+  <data name="Cache_DeleteVideo" xml:space="preserve">
+    <value>削除</value>
+  </data>
 </root>

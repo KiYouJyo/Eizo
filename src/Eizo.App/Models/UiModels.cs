@@ -130,4 +130,12 @@ public sealed record CacheItemModel(
     string Title,
     string Source,
     string Size,
-    string LastAccessed);
+    string LastAccessed,
+    double ProgressPercent = 100,
+    string ProgressText = "",
+    string Status = "",
+    bool IsCompleted = false,
+    string? GroupKey = null,
+    string? TaskKey = null,
+    CachedVideoPlaybackRequest? PlaybackRequest = null,
+    string DeleteText = "");

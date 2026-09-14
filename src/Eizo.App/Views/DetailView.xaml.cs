@@ -316,7 +316,7 @@ public sealed partial class DetailView : UserControl
 
         try
         {
-            await WebDavVideoCacheService.Default.CacheAsync(
+            await VideoCacheDownloadManager.Default.StartAsync(
                 item);
 
             button.Content =

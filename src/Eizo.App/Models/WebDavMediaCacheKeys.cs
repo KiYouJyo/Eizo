@@ -32,6 +32,79 @@ internal static class WebDavMediaCacheKeys
         groupKey + ":block:" +
         blockIndex.ToString(CultureInfo.InvariantCulture);
 
+    public static bool TryParseGroupKey(
+        string groupKey,
+        out string sourceId,
+        out Uri? mediaUri)
+    {
+        sourceId = string.Empty;
+        mediaUri = null;
+
+        const string prefix = "webdav-media:";
+
+        if (string.IsNullOrWhiteSpace(groupKey) ||
+            !groupKey.StartsWith(
+                prefix,
+                StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var sourceSeparator =
+            groupKey.IndexOf(
+                ':',
+                prefix.Length);
+
+        if (sourceSeparator <= prefix.Length)
+            return false;
+
+        var versionSeparator =
+            FindVersionSeparator(
+                groupKey);
+
+        if (versionSeparator <= sourceSeparator + 1)
+            return false;
+
+        sourceId =
+            groupKey[
+                prefix.Length..
+                sourceSeparator];
+
+        var uriText =
+            groupKey[
+                (sourceSeparator + 1)..
+                versionSeparator];
+
+        return Uri.TryCreate(
+            uriText,
+            UriKind.Absolute,
+            out mediaUri);
+    }
+
+    private static int FindVersionSeparator(
+        string groupKey)
+    {
+        var result = -1;
+
+        foreach (var marker in new[]
+                 {
+                     ":etag:",
+                     ":modified:",
+                     ":length:"
+                 })
+        {
+            var index =
+                groupKey.LastIndexOf(
+                    marker,
+                    StringComparison.Ordinal);
+
+            if (index > result)
+                result = index;
+        }
+
+        return result;
+    }
+
     public static int ExpectedBlockLength(
         long contentLength,
         long blockIndex)
