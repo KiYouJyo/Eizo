@@ -22,9 +22,15 @@ public sealed partial class HomeView : UserControl
     private readonly Dictionary<string, BangumiSubjectCard> _bangumiSeasonSubjects =
         new(StringComparer.Ordinal);
 
+    private const int SearchPageSize = 30;
+
     private IReadOnlyList<HomeContinueCardModel> _continueItems = [];
     private IReadOnlyList<MediaCardModel> _seasonItems = [];
     private IReadOnlyList<HomeSearchSuggestion> _searchSuggestions = [];
+    private IReadOnlyList<HomeSearchResultItem> _searchResults = [];
+    private string _activeSearchQuery = string.Empty;
+    private int _searchNextOffset;
+    private int _searchTotal;
     private CatalogSubjectModel? _featuredSubject;
     private CatalogMediaItemModel? _featuredItem;
     private CancellationTokenSource? _seasonCancellation;
@@ -141,8 +147,10 @@ public sealed partial class HomeView : UserControl
             })
             .ToArray();
 
-        var heroCandidates = aggregation.Subjects
-            .Where(static subject => subject.FirstPlayableItem is not null)
+        var illustratedSubjects = aggregation.Subjects
+            .Where(static subject =>
+                subject.FirstPlayableItem is not null &&
+                HasArtwork(subject))
             .OrderByDescending(static subject =>
                 !string.IsNullOrWhiteSpace(
                     subject.Metadata?.BackdropUrl))
@@ -153,18 +161,32 @@ public sealed partial class HomeView : UserControl
                 StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
 
+        var fallbackSubjects = aggregation.Subjects
+            .Where(static subject =>
+                subject.FirstPlayableItem is not null)
+            .OrderByDescending(static subject =>
+                subject.Metadata is { IsResolved: true })
+            .ThenBy(static subject =>
+                subject.Title,
+                StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+
+        var heroCandidates =
+            illustratedSubjects.Length > 0
+                ? illustratedSubjects
+                : fallbackSubjects;
+
         _featuredSubject = heroCandidates.Length == 0
             ? null
             : heroCandidates[
                 DateTimeOffset.Now.DayOfYear %
-                heroCandidates.Length];
+                Math.Min(heroCandidates.Length, 8)];
 
         _featuredItem =
             _featuredSubject?.FirstPlayableItem ??
             aggregation.StandaloneItems
                 .OrderByDescending(static item =>
-                    !string.IsNullOrWhiteSpace(
-                        item.Metadata?.BackdropUrl))
+                    HasArtwork(item))
                 .ThenByDescending(static item =>
                     item.Metadata is { IsResolved: true })
                 .FirstOrDefault();
@@ -178,8 +200,12 @@ public sealed partial class HomeView : UserControl
         if (_featuredSubject is { } subject &&
             _featuredItem is { } subjectItem)
         {
-            FeaturedTitle.Text = subject.Title;
-            FeaturedNativeTitle.Text = subject.NativeTitle;
+            FeaturedTitle.Text = FirstNonEmpty(
+                subject.Metadata?.CanonicalTitle,
+                subject.Title);
+            FeaturedNativeTitle.Text = FirstNonEmpty(
+                subject.Metadata?.OriginalTitle,
+                subject.NativeTitle);
             FeaturedMeta.Text = subject.Meta;
             FeaturedDescription.Text =
                 FirstNonEmpty(
@@ -201,8 +227,12 @@ public sealed partial class HomeView : UserControl
 
         if (_featuredItem is { } item)
         {
-            FeaturedTitle.Text = item.DisplayTitle;
-            FeaturedNativeTitle.Text = item.SecondaryTitle;
+            FeaturedTitle.Text = FirstNonEmpty(
+                item.Metadata?.CanonicalTitle,
+                item.DisplayTitle);
+            FeaturedNativeTitle.Text = FirstNonEmpty(
+                item.Metadata?.OriginalTitle,
+                item.SecondaryTitle);
             FeaturedMeta.Text = item.Meta;
             FeaturedDescription.Text =
                 FirstNonEmpty(
@@ -347,7 +377,8 @@ public sealed partial class HomeView : UserControl
             nativeTitle,
             string.Join(" · ", meta),
             Progress: 0,
-            ExternalKey: key);
+            ExternalKey: key,
+            ArtworkUrl: subject.PosterUrl);
     }
 
     private async void SearchBox_TextChanged(
@@ -362,7 +393,7 @@ public sealed partial class HomeView : UserControl
         _searchCancellation = null;
 
         var query = sender.Text.Trim();
-        if (query.Length < 2)
+        if (query.Length < 1)
         {
             _searchSuggestions = [];
             sender.ItemsSource = null;
@@ -425,66 +456,203 @@ public sealed partial class HomeView : UserControl
         AutoSuggestBox sender,
         AutoSuggestBoxQuerySubmittedEventArgs args)
     {
-        if (args.ChosenSuggestion is HomeSearchSuggestion selected)
-        {
-            BangumiSubjectRequested?.Invoke(
-                this,
-                selected.Subject);
-            return;
-        }
+        var query = args.ChosenSuggestion is HomeSearchSuggestion selected
+            ? FirstNonEmpty(
+                selected.Subject.ChineseTitle,
+                selected.Subject.NativeTitle)
+            : args.QueryText.Trim();
 
-        var query = args.QueryText.Trim();
         if (string.IsNullOrWhiteSpace(query))
             return;
 
-        var cached = _searchSuggestions.FirstOrDefault(
-            suggestion =>
-                string.Equals(
-                    suggestion.DisplayText,
-                    query,
-                    StringComparison.CurrentCultureIgnoreCase) ||
-                string.Equals(
-                    suggestion.Subject.NativeTitle,
-                    query,
-                    StringComparison.CurrentCultureIgnoreCase) ||
-                string.Equals(
-                    suggestion.Subject.ChineseTitle,
-                    query,
-                    StringComparison.CurrentCultureIgnoreCase));
+        sender.IsSuggestionListOpen = false;
+        await LoadSearchResultsAsync(
+            query,
+            append: false);
+    }
 
-        if (cached is not null)
-        {
-            BangumiSubjectRequested?.Invoke(
-                this,
-                cached.Subject);
-            return;
-        }
-
+    private async Task LoadSearchResultsAsync(
+        string query,
+        bool append)
+    {
         _searchCancellation?.Cancel();
         _searchCancellation?.Dispose();
         _searchCancellation = new CancellationTokenSource();
+        var cancellationToken = _searchCancellation.Token;
+
+        if (!append)
+        {
+            _activeSearchQuery = query.Trim();
+            _searchResults = [];
+            _searchNextOffset = 0;
+            _searchTotal = 0;
+            SearchResultsGrid.ItemsSource = _searchResults;
+            SetSearchMode(true);
+        }
+
+        SearchResultsLoadingRing.IsActive = true;
+        SearchResultsLoadingRing.Visibility = Visibility.Visible;
+        SearchResultsLoadMoreButton.Visibility = Visibility.Collapsed;
+        SearchResultsStatus.Text = T("Bangumi_Loading");
 
         try
         {
             var page = await _bangumi.SearchAnimeAsync(
-                query,
-                limit: 10,
-                offset: 0,
-                _searchCancellation.Token);
+                _activeSearchQuery,
+                limit: SearchPageSize,
+                offset: append ? _searchNextOffset : 0,
+                cancellationToken);
 
-            if (page.Items.FirstOrDefault() is { } result)
-            {
-                BangumiSubjectRequested?.Invoke(
-                    this,
-                    result);
-            }
+            var newItems = page.Items
+                .Select(CreateSearchResultItem)
+                .ToArray();
+
+            _searchResults = append
+                ? _searchResults
+                    .Concat(newItems)
+                    .GroupBy(static item => item.Subject.Id)
+                    .Select(static group => group.First())
+                    .ToArray()
+                : newItems;
+
+            _searchNextOffset =
+                page.Offset + page.Items.Count;
+            _searchTotal = page.Total;
+            SearchResultsGrid.ItemsSource = _searchResults;
+
+            SearchResultsTitle.Text = string.Format(
+                CultureInfo.CurrentCulture,
+                T("Home_BangumiSearchResultsTitleFormat"),
+                _activeSearchQuery);
+
+            SearchResultsStatus.Text = _searchResults.Count == 0
+                ? T("Bangumi_NoResults")
+                : string.Format(
+                    CultureInfo.CurrentCulture,
+                    T("Home_BangumiSearchResultsCountFormat"),
+                    _searchResults.Count,
+                    _searchTotal);
+
+            SearchResultsLoadMoreButton.Visibility =
+                page.HasMore
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
         }
         catch (OperationCanceledException)
         {
         }
         catch
         {
+            SearchResultsStatus.Text =
+                T("Bangumi_NetworkError");
         }
+        finally
+        {
+            SearchResultsLoadingRing.IsActive = false;
+            SearchResultsLoadingRing.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void SetSearchMode(bool enabled)
+    {
+        SearchResultsPanel.Visibility =
+            enabled
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        var normalVisibility =
+            enabled
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        HeroPanel.Visibility = normalVisibility;
+        ContinueHeader.Visibility = normalVisibility;
+        ContinueGrid.Visibility = normalVisibility;
+        SeasonHeader.Visibility = normalVisibility;
+        SeasonGrid.Visibility = normalVisibility;
+    }
+
+    private async void SearchResultsLoadMoreButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_activeSearchQuery))
+            return;
+
+        await LoadSearchResultsAsync(
+            _activeSearchQuery,
+            append: true);
+    }
+
+    private void SearchResultsBackButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _searchCancellation?.Cancel();
+        _activeSearchQuery = string.Empty;
+        _searchResults = [];
+        _searchNextOffset = 0;
+        _searchTotal = 0;
+        SearchResultsGrid.ItemsSource = null;
+        SearchResultsStatus.Text = string.Empty;
+        SetSearchMode(false);
+    }
+
+    private void SearchResultCard_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is Button
+            {
+                Tag: BangumiSubjectCard subject
+            })
+        {
+            BangumiSubjectRequested?.Invoke(
+                this,
+                subject);
+        }
+    }
+
+    private HomeSearchResultItem CreateSearchResultItem(
+        BangumiSubjectCard subject)
+    {
+        var preferNative =
+            _localization.CurrentLanguage is "ja-JP" or "en-US";
+
+        var title = preferNative
+            ? FirstNonEmpty(
+                subject.NativeTitle,
+                subject.ChineseTitle)
+            : FirstNonEmpty(
+                subject.ChineseTitle,
+                subject.NativeTitle);
+
+        var subtitle = preferNative
+            ? subject.ChineseTitle
+            : subject.NativeTitle;
+
+        if (string.Equals(
+                title,
+                subtitle,
+                StringComparison.CurrentCultureIgnoreCase))
+        {
+            subtitle = string.Empty;
+        }
+
+        var meta = new List<string>();
+        if (!string.IsNullOrWhiteSpace(subject.AirDate))
+            meta.Add(subject.AirDate!);
+        if (subject.Score > 0)
+            meta.Add($"★ {subject.Score:0.0}");
+        if (subject.Rank > 0)
+            meta.Add($"#{subject.Rank}");
+
+        return new HomeSearchResultItem(
+            subject,
+            title,
+            subtitle,
+            string.Join(" · ", meta),
+            subject.PosterUrl);
     }
 
     private HomeSearchSuggestion CreateSearchSuggestion(
@@ -551,9 +719,7 @@ public sealed partial class HomeView : UserControl
 
         columns = Math.Max(
             1,
-            Math.Min(
-                columns,
-                Math.Max(1, items.Count)));
+            columns);
 
         for (var column = 0; column < columns; column++)
             grid.ColumnDefinitions.Add(new ColumnDefinition());
@@ -601,7 +767,12 @@ public sealed partial class HomeView : UserControl
     private void ApplyText()
     {
         PageTitle.Text = T("Nav_Home");
-        SearchBox.PlaceholderText = T("Search_Placeholder");
+        SearchBox.PlaceholderText =
+            T("Home_BangumiSearchPlaceholder");
+        SearchResultsBackButton.Content =
+            T("Common_Back");
+        SearchResultsLoadMoreButton.Content =
+            T("Bangumi_LoadMore");
         FeaturedEyebrow.Text = T("Home_Featured");
         FeaturedDescription.Text =
             T("Home_FeaturedDescription");
@@ -731,6 +902,24 @@ public sealed partial class HomeView : UserControl
         return string.Join(" · ", parts);
     }
 
+    private static bool HasArtwork(
+        CatalogSubjectModel subject) =>
+        !string.IsNullOrWhiteSpace(
+            subject.Metadata?.BackdropUrl) ||
+        !string.IsNullOrWhiteSpace(
+            subject.Metadata?.PosterUrl) ||
+        (subject.FirstPlayableItem is { } item &&
+         HasArtwork(item));
+
+    private static bool HasArtwork(
+        CatalogMediaItemModel item) =>
+        !string.IsNullOrWhiteSpace(
+            item.Metadata?.BackdropUrl) ||
+        !string.IsNullOrWhiteSpace(
+            item.Metadata?.PosterUrl) ||
+        !string.IsNullOrWhiteSpace(
+            item.Metadata?.EpisodeThumbnailUrl);
+
     private static BitmapImage? CreateArtwork(
         string? url,
         int decodePixelWidth)
@@ -772,6 +961,13 @@ public sealed partial class HomeView : UserControl
             static value =>
                 !string.IsNullOrWhiteSpace(value))
         ?? string.Empty;
+
+    private sealed record HomeSearchResultItem(
+        BangumiSubjectCard Subject,
+        string Title,
+        string Subtitle,
+        string Meta,
+        string? ArtworkUrl);
 
     private sealed record HomeSearchSuggestion(
         BangumiSubjectCard Subject,
