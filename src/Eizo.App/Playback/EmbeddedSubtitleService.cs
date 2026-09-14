@@ -13,10 +13,12 @@ internal static class EmbeddedSubtitleService
         new(StringComparer.OrdinalIgnoreCase)
         {
             "PGS",
+            "BDPG",
             "HDMV",
             "DVBS",
             "DVD",
             "SPU",
+            "SUBP",
             "XSUB"
         };
 
@@ -31,14 +33,7 @@ internal static class EmbeddedSubtitleService
             return false;
         }
 
-        var extension = Path.GetExtension(
-            Uri.UnescapeDataString(source.Uri.AbsolutePath));
-
-        return extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".m4v", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".mov", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".mkv", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".webm", StringComparison.OrdinalIgnoreCase);
+        return true;
     }
 
     internal static async Task<SubtitleDocument?> LoadDocumentAsync(
@@ -67,8 +62,12 @@ internal static class EmbeddedSubtitleService
         var extension = Path.GetExtension(
             Uri.UnescapeDataString(source.Uri.AbsolutePath));
 
-        if (extension.Equals(".mkv", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".webm", StringComparison.OrdinalIgnoreCase))
+        var container = await DetectEmbeddedSubtitleContainerAsync(
+            reader,
+            extension,
+            cancellationToken);
+
+        if (container == EmbeddedSubtitleContainer.Matroska)
         {
             return await LoadMatroskaDocumentAsync(
                 reader,
@@ -77,6 +76,9 @@ internal static class EmbeddedSubtitleService
                 subtitleTracks,
                 cancellationToken);
         }
+
+        if (container != EmbeddedSubtitleContainer.IsoBaseMedia)
+            return null;
 
         var moov = await ReadMoovAsync(
             reader,
@@ -259,6 +261,49 @@ internal static class EmbeddedSubtitleService
             return TimeSpan.Zero;
 
         return TimeSpan.FromSeconds((double)units / timescale);
+    }
+
+    private static async Task<EmbeddedSubtitleContainer>
+        DetectEmbeddedSubtitleContainerAsync(
+            IRangeReader reader,
+            string extension,
+            CancellationToken cancellationToken)
+    {
+        if (extension.Equals(".mkv", StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".webm", StringComparison.OrdinalIgnoreCase))
+        {
+            return EmbeddedSubtitleContainer.Matroska;
+        }
+
+        if (extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".m4v", StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".mov", StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".3gp", StringComparison.OrdinalIgnoreCase))
+        {
+            return EmbeddedSubtitleContainer.IsoBaseMedia;
+        }
+
+        var header = new byte[12];
+        var read = await reader.ReadAsync(
+            0,
+            header,
+            cancellationToken);
+
+        if (read >= 4 &&
+            BinaryPrimitives.ReadUInt32BigEndian(
+                header.AsSpan(0, 4)) == 0x1A45DFA3)
+        {
+            return EmbeddedSubtitleContainer.Matroska;
+        }
+
+        if (read >= 8)
+        {
+            var boxType = Encoding.ASCII.GetString(header, 4, 4);
+            if (boxType is "ftyp" or "moov" or "mdat" or "free" or "wide")
+                return EmbeddedSubtitleContainer.IsoBaseMedia;
+        }
+
+        return EmbeddedSubtitleContainer.Unknown;
     }
 
     private static async Task<byte[]?> ReadMoovAsync(
@@ -1796,6 +1841,13 @@ internal static class EmbeddedSubtitleService
     private readonly record struct StscEntry(
         uint FirstChunk,
         uint SamplesPerChunk);
+
+    private enum EmbeddedSubtitleContainer
+    {
+        Unknown,
+        IsoBaseMedia,
+        Matroska
+    }
 
     private sealed record Mp4SubtitleTrack(
         string Codec,
