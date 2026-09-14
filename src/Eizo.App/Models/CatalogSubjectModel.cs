@@ -32,6 +32,8 @@ public sealed record CatalogSubjectModel(
             .OfType<MediaMetadataSnapshot>()
             .Where(static metadata => metadata.IsResolved)
             .OrderByDescending(static metadata =>
+                !string.IsNullOrWhiteSpace(metadata.BackdropUrl))
+            .ThenByDescending(static metadata =>
                 !string.IsNullOrWhiteSpace(metadata.PosterUrl))
             .ThenByDescending(static metadata =>
                 !string.IsNullOrWhiteSpace(metadata.CanonicalTitle) ||
@@ -134,6 +136,9 @@ internal static class CatalogSubjectAggregator
     {
         var representative = items
             .OrderByDescending(static item =>
+                item.Metadata is { IsResolved: true } metadata &&
+                !string.IsNullOrWhiteSpace(metadata.BackdropUrl))
+            .ThenByDescending(static item =>
                 item.Metadata is { IsResolved: true } metadata &&
                 !string.IsNullOrWhiteSpace(metadata.PosterUrl))
             .ThenByDescending(static item => item.Metadata is { IsResolved: true })
