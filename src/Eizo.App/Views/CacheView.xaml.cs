@@ -106,10 +106,10 @@ public sealed partial class CacheView : UserControl
                     VideoCacheDownloadManager.Default.Snapshot();
                 var terminalChanged =
                     tasks.Any(task =>
-                        task.Status is
+                        (task.Status is
                             VideoCacheDownloadStatus.Completed or
                             VideoCacheDownloadStatus.Failed or
-                            VideoCacheDownloadStatus.Canceled &&
+                            VideoCacheDownloadStatus.Canceled) &&
                         task.UpdatedUtc >
                             _lastSnapshotUtc);
 
@@ -388,12 +388,12 @@ public sealed partial class CacheView : UserControl
                     true,
                     group.Key,
                     TaskKey: null,
-                    new CachedVideoPlaybackRequest(
+                    PlaybackRequest: new CachedVideoPlaybackRequest(
                         group.Key,
                         first.DisplayName,
                         first.Source,
                         size),
-                    T("Cache_DeleteVideo")));
+                    DeleteText: T("Cache_DeleteVideo")));
         }
 
         var videoCacheBytes =

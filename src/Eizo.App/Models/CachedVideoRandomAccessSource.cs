@@ -12,8 +12,12 @@ internal sealed record CachedVideoPlaybackRequest(
 internal sealed class CachedVideoRandomAccessSource
     : IPlaybackRandomAccessSource
 {
+    private const int MemoryBlockLimit = 4;
+
     private readonly string _groupKey;
     private readonly long _length;
+    private readonly Dictionary<long, byte[]> _memoryBlocks = [];
+    private readonly object _memorySync = new();
 
     public CachedVideoRandomAccessSource(
         string groupKey,
@@ -74,11 +78,28 @@ internal sealed class CachedVideoRandomAccessSource
                     _groupKey,
                     blockIndex);
 
-            var block =
-                await global::Eizo.CacheRuntime.Store.ReadBytesAsync(
-                    CacheCategory.Media,
-                    cacheKey,
-                    cancellationToken);
+            byte[]? block;
+
+            lock (_memorySync)
+            {
+                _memoryBlocks.TryGetValue(
+                    blockIndex,
+                    out block);
+            }
+
+            if (block is null)
+            {
+                block =
+                    await global::Eizo.CacheRuntime.Store.ReadBytesAsync(
+                        CacheCategory.Media,
+                        cacheKey,
+                        cancellationToken);
+
+                if (block is not null)
+                    RememberBlock(
+                        blockIndex,
+                        block);
+            }
 
             if (block is null ||
                 blockOffset >= block.Length)
@@ -105,5 +126,33 @@ internal sealed class CachedVideoRandomAccessSource
         }
 
         return written;
+    }
+
+    private void RememberBlock(
+        long blockIndex,
+        byte[] block)
+    {
+        lock (_memorySync)
+        {
+            _memoryBlocks[blockIndex] =
+                block;
+
+            if (_memoryBlocks.Count <=
+                MemoryBlockLimit)
+            {
+                return;
+            }
+
+            foreach (var key in _memoryBlocks.Keys
+                         .OrderBy(key =>
+                             Math.Abs(
+                                 key -
+                                 blockIndex))
+                         .Skip(MemoryBlockLimit)
+                         .ToArray())
+            {
+                _memoryBlocks.Remove(key);
+            }
+        }
     }
 }
