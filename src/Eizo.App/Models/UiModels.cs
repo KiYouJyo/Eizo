@@ -125,7 +125,7 @@ public sealed record EpisodeItemModel(
     string Status,
     double Progress = 0,
     CatalogMediaItemModel? MediaItem = null);
-internal sealed record CachedVideoPlaybackRequest(
+public sealed record CachedVideoPlaybackRequest(
     string GroupKey,
     string Title,
     string Source,
