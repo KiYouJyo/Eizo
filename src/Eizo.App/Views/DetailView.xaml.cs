@@ -1,4 +1,5 @@
 using System.Globalization;
+using Eizo.Bangumi;
 using Eizo.Localization;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
@@ -12,6 +13,9 @@ public sealed partial class DetailView : UserControl
     private readonly AppLocalizationService _localization =
         AppLocalizationService.Default;
     private readonly CatalogSubjectModel? _subject;
+    private readonly BangumiRepository _bangumi =
+        BangumiRepository.Default;
+    private CancellationTokenSource? _creditsLoadCancellation;
 
     public event EventHandler<string>? PlayRequested;
     public event EventHandler<CatalogMediaItemModel>? MediaPlayRequested;
@@ -52,14 +56,9 @@ public sealed partial class DetailView : UserControl
         };
         SeasonComboBox.SelectedIndex = 0;
         EpisodeCountText.Text = "2";
-        MediaTypeInfoValue.Text = "-";
-        ReleaseDateInfoValue.Text = "-";
-        TotalEpisodesInfoValue.Text = "-";
-        LocalEpisodesInfoValue.Text = "-";
-        MediaSourcesInfoValue.Text = "-";
-        MetadataProviderInfoValue.Text = "-";
-        ExternalIdsText.Text = "-";
-        ExternalIdsSection.Visibility = Visibility.Collapsed;
+        CreditsStatusText.Text =
+            L("暂无演职人员信息。", "キャスト・スタッフ情報はありません。", "No cast or staff information.");
+        CreditsStatusText.Visibility = Visibility.Visible;
     }
 
     public DetailView(CatalogSubjectModel subject)
@@ -84,6 +83,7 @@ public sealed partial class DetailView : UserControl
             PlaybackHistoryStore_Changed;
 
         RebuildEpisodeList();
+        _ = LoadCreditsAsync();
     }
 
     private void DetailView_Unloaded(
@@ -92,6 +92,10 @@ public sealed partial class DetailView : UserControl
     {
         PlaybackHistoryStore.Default.Changed -=
             PlaybackHistoryStore_Changed;
+
+        _creditsLoadCancellation?.Cancel();
+        _creditsLoadCancellation?.Dispose();
+        _creditsLoadCancellation = null;
     }
 
     private void PlaybackHistoryStore_Changed(
@@ -119,14 +123,8 @@ public sealed partial class DetailView : UserControl
         EpisodesTitle.Text = _subject?.IsMovieSubject == true
             ? L("影片", "作品", "Films")
             : T("Media_Episodes");
-        InfoTitle.Text = L("作品信息", "作品情報", "Title information");
-        MediaTypeInfoLabel.Text = L("作品类型", "作品種別", "Type");
-        ReleaseDateInfoLabel.Text = L("发布日期", "公開日", "Release date");
-        TotalEpisodesInfoLabel.Text = L("总集数", "総話数", "Total episodes");
-        LocalEpisodesInfoLabel.Text = L("本地集数", "ローカル話数", "Local episodes");
-        MediaSourcesInfoLabel.Text = L("媒体来源", "メディアソース", "Media sources");
-        MetadataProviderInfoLabel.Text = L("元数据来源", "メタデータ提供元", "Metadata provider");
-        ExternalIdsTitle.Text = L("外部 ID", "外部 ID", "External IDs");
+        CastTitle.Text = L("角色与声优", "キャラクターと声優", "Characters & cast");
+        StaffTitle.Text = L("制作人员", "スタッフ", "Staff");
     }
 
     private void ApplySubject()
@@ -197,9 +195,6 @@ public sealed partial class DetailView : UserControl
                 $"{sourceKind} · {sourceCount}",
                 $"{sourceKind} · {sourceCount}")
             : sourceKind;
-
-        MediaTypeInfoValue.Text = ResolveMediaTypeLabel(_subject);
-        ReleaseDateInfoValue.Text = release;
 
         if (_subject.IsMovieSubject)
         {
@@ -276,105 +271,180 @@ public sealed partial class DetailView : UserControl
         RebuildEpisodeList();
     }
 
-    private string ResolveMediaTypeLabel(
-        CatalogSubjectModel subject)
+    private async Task LoadCreditsAsync()
     {
-        if (subject.IsMovieSubject ||
-            subject.Category == MediaCategoryKind.Movies)
+        if (_subject is null)
+            return;
+
+        var subjectId = ResolveBangumiSubjectId();
+        if (subjectId is null)
         {
-            return L("电影", "映画", "Movie");
+            CharactersList.ItemsSource = null;
+            StaffList.ItemsSource = null;
+            CreditsStatusText.Text =
+                L(
+                    "暂无可用的演职人员数据。",
+                    "利用可能なキャスト・スタッフ情報がありません。",
+                    "No cast or staff data is available.");
+            CreditsStatusText.Visibility = Visibility.Visible;
+            return;
         }
 
-        return subject.Category switch
-        {
-            MediaCategoryKind.Anime =>
-                L("动画", "アニメ", "Anime"),
-            MediaCategoryKind.Series =>
-                L("电视剧", "テレビシリーズ", "TV series"),
-            _ =>
-                L("剧集", "シリーズ", "Series"),
-        };
-    }
+        _creditsLoadCancellation?.Cancel();
+        _creditsLoadCancellation?.Dispose();
+        _creditsLoadCancellation =
+            new CancellationTokenSource();
+        var token = _creditsLoadCancellation.Token;
 
-    private string ResolveMediaSourceSummary(
-        IReadOnlyList<CatalogMediaItemModel> items)
-    {
-        var labels = items
-            .Where(static item =>
-                item.Location is not null)
-            .GroupBy(
-                static item => item.Location!.SourceId,
-                StringComparer.Ordinal)
-            .Select(group =>
+        CreditsLoadingRing.IsActive = true;
+        CreditsLoadingRing.Visibility = Visibility.Visible;
+        CreditsStatusText.Visibility = Visibility.Collapsed;
+
+        try
+        {
+            var result = await _bangumi.GetSubjectCreditsAsync(
+                subjectId.Value,
+                forceRefresh: false,
+                token);
+
+            var characters = result.Value.Characters
+                .OrderBy(static item => CharacterPriority(item.Relation))
+                .ThenBy(static item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+                .Take(8)
+                .Select(item =>
+                    new CharacterCreditViewModel(
+                        item.Name,
+                        string.IsNullOrWhiteSpace(item.Relation)
+                            ? L("角色", "キャラクター", "Character")
+                            : item.Relation,
+                        item.Actors.Count > 0
+                            ? string.Join(
+                                " / ",
+                                item.Actors
+                                    .Select(static actor => actor.Name)
+                                    .Where(static name => !string.IsNullOrWhiteSpace(name))
+                                    .Take(2))
+                            : L("声优未收录", "声優未登録", "No cast listed"),
+                        CreateRemoteImage(item.ImageUrl, 160)))
+                .ToArray();
+
+            var staff = result.Value.Staff
+                .Where(static item => !string.IsNullOrWhiteSpace(item.Relation))
+                .OrderBy(static item => StaffPriority(item.Relation))
+                .ThenBy(static item => item.Relation, StringComparer.CurrentCultureIgnoreCase)
+                .ThenBy(static item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+                .Take(12)
+                .Select(static item =>
+                    new StaffCreditViewModel(
+                        item.Relation,
+                        item.Name))
+                .ToArray();
+
+            CharactersList.ItemsSource = characters;
+            StaffList.ItemsSource = staff;
+
+            if (characters.Length == 0 && staff.Length == 0)
             {
-                var source =
-                    MediaSourceStore.Default.Find(group.Key);
-                if (source is { IsBuiltIn: true })
-                {
-                    return L(
-                        "本地媒体",
-                        "ローカルメディア",
-                        "Local media");
-                }
-
-                if (source is not null &&
-                    !string.IsNullOrWhiteSpace(
-                        source.DisplayName))
-                {
-                    return source.DisplayName;
-                }
-
-                return group.First().Location?.Kind ==
-                       MediaLocationKind.LocalFile
-                    ? L(
-                        "本地媒体",
-                        "ローカルメディア",
-                        "Local media")
-                    : L(
-                        "远程媒体",
-                        "リモートメディア",
-                        "Remote media");
-            })
-            .Distinct(
-                StringComparer.CurrentCultureIgnoreCase)
-            .ToArray();
-
-        return labels.Length > 0
-            ? string.Join(" · ", labels)
-            : L(
-                "未知来源",
-                "不明なソース",
-                "Unknown source");
+                CreditsStatusText.Text =
+                    L(
+                        "暂无演职人员信息。",
+                        "キャスト・スタッフ情報はありません。",
+                        "No cast or staff information.");
+                CreditsStatusText.Visibility = Visibility.Visible;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            CharactersList.ItemsSource = null;
+            StaffList.ItemsSource = null;
+            CreditsStatusText.Text =
+                L(
+                    "演职人员信息暂时无法加载。",
+                    "キャスト・スタッフ情報を読み込めません。",
+                    "Cast and staff information could not be loaded.");
+            CreditsStatusText.Visibility = Visibility.Visible;
+        }
+        finally
+        {
+            CreditsLoadingRing.IsActive = false;
+            CreditsLoadingRing.Visibility = Visibility.Collapsed;
+        }
     }
 
-    private static string FormatMetadataProvider(
-        string? provider) =>
-        provider?.Trim().ToLowerInvariant() switch
+    private int? ResolveBangumiSubjectId()
+    {
+        var metadata = _subject?.Metadata;
+        if (metadata is null)
+            return null;
+
+        string? value = null;
+        if (string.Equals(
+                metadata.Provider,
+                "bangumi",
+                StringComparison.OrdinalIgnoreCase))
         {
-            "bangumi" => "Bangumi",
-            "anilist" => "AniList",
-            "tmdb" => "TMDB",
-            { Length: > 0 } value => value,
-            _ => "-",
+            value = metadata.ProviderSubjectId;
+        }
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            value = metadata.ExternalIds
+                .FirstOrDefault(pair =>
+                    string.Equals(
+                        pair.Key,
+                        "bangumi",
+                        StringComparison.OrdinalIgnoreCase))
+                .Value;
+        }
+
+        return int.TryParse(
+                value,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var subjectId) &&
+               subjectId > 0
+            ? subjectId
+            : null;
+    }
+
+    private static int CharacterPriority(string? relation) =>
+        relation?.Trim() switch
+        {
+            "主角" => 0,
+            "配角" => 1,
+            "客串" => 2,
+            _ => 9,
         };
 
-    private static bool IsSameProviderIdentifier(
-        string? key,
-        string? value,
-        string? provider,
-        string? subjectId) =>
-        !string.IsNullOrWhiteSpace(key) &&
-        !string.IsNullOrWhiteSpace(value) &&
-        !string.IsNullOrWhiteSpace(provider) &&
-        !string.IsNullOrWhiteSpace(subjectId) &&
-        string.Equals(
-            key.Trim(),
-            provider.Trim(),
-            StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(
-            value.Trim(),
-            subjectId.Trim(),
-            StringComparison.OrdinalIgnoreCase);
+    private static int StaffPriority(string? relation)
+    {
+        var value = relation?.Trim() ?? string.Empty;
+        if (value.Contains("原作", StringComparison.OrdinalIgnoreCase))
+            return 0;
+        if (value.Contains("监督", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("監督", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("导演", StringComparison.OrdinalIgnoreCase))
+            return 1;
+        if (value.Contains("系列构成", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("シリーズ構成", StringComparison.OrdinalIgnoreCase))
+            return 2;
+        if (value.Contains("脚本", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("脚本", StringComparison.OrdinalIgnoreCase))
+            return 3;
+        if (value.Contains("人物设定", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("キャラクターデザイン", StringComparison.OrdinalIgnoreCase))
+            return 4;
+        if (value.Contains("音乐", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("音楽", StringComparison.OrdinalIgnoreCase))
+            return 5;
+        if (value.Contains("动画制作", StringComparison.OrdinalIgnoreCase) ||
+            value.Contains("アニメーション制作", StringComparison.OrdinalIgnoreCase))
+            return 6;
+        return 20;
+    }
 
     private void ApplyPoster(string? posterUrl)
     {
@@ -613,6 +683,16 @@ public sealed partial class DetailView : UserControl
 
         PlayRequested?.Invoke(this, "第18话");
     }
+
+    private sealed record CharacterCreditViewModel(
+        string Name,
+        string Relation,
+        string ActorText,
+        BitmapImage? Image);
+
+    private sealed record StaffCreditViewModel(
+        string Relation,
+        string Name);
 
     private sealed record SeasonOption(
         int Number,
