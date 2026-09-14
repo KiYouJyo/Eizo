@@ -1287,4 +1287,110 @@
   <data name="Home_BangumiSearchResultsCountFormat" xml:space="preserve">
     <value>已显示 {0} / {1} 个结果</value>
   </data>
+
+  <data name="Settings_MetadataAutomation" xml:space="preserve">
+    <value>自动化</value>
+  </data>
+  <data name="Settings_MetadataAutoScrape" xml:space="preserve">
+    <value>扫描时自动刮削</value>
+  </data>
+  <data name="Settings_MetadataAutoScrapeDescription" xml:space="preserve">
+    <value>扫描媒体来源时同步识别并获取作品元数据。</value>
+  </data>
+  <data name="Settings_MetadataArtwork" xml:space="preserve">
+    <value>自动补全图片</value>
+  </data>
+  <data name="Settings_MetadataArtworkDescription" xml:space="preserve">
+    <value>缺少海报或横图时，允许 Metadata 从图片提供源补全。</value>
+  </data>
+  <data name="Settings_MetadataMaintenance" xml:space="preserve">
+    <value>维护</value>
+  </data>
+  <data name="Settings_MetadataRescrape" xml:space="preserve">
+    <value>重新刮削媒体库</value>
+  </data>
+  <data name="Settings_MetadataRescrapeDescription" xml:space="preserve">
+    <value>不重新扫描文件，只刷新当前媒体库的识别与元数据结果。</value>
+  </data>
+  <data name="Settings_MetadataRescrapeButton" xml:space="preserve">
+    <value>重新刮削</value>
+  </data>
+  <data name="Settings_MetadataClearCache" xml:space="preserve">
+    <value>清除元数据缓存</value>
+  </data>
+  <data name="Settings_MetadataClearCacheDescription" xml:space="preserve">
+    <value>删除 Metadata 的本地提供源缓存；不会删除媒体来源或播放记录。</value>
+  </data>
+  <data name="Settings_MetadataClearCacheButton" xml:space="preserve">
+    <value>清除缓存</value>
+  </data>
+  <data name="Settings_MetadataNoMedia" xml:space="preserve">
+    <value>当前媒体库没有可重新刮削的内容。</value>
+  </data>
+  <data name="Settings_MetadataRescrapeRunningFormat" xml:space="preserve">
+    <value>正在重新刮削：{0}</value>
+  </data>
+  <data name="Settings_MetadataRescrapeCompleteFormat" xml:space="preserve">
+    <value>重新刮削完成，共处理 {0} 个媒体项。</value>
+  </data>
+  <data name="Settings_MetadataRescrapePartialFormat" xml:space="preserve">
+    <value>重新刮削完成，共处理 {0} 个媒体项；{1} 个来源未完成。</value>
+  </data>
+  <data name="Settings_MetadataBusy" xml:space="preserve">
+    <value>媒体扫描或刮削正在进行，请完成后再清除缓存。</value>
+  </data>
+  <data name="Settings_MetadataClearingCache" xml:space="preserve">
+    <value>正在清除元数据缓存…</value>
+  </data>
+  <data name="Settings_MetadataCacheCleared" xml:space="preserve">
+    <value>元数据缓存已清除。</value>
+  </data>
+  <data name="Settings_PlaybackBehavior" xml:space="preserve">
+    <value>播放行为</value>
+  </data>
+  <data name="Settings_AutoPlayNext" xml:space="preserve">
+    <value>自动播放下一集</value>
+  </data>
+  <data name="Settings_AutoPlayNextDescription" xml:space="preserve">
+    <value>当前集播放结束后自动切换到队列中的下一集。</value>
+  </data>
+  <data name="Settings_RememberPlaybackRate" xml:space="preserve">
+    <value>记住播放速度</value>
+  </data>
+  <data name="Settings_RememberPlaybackRateDescription" xml:space="preserve">
+    <value>手动调整倍速后，在之后的视频中继续使用该倍速。</value>
+  </data>
+  <data name="Settings_DefaultPlaybackRate" xml:space="preserve">
+    <value>默认播放速度</value>
+  </data>
+  <data name="Settings_DefaultPlaybackRateDescription" xml:space="preserve">
+    <value>未使用记忆倍速时，新视频采用的初始倍速。</value>
+  </data>
+  <data name="Settings_TracksAndSubtitles" xml:space="preserve">
+    <value>音轨与字幕</value>
+  </data>
+  <data name="Settings_PreferredAudioLanguage" xml:space="preserve">
+    <value>首选音轨语言</value>
+  </data>
+  <data name="Settings_PreferredAudioLanguageDescription" xml:space="preserve">
+    <value>打开视频时优先选择匹配语言的音轨；找不到时保留文件默认音轨。</value>
+  </data>
+  <data name="Settings_PreferredSubtitleLanguage" xml:space="preserve">
+    <value>首选字幕语言</value>
+  </data>
+  <data name="Settings_PreferredSubtitleLanguageDescription" xml:space="preserve">
+    <value>没有作品级字幕记忆时，优先选择匹配语言的字幕。</value>
+  </data>
+  <data name="Settings_RememberSubtitleTrack" xml:space="preserve">
+    <value>记住同一作品的字幕</value>
+  </data>
+  <data name="Settings_RememberSubtitleTrackDescription" xml:space="preserve">
+    <value>按作品记住主字幕的内封/外挂类型和语言，不保存跨集不稳定的轨道编号。</value>
+  </data>
+  <data name="Settings_LanguageAuto" xml:space="preserve">
+    <value>自动</value>
+  </data>
+  <data name="Settings_SubtitleStyle" xml:space="preserve">
+    <value>字幕位置与背景</value>
+  </data>
 </root>
