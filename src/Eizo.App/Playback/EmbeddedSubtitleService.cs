@@ -48,9 +48,11 @@ internal static class EmbeddedSubtitleService
         if (!CanRenderAsOverlay(source, selectedTrack))
             return null;
 
-        await using var reader = await OpenReaderAsync(source, cancellationToken);
+        var reader = await OpenReaderAsync(source, cancellationToken);
         if (reader is null)
             return null;
+
+        await using var ownedReader = reader;
 
         var length = await reader.GetLengthAsync(cancellationToken);
         if (length is null || length <= 0)
@@ -131,10 +133,15 @@ internal static class EmbeddedSubtitleService
                 return matches[0];
         }
 
-        var ordinal = subtitleTracks
-            .Select((track, index) => (track, index))
-            .FirstOrDefault(pair => pair.track.Id == selectedTrack.Id)
-            .index;
+        var ordinal = -1;
+        for (var index = 0; index < subtitleTracks.Count; index++)
+        {
+            if (subtitleTracks[index].Id == selectedTrack.Id)
+            {
+                ordinal = index;
+                break;
+            }
+        }
 
         if (ordinal >= 0 && ordinal < parsedTracks.Count)
             return parsedTracks[ordinal];
@@ -479,9 +486,14 @@ internal static class EmbeddedSubtitleService
         chars[1] = (char)(((packed >> 5) & 0x1f) + 0x60);
         chars[2] = (char)((packed & 0x1f) + 0x60);
 
-        return chars.Any(static ch => ch is < 'a' or > 'z')
-            ? null
-            : new string(chars);
+        if (chars[0] is < 'a' or > 'z' ||
+            chars[1] is < 'a' or > 'z' ||
+            chars[2] is < 'a' or > 'z')
+        {
+            return null;
+        }
+
+        return new string(chars);
     }
 
     private static int[] ReadSampleSizes(byte[] data, Box stsz)
@@ -495,7 +507,7 @@ internal static class EmbeddedSubtitleService
         if (count == 0 || count > 1_000_000)
             return [];
 
-        var sizes = new int[count];
+        var sizes = new int[(int)count];
 
         if (fixedSize != 0)
         {
@@ -579,7 +591,7 @@ internal static class EmbeddedSubtitleService
 
             var count = ReadUInt32(data, cursor);
             var raw = ReadUInt32(data, cursor + 4);
-            var value = version == 1
+            long value = version == 1
                 ? unchecked((int)raw)
                 : raw;
             cursor += 8;
@@ -631,7 +643,10 @@ internal static class EmbeddedSubtitleService
 
         var chunkCount = ReadUInt32(data, chunkOffset + 4);
         cursor = chunkOffset + 8;
-        var chunks = new long[chunkCount];
+        if (chunkCount > 1_000_000)
+            return [];
+
+        var chunks = new long[(int)chunkCount];
 
         for (var index = 0; index < chunks.Length; index++)
         {
