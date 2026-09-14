@@ -114,29 +114,41 @@ public static class MediaExternalIds
     public static Dictionary<string, string> Common(
         params IEnumerable<KeyValuePair<string, string>>?[] sets)
     {
-        var candidates = new Dictionary<string, HashSet<string>>(
-            StringComparer.OrdinalIgnoreCase);
-
-        foreach (var set in sets)
+        if (sets.Length == 0)
         {
-            foreach (var pair in Normalize(set))
-            {
-                if (!candidates.TryGetValue(pair.Key, out var ids))
-                {
-                    ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    candidates.Add(pair.Key, ids);
-                }
-
-                ids.Add(pair.Value);
-            }
+            return new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase);
         }
+
+        var normalizedSets = sets
+            .Select(Normalize)
+            .ToArray();
+        var providerNames = normalizedSets
+            .SelectMany(static set => set.Keys)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
 
         var result = new Dictionary<string, string>(
             StringComparer.OrdinalIgnoreCase);
-        foreach (var candidate in candidates)
+
+        foreach (var provider in providerNames)
         {
-            if (candidate.Value.Count == 1)
-                result[candidate.Key] = candidate.Value.Single();
+            var ids = new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+            var presentInEverySet = true;
+
+            foreach (var set in normalizedSets)
+            {
+                if (!set.TryGetValue(provider, out var id))
+                {
+                    presentInEverySet = false;
+                    break;
+                }
+
+                ids.Add(id);
+            }
+
+            if (presentInEverySet && ids.Count == 1)
+                result[provider] = ids.Single();
         }
 
         return result;

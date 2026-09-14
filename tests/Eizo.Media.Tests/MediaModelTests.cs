@@ -55,6 +55,24 @@ public sealed class MediaModelTests
     }
 
     [Fact]
+    public void CommonExternalIdsDoesNotPromotePartialProviderCoverage()
+    {
+        var common = MediaExternalIds.Common(
+            new Dictionary<string, string>
+            {
+                ["tmdb"] = "1396",
+                ["bangumi"] = "100",
+            },
+            new Dictionary<string, string>
+            {
+                ["tmdb"] = "1396",
+            });
+
+        Assert.Equal("1396", common["tmdb"]);
+        Assert.False(common.ContainsKey("bangumi"));
+    }
+
+    [Fact]
     public void HierarchyBuilderCreatesStableSeasonAndEpisodeScopes()
     {
         var media = new EizoMedia(

@@ -49,3 +49,6 @@ This is the boundary required before field-level provider routing is introduced.
 ## Diagnostics
 
 The existing media-library recognition report now exports the Stage 1 model beside Recognition and Metadata provenance. Each row includes the item Eizo ID, the aggregated subject Eizo ID, grouping evidence, format/domain/origin and both item/subject ExternalIds. This makes real-library verification possible before routing rules begin changing provider behavior.
+
+
+Provider IDs are promoted from episode/item scope to a higher scope only when every member at that scope carries the same provider ID. Partial coverage is deliberately not promoted, preventing a single scraped season from temporarily becoming the identity of an entire multi-season work.
