@@ -22,7 +22,17 @@ internal sealed record AppSettings(
     bool CacheAutoCleanup = true,
     long CacheLimitBytes = 32L * 1024 * 1024 * 1024,
     long RemotePrecacheBytes = 256L * 1024 * 1024,
-    bool PreserveOfflineCache = true);
+    bool PreserveOfflineCache = true,
+    bool MetadataAutoScrapeOnScan = true,
+    bool MetadataArtworkEnrichment = true,
+    bool AutoPlayNextEpisode = true,
+    bool RememberPlaybackRate = true,
+    double DefaultPlaybackRate = 1d,
+    double LastPlaybackRate = 1d,
+    bool RememberSubtitleTrack = true,
+    string PreferredAudioLanguage = "auto",
+    string PreferredSubtitleLanguage = "auto",
+    string PreferredSecondarySubtitleLanguage = "auto");
 
 internal static class AppSettingsStore
 {
@@ -89,7 +99,60 @@ internal static class AppSettingsStore
                         nameof(AppSettings.PreserveOfflineCache),
                         out _)
                         ? loaded.PreserveOfflineCache
-                        : true
+                        : true,
+                MetadataAutoScrapeOnScan =
+                    root.TryGetProperty(
+                        nameof(AppSettings.MetadataAutoScrapeOnScan),
+                        out _)
+                        ? loaded.MetadataAutoScrapeOnScan
+                        : true,
+                MetadataArtworkEnrichment =
+                    root.TryGetProperty(
+                        nameof(AppSettings.MetadataArtworkEnrichment),
+                        out _)
+                        ? loaded.MetadataArtworkEnrichment
+                        : true,
+                AutoPlayNextEpisode =
+                    root.TryGetProperty(
+                        nameof(AppSettings.AutoPlayNextEpisode),
+                        out _)
+                        ? loaded.AutoPlayNextEpisode
+                        : true,
+                RememberPlaybackRate =
+                    root.TryGetProperty(
+                        nameof(AppSettings.RememberPlaybackRate),
+                        out _)
+                        ? loaded.RememberPlaybackRate
+                        : true,
+                DefaultPlaybackRate =
+                    root.TryGetProperty(
+                        nameof(AppSettings.DefaultPlaybackRate),
+                        out _) &&
+                    loaded.DefaultPlaybackRate is >= 0.5d and <= 2d
+                        ? loaded.DefaultPlaybackRate
+                        : 1d,
+                LastPlaybackRate =
+                    root.TryGetProperty(
+                        nameof(AppSettings.LastPlaybackRate),
+                        out _) &&
+                    loaded.LastPlaybackRate is >= 0.5d and <= 2d
+                        ? loaded.LastPlaybackRate
+                        : 1d,
+                RememberSubtitleTrack =
+                    root.TryGetProperty(
+                        nameof(AppSettings.RememberSubtitleTrack),
+                        out _)
+                        ? loaded.RememberSubtitleTrack
+                        : true,
+                PreferredAudioLanguage =
+                    NormalizeLanguagePreference(
+                        loaded.PreferredAudioLanguage),
+                PreferredSubtitleLanguage =
+                    NormalizeLanguagePreference(
+                        loaded.PreferredSubtitleLanguage),
+                PreferredSecondarySubtitleLanguage =
+                    NormalizeLanguagePreference(
+                        loaded.PreferredSecondarySubtitleLanguage)
             };
         }
         catch (IOException)
@@ -101,6 +164,15 @@ internal static class AppSettingsStore
             return new AppSettings();
         }
     }
+
+    private static string NormalizeLanguagePreference(string? value) =>
+        value?.Trim().ToLowerInvariant() switch
+        {
+            "ja" => "ja",
+            "zh" => "zh",
+            "en" => "en",
+            _ => "auto"
+        };
 
     private static void SaveCore(AppSettings settings)
     {

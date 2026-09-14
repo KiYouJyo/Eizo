@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/KiYouJyo/Eizo.Metadata.git",
-  "commit": "196c4949b54ee00864ce3b525bbd92161c2835a0",
-  "version": "0.2.20",
+  "commit": "90aa59e76882267a7aa0f68fe5bcbe6ebed5b2bf",
+  "version": "0.2.21",
   "package": "Eizo.Metadata.Recognition"
 }

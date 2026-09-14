@@ -83,6 +83,60 @@ internal static class BangumiJsonParser
                 ?? []);
     }
 
+    public static IReadOnlyList<BangumiCharacterCredit>
+        ParseSubjectCharacters(string json)
+    {
+        var payload = JsonSerializer.Deserialize<RelatedCharacterDto[]>(
+            json,
+            SerializerOptions)
+            ?? [];
+
+        return payload
+            .Where(static item =>
+                item.Id > 0 &&
+                !string.IsNullOrWhiteSpace(item.Name))
+            .Select(static item =>
+                new BangumiCharacterCredit(
+                    item.Id,
+                    item.Name ?? string.Empty,
+                    item.Relation ?? string.Empty,
+                    ResolvePersonImage(item.Images),
+                    item.Actors?
+                        .Where(static actor =>
+                            actor.Id > 0 &&
+                            !string.IsNullOrWhiteSpace(actor.Name))
+                        .Select(static actor =>
+                            new BangumiCreditPerson(
+                                actor.Id,
+                                actor.Name ?? string.Empty,
+                                string.Empty,
+                                ResolvePersonImage(actor.Images)))
+                        .ToArray()
+                        ?? []))
+            .ToArray();
+    }
+
+    public static IReadOnlyList<BangumiCreditPerson>
+        ParseSubjectPersons(string json)
+    {
+        var payload = JsonSerializer.Deserialize<RelatedPersonDto[]>(
+            json,
+            SerializerOptions)
+            ?? [];
+
+        return payload
+            .Where(static item =>
+                item.Id > 0 &&
+                !string.IsNullOrWhiteSpace(item.Name))
+            .Select(static item =>
+                new BangumiCreditPerson(
+                    item.Id,
+                    item.Name ?? string.Empty,
+                    item.Relation ?? string.Empty,
+                    ResolvePersonImage(item.Images)))
+            .ToArray();
+    }
+
     public static BangumiUserProfile ParseUserProfile(
         string json)
     {
@@ -217,6 +271,13 @@ internal static class BangumiJsonParser
             ? parsed
             : null;
 
+    private static string? ResolvePersonImage(ImagesDto? images) =>
+        FirstNonEmpty(
+            images?.Large,
+            images?.Medium,
+            images?.Grid,
+            images?.Small);
+
     private static string? ResolvePoster(ImagesDto? images) =>
         FirstNonEmpty(
             images?.Large,
@@ -258,6 +319,51 @@ internal static class BangumiJsonParser
 
         [JsonPropertyName("small")]
         public string? Small { get; set; }
+    }
+
+    private sealed class RelatedCharacterDto
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("relation")]
+        public string? Relation { get; set; }
+
+        [JsonPropertyName("images")]
+        public ImagesDto? Images { get; set; }
+
+        [JsonPropertyName("actors")]
+        public List<RelatedActorDto>? Actors { get; set; }
+    }
+
+    private sealed class RelatedActorDto
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("images")]
+        public ImagesDto? Images { get; set; }
+    }
+
+    private sealed class RelatedPersonDto
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("relation")]
+        public string? Relation { get; set; }
+
+        [JsonPropertyName("images")]
+        public ImagesDto? Images { get; set; }
     }
 
     private sealed class PagedUserCollectionDto

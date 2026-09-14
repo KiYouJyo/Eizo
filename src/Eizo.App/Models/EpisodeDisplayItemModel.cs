@@ -14,6 +14,11 @@ public sealed record EpisodeDisplayItemModel(
 {
     public EpisodeDisplayItemModel Self => this;
 
+    public string PlaybackText =>
+        string.IsNullOrWhiteSpace(Duration)
+            ? Status
+            : $"{Status} / {Duration}";
+
     public bool CanCache =>
         MediaItem?.Location?.Kind ==
         MediaLocationKind.RemoteUri;

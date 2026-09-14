@@ -406,14 +406,28 @@ public sealed partial class MainWindow : Window
 
     private void WireWorkspaceMediaView(HomeView view)
     {
-        view.DetailRequested += (_, title) => OpenDetail(title, startPlaying: false);
-        view.PlayRequested += (_, title) => OpenDetail(title, startPlaying: true);
+        view.DetailRequested += (_, title) =>
+            OpenDetail(
+                title,
+                startPlaying: false);
+        view.PlayRequested += (_, title) =>
+            OpenDetail(
+                title,
+                startPlaying: true);
+        view.CatalogMediaRequested += async (_, item) =>
+            await OpenCatalogMediaAsync(item);
+        view.CatalogSubjectRequested += (_, subject) =>
+            OpenCatalogSubject(subject);
         view.BangumiSubjectRequested += (_, subject) =>
             OpenBangumiSubject(subject);
         view.BangumiSeasonalRequested += (_, _) =>
             NavigateSelectedWorkspace(
                 "bangumi-seasonal",
                 SeasonalNav);
+        view.LibraryRequested += (_, _) =>
+            NavigateSelectedWorkspace(
+                "categories",
+                CategoryNav);
     }
 
     private void WireWorkspaceMediaView(CategoryView view)

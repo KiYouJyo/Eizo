@@ -11,6 +11,8 @@
              Link="Models/UiModels.cs" />
     <Compile Include="../../src/Eizo.App/Models/CatalogMediaItemModel.cs"
              Link="Models/CatalogMediaItemModel.cs" />
+    <Compile Include="../../src/Eizo.App/Models/MediaTitleDisplayResolver.cs"
+             Link="Models/MediaTitleDisplayResolver.cs" />
     <Compile Include="../../src/Eizo.App/Models/MediaSourceStore.cs"
              Link="Models/MediaSourceStore.cs" />
     <Compile Include="../../src/Eizo.App/Models/MediaSourceProvider.cs"

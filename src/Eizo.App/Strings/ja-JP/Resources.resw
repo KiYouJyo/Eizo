@@ -247,6 +247,9 @@
   <data name="Playback_PrimarySubtitleOpacity" xml:space="preserve">
     <value>第1字幕の背景不透明度</value>
   </data>
+  <data name="Playback_NativeSubtitleStyleManagedByEngine" xml:space="preserve">
+    <value>内蔵字幕は再生エンジンで描画されます。位置と背景の設定は外部字幕にのみ適用されます。</value>
+  </data>
   <data name="Playback_SecondarySubtitleOpacity" xml:space="preserve">
     <value>第2字幕の背景不透明度</value>
   </data>
@@ -1274,5 +1277,126 @@
   </data>
   <data name="Cache_StatusPaused" xml:space="preserve">
     <value>一時停止</value>
+  </data>
+  <data name="Home_BangumiSearchPlaceholder" xml:space="preserve">
+    <value>Bangumi のアニメ作品を検索</value>
+  </data>
+  <data name="Home_BangumiSearchResultsTitleFormat" xml:space="preserve">
+    <value>「{0}」の Bangumi 検索結果</value>
+  </data>
+  <data name="Home_BangumiSearchResultsCountFormat" xml:space="preserve">
+    <value>{0} / {1} 件を表示</value>
+  </data>
+
+  <data name="Settings_MetadataAutomation" xml:space="preserve">
+    <value>自動化</value>
+  </data>
+  <data name="Settings_MetadataAutoScrape" xml:space="preserve">
+    <value>スキャン時に自動取得</value>
+  </data>
+  <data name="Settings_MetadataAutoScrapeDescription" xml:space="preserve">
+    <value>メディアソースのスキャン時に作品の識別とメタデータ取得を同時に行います。</value>
+  </data>
+  <data name="Settings_MetadataArtwork" xml:space="preserve">
+    <value>画像を自動補完</value>
+  </data>
+  <data name="Settings_MetadataArtworkDescription" xml:space="preserve">
+    <value>ポスターやバックドロップがない場合、画像プロバイダーから補完します。</value>
+  </data>
+  <data name="Settings_MetadataMaintenance" xml:space="preserve">
+    <value>メンテナンス</value>
+  </data>
+  <data name="Settings_MetadataRescrape" xml:space="preserve">
+    <value>ライブラリを再取得</value>
+  </data>
+  <data name="Settings_MetadataRescrapeDescription" xml:space="preserve">
+    <value>ファイルを再スキャンせず、現在のライブラリの識別とメタデータだけを更新します。</value>
+  </data>
+  <data name="Settings_MetadataRescrapeButton" xml:space="preserve">
+    <value>再取得</value>
+  </data>
+  <data name="Settings_MetadataClearCache" xml:space="preserve">
+    <value>メタデータキャッシュを消去</value>
+  </data>
+  <data name="Settings_MetadataClearCacheDescription" xml:space="preserve">
+    <value>Metadata のローカルプロバイダーキャッシュを削除します。メディアソースや再生履歴は削除しません。</value>
+  </data>
+  <data name="Settings_MetadataClearCacheButton" xml:space="preserve">
+    <value>キャッシュを消去</value>
+  </data>
+  <data name="Settings_MetadataNoMedia" xml:space="preserve">
+    <value>再取得できるメディアがありません。</value>
+  </data>
+  <data name="Settings_MetadataRescrapeRunningFormat" xml:space="preserve">
+    <value>再取得中: {0}</value>
+  </data>
+  <data name="Settings_MetadataRescrapeCompleteFormat" xml:space="preserve">
+    <value>再取得が完了しました。{0} 件を処理しました。</value>
+  </data>
+  <data name="Settings_MetadataRescrapePartialFormat" xml:space="preserve">
+    <value>再取得が完了しました。{0} 件を処理し、{1} 個のソースが未完了です。</value>
+  </data>
+  <data name="Settings_MetadataBusy" xml:space="preserve">
+    <value>メディアのスキャンまたは取得中です。完了してからキャッシュを消去してください。</value>
+  </data>
+  <data name="Settings_MetadataClearingCache" xml:space="preserve">
+    <value>メタデータキャッシュを消去しています…</value>
+  </data>
+  <data name="Settings_MetadataCacheCleared" xml:space="preserve">
+    <value>メタデータキャッシュを消去しました。</value>
+  </data>
+  <data name="Settings_PlaybackBehavior" xml:space="preserve">
+    <value>再生動作</value>
+  </data>
+  <data name="Settings_AutoPlayNext" xml:space="preserve">
+    <value>次のエピソードを自動再生</value>
+  </data>
+  <data name="Settings_AutoPlayNextDescription" xml:space="preserve">
+    <value>現在のエピソード終了後、キューの次のエピソードへ自動的に進みます。</value>
+  </data>
+  <data name="Settings_RememberPlaybackRate" xml:space="preserve">
+    <value>再生速度を記憶</value>
+  </data>
+  <data name="Settings_RememberPlaybackRateDescription" xml:space="preserve">
+    <value>手動で変更した再生速度を次の動画でも使用します。</value>
+  </data>
+  <data name="Settings_DefaultPlaybackRate" xml:space="preserve">
+    <value>既定の再生速度</value>
+  </data>
+  <data name="Settings_DefaultPlaybackRateDescription" xml:space="preserve">
+    <value>再生速度を記憶しない場合に新しい動画で使用する初期速度です。</value>
+  </data>
+  <data name="Settings_TracksAndSubtitles" xml:space="preserve">
+    <value>音声と字幕</value>
+  </data>
+  <data name="Settings_PreferredAudioLanguage" xml:space="preserve">
+    <value>優先音声言語</value>
+  </data>
+  <data name="Settings_PreferredAudioLanguageDescription" xml:space="preserve">
+    <value>動画を開いたときに一致する言語の音声を優先し、見つからない場合はファイルの既定音声を維持します。</value>
+  </data>
+  <data name="Settings_PreferredSubtitleLanguage" xml:space="preserve">
+    <value>優先字幕言語</value>
+  </data>
+  <data name="Settings_PreferredSubtitleLanguageDescription" xml:space="preserve">
+    <value>作品ごとの字幕記憶がない場合に、一致する言語の字幕を優先します。</value>
+  </data>
+  <data name="Settings_RememberSubtitleTrack" xml:space="preserve">
+    <value>作品ごとの字幕を記憶</value>
+  </data>
+  <data name="Settings_RememberSubtitleTrackDescription" xml:space="preserve">
+    <value>主字幕の内蔵/外部種別と言語を作品ごとに記憶し、エピソード間で不安定なトラック ID は保存しません。</value>
+  </data>
+  <data name="Settings_LanguageAuto" xml:space="preserve">
+    <value>自動</value>
+  </data>
+  <data name="Settings_SubtitleStyle" xml:space="preserve">
+    <value>字幕位置と背景</value>
+  </data>
+  <data name="Settings_PreferredSecondarySubtitleLanguage" xml:space="preserve">
+    <value>優先第2字幕言語</value>
+  </data>
+  <data name="Settings_PreferredSecondarySubtitleLanguageDescription" xml:space="preserve">
+    <value>第2字幕の優先言語を選択します。自動では第2字幕を自動的に有効化しません。</value>
   </data>
 </root>

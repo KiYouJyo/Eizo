@@ -91,8 +91,13 @@ foreach ($required in @(
 
 foreach ($required in @(
     'BangumiAccountDialogService.ShowConnectAsync',
-    'GetFollowingAsync',
-    'Bangumi_FollowingCountFormat',
+    'GetCollectionAsync',
+    'CollectionSectionList_SelectionChanged',
+    'BangumiCollectionType.Wish',
+    'BangumiCollectionType.Done',
+    'BangumiCollectionType.Doing',
+    'BangumiCollectionType.OnHold',
+    'BangumiCollectionType.Dropped',
     'LoadMoreButton_Click',
     'SubjectRequested?.Invoke')) {
     if (-not $following.Contains(
@@ -135,4 +140,4 @@ foreach ($required in @(
     }
 }
 
-Write-Host 'Eizo v0.4.3 Bangumi account and My Following contract PASS.'
+Write-Host 'Eizo v0.4.6 Bangumi account and five-state collection contract PASS.'

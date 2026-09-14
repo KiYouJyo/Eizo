@@ -83,6 +83,27 @@ public sealed class BangumiRepository
             FetchedAtUtc: pages.Min(static result => result.FetchedAtUtc));
     }
 
+    public async Task<BangumiSubjectPage> SearchAnimeAsync(
+        string keyword,
+        int limit = 12,
+        int offset = 0,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(keyword);
+        if (limit is < 1 or > 50)
+            throw new ArgumentOutOfRangeException(nameof(limit));
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+
+        var payload = await _client.SearchAnimeAsync(
+            keyword,
+            limit,
+            offset,
+            cancellationToken);
+
+        return BangumiJsonParser.ParsePagedSubjectPage(payload);
+    }
+
     public Task<BangumiLoadResult<BangumiSubjectPage>>
         GetRankedAnimeAsync(
             int offset = 0,
@@ -198,6 +219,58 @@ public sealed class BangumiRepository
             cancellationToken);
     }
 
+    public async Task<BangumiLoadResult<BangumiSubjectCredits>>
+        GetSubjectCreditsAsync(
+            int subjectId,
+            bool forceRefresh = false,
+            CancellationToken cancellationToken = default)
+    {
+        if (subjectId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(subjectId));
+
+        var charactersTask = GetCachedAsync(
+            $"subject-characters:{subjectId}",
+            SubjectCacheLifetime,
+            ct => _client.GetSubjectCharactersAsync(
+                subjectId,
+                ct),
+            BangumiJsonParser.ParseSubjectCharacters,
+            forceRefresh,
+            cancellationToken);
+
+        var personsTask = GetCachedAsync(
+            $"subject-persons:{subjectId}",
+            SubjectCacheLifetime,
+            ct => _client.GetSubjectPersonsAsync(
+                subjectId,
+                ct),
+            BangumiJsonParser.ParseSubjectPersons,
+            forceRefresh,
+            cancellationToken);
+
+        await Task.WhenAll(
+            charactersTask,
+            personsTask);
+
+        var characters = await charactersTask;
+        var persons = await personsTask;
+
+        return new BangumiLoadResult<BangumiSubjectCredits>(
+            new BangumiSubjectCredits(
+                characters.Value,
+                persons.Value),
+            IsFromCache:
+                characters.IsFromCache &&
+                persons.IsFromCache,
+            IsStale:
+                characters.IsStale ||
+                persons.IsStale,
+            FetchedAtUtc:
+                characters.FetchedAtUtc < persons.FetchedAtUtc
+                    ? characters.FetchedAtUtc
+                    : persons.FetchedAtUtc);
+    }
+
     public async Task<BangumiUserProfile> GetMyselfAsync(
         string accessToken,
         CancellationToken cancellationToken = default)
@@ -208,10 +281,24 @@ public sealed class BangumiRepository
         return BangumiJsonParser.ParseUserProfile(payload);
     }
 
-    public async Task<BangumiUserCollectionPage>
+    public Task<BangumiUserCollectionPage>
         GetFollowingAsync(
             string accessToken,
             string userName,
+            int offset = 0,
+            CancellationToken cancellationToken = default) =>
+        GetUserCollectionAsync(
+            accessToken,
+            userName,
+            BangumiCollectionType.Doing,
+            offset,
+            cancellationToken);
+
+    public async Task<BangumiUserCollectionPage>
+        GetUserCollectionAsync(
+            string accessToken,
+            string userName,
+            BangumiCollectionType type,
             int offset = 0,
             CancellationToken cancellationToken = default)
     {
@@ -221,7 +308,7 @@ public sealed class BangumiRepository
         var payload =
             await _client.GetUserCollectionsAsync(
                 userName,
-                BangumiCollectionType.Doing,
+                type,
                 PageSize,
                 offset,
                 accessToken,

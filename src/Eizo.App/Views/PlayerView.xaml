@@ -420,6 +420,10 @@
                   Maximum="100"
                   StepFrequency="1"
                   ValueChanged="PrimarySubtitleOpacitySlider_ValueChanged" />
+          <TextBlock x:Name="PrimarySubtitleNativeHint"
+                     Visibility="Collapsed"
+                     TextWrapping="Wrap"
+                     Style="{StaticResource MetadataText}" />
 
           <TextBlock x:Name="SecondarySubtitleTrackLabel"
                      Margin="0,6,0,0"

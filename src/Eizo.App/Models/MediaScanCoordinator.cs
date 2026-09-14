@@ -17,13 +17,11 @@ public sealed class MediaScanCoordinator
         new(StringComparer.Ordinal);
     private readonly HashSet<string> _metadataJobs =
         new(StringComparer.Ordinal);
-    private readonly Lazy<MediaMetadataService?> _metadataService;
+    private Lazy<MediaMetadataService?> _metadataService;
 
     private MediaScanCoordinator()
     {
-        _metadataService = new Lazy<MediaMetadataService?>(
-            CreateMetadataService,
-            LazyThreadSafetyMode.ExecutionAndPublication);
+        _metadataService = CreateMetadataServiceLazy();
     }
 
     public static MediaScanCoordinator Default { get; } = new();
@@ -101,6 +99,8 @@ public sealed class MediaScanCoordinator
         {
             if (_jobs.TryGetValue(source.Id, out var existing))
                 return existing;
+
+            _metadataService = CreateMetadataServiceLazy();
 
             var mediaCount =
                 MediaCatalogStore.Default.SnapshotForSource(source.Id).Count;
@@ -205,6 +205,15 @@ public sealed class MediaScanCoordinator
         }
 
         RaiseChanged();
+
+        if (finished.Status == MediaScanStatus.Completed &&
+            AppSettingsStore.Current.MetadataAutoScrapeOnScan)
+        {
+            _ = StartMetadataAsync(
+                source,
+                CancellationToken.None);
+        }
+
         return finished;
     }
 
@@ -332,6 +341,34 @@ public sealed class MediaScanCoordinator
             RaiseChanged();
     }
 
+    public static async Task ClearMetadataCacheAsync()
+    {
+        var cacheDirectory = Path.Combine(
+            ApplicationData.Current.LocalCacheFolder.Path,
+            "Eizo",
+            "MetadataCache");
+
+        await Task.Run(() =>
+        {
+            try
+            {
+                if (Directory.Exists(cacheDirectory))
+                    Directory.Delete(cacheDirectory, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        });
+    }
+
+    private static Lazy<MediaMetadataService?> CreateMetadataServiceLazy() =>
+        new(
+            CreateMetadataService,
+            LazyThreadSafetyMode.ExecutionAndPublication);
+
     private static MediaMetadataService? CreateMetadataService()
     {
         if (string.Equals(
@@ -354,7 +391,9 @@ public sealed class MediaScanCoordinator
             TmdbReadAccessToken:
                 Environment.GetEnvironmentVariable(
                     "EIZO_TMDB_READ_ACCESS_TOKEN"),
-            CacheDirectory: cacheDirectory);
+            CacheDirectory: cacheDirectory,
+            EnableArtworkProviders:
+                AppSettingsStore.Current.MetadataArtworkEnrichment);
 
         return new MediaMetadataService(options);
     }

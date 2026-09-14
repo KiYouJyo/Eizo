@@ -107,8 +107,18 @@ internal sealed class BangumiAccountService
         }
     }
 
-    public async Task<BangumiUserCollectionPage?>
+    public Task<BangumiUserCollectionPage?>
         GetFollowingAsync(
+            int offset = 0,
+            CancellationToken cancellationToken = default) =>
+        GetCollectionAsync(
+            BangumiCollectionType.Doing,
+            offset,
+            cancellationToken);
+
+    public async Task<BangumiUserCollectionPage?>
+        GetCollectionAsync(
+            BangumiCollectionType type,
             int offset = 0,
             CancellationToken cancellationToken = default)
     {
@@ -124,9 +134,10 @@ internal sealed class BangumiAccountService
 
         try
         {
-            return await _repository.GetFollowingAsync(
+            return await _repository.GetUserCollectionAsync(
                 token,
                 profile.UserName,
+                type,
                 offset,
                 cancellationToken);
         }

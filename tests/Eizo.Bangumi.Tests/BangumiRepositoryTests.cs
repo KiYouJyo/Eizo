@@ -319,4 +319,159 @@ public sealed class BangumiRepositoryTests
         }
     }
 
+    [Fact]
+    public async Task UserCollection_ReadsRequestedCollectionType()
+    {
+        const string token = "secret-test-token";
+        string? collectionUri = null;
+
+        var handler = new CallbackHandler(request =>
+        {
+            collectionUri = request.RequestUri!.ToString();
+            return JsonResponse("""
+            {
+              "total": 0,
+              "limit": 50,
+              "offset": 0,
+              "data": []
+            }
+            """);
+        });
+
+        var cacheRoot = CreateTempDirectory();
+        try
+        {
+            using var client = CreateClient(handler);
+            var repository = new BangumiRepository(
+                new BangumiApiClient(client),
+                new BangumiCacheStore(cacheRoot));
+
+            var result = await repository.GetUserCollectionAsync(
+                token,
+                "eizo-user",
+                BangumiCollectionType.Dropped,
+                cancellationToken:
+                    TestContext.Current.CancellationToken);
+
+            Assert.Empty(result.Items);
+            Assert.Contains(
+                "subject_type=2",
+                collectionUri,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "type=5",
+                collectionUri,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "limit=50",
+                collectionUri,
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(
+                cacheRoot,
+                recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SearchAnime_UsesGlobalSubjectSearchAndAnimeFilter()
+    {
+        HttpMethod? method = null;
+        string? requestUri = null;
+        string? requestBody = null;
+
+        var handler = new CallbackHandler(request =>
+        {
+            method = request.Method;
+            requestUri = request.RequestUri!.ToString();
+            requestBody = request.Content is null
+                ? null
+                : request.Content.ReadAsStringAsync()
+                    .GetAwaiter()
+                    .GetResult();
+
+            return JsonResponse("""
+            {
+              "total": 1,
+              "limit": 10,
+              "offset": 0,
+              "data": [
+                {
+                  "id": 123,
+                  "type": 2,
+                  "name": "Sousou no Frieren",
+                  "name_cn": "葬送的芙莉莲",
+                  "summary": "",
+                  "date": "2023-09-29",
+                  "platform": "TV",
+                  "images": {
+                    "large": "https://lain.bgm.tv/frieren.jpg"
+                  },
+                  "eps": 28,
+                  "total_episodes": 28,
+                  "rating": {
+                    "rank": 10,
+                    "score": 9.0
+                  },
+                  "collection": {
+                    "wish": 1,
+                    "collect": 2,
+                    "doing": 3,
+                    "on_hold": 0,
+                    "dropped": 0
+                  }
+                }
+              ]
+            }
+            """);
+        });
+
+        var cacheRoot = CreateTempDirectory();
+        try
+        {
+            using var client = CreateClient(handler);
+            var repository = new BangumiRepository(
+                new BangumiApiClient(client),
+                new BangumiCacheStore(cacheRoot));
+
+            var result = await repository.SearchAnimeAsync(
+                "芙莉莲",
+                limit: 10,
+                cancellationToken:
+                    TestContext.Current.CancellationToken);
+
+            Assert.Equal(HttpMethod.Post, method);
+            Assert.Contains(
+                "/v0/search/subjects?limit=10&offset=0",
+                requestUri,
+                StringComparison.Ordinal);
+
+            using var requestJson =
+                System.Text.Json.JsonDocument.Parse(
+                    requestBody!);
+            var root = requestJson.RootElement;
+
+            Assert.Equal(
+                "芙莉莲",
+                root.GetProperty("keyword").GetString());
+            Assert.Equal(
+                2,
+                root.GetProperty("filter")
+                    .GetProperty("type")[0]
+                    .GetInt32());
+
+            Assert.Single(result.Items);
+            Assert.Equal(123, result.Items[0].Id);
+        }
+        finally
+        {
+            Directory.Delete(
+                cacheRoot,
+                recursive: true);
+        }
+    }
+
+
 }

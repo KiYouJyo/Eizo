@@ -126,14 +126,24 @@
                       SelectionMode="None"
                       IsItemClickEnabled="True"
                       ItemClick="EpisodeList_ItemClick"
-                      ItemContainerStyle="{StaticResource SourceListItemStyle}">
+                      Padding="0,2,0,0">
+              <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem"
+                       BasedOn="{StaticResource SourceListItemStyle}">
+                  <Setter Property="Margin"
+                          Value="0,0,0,8" />
+                </Style>
+              </ListView.ItemContainerStyle>
               <ListView.ItemTemplate>
                 <DataTemplate x:DataType="models:EpisodeDisplayItemModel">
-                  <Grid Height="88"
-                        ColumnDefinitions="118,48,*,52"
-                        ColumnSpacing="10">
-                    <Border CornerRadius="7"
-                            Background="{ThemeResource EizoSelectionBrush}">
+                  <Grid Height="100"
+                        ColumnDefinitions="132,48,*,52"
+                        ColumnSpacing="12">
+                    <Border Width="132"
+                            Height="74"
+                            CornerRadius="7"
+                            Background="{ThemeResource EizoSelectionBrush}"
+                            VerticalAlignment="Center">
                       <Grid>
                         <FontIcon Glyph="&#xE8B9;"
                                   FontSize="24"
@@ -161,9 +171,13 @@
                       <TextBlock Text="{x:Bind NativeTitle}"
                                  Style="{StaticResource MetadataText}"
                                  TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{x:Bind PlaybackText}"
+                                 Style="{StaticResource MetadataText}"
+                                 TextTrimming="CharacterEllipsis" />
                       <ProgressBar Value="{x:Bind Progress}"
                                    Maximum="100"
-                                   Height="3" />
+                                   Height="3"
+                                   Margin="0,2,0,0" />
                     </StackPanel>
 
                     <Button Grid.Column="3"
@@ -188,18 +202,108 @@
 
         <Border Grid.Column="1"
                 Style="{StaticResource SectionCardStyle}">
-          <StackPanel Spacing="14">
-            <TextBlock x:Name="InfoTitle"
-                       Style="{StaticResource SectionTitleText}" />
-            <TextBlock x:Name="InfoText"
-                       Style="{StaticResource BodyText}"
-                       TextWrapping="Wrap" />
-            <TextBlock x:Name="ExternalIdsTitle"
-                       Style="{StaticResource SectionTitleText}"
-                       Margin="0,8,0,0" />
-            <TextBlock x:Name="ExternalIdsText"
+          <StackPanel Spacing="16">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock x:Name="CastTitle"
+                         Style="{StaticResource SectionTitleText}" />
+              <ProgressRing x:Name="CreditsLoadingRing"
+                            Grid.Column="1"
+                            Width="20"
+                            Height="20"
+                            IsActive="False"
+                            Visibility="Collapsed" />
+            </Grid>
+
+            <TextBlock x:Name="CreditsStatusText"
                        Style="{StaticResource MetadataText}"
-                       TextWrapping="Wrap" />
+                       TextWrapping="Wrap"
+                       Visibility="Collapsed" />
+
+            <ItemsRepeater x:Name="CharactersList"
+                           HorizontalAlignment="Stretch">
+              <ItemsRepeater.Layout>
+                <UniformGridLayout Orientation="Horizontal"
+                                   MinItemWidth="176"
+                                   MinItemHeight="104"
+                                   MinColumnSpacing="10"
+                                   MinRowSpacing="10"
+                                   MaximumRowsOrColumns="2"
+                                   ItemsJustification="SpaceBetween"
+                                   ItemsStretch="Fill" />
+              </ItemsRepeater.Layout>
+              <ItemsRepeater.ItemTemplate>
+                <DataTemplate>
+                  <Border MinHeight="104"
+                          Padding="10"
+                          HorizontalAlignment="Stretch"
+                          CornerRadius="8"
+                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                          BorderThickness="1">
+                    <Grid ColumnDefinitions="58,*"
+                          ColumnSpacing="10">
+                      <Border Width="56"
+                              Height="56"
+                              CornerRadius="28"
+                              Background="{ThemeResource EizoSelectionBrush}"
+                              VerticalAlignment="Top">
+                        <Grid>
+                          <FontIcon Glyph="&#xE77B;"
+                                    FontSize="22"
+                                    Opacity="0.24"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                          <Image Source="{Binding Image}"
+                                 Stretch="UniformToFill" />
+                        </Grid>
+                      </Border>
+                      <StackPanel Grid.Column="1"
+                                  Spacing="3">
+                        <TextBlock Text="{Binding Name}"
+                                   Style="{StaticResource CardTitleText}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Relation}"
+                                   Style="{StaticResource MetadataText}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding ActorText}"
+                                   Style="{StaticResource MetadataText}"
+                                   TextWrapping="Wrap"
+                                   MaxLines="2"
+                                   TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+
+            <Border Height="1"
+                    Margin="0,4,0,0"
+                    Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+            <TextBlock x:Name="StaffTitle"
+                       Style="{StaticResource SectionTitleText}" />
+
+            <ItemsControl x:Name="StaffList">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid MinHeight="42"
+                        ColumnDefinitions="104,*"
+                        ColumnSpacing="12">
+                    <TextBlock Text="{Binding Relation}"
+                               Style="{StaticResource MetadataText}"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Name}"
+                               Style="{StaticResource BodyText}"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
           </StackPanel>
         </Border>
       </Grid>

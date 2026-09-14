@@ -7,6 +7,33 @@ function Assert-LastExitCode([string]$message) {
     if ($LASTEXITCODE -ne 0) { throw "$message ($LASTEXITCODE)" }
 }
 
+function Invoke-WebRequestWithRetry(
+    [string]$uri,
+    [string]$outFile,
+    [int]$attempts = 4) {
+    $lastError = $null
+    for ($attempt = 1; $attempt -le $attempts; $attempt++) {
+        try {
+            if (Test-Path -LiteralPath $outFile) {
+                Remove-Item -LiteralPath $outFile -Force
+            }
+            Invoke-WebRequest -Uri $uri -OutFile $outFile -UseBasicParsing
+            if ((Test-Path -LiteralPath $outFile -PathType Leaf) -and
+                (Get-Item -LiteralPath $outFile).Length -gt 0) {
+                return
+            }
+            throw 'Downloaded file is empty.'
+        }
+        catch {
+            $lastError = $_
+            if ($attempt -lt $attempts) {
+                Start-Sleep -Seconds ([Math]::Min(5 * $attempt, 15))
+            }
+        }
+    }
+    throw ("Download failed after {0} attempts: {1}. Last error: {2}" -f $attempts, $uri, $lastError)
+}
+
 function Get-EizoProcesses([string]$installRoot) {
     $root = [IO.Path]::GetFullPath($installRoot)
     return @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
@@ -44,10 +71,10 @@ $expectedMetadataRuntimeRegex = [regex]::Escape($expectedMetadataRuntimeVersion)
 Push-Location $repoRoot
 try {
     $runnerTemp = if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) { [IO.Path]::GetTempPath() } else { $env:RUNNER_TEMP }
-    $assets = Join-Path $runnerTemp 'Eizo-v0.4.6-acceptance'
-    $appPackages = Join-Path $runnerTemp 'Eizo-AppPackages-v046'
-    $bundleExtract = Join-Path $runnerTemp 'Eizo-bundle-extract-v046'
-    $oneClickStaging = Join-Path $runnerTemp 'Eizo-one-click-v046'
+    $assets = Join-Path $runnerTemp 'Eizo-v0.4.7-acceptance'
+    $appPackages = Join-Path $runnerTemp 'Eizo-AppPackages-v047'
+    $bundleExtract = Join-Path $runnerTemp 'Eizo-bundle-extract-v047'
+    $oneClickStaging = Join-Path $runnerTemp 'Eizo-one-click-v047'
     foreach ($path in @($assets, $appPackages, $bundleExtract, $oneClickStaging)) {
         if (Test-Path $path) { Remove-Item -LiteralPath $path -Recurse -Force }
         New-Item -ItemType Directory -Force -Path $path | Out-Null
@@ -57,12 +84,13 @@ try {
     & ./scripts/Restore-EizoPlayback.ps1
     & ./scripts/Restore-EizoMetadata.ps1
 
-    Write-Host '== Validate v0.4.6 cache system and prior release regressions =='
+    Write-Host '== Validate v0.4.7 settings integration and prior release regressions =='
     & ./scripts/Test-BangumiPublicIntegration.ps1
     & ./scripts/Test-BangumiAccountIntegration.ps1
     & ./scripts/Test-BangumiOAuthIntegration.ps1
     & ./scripts/Test-BangumiCommunityIntegration.ps1
     & ./scripts/Test-CacheSystemContract.ps1
+    & ./scripts/Test-SettingsContentIntegrationContract.ps1
     & ./scripts/Test-LibraryAggregationUiContract.ps1
     dotnet run --project tools/Eizo.WebDavV030Probe/Eizo.WebDavV030Probe.csproj --configuration Release
     Assert-LastExitCode 'WebDAV range runtime probe failed'
@@ -117,7 +145,7 @@ try {
     Assert-LastExitCode 'MSIX build failed'
     $producedBundle = @(Get-ChildItem $appPackages -Recurse -Filter '*.msixbundle' -File) | Select-Object -First 1
     if (-not $producedBundle) { throw 'MSIX bundle was not produced.' }
-    $bundlePath = Join-Path $assets 'Eizo_0.4.6.0_x64.msixbundle'
+    $bundlePath = Join-Path $assets 'Eizo_0.4.7.0_x64.msixbundle'
     Copy-Item -LiteralPath $producedBundle.FullName -Destination $bundlePath -Force
 
     Write-Host '== Verify packaged component probing contract =='
@@ -153,7 +181,7 @@ try {
     finally { $archive.Dispose() }
 
     Write-Host '== Sign bundle =='
-    $pfx = Join-Path $runnerTemp 'eizo-v046-release-signing.pfx'
+    $pfx = Join-Path $runnerTemp 'eizo-v047-release-signing.pfx'
     [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:RELEASE_CERTIFICATE_BASE64))
     $password = ConvertTo-SecureString $env:RELEASE_CERTIFICATE_PASSWORD -AsPlainText -Force
     $certificate = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
@@ -162,7 +190,7 @@ try {
         -not $certificate.HasPrivateKey) {
         throw "Unexpected signing certificate: Subject=$($certificate.Subject); Thumbprint=$($certificate.Thumbprint)"
     }
-    $cer = Join-Path $assets 'Eizo-v0.4.6-AppPublisher.cer'
+    $cer = Join-Path $assets 'Eizo-v0.4.7-AppPublisher.cer'
     Export-Certificate -Cert $certificate -FilePath $cer | Out-Null
     $kitsRoot = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
     $signtool = Get-ChildItem (Join-Path $kitsRoot 'Windows Kits\10\bin') -Recurse -Filter signtool.exe |
@@ -188,7 +216,7 @@ try {
     Remove-Item -LiteralPath $legacyComponentsRoot -Recurse -Force -ErrorAction SilentlyContinue
 
     $runtimeInstaller = Join-Path $runnerTemp 'WindowsAppRuntimeInstall-x64.exe'
-    Invoke-WebRequest -Uri 'https://aka.ms/windowsappsdk/1.8/1.8.260710003/windowsappruntimeinstall-x64.exe' -OutFile $runtimeInstaller -UseBasicParsing
+    Invoke-WebRequestWithRetry -Uri 'https://aka.ms/windowsappsdk/1.8/1.8.260710003/windowsappruntimeinstall-x64.exe' -OutFile $runtimeInstaller
     $runtimeSignature = Get-AuthenticodeSignature -FilePath $runtimeInstaller
     if (-not $runtimeSignature.SignerCertificate -or $runtimeSignature.Status -ne 'Valid' -or
         $runtimeSignature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
@@ -199,7 +227,7 @@ try {
 
     Add-AppxPackage -Path $bundlePath -ForceApplicationShutdown
     $pkg = Get-AppxPackage -Name Eizo
-    if (-not $pkg -or [string]$pkg.Version -ne '0.4.6.0') {
+    if (-not $pkg -or [string]$pkg.Version -ne '0.4.7.0') {
         throw "Installed package version mismatch: $($pkg.Version)"
     }
 
@@ -252,10 +280,10 @@ try {
     Write-Host '== Build one-click acceptance assets =='
     Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $componentsRoot -Recurse -Force -ErrorAction SilentlyContinue
-    & ./packaging/New-GitHubOneClickInstallerPackage.ps1 -SignedBundlePath $bundlePath -PublicCertificatePath $cer -OutputDirectory $oneClickStaging -DisplayVersion '0.4.6' -PackageVersion '0.4.6.0'
-    $packageRoot = Join-Path $oneClickStaging 'Eizo-v0.4.6-x64-one-click'
+    & ./packaging/New-GitHubOneClickInstallerPackage.ps1 -SignedBundlePath $bundlePath -PublicCertificatePath $cer -OutputDirectory $oneClickStaging -DisplayVersion '0.4.7' -PackageVersion '0.4.7.0'
+    $packageRoot = Join-Path $oneClickStaging 'Eizo-v0.4.7-x64-one-click'
     & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $packageRoot
-    $oneClickZip = Join-Path $assets 'Eizo-v0.4.6-x64-one-click.zip'
+    $oneClickZip = Join-Path $assets 'Eizo-v0.4.7-x64-one-click.zip'
     Compress-Archive -LiteralPath $packageRoot -DestinationPath $oneClickZip -CompressionLevel Optimal
 
     $sumLines = foreach ($file in @($bundlePath, $oneClickZip)) {
@@ -265,7 +293,7 @@ try {
     $sumPath = Join-Path $assets 'SHA256SUMS.txt'
     Set-Content -LiteralPath $sumPath -Value $sumLines -Encoding ascii
     Get-Content -LiteralPath $sumPath
-    Write-Host "Eizo 0.4.6 cache system acceptance PASS. Assets=$assets"
+    Write-Host "Eizo 0.4.7 settings integration acceptance PASS. Assets=$assets"
 }
 finally {
     Pop-Location

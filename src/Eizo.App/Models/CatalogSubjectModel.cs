@@ -32,6 +32,8 @@ public sealed record CatalogSubjectModel(
             .OfType<MediaMetadataSnapshot>()
             .Where(static metadata => metadata.IsResolved)
             .OrderByDescending(static metadata =>
+                !string.IsNullOrWhiteSpace(metadata.BackdropUrl))
+            .ThenByDescending(static metadata =>
                 !string.IsNullOrWhiteSpace(metadata.PosterUrl))
             .ThenByDescending(static metadata =>
                 !string.IsNullOrWhiteSpace(metadata.CanonicalTitle) ||
@@ -135,6 +137,9 @@ internal static class CatalogSubjectAggregator
         var representative = items
             .OrderByDescending(static item =>
                 item.Metadata is { IsResolved: true } metadata &&
+                !string.IsNullOrWhiteSpace(metadata.BackdropUrl))
+            .ThenByDescending(static item =>
+                item.Metadata is { IsResolved: true } metadata &&
                 !string.IsNullOrWhiteSpace(metadata.PosterUrl))
             .ThenByDescending(static item => item.Metadata is { IsResolved: true })
             .ThenByDescending(static item => item.Recognition?.Confidence ?? 0)
@@ -145,6 +150,8 @@ internal static class CatalogSubjectAggregator
             .OfType<MediaMetadataSnapshot>()
             .Where(static value => value.IsResolved)
             .OrderByDescending(static value =>
+                !string.IsNullOrWhiteSpace(value.BackdropUrl))
+            .ThenByDescending(static value =>
                 !string.IsNullOrWhiteSpace(value.PosterUrl))
             .ThenByDescending(static value =>
                 !string.IsNullOrWhiteSpace(value.CanonicalTitle) ||
@@ -152,28 +159,16 @@ internal static class CatalogSubjectAggregator
                 !string.IsNullOrWhiteSpace(value.ReleaseDate))
             .FirstOrDefault();
 
-        var title = !string.IsNullOrWhiteSpace(identity.TitleHint)
-            ? identity.TitleHint
-            : metadata?.CanonicalTitle;
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            title = representative.Recognition?.Title;
-        }
+        var title = MediaTitleDisplayResolver.ResolvePrimary(
+            metadata,
+            identity.TitleHint,
+            representative.Recognition?.Title,
+            representative.DisplayTitle);
 
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            title = representative.DisplayTitle;
-        }
-
-        var nativeTitle = metadata?.OriginalTitle;
-        if (string.IsNullOrWhiteSpace(nativeTitle) ||
-            string.Equals(
-                nativeTitle,
-                title,
-                StringComparison.CurrentCultureIgnoreCase))
-        {
-            nativeTitle = representative.SecondaryTitle;
-        }
+        var nativeTitle = MediaTitleDisplayResolver.ResolveSecondary(
+            metadata,
+            title,
+            representative.SecondaryTitle);
 
         var category = CatalogCategoryClassifier.ResolveSubject(
             identity,

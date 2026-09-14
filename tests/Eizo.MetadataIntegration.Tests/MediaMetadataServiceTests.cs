@@ -108,6 +108,142 @@ public sealed class MediaMetadataServiceTests
     }
 
     [Fact]
+    public async Task EnrichAsync_FillsMissingAnimeBackdropFromAniList()
+    {
+        using var cache = new TempDirectory();
+
+        var bangumiHandler = new RecordingHandler(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+
+            if (path.EndsWith(
+                    "/v0/search/subjects",
+                    StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "data": [
+                    {
+                      "id": 400,
+                      "type": 2,
+                      "name": "葬送のフリーレン",
+                      "name_cn": "葬送的芙莉莲",
+                      "date": "2023-09-29",
+                      "platform": "TV",
+                      "rating": { "score": 9.0 }
+                    }
+                  ],
+                  "total": 1
+                }
+                """);
+            }
+
+            if (path.EndsWith(
+                    "/v0/subjects/400",
+                    StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "id": 400,
+                  "type": 2,
+                  "name": "葬送のフリーレン",
+                  "name_cn": "葬送的芙莉莲",
+                  "date": "2023-09-29",
+                  "platform": "TV",
+                  "summary": "Journey.",
+                  "eps": 28,
+                  "images": {
+                    "large": "https://example.test/frieren-poster.jpg"
+                  }
+                }
+                """);
+            }
+
+            if (path.EndsWith(
+                    "/v0/episodes",
+                    StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "data": [
+                    {
+                      "id": 1,
+                      "type": 0,
+                      "sort": 1,
+                      "name": "冒険の終わり",
+                      "airdate": "2023-09-29"
+                    }
+                  ],
+                  "total": 1
+                }
+                """);
+            }
+
+            return new HttpResponseMessage(
+                HttpStatusCode.NotFound);
+        });
+
+        var aniListHandler = new RecordingHandler(request =>
+        {
+            Assert.Equal(
+                "graphql.anilist.co",
+                request.RequestUri!.Host);
+
+            return Json("""
+                {
+                  "data": {
+                    "Page": {
+                      "media": [
+                        {
+                          "id": 154587,
+                          "title": {
+                            "romaji": "Sousou no Frieren",
+                            "english": "Frieren: Beyond Journey's End",
+                            "native": "葬送のフリーレン"
+                          },
+                          "synonyms": ["葬送的芙莉莲"],
+                          "startDate": { "year": 2023 },
+                          "bannerImage": "https://img.anilist.co/banner/frieren.jpg",
+                          "coverImage": {
+                            "extraLarge": "https://img.anilist.co/cover/frieren.jpg"
+                          },
+                          "popularity": 500000
+                        }
+                      ]
+                    }
+                  }
+                }
+                """);
+        });
+
+        var service = new MediaMetadataService(
+            new MediaMetadataServiceOptions(
+                CacheDirectory: cache.Path),
+            bangumiHttpClient:
+                new HttpClient(bangumiHandler),
+            anilistHttpClient:
+                new HttpClient(aniListHandler));
+
+        var result = await service.EnrichAsync(
+            Recognition(
+                "葬送のフリーレン",
+                year: 2023,
+                episode: 1),
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(
+            MediaMetadataStatus.Resolved,
+            result.Status);
+        Assert.Equal(
+            "https://img.anilist.co/banner/frieren.jpg",
+            result.BackdropUrl);
+        Assert.Equal(
+            "https://example.test/frieren-poster.jpg",
+            result.PosterUrl);
+    }
+
+    [Fact]
     public async Task EnrichAsync_ReusesRuntimeScopedPersistentCacheAcrossServiceInstances()
     {
         using var cache = new TempDirectory();

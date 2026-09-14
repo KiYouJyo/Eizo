@@ -9,7 +9,17 @@ public sealed record MediaCardModel(
     string NativeTitle,
     string Meta,
     double Progress = 0,
-    string? ExternalKey = null);
+    string? ExternalKey = null,
+    string? ArtworkUrl = null);
+
+public sealed record HomeContinueCardModel(
+    CatalogMediaItemModel MediaItem,
+    string Title,
+    string NativeTitle,
+    string Meta,
+    double Progress,
+    string? ArtworkUrl);
+
 
 public sealed class SourceItemModel : INotifyPropertyChanged
 {
