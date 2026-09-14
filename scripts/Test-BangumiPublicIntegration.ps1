@@ -25,7 +25,7 @@ $shell = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
 foreach ($required in @(
     '../Eizo.Bangumi/Eizo.Bangumi.csproj',
     'https://api.bgm.tv/',
-    'Eizo/0.4.5',
+    'Eizo/0.4.7',
     '"type=2"',
     '"sort=" + sort',
     'GetSeasonMonthAsync',
@@ -52,7 +52,8 @@ foreach ($required in @(
     'ShiftSeason',
     'Enumerable.Range(startMonth, 3)',
     'GetCalendarAsync',
-    'GetSubjectAsync')) {
+    'GetSubjectAsync',
+    'GetSubjectCreditsAsync')) {
     if (-not $repository.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi repository contract missing: $required"
     }
@@ -63,6 +64,8 @@ foreach ($required in @(
     'ParsePagedSubjectPage',
     'ParseCalendar',
     'ParseSubject',
+    'ParseSubjectCharacters',
+    'ParseSubjectPersons',
     'subject.Type == 2',
     'ResolvePoster')) {
     if (-not $parser.Contains($required, [StringComparison]::Ordinal)) {
@@ -119,4 +122,4 @@ foreach ($required in @(
     }
 }
 
-Write-Host 'Eizo v0.4.5 Bangumi public integration contract PASS.'
+Write-Host 'Eizo v0.4.7 Bangumi public integration contract PASS.'
