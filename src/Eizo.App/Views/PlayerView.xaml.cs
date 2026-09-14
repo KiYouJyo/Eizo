@@ -677,9 +677,16 @@ public sealed partial class PlayerView : UserControl
         var track = engine.Tracks.SubtitleTracks
             .FirstOrDefault(candidate => candidate.Id == selectedId);
 
-        if (track is null ||
-            !EmbeddedSubtitleService.CanRenderAsOverlay(source, track))
+        if (track is null)
+            return;
+
+        if (!EmbeddedSubtitleService.CanRenderAsOverlay(source, track))
         {
+            PlaybackTrace.Write(
+                "view",
+                "embedded-subtitle",
+                "overlay-unsupported",
+                $"{track.Id}:{track.Language}:{track.Codec}:{Path.GetExtension(source.Uri.AbsolutePath)}:random={source.RandomAccessSource is not null}");
             return;
         }
 
@@ -707,8 +714,17 @@ public sealed partial class PlayerView : UserControl
             return;
         }
 
-        if (document is null ||
-            selectionGeneration != _primarySubtitleGeneration ||
+        if (document is null)
+        {
+            PlaybackTrace.Write(
+                "view",
+                "embedded-subtitle",
+                "parse-empty",
+                $"{track.Id}:{track.Language}:{track.Codec}:{Path.GetExtension(source.Uri.AbsolutePath)}");
+            return;
+        }
+
+        if (selectionGeneration != _primarySubtitleGeneration ||
             !ReferenceEquals(_session, session) ||
             !ReferenceEquals(_engine, engine) ||
             session.Token.IsCancellationRequested ||
