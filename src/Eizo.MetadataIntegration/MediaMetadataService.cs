@@ -8,12 +8,12 @@ namespace Eizo.MetadataIntegration;
 
 public sealed record MediaMetadataServiceOptions(
     bool EnableBangumi = true,
-    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.3 (https://github.com/KiYouJyo/Eizo)",
+    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.6 (https://github.com/KiYouJyo/Eizo)",
     string PreferredLanguage = "zh-CN",
     string? TmdbReadAccessToken = null,
     string? CacheDirectory = null,
     bool EnableArtworkProviders = true,
-    string AniListUserAgent = "KiYouJyo/Eizo/0.5.3 (https://github.com/KiYouJyo/Eizo)");
+    string AniListUserAgent = "KiYouJyo/Eizo/0.5.6 (https://github.com/KiYouJyo/Eizo)");
 
 public sealed class MediaMetadataService
 {
@@ -23,7 +23,6 @@ public sealed class MediaMetadataService
 
     private static readonly HttpClient SharedBangumiHttpClient = CreateHttpClient();
     private static readonly HttpClient SharedTmdbHttpClient = CreateHttpClient();
-    private static readonly HttpClient SharedAniListHttpClient = CreateHttpClient();
 
     private readonly Core.MetadataResolver? _resolver;
     private readonly IReadOnlyDictionary<string, Core.MetadataResolver>
@@ -71,22 +70,9 @@ public sealed class MediaMetadataService
         var artworkProviders =
             new List<Core.IMetadataArtworkProvider>();
 
-        if (options.EnableArtworkProviders)
-        {
-            Core.IMetadataArtworkProvider aniList =
-                new Provider.AniListArtworkProvider(
-                    anilistHttpClient ?? SharedAniListHttpClient,
-                    new Provider.AniListArtworkProviderOptions(
-                        options.AniListUserAgent));
-
-            aniList = new Core.CachedMetadataArtworkProvider(
-                aniList,
-                fileCache);
-            artworkProviders.Add(
-                new Core.CachedMetadataArtworkProvider(
-                    aniList,
-                    memoryCache));
-        }
+        // AniList is intentionally skipped in the current roadmap.
+        // Artwork enhancement is provided by TMDB plus local fallbacks.
+        _ = anilistHttpClient;
 
         if (options.EnableBangumi)
         {
@@ -601,6 +587,7 @@ public sealed class MediaMetadataService
                     .Concat(artworkContributors)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList(),
+                MergeProfile = mergeResult.Profile.ToString(),
             },
             providerRequest,
             result.Resolution,

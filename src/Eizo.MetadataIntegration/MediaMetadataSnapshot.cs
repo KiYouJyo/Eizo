@@ -108,6 +108,8 @@ public sealed record MediaMetadataSnapshot(
 
     public List<string> MergeContributors { get; init; } = [];
 
+    public string? MergeProfile { get; init; }
+
     public List<string> SearchTitles { get; init; } = [];
 
     public int CandidateCount { get; init; }

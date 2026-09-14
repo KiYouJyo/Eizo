@@ -2,6 +2,14 @@ using Core = Eizo.Metadata.Core;
 
 namespace Eizo.MetadataIntegration;
 
+public enum MediaMetadataMergeProfile
+{
+    Unknown = 0,
+    Anime = 1,
+    JapaneseLiveAction = 2,
+    GeneralLiveAction = 3,
+}
+
 public sealed record MediaMetadataProviderSource(
     string Provider,
     Core.MetadataSubject Subject,
@@ -13,7 +21,8 @@ public sealed record MediaMetadataMergeResult(
     Dictionary<string, string> SeasonExternalIds,
     Dictionary<string, string> EpisodeExternalIds,
     Dictionary<string, string> FieldSources,
-    List<string> Contributors);
+    List<string> Contributors,
+    MediaMetadataMergeProfile Profile);
 
 public static class MediaMetadataMergePolicy
 {
@@ -34,92 +43,109 @@ public static class MediaMetadataMergePolicy
             .Select(static group => group.First())
             .ToArray();
 
+        var profile = ResolveProfile(sources);
+        var identitySources = OrderIdentitySources(
+            sources,
+            primary.Provider);
+        var detailSources = OrderDetailSources(
+            sources,
+            primary.Provider,
+            profile);
+        var visualSources = OrderVisualSources(
+            sources,
+            primary.Provider,
+            profile);
+        var creditSources = OrderCreditSources(
+            sources,
+            primary.Provider,
+            profile);
+
         var fieldSources = new Dictionary<string, string>(
             StringComparer.OrdinalIgnoreCase);
 
         var subjectExternalIds =
             MergeSubjectExternalIds(sources);
         var titles = MergeTitles(
-            sources,
+            identitySources,
             fieldSources);
 
         var overview = FirstValue(
-            sources,
+            detailSources,
             static source => source.Subject.Overview,
             "Overview",
             fieldSources);
         var releaseDate = FirstValue(
-            sources,
+            detailSources,
             static source => source.Subject.ReleaseDate,
             "ReleaseDate",
             fieldSources);
         var episodeCount = FirstValue(
-            sources,
+            detailSources,
             static source => source.Subject.EpisodeCount,
             "EpisodeCount",
             fieldSources);
 
         var artwork = new Core.MetadataArtwork(
             FirstValue(
-                sources,
+                visualSources,
                 static source => source.Subject.Artwork.PosterUrl,
                 "PosterUrl",
                 fieldSources),
             FirstValue(
-                sources,
+                visualSources,
                 static source => source.Subject.Artwork.BackdropUrl,
                 "BackdropUrl",
                 fieldSources),
             FirstValue(
-                sources,
+                visualSources,
                 static source => source.Subject.Artwork.ThumbnailUrl,
                 "ThumbnailUrl",
                 fieldSources));
 
         var genres = MergeList(
-            sources,
+            detailSources,
             static source => source.Subject.Genres,
             "Genres",
             fieldSources);
         var companies = MergeList(
-            sources,
+            detailSources,
             static source => source.Subject.ProductionCompanies,
             "ProductionCompanies",
             fieldSources);
         var origins = MergeList(
-            sources,
+            detailSources,
             static source => source.Subject.OriginCountryCodes,
             "OriginCountryCodes",
             fieldSources);
 
         var runtime = FirstValue(
-            sources,
+            detailSources,
             static source => source.Subject.RuntimeMinutes,
             "RuntimeMinutes",
             fieldSources);
         var status = FirstValue(
-            sources,
+            detailSources,
             static source => source.Subject.Status,
             "ProductionStatus",
             fieldSources);
         var language = FirstValue(
-            sources,
+            detailSources,
             static source => source.Subject.OriginalLanguage,
             "OriginalLanguage",
             fieldSources);
 
         var cast = FirstNonEmptyList(
-            sources,
+            creditSources,
             static source => source.Subject.Cast,
             "Cast",
             fieldSources);
         var crew = FirstNonEmptyList(
-            sources,
+            creditSources,
             static source => source.Subject.Crew,
             "Crew",
             fieldSources);
 
-        var contentKind = sources
+        var contentKind = identitySources
             .Select(static source =>
                 (source.Provider, source.Subject.ContentKind))
             .FirstOrDefault(static item =>
@@ -154,6 +180,8 @@ public static class MediaMetadataMergePolicy
 
         var episode = MergeEpisode(
             sources,
+            visualSources,
+            detailSources,
             fieldSources);
         var seasonExternalIds =
             MergeScopedExternalIds(
@@ -175,7 +203,8 @@ public static class MediaMetadataMergePolicy
             sources
                 .Select(static source => source.Provider)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList());
+                .ToList(),
+            profile);
     }
 
     private static Core.MetadataTitles MergeTitles(
@@ -265,9 +294,19 @@ public static class MediaMetadataMergePolicy
 
     private static Core.MetadataEpisode? MergeEpisode(
         IReadOnlyList<MediaMetadataProviderSource> sources,
+        IReadOnlyList<MediaMetadataProviderSource> visualSources,
+        IReadOnlyList<MediaMetadataProviderSource> detailSources,
         IDictionary<string, string> fieldSources)
     {
         var episodeSources = sources
+            .Where(static source =>
+                source.Episode is not null)
+            .ToArray();
+        var episodeDetailSources = detailSources
+            .Where(static source =>
+                source.Episode is not null)
+            .ToArray();
+        var episodeVisualSources = visualSources
             .Where(static source =>
                 source.Episode is not null)
             .ToArray();
@@ -278,48 +317,48 @@ public static class MediaMetadataMergePolicy
         var basisEpisode = basis.Episode!;
 
         var primaryTitle = FirstValue(
-            episodeSources,
+            episodeDetailSources,
             static source => source.Episode!.Titles.Primary,
             "EpisodeTitle",
             fieldSources) ??
             basisEpisode.Titles.Primary;
         var originalTitle = FirstValue(
-            episodeSources,
+            episodeDetailSources,
             static source => source.Episode!.Titles.Original,
             "EpisodeOriginalTitle",
             fieldSources);
         var overview = FirstValue(
-            episodeSources,
+            episodeDetailSources,
             static source => source.Episode!.Overview,
             "EpisodeOverview",
             fieldSources);
         var airDate = FirstValue(
-            episodeSources,
+            episodeDetailSources,
             static source => source.Episode!.AirDate,
             "EpisodeAirDate",
             fieldSources);
         var thumbnail = FirstValue(
-            episodeSources,
+            episodeVisualSources,
             static source => source.Episode!.ThumbnailUrl,
             "EpisodeThumbnailUrl",
             fieldSources);
         var seasonTitle = FirstValue(
-            episodeSources,
+            episodeDetailSources,
             static source => source.Episode!.SeasonTitle,
             "SeasonTitle",
             fieldSources);
         var seasonOverview = FirstValue(
-            episodeSources,
+            episodeDetailSources,
             static source => source.Episode!.SeasonOverview,
             "SeasonOverview",
             fieldSources);
         var seasonAirDate = FirstValue(
-            episodeSources,
+            episodeDetailSources,
             static source => source.Episode!.SeasonAirDate,
             "SeasonAirDate",
             fieldSources);
         var seasonPoster = FirstValue(
-            episodeSources,
+            episodeVisualSources,
             static source => source.Episode!.SeasonPosterUrl,
             "SeasonPosterUrl",
             fieldSources);
@@ -351,6 +390,168 @@ public static class MediaMetadataMergePolicy
             SeasonAirDate = seasonAirDate,
             SeasonPosterUrl = seasonPoster,
         };
+    }
+
+    private static MediaMetadataMergeProfile ResolveProfile(
+        IReadOnlyList<MediaMetadataProviderSource> sources)
+    {
+        if (sources.Any(static source =>
+                source.Subject.ContentKind ==
+                    Core.MetadataContentKind.Animation))
+        {
+            return MediaMetadataMergeProfile.Anime;
+        }
+
+        var hasLiveAction = sources.Any(static source =>
+            source.Subject.ContentKind ==
+                Core.MetadataContentKind.LiveAction);
+        if (!hasLiveAction)
+            return MediaMetadataMergeProfile.Unknown;
+
+        var isJapanese = sources.Any(static source =>
+            source.Subject.OriginCountryCodes.Any(
+                static code =>
+                    string.Equals(
+                        code,
+                        "JP",
+                        StringComparison.OrdinalIgnoreCase)) ||
+            string.Equals(
+                source.Subject.OriginalLanguage,
+                "ja",
+                StringComparison.OrdinalIgnoreCase));
+
+        return isJapanese
+            ? MediaMetadataMergeProfile.JapaneseLiveAction
+            : MediaMetadataMergeProfile.GeneralLiveAction;
+    }
+
+    private static IReadOnlyList<MediaMetadataProviderSource>
+        OrderIdentitySources(
+            IReadOnlyList<MediaMetadataProviderSource> sources,
+            string primaryProvider) =>
+        OrderSources(
+            sources,
+            primaryProvider);
+
+    private static IReadOnlyList<MediaMetadataProviderSource>
+        OrderDetailSources(
+            IReadOnlyList<MediaMetadataProviderSource> sources,
+            string primaryProvider,
+            MediaMetadataMergeProfile profile)
+    {
+        return profile switch
+        {
+            MediaMetadataMergeProfile.Anime =>
+                OrderSources(
+                    sources,
+                    primaryProvider,
+                    "bangumi",
+                    "tmdb"),
+            MediaMetadataMergeProfile.JapaneseLiveAction =>
+                OrderSources(
+                    sources,
+                    primaryProvider,
+                    "tmdb",
+                    "bangumi"),
+            MediaMetadataMergeProfile.GeneralLiveAction =>
+                OrderSources(
+                    sources,
+                    primaryProvider,
+                    "tmdb"),
+            _ => OrderSources(
+                sources,
+                primaryProvider),
+        };
+    }
+
+    private static IReadOnlyList<MediaMetadataProviderSource>
+        OrderVisualSources(
+            IReadOnlyList<MediaMetadataProviderSource> sources,
+            string primaryProvider,
+            MediaMetadataMergeProfile profile)
+    {
+        return profile switch
+        {
+            MediaMetadataMergeProfile.Anime =>
+                OrderSources(
+                    sources,
+                    "tmdb",
+                    primaryProvider,
+                    "bangumi"),
+            MediaMetadataMergeProfile.JapaneseLiveAction =>
+                OrderSources(
+                    sources,
+                    "tmdb",
+                    primaryProvider,
+                    "bangumi"),
+            MediaMetadataMergeProfile.GeneralLiveAction =>
+                OrderSources(
+                    sources,
+                    "tmdb",
+                    primaryProvider),
+            _ => OrderSources(
+                sources,
+                primaryProvider,
+                "tmdb"),
+        };
+    }
+
+    private static IReadOnlyList<MediaMetadataProviderSource>
+        OrderCreditSources(
+            IReadOnlyList<MediaMetadataProviderSource> sources,
+            string primaryProvider,
+            MediaMetadataMergeProfile profile)
+    {
+        return profile switch
+        {
+            MediaMetadataMergeProfile.Anime =>
+                OrderSources(
+                    sources,
+                    primaryProvider,
+                    "bangumi",
+                    "tmdb"),
+            MediaMetadataMergeProfile.JapaneseLiveAction or
+            MediaMetadataMergeProfile.GeneralLiveAction =>
+                OrderSources(
+                    sources,
+                    "tmdb",
+                    primaryProvider,
+                    "bangumi"),
+            _ => OrderSources(
+                sources,
+                primaryProvider,
+                "tmdb"),
+        };
+    }
+
+    private static IReadOnlyList<MediaMetadataProviderSource>
+        OrderSources(
+            IReadOnlyList<MediaMetadataProviderSource> sources,
+            params string[] preferredProviders)
+    {
+        var priority = preferredProviders
+            .Where(static value =>
+                !string.IsNullOrWhiteSpace(value))
+            .Select((provider, index) => (provider, index))
+            .GroupBy(
+                static item => item.provider,
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                static group => group.Key,
+                static group => group.First().index,
+                StringComparer.OrdinalIgnoreCase);
+
+        return sources
+            .Select((source, index) => (source, index))
+            .OrderBy(item =>
+                priority.TryGetValue(
+                    item.source.Provider,
+                    out var rank)
+                    ? rank
+                    : int.MaxValue)
+            .ThenBy(static item => item.index)
+            .Select(static item => item.source)
+            .ToArray();
     }
 
     private static T? FirstValue<T>(
