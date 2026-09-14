@@ -1278,4 +1278,13 @@
   <data name="Cache_StatusPaused" xml:space="preserve">
     <value>Paused</value>
   </data>
+  <data name="Home_BangumiSearchPlaceholder" xml:space="preserve">
+    <value>Search Bangumi anime titles</value>
+  </data>
+  <data name="Home_BangumiSearchResultsTitleFormat" xml:space="preserve">
+    <value>Bangumi results for “{0}”</value>
+  </data>
+  <data name="Home_BangumiSearchResultsCountFormat" xml:space="preserve">
+    <value>Showing {0} of {1} results</value>
+  </data>
 </root>
