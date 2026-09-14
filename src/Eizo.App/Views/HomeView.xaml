@@ -3,25 +3,31 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:models="using:Eizo.Models">
   <UserControl.Resources>
-    <DataTemplate x:Key="ContinueCardTemplate" x:DataType="models:MediaCardModel">
+    <DataTemplate x:Key="ContinueCardTemplate" x:DataType="models:HomeContinueCardModel">
       <Button Style="{StaticResource MediaCardButton}"
-              Tag="{x:Bind Title}"
+              Tag="{x:Bind MediaItem}"
               Click="MediaCard_Click">
         <Grid RowDefinitions="86,*">
           <Border Background="{ThemeResource EizoSelectionBrush}"
                   CornerRadius="8,8,0,0">
-            <FontIcon Glyph="&#xE8B9;"
-                      FontSize="30"
-                      Opacity="0.28" />
+            <Grid>
+              <FontIcon Glyph="&#xE8B9;"
+                        FontSize="30"
+                        Opacity="0.18" />
+              <Image Source="{x:Bind Artwork}"
+                     Stretch="UniformToFill" />
+            </Grid>
           </Border>
           <Grid Grid.Row="1"
                 Padding="12,8"
                 RowDefinitions="Auto,Auto,*">
             <TextBlock Text="{x:Bind Title}"
-                       Style="{StaticResource CardTitleText}" />
+                       Style="{StaticResource CardTitleText}"
+                       TextTrimming="CharacterEllipsis" />
             <TextBlock Grid.Row="1"
-                       Text="{x:Bind NativeTitle}"
-                       Style="{StaticResource MetadataText}" />
+                       Text="{x:Bind Meta}"
+                       Style="{StaticResource MetadataText}"
+                       TextTrimming="CharacterEllipsis" />
             <ProgressBar Grid.Row="2"
                          Value="{x:Bind Progress}"
                          Maximum="100"
@@ -100,7 +106,10 @@
                       Grid.Row="2"
                       Height="38"
                       QueryIcon="Find"
-                      HorizontalAlignment="Stretch" />
+                      HorizontalAlignment="Stretch"
+                      TextChanged="SearchBox_TextChanged"
+                      SuggestionChosen="SearchBox_SuggestionChosen"
+                      QuerySubmitted="SearchBox_QuerySubmitted" />
 
       <Border Grid.Row="4"
               MinHeight="250"
@@ -117,12 +126,13 @@
             <TextBlock x:Name="FeaturedEyebrow"
                        Style="{StaticResource MetadataText}"
                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-            <TextBlock Text="葬送的芙莉莲"
+            <TextBlock x:Name="FeaturedTitle"
                        FontSize="28"
-                       FontWeight="SemiBold" />
-            <TextBlock Text="葬送のフリーレン"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <TextBlock x:Name="FeaturedNativeTitle"
                        Style="{StaticResource BodyText}" />
-            <TextBlock Text="TV · 2023 · MADHOUSE · 28"
+            <TextBlock x:Name="FeaturedMeta"
                        Style="{StaticResource MetadataText}" />
             <TextBlock x:Name="FeaturedDescription"
                        MaxWidth="560"
@@ -149,9 +159,26 @@
                   Visibility="Collapsed"
                   CornerRadius="8"
                   Background="{ThemeResource EizoSelectionBrush}">
-            <FontIcon Glyph="&#xE8B9;"
-                      FontSize="72"
-                      Opacity="0.22" />
+            <Grid>
+              <FontIcon Glyph="&#xE8B9;"
+                        FontSize="72"
+                        Opacity="0.18" />
+              <Image x:Name="HeroArtworkImage"
+                     Stretch="UniformToFill" />
+              <Rectangle VerticalAlignment="Stretch">
+                <Rectangle.Fill>
+                  <LinearGradientBrush StartPoint="0,0.5"
+                                       EndPoint="1,0.5">
+                    <GradientStop Offset="0"
+                                  Color="#AA202525" />
+                    <GradientStop Offset="0.45"
+                                  Color="#44202525" />
+                    <GradientStop Offset="1"
+                                  Color="#00202525" />
+                  </LinearGradientBrush>
+                </Rectangle.Fill>
+              </Rectangle>
+            </Grid>
           </Border>
         </Grid>
       </Border>
@@ -162,7 +189,8 @@
                    Style="{StaticResource SectionTitleText}" />
         <Button x:Name="ContinueAllButton"
                 Grid.Column="1"
-                Style="{StaticResource CompactActionButton}" />
+                Style="{StaticResource CompactActionButton}"
+                Click="ContinueAllButton_Click" />
       </Grid>
 
       <!-- Deliberately mirrors SpatialViewer's explicit responsive grids.
