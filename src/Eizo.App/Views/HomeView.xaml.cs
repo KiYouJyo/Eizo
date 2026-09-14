@@ -61,11 +61,13 @@ public sealed partial class HomeView : UserControl
         if (_responsiveMode == mode &&
             ContinueGrid.Children.Count > 0)
         {
+            UpdateHeroLayout();
             return;
         }
 
         _responsiveMode = mode;
         RebuildMediaGrids();
+        UpdateHeroLayout();
     }
 
     private async void HomeView_Loaded(
@@ -218,6 +220,7 @@ public sealed partial class HomeView : UserControl
 
             FeaturedPlayButton.IsEnabled = true;
             FeaturedDetailsButton.IsEnabled = true;
+            UpdateHeroLayout();
             return;
         }
 
@@ -242,6 +245,7 @@ public sealed partial class HomeView : UserControl
 
             FeaturedPlayButton.IsEnabled = true;
             FeaturedDetailsButton.IsEnabled = true;
+            UpdateHeroLayout();
             return;
         }
 
@@ -252,6 +256,23 @@ public sealed partial class HomeView : UserControl
         HeroArtworkImage.Source = null;
         FeaturedPlayButton.IsEnabled = false;
         FeaturedDetailsButton.IsEnabled = false;
+        UpdateHeroLayout();
+    }
+
+    private void UpdateHeroLayout()
+    {
+        var showArtwork =
+            _responsiveMode == ResponsiveLayoutMode.Large &&
+            HeroArtworkImage.Source is not null;
+
+        HeroArtwork.Visibility =
+            showArtwork
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        Grid.SetColumnSpan(
+            HeroText,
+            showArtwork ? 1 : 2);
     }
 
     private async Task LoadCurrentSeasonAsync()
