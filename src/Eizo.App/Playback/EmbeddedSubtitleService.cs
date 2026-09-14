@@ -1016,9 +1016,12 @@ internal static class EmbeddedSubtitleService
 
             if (end <= cue.Start)
             {
+                var fallbackEnd = cue.Start + TimeSpan.FromSeconds(7);
                 end = index + 1 < pending.Count
-                    ? pending[index + 1].Start
-                    : cue.Start + TimeSpan.FromSeconds(5);
+                    ? MinTimeSpan(
+                        pending[index + 1].Start,
+                        fallbackEnd)
+                    : fallbackEnd;
             }
 
             if (end <= cue.Start)
@@ -1508,6 +1511,11 @@ internal static class EmbeddedSubtitleService
 
         return builder.ToString();
     }
+
+    private static TimeSpan MinTimeSpan(
+        TimeSpan left,
+        TimeSpan right) =>
+        left <= right ? left : right;
 
     private static TimeSpan MatroskaTimeToTimeSpan(
         long units,
