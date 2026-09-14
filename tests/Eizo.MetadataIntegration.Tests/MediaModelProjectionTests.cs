@@ -69,6 +69,28 @@ public sealed class MediaModelProjectionTests
     }
 
     [Fact]
+    public void EpisodeExternalIdsUseExactProviderEpisodeIdentity()
+    {
+        var metadata = Metadata(
+            provider: "tmdb",
+            id: "1396",
+            contentKind: "LiveAction",
+            externalIds: new Dictionary<string, string>
+            {
+                ["tmdb"] = "1396",
+            }) with
+        {
+            EpisodeSeasonNumber = 1,
+            ProviderEpisodeId = "62085",
+        };
+
+        var ids = MediaModelProjection.ProjectEpisodeExternalIds(metadata);
+
+        Assert.Equal("62085", ids["tmdb"]);
+        Assert.DoesNotContain("1396", ids.Values);
+    }
+
+    [Fact]
     public void ProjectionDistinguishesMovieAndOvaFormats()
     {
         var movie = Recognition("Oppenheimer", 2023) with
