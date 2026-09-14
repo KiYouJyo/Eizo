@@ -1,12 +1,12 @@
 {
     "schemaVersion": 1,
     "product": {
-        "version": "0.5.8",
-        "packageVersion": "0.5.8.0",
+        "version": "0.5.9",
+        "packageVersion": "0.5.9.0",
         "title": {
-            "zh-CN": "扫描、刮削与持久化链收口",
-            "ja-JP": "スキャン・スクレイプ・永続化基盤",
-            "en-US": "Scan, Scrape & Persistence Close-out"
+            "zh-CN": "真实内容 UI 接入",
+            "ja-JP": "実コンテンツ UI 接続",
+            "en-US": "Real Content UI Integration"
         }
     },
     "channels": {

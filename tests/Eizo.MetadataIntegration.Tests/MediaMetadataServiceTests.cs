@@ -108,6 +108,60 @@ public sealed class MediaMetadataServiceTests
     }
 
     [Fact]
+    public async Task SearchCandidatesAsync_ReturnsProviderIdentityForManualMatching()
+    {
+        using var cache = new TempDirectory();
+        var handler = new RecordingHandler(request =>
+        {
+            Assert.EndsWith(
+                "/v0/search/subjects",
+                request.RequestUri!.AbsolutePath,
+                StringComparison.Ordinal);
+
+            return Json("""
+            {
+              "data": [
+                {
+                  "id": 253,
+                  "type": 2,
+                  "name": "攻殻機動隊 STAND ALONE COMPLEX",
+                  "name_cn": "攻壳机动队 STAND ALONE COMPLEX",
+                  "date": "2002-10-01",
+                  "platform": "TV",
+                  "rating": { "score": 8.8 }
+                }
+              ],
+              "total": 1
+            }
+            """);
+        });
+
+        var service = new MediaMetadataService(
+            new MediaMetadataServiceOptions(
+                CacheDirectory: cache.Path),
+            bangumiHttpClient:
+                new HttpClient(handler));
+
+        var candidates = await service.SearchCandidatesAsync(
+            Recognition(
+                "攻殻機動隊 STAND ALONE COMPLEX",
+                year: 2002,
+                episode: 1),
+            query: "攻殻機動隊",
+            provider: "bangumi",
+            TestContext.Current.CancellationToken);
+
+        var candidate = Assert.Single(candidates);
+        Assert.Equal("bangumi", candidate.Provider);
+        Assert.Equal("253", candidate.ProviderSubjectId);
+        Assert.Equal(
+            "攻壳机动队 STAND ALONE COMPLEX",
+            candidate.PrimaryTitle);
+        Assert.Equal(2002, candidate.Year);
+        Assert.Equal("Series", candidate.SubjectKind);
+    }
+
+    [Fact]
     public async Task EnrichAsync_DoesNotCallAniListWhenRoadmapSkipsIt()
     {
         using var cache = new TempDirectory();

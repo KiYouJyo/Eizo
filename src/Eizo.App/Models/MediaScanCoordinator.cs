@@ -1,5 +1,6 @@
 using Eizo.Localization;
 using Eizo.MetadataIntegration;
+using Eizo.Recognition;
 using Windows.Storage;
 
 namespace Eizo.Models;
@@ -48,6 +49,29 @@ public sealed class MediaScanCoordinator
     {
         lock (_sync)
             return _metadataJobs.Contains(sourceId);
+    }
+
+    public async Task<IReadOnlyList<MediaMetadataMatchCandidate>>
+        SearchMetadataMatchesAsync(
+            MediaRecognitionSnapshot recognition,
+            string? query = null,
+            string? provider = null,
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(recognition);
+
+        _metadataService = CreateMetadataServiceLazy();
+        var service = _metadataService.Value;
+        if (service is null)
+            return Array.Empty<MediaMetadataMatchCandidate>();
+
+        return await service
+            .SearchCandidatesAsync(
+                recognition,
+                query,
+                provider,
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public Task<MediaScanSnapshot> StartAsync(

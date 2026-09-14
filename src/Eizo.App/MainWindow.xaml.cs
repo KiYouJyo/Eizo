@@ -749,6 +749,10 @@ public sealed partial class MainWindow : Window
             await OpenCatalogMediaAsync(
                 item,
                 subject);
+        view.SubjectUpdated += (_, updated) =>
+            ShowCatalogSubjectInTab(
+                state,
+                updated);
 
         state.MediaTitle = subject.Title;
         state.Episode = null;

@@ -91,6 +91,13 @@
                         Click="PlayButton_Click" />
                 <Button x:Name="FavoriteButton"
                         Style="{StaticResource CompactActionButton}" />
+                <Button x:Name="MoreButton"
+                        Style="{StaticResource CompactActionButton}"
+                        Click="MoreButton_Click"
+                        ToolTipService.ToolTip="More">
+                  <FontIcon Glyph="&#xE712;"
+                            FontSize="15" />
+                </Button>
               </StackPanel>
             </StackPanel>
           </Grid>

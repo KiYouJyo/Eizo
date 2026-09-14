@@ -211,11 +211,6 @@ internal static class CatalogSubjectAggregator
                     $"{episodes.Count} episodes"));
         }
 
-        if (metadata is { IsResolved: true, Provider.Length: > 0 })
-        {
-            metaParts.Add(metadata.Provider!);
-        }
-
         var subjectMedia = BuildSubjectMedia(
             identity,
             representative,
