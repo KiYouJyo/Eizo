@@ -27,6 +27,8 @@ internal sealed class PlaybackHistoryStore
 
     internal static PlaybackHistoryStore Default { get; } = new();
 
+    internal event EventHandler? Changed;
+
     internal IReadOnlyList<PlaybackHistoryEntry> Snapshot() 
     {
         lock (_sync)
@@ -89,6 +91,8 @@ internal sealed class PlaybackHistoryStore
 
             SaveCoreLocked(now);
         }
+
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     internal void Record(
@@ -108,6 +112,8 @@ internal sealed class PlaybackHistoryStore
             0d,
             duration.TotalSeconds);
 
+        var persisted = false;
+
         lock (_sync)
         {
             _entries[key] = new PlaybackHistoryEntry(
@@ -117,8 +123,14 @@ internal sealed class PlaybackHistoryStore
                 now);
 
             if (now - _lastPersistedAtUtc >= TimeSpan.FromSeconds(5))
+            {
                 SaveCoreLocked(now);
+                persisted = true;
+            }
         }
+
+        if (persisted)
+            Changed?.Invoke(this, EventArgs.Empty);
     }
 
     internal void Flush()
