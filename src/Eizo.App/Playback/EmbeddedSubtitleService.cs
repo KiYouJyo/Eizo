@@ -91,7 +91,7 @@ internal static class EmbeddedSubtitleService
                     ? target.CompositionOffsets[index]
                     : 0L;
             var startUnits = Math.Max(0L, decodeTime + compositionOffset);
-            var endUnits = Math.Max(startUnits, decodeTime + duration);
+            var endUnits = Math.Max(startUnits, startUnits + duration);
 
             var text = await ReadTimedTextSampleAsync(
                 reader,
