@@ -25,6 +25,8 @@
              Link="Models/MediaScanModels.cs" />
     <Compile Include="../../src/Eizo.App/Models/MediaCatalogStore.cs"
              Link="Models/MediaCatalogStore.cs" />
+    <Compile Include="../../src/Eizo.App/Models/MediaIdentityBindingStore.cs"
+             Link="Models/MediaIdentityBindingStore.cs" />
     <ProjectReference Include="../../src/Eizo.RecognitionIntegration/Eizo.RecognitionIntegration.csproj" />
     <ProjectReference Include="../../src/Eizo.MetadataIntegration/Eizo.MetadataIntegration.csproj" />
   </ItemGroup>
