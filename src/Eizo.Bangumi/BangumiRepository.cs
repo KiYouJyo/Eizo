@@ -229,10 +229,24 @@ public sealed class BangumiRepository
         return BangumiJsonParser.ParseUserProfile(payload);
     }
 
-    public async Task<BangumiUserCollectionPage>
+    public Task<BangumiUserCollectionPage>
         GetFollowingAsync(
             string accessToken,
             string userName,
+            int offset = 0,
+            CancellationToken cancellationToken = default) =>
+        GetUserCollectionAsync(
+            accessToken,
+            userName,
+            BangumiCollectionType.Doing,
+            offset,
+            cancellationToken);
+
+    public async Task<BangumiUserCollectionPage>
+        GetUserCollectionAsync(
+            string accessToken,
+            string userName,
+            BangumiCollectionType type,
             int offset = 0,
             CancellationToken cancellationToken = default)
     {
@@ -242,7 +256,7 @@ public sealed class BangumiRepository
         var payload =
             await _client.GetUserCollectionsAsync(
                 userName,
-                BangumiCollectionType.Doing,
+                type,
                 PageSize,
                 offset,
                 accessToken,
