@@ -3,12 +3,6 @@ using Eizo.Playback;
 
 namespace Eizo.Models;
 
-internal sealed record CachedVideoPlaybackRequest(
-    string GroupKey,
-    string Title,
-    string Source,
-    long SizeBytes);
-
 internal sealed class CachedVideoRandomAccessSource
     : IPlaybackRandomAccessSource
 {
