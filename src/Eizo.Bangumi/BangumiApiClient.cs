@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace Eizo.Bangumi;
 
@@ -78,6 +80,39 @@ internal sealed class BangumiApiClient
             category: null,
             cancellationToken);
 
+    public Task<string> SearchAnimeAsync(
+        string keyword,
+        int limit,
+        int offset,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(keyword);
+        if (limit is < 1 or > 50)
+            throw new ArgumentOutOfRangeException(nameof(limit));
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+
+        var body = JsonSerializer.Serialize(
+            new
+            {
+                keyword = keyword.Trim(),
+                sort = "match",
+                filter = new
+                {
+                    type = new[] { 2 },
+                },
+            });
+
+        return SendJsonAsync(
+            HttpMethod.Post,
+            "v0/search/subjects?limit=" +
+            limit.ToString(CultureInfo.InvariantCulture) +
+            "&offset=" +
+            offset.ToString(CultureInfo.InvariantCulture),
+            body,
+            cancellationToken);
+    }
+
     public Task<string> GetCalendarAsync(
         CancellationToken cancellationToken) =>
         GetStringAsync("calendar", cancellationToken);
@@ -127,6 +162,32 @@ internal sealed class BangumiApiClient
             relativeUri,
             cancellationToken,
             NormalizeAccessToken(accessToken));
+    }
+
+    private async Task<string> SendJsonAsync(
+        HttpMethod method,
+        string relativeUri,
+        string json,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            method,
+            relativeUri)
+        {
+            Content = new StringContent(
+                json,
+                Encoding.UTF8,
+                "application/json"),
+        };
+
+        using var response = await _httpClient.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsStringAsync(
+            cancellationToken);
     }
 
     private async Task<string> GetStringAsync(
