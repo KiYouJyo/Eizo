@@ -79,6 +79,15 @@ public sealed partial class PlayerView : UserControl
         int initialQueueIndex = 0)
     {
         InitializeComponent();
+
+        SubtitleStyleProfile.ApplyTo(PrimarySubtitleText);
+        SubtitleStyleProfile.ApplyTo(SecondarySubtitleText);
+        PlaybackSurface.PlaybackOptions = new()
+        {
+            Arguments = SubtitleStyleProfile.CreateLibVlcArguments(
+                AppSettingsStore.Current)
+        };
+
         InitializeSubtitlePositionControls();
 
         _queueItems = queue?
