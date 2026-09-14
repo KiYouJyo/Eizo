@@ -456,7 +456,7 @@ public sealed partial class PlayerView : UserControl
         }
     }
 
-    private Task OpenSourceOnEngineAsync(
+    private async Task OpenSourceOnEngineAsync(
         IPlaybackEngine engine,
         bool restorePosition,
         bool latest = false)
@@ -469,9 +469,14 @@ public sealed partial class PlayerView : UserControl
             : TimeSpan.Zero;
 
         if (source is null)
-            return Task.CompletedTask;
+            return;
 
-        return RunOperationAsync(
+        var session = _session;
+
+        // Keep the serialized playback gate limited to native playback operations.
+        // Subtitle discovery/parsing may perform network or random-access I/O and
+        // must never block pause, seek, or other playback controls.
+        await RunOperationAsync(
             engine,
             "open",
             async token =>
@@ -490,26 +495,68 @@ public sealed partial class PlayerView : UserControl
                 if (!_playIntent)
                     await engine.PauseAsync(token);
 
-                // Refresh native tracks before discovering external subtitles so an
-                // automatically selected embedded text track wins the primary slot.
-                // It is then promoted to the same WinUI overlay renderer used by
-                // external subtitles.
                 await engine.Tracks.RefreshAsync(token);
-
-                await DiscoverAndAttachExternalSubtitlesAsync(
-                    engine,
-                    source,
-                    catalogItem,
-                    token);
-
-                await TryPromoteSelectedEmbeddedSubtitleAsync(
-                    engine,
-                    source,
-                    token);
                 await engine.Navigation.RefreshAsync(token);
                 await engine.Diagnostics.RefreshAsync(token);
             },
             latest: latest);
+
+        if (_isPreparingForDetach ||
+            !ReferenceEquals(_engine, engine) ||
+            !ReferenceEquals(_session, session) ||
+            session.Token.IsCancellationRequested ||
+            _currentSource?.Uri != source.Uri)
+        {
+            return;
+        }
+
+        _ = PrepareSubtitleSourcesAsync(
+            engine,
+            source,
+            catalogItem,
+            session);
+    }
+
+    private async Task PrepareSubtitleSourcesAsync(
+        IPlaybackEngine engine,
+        PlaybackSource source,
+        CatalogMediaItemModel? catalogItem,
+        PlaybackOperationSession session)
+    {
+        try
+        {
+            await DiscoverAndAttachExternalSubtitlesAsync(
+                engine,
+                source,
+                catalogItem,
+                session.Token);
+
+            if (_isPreparingForDetach ||
+                !ReferenceEquals(_engine, engine) ||
+                !ReferenceEquals(_session, session) ||
+                session.Token.IsCancellationRequested ||
+                _currentSource?.Uri != source.Uri)
+            {
+                return;
+            }
+
+            await TryPromoteSelectedEmbeddedSubtitleAsync(
+                engine,
+                source,
+                session,
+                session.Token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            PlaybackTrace.Write(
+                "view",
+                "subtitle-preparation",
+                "error",
+                exception.GetType().Name);
+        }
     }
 
     private async Task DiscoverAndAttachExternalSubtitlesAsync(
@@ -611,8 +658,10 @@ public sealed partial class PlayerView : UserControl
     private async Task TryPromoteSelectedEmbeddedSubtitleAsync(
         IPlaybackEngine engine,
         PlaybackSource source,
+        PlaybackOperationSession session,
         CancellationToken token)
     {
+        var selectionGeneration = _primarySubtitleGeneration;
         if (engine.Tracks.SelectedSubtitleTrackId is not int selectedId)
             return;
 
@@ -649,15 +698,59 @@ public sealed partial class PlayerView : UserControl
             return;
         }
 
-        if (document is null)
+        if (document is null ||
+            selectionGeneration != _primarySubtitleGeneration ||
+            !ReferenceEquals(_session, session) ||
+            !ReferenceEquals(_engine, engine) ||
+            session.Token.IsCancellationRequested ||
+            _currentSource?.Uri != source.Uri ||
+            engine.Tracks.SelectedSubtitleTrackId != selectedId)
+        {
             return;
+        }
 
-        await engine.Tracks.SelectSubtitleTrackAsync(null, token);
+        try
+        {
+            PlaybackTrace.Write(
+                "view",
+                "embedded-subtitle",
+                "disable-native-requested");
+
+            await session.RunAsync(
+                "subtitle",
+                async operationToken =>
+                    await engine.Tracks.SelectSubtitleTrackAsync(
+                        null,
+                        operationToken),
+                latest: true,
+                cancellationToken: token);
+
+            PlaybackTrace.Write(
+                "view",
+                "embedded-subtitle",
+                "disable-native-complete");
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (selectionGeneration != _primarySubtitleGeneration ||
+            !ReferenceEquals(_session, session) ||
+            !ReferenceEquals(_engine, engine) ||
+            session.Token.IsCancellationRequested ||
+            _currentSource?.Uri != source.Uri)
+        {
+            return;
+        }
 
         Dispatch(() =>
         {
             if (_currentSource is null ||
-                _currentSource.Uri != source.Uri)
+                _currentSource.Uri != source.Uri ||
+                selectionGeneration != _primarySubtitleGeneration ||
+                !ReferenceEquals(_session, session) ||
+                !ReferenceEquals(_engine, engine))
             {
                 return;
             }
@@ -868,15 +961,15 @@ public sealed partial class PlayerView : UserControl
         var token = request.Token;
         var target = TimeSpan.FromSeconds(e.NewValue);
 
-        _lastKnownPosition = target;
-        CurrentTimeText.Text = FormatTime(target);
-        UpdatePrimarySubtitle(target);
-        UpdateSecondarySubtitle(target);
-
         try
         {
             await Task.Delay(80, token);
-            await RunOperationAsync(engine, "seek", async ct => await engine.SeekAsync(target, ct), latest: true, token: token);
+            await RunOperationAsync(
+                engine,
+                "seek",
+                async ct => await engine.SeekAsync(target, ct),
+                latest: true,
+                token: token);
         }
         catch (OperationCanceledException)
         {
