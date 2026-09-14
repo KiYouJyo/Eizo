@@ -4,6 +4,7 @@ using Eizo.Localization;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace Eizo.Views;
 
@@ -13,31 +14,36 @@ public sealed partial class HomeView : UserControl
         AppLocalizationService.Default;
     private readonly BangumiRepository _bangumi =
         BangumiRepository.Default;
-    private readonly IReadOnlyList<MediaCardModel> _continueItems;
+    private readonly MediaCatalogStore _catalog =
+        MediaCatalogStore.Default;
+    private readonly PlaybackHistoryStore _history =
+        PlaybackHistoryStore.Default;
+
     private readonly Dictionary<string, BangumiSubjectCard> _bangumiSeasonSubjects =
         new(StringComparer.Ordinal);
+
+    private IReadOnlyList<HomeContinueCardModel> _continueItems = [];
     private IReadOnlyList<MediaCardModel> _seasonItems = [];
+    private IReadOnlyList<HomeSearchSuggestion> _searchSuggestions = [];
+    private CatalogSubjectModel? _featuredSubject;
+    private CatalogMediaItemModel? _featuredItem;
     private CancellationTokenSource? _seasonCancellation;
+    private CancellationTokenSource? _searchCancellation;
     private ResponsiveLayoutMode _responsiveMode = ResponsiveLayoutMode.Large;
 
     public event EventHandler<string>? DetailRequested;
     public event EventHandler<string>? PlayRequested;
+    public event EventHandler<CatalogMediaItemModel>? CatalogMediaRequested;
+    public event EventHandler<CatalogSubjectModel>? CatalogSubjectRequested;
     public event EventHandler<BangumiSubjectCard>? BangumiSubjectRequested;
     public event EventHandler? BangumiSeasonalRequested;
+    public event EventHandler? LibraryRequested;
 
     public HomeView()
     {
         InitializeComponent();
         ApplyText();
-
-        _continueItems =
-        [
-            new MediaCardModel("葬送的芙莉莲", "葬送のフリーレン", "18 / 28", 52),
-            new MediaCardModel("药屋少女的呢喃", "薬屋のひとりごと", "14 / 24", 36),
-            new MediaCardModel("VIVANT", "VIVANT", "6 / 10", 64),
-            new MediaCardModel("非自然死亡", "アンナチュラル", "5 / 10", 44)
-        ];
-
+        RefreshLibraryContent();
         RebuildMediaGrids();
 
         Loaded += HomeView_Loaded;
@@ -60,6 +66,12 @@ public sealed partial class HomeView : UserControl
         object sender,
         RoutedEventArgs e)
     {
+        _catalog.Changed -= Catalog_Changed;
+        _catalog.Changed += Catalog_Changed;
+        _history.Changed -= History_Changed;
+        _history.Changed += History_Changed;
+
+        RefreshLibraryContent();
         await LoadCurrentSeasonAsync();
     }
 
@@ -67,9 +79,155 @@ public sealed partial class HomeView : UserControl
         object sender,
         RoutedEventArgs e)
     {
+        _catalog.Changed -= Catalog_Changed;
+        _history.Changed -= History_Changed;
+
         _seasonCancellation?.Cancel();
         _seasonCancellation?.Dispose();
         _seasonCancellation = null;
+
+        _searchCancellation?.Cancel();
+        _searchCancellation?.Dispose();
+        _searchCancellation = null;
+    }
+
+    private void Catalog_Changed(object? sender, EventArgs e) =>
+        DispatcherQueue.TryEnqueue(RefreshLibraryContent);
+
+    private void History_Changed(object? sender, EventArgs e) =>
+        DispatcherQueue.TryEnqueue(RefreshLibraryContent);
+
+    private void RefreshLibraryContent()
+    {
+        var items = _catalog.SnapshotForDisplay();
+        var aggregation = CatalogSubjectAggregator.Build(items);
+
+        var itemsByKey = items.ToDictionary(
+            MediaCatalogStore.ItemKey,
+            StringComparer.Ordinal);
+
+        var subjectsByItemKey = aggregation.Subjects
+            .SelectMany(subject =>
+                subject.Items.Select(item =>
+                    (Key: MediaCatalogStore.ItemKey(item), Subject: subject)))
+            .GroupBy(static value => value.Key, StringComparer.Ordinal)
+            .ToDictionary(
+                static group => group.Key,
+                static group => group.First().Subject,
+                StringComparer.Ordinal);
+
+        _continueItems = _history.Snapshot()
+            .Where(entry => itemsByKey.ContainsKey(entry.ItemKey))
+            .Take(8)
+            .Select(entry =>
+            {
+                var item = itemsByKey[entry.ItemKey];
+                subjectsByItemKey.TryGetValue(
+                    entry.ItemKey,
+                    out var subject);
+
+                return new HomeContinueCardModel(
+                    item,
+                    subject?.Title ?? item.DisplayTitle,
+                    subject?.NativeTitle ?? item.SecondaryTitle,
+                    BuildContinueMeta(item),
+                    entry.ProgressPercent,
+                    CreateArtwork(
+                        FirstNonEmpty(
+                            item.Metadata?.EpisodeThumbnailUrl,
+                            subject?.Metadata?.BackdropUrl,
+                            item.Metadata?.BackdropUrl,
+                            subject?.Metadata?.PosterUrl,
+                            item.Metadata?.PosterUrl),
+                        decodePixelWidth: 560));
+            })
+            .ToArray();
+
+        var heroCandidates = aggregation.Subjects
+            .Where(static subject => subject.FirstPlayableItem is not null)
+            .OrderByDescending(static subject =>
+                !string.IsNullOrWhiteSpace(
+                    subject.Metadata?.BackdropUrl))
+            .ThenByDescending(static subject =>
+                subject.Metadata is { IsResolved: true })
+            .ThenBy(static subject =>
+                subject.Title,
+                StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+
+        _featuredSubject = heroCandidates.Length == 0
+            ? null
+            : heroCandidates[
+                DateTimeOffset.Now.DayOfYear %
+                heroCandidates.Length];
+
+        _featuredItem =
+            _featuredSubject?.FirstPlayableItem ??
+            aggregation.StandaloneItems
+                .OrderByDescending(static item =>
+                    !string.IsNullOrWhiteSpace(
+                        item.Metadata?.BackdropUrl))
+                .ThenByDescending(static item =>
+                    item.Metadata is { IsResolved: true })
+                .FirstOrDefault();
+
+        ApplyHero();
+        RebuildMediaGrids();
+    }
+
+    private void ApplyHero()
+    {
+        if (_featuredSubject is { } subject &&
+            _featuredItem is { } subjectItem)
+        {
+            FeaturedTitle.Text = subject.Title;
+            FeaturedNativeTitle.Text = subject.NativeTitle;
+            FeaturedMeta.Text = subject.Meta;
+            FeaturedDescription.Text =
+                FirstNonEmpty(
+                    subject.Metadata?.Overview,
+                    T("Home_FeaturedDescription"));
+
+            HeroArtworkImage.Source = CreateArtwork(
+                FirstNonEmpty(
+                    subject.Metadata?.BackdropUrl,
+                    subjectItem.Metadata?.BackdropUrl,
+                    subject.Metadata?.PosterUrl,
+                    subjectItem.Metadata?.PosterUrl),
+                decodePixelWidth: 1200);
+
+            FeaturedPlayButton.IsEnabled = true;
+            FeaturedDetailsButton.IsEnabled = true;
+            return;
+        }
+
+        if (_featuredItem is { } item)
+        {
+            FeaturedTitle.Text = item.DisplayTitle;
+            FeaturedNativeTitle.Text = item.SecondaryTitle;
+            FeaturedMeta.Text = item.Meta;
+            FeaturedDescription.Text =
+                FirstNonEmpty(
+                    item.Metadata?.Overview,
+                    T("Home_FeaturedDescription"));
+            HeroArtworkImage.Source = CreateArtwork(
+                FirstNonEmpty(
+                    item.Metadata?.BackdropUrl,
+                    item.Metadata?.PosterUrl),
+                decodePixelWidth: 1200);
+
+            FeaturedPlayButton.IsEnabled = true;
+            FeaturedDetailsButton.IsEnabled = true;
+            return;
+        }
+
+        FeaturedTitle.Text = T("Status_EmptyLibrary");
+        FeaturedNativeTitle.Text = string.Empty;
+        FeaturedMeta.Text = string.Empty;
+        FeaturedDescription.Text = T("Home_FeaturedDescription");
+        HeroArtworkImage.Source = null;
+        FeaturedPlayButton.IsEnabled = false;
+        FeaturedDetailsButton.IsEnabled = false;
     }
 
     private async Task LoadCurrentSeasonAsync()
@@ -194,6 +352,174 @@ public sealed partial class HomeView : UserControl
             ExternalKey: key);
     }
 
+    private async void SearchBox_TextChanged(
+        AutoSuggestBox sender,
+        AutoSuggestBoxTextChangedEventArgs args)
+    {
+        if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput)
+            return;
+
+        _searchCancellation?.Cancel();
+        _searchCancellation?.Dispose();
+        _searchCancellation = null;
+
+        var query = sender.Text.Trim();
+        if (query.Length < 2)
+        {
+            _searchSuggestions = [];
+            sender.ItemsSource = null;
+            return;
+        }
+
+        var cancellation = new CancellationTokenSource();
+        _searchCancellation = cancellation;
+
+        try
+        {
+            await Task.Delay(
+                TimeSpan.FromMilliseconds(260),
+                cancellation.Token);
+
+            var page = await _bangumi.SearchAnimeAsync(
+                query,
+                limit: 10,
+                offset: 0,
+                cancellation.Token);
+
+            if (!ReferenceEquals(
+                    _searchCancellation,
+                    cancellation))
+            {
+                return;
+            }
+
+            _searchSuggestions = page.Items
+                .Select(CreateSearchSuggestion)
+                .ToArray();
+            sender.ItemsSource = _searchSuggestions;
+            sender.IsSuggestionListOpen =
+                _searchSuggestions.Count > 0;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            if (ReferenceEquals(
+                    _searchCancellation,
+                    cancellation))
+            {
+                _searchSuggestions = [];
+                sender.ItemsSource = null;
+            }
+        }
+    }
+
+    private void SearchBox_SuggestionChosen(
+        AutoSuggestBox sender,
+        AutoSuggestBoxSuggestionChosenEventArgs args)
+    {
+        if (args.SelectedItem is HomeSearchSuggestion suggestion)
+            sender.Text = suggestion.DisplayText;
+    }
+
+    private async void SearchBox_QuerySubmitted(
+        AutoSuggestBox sender,
+        AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        if (args.ChosenSuggestion is HomeSearchSuggestion selected)
+        {
+            BangumiSubjectRequested?.Invoke(
+                this,
+                selected.Subject);
+            return;
+        }
+
+        var query = args.QueryText.Trim();
+        if (string.IsNullOrWhiteSpace(query))
+            return;
+
+        var cached = _searchSuggestions.FirstOrDefault(
+            suggestion =>
+                string.Equals(
+                    suggestion.DisplayText,
+                    query,
+                    StringComparison.CurrentCultureIgnoreCase) ||
+                string.Equals(
+                    suggestion.Subject.NativeTitle,
+                    query,
+                    StringComparison.CurrentCultureIgnoreCase) ||
+                string.Equals(
+                    suggestion.Subject.ChineseTitle,
+                    query,
+                    StringComparison.CurrentCultureIgnoreCase));
+
+        if (cached is not null)
+        {
+            BangumiSubjectRequested?.Invoke(
+                this,
+                cached.Subject);
+            return;
+        }
+
+        _searchCancellation?.Cancel();
+        _searchCancellation?.Dispose();
+        _searchCancellation = new CancellationTokenSource();
+
+        try
+        {
+            var page = await _bangumi.SearchAnimeAsync(
+                query,
+                limit: 10,
+                offset: 0,
+                _searchCancellation.Token);
+
+            if (page.Items.FirstOrDefault() is { } result)
+            {
+                BangumiSubjectRequested?.Invoke(
+                    this,
+                    result);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+        }
+    }
+
+    private HomeSearchSuggestion CreateSearchSuggestion(
+        BangumiSubjectCard subject)
+    {
+        var preferNative =
+            _localization.CurrentLanguage is "ja-JP" or "en-US";
+
+        var primary = preferNative
+            ? FirstNonEmpty(
+                subject.NativeTitle,
+                subject.ChineseTitle)
+            : FirstNonEmpty(
+                subject.ChineseTitle,
+                subject.NativeTitle);
+
+        var secondary = preferNative
+            ? subject.ChineseTitle
+            : subject.NativeTitle;
+
+        var display = string.IsNullOrWhiteSpace(secondary) ||
+                      string.Equals(
+                          primary,
+                          secondary,
+                          StringComparison.CurrentCultureIgnoreCase)
+            ? primary
+            : $"{primary} · {secondary}";
+
+        return new HomeSearchSuggestion(
+            subject,
+            display);
+    }
+
     private void RebuildMediaGrids()
     {
         var columns = _responsiveMode switch
@@ -215,9 +541,9 @@ public sealed partial class HomeView : UserControl
             "SeasonCardTemplate");
     }
 
-    private void PopulateGrid(
+    private void PopulateGrid<T>(
         Grid grid,
-        IReadOnlyList<MediaCardModel> items,
+        IReadOnlyList<T> items,
         int columns,
         string templateKey)
     {
@@ -296,25 +622,58 @@ public sealed partial class HomeView : UserControl
 
     private void FeaturedButton_Click(
         object sender,
-        RoutedEventArgs e) =>
-        DetailRequested?.Invoke(
-            this,
-            "葬送的芙莉莲");
+        RoutedEventArgs e)
+    {
+        if (_featuredSubject is { } subject)
+        {
+            CatalogSubjectRequested?.Invoke(
+                this,
+                subject);
+            return;
+        }
+
+        if (_featuredItem is { } item)
+            DetailRequested?.Invoke(
+                this,
+                item.DisplayTitle);
+    }
 
     private void FeaturedPlayButton_Click(
         object sender,
-        RoutedEventArgs e) =>
-        PlayRequested?.Invoke(
-            this,
-            "葬送的芙莉莲");
+        RoutedEventArgs e)
+    {
+        if (_featuredItem is { } item)
+            CatalogMediaRequested?.Invoke(
+                this,
+                item);
+        else if (!string.IsNullOrWhiteSpace(
+                     FeaturedTitle.Text))
+            PlayRequested?.Invoke(
+                this,
+                FeaturedTitle.Text);
+    }
 
     private void MediaCard_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string title })
-            DetailRequested?.Invoke(this, title);
+        if (sender is Button
+            {
+                Tag: CatalogMediaItemModel item
+            })
+        {
+            CatalogMediaRequested?.Invoke(
+                this,
+                item);
+        }
     }
+
+    private void ContinueAllButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        LibraryRequested?.Invoke(
+            this,
+            EventArgs.Empty);
 
     private void SeasonCard_Click(
         object sender,
@@ -340,10 +699,87 @@ public sealed partial class HomeView : UserControl
             this,
             EventArgs.Empty);
 
+    private static string BuildContinueMeta(
+        CatalogMediaItemModel item)
+    {
+        var parts = new List<string>();
+        var recognition = item.Recognition;
+
+        if (recognition?.SeasonNumber is { } season &&
+            recognition.EpisodeNumber is { } episode)
+        {
+            parts.Add(
+                $"S{season:00}E{episode:0.##}");
+        }
+        else if (recognition?.EpisodeNumber is { } standaloneEpisode)
+        {
+            parts.Add(
+                $"EP{standaloneEpisode:0.##}");
+        }
+
+        var episodeTitle = FirstNonEmpty(
+            item.Metadata?.EpisodeTitle,
+            recognition?.EpisodeTitle);
+
+        if (!string.IsNullOrWhiteSpace(episodeTitle))
+            parts.Add(episodeTitle);
+
+        if (parts.Count == 0 &&
+            !string.IsNullOrWhiteSpace(item.Meta))
+        {
+            parts.Add(item.Meta);
+        }
+
+        return string.Join(" · ", parts);
+    }
+
+    private static BitmapImage? CreateArtwork(
+        string? url,
+        int decodePixelWidth)
+    {
+        if (string.IsNullOrWhiteSpace(url) ||
+            !Uri.TryCreate(
+                url,
+                UriKind.Absolute,
+                out var uri) ||
+            (!string.Equals(
+                 uri.Scheme,
+                 Uri.UriSchemeHttp,
+                 StringComparison.OrdinalIgnoreCase) &&
+             !string.Equals(
+                 uri.Scheme,
+                 Uri.UriSchemeHttps,
+                 StringComparison.OrdinalIgnoreCase)))
+        {
+            return null;
+        }
+
+        try
+        {
+            return new BitmapImage
+            {
+                UriSource = uri,
+                DecodePixelWidth = decodePixelWidth,
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private static string FirstNonEmpty(
         params string?[] values) =>
         values.FirstOrDefault(
             static value =>
                 !string.IsNullOrWhiteSpace(value))
         ?? string.Empty;
+
+    private sealed record HomeSearchSuggestion(
+        BangumiSubjectCard Subject,
+        string DisplayText)
+    {
+        public override string ToString() =>
+            DisplayText;
+    }
 }
