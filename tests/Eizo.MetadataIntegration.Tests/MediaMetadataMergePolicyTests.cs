@@ -115,6 +115,141 @@ public sealed class MediaMetadataMergePolicyTests
     }
 
     [Fact]
+    public void AnimeProfilePrefersTmdbVisualsButBangumiText()
+    {
+        var bangumi = Subject(
+            "bangumi",
+            "400602",
+            "葬送的芙莉莲",
+            "Bangumi overview") with
+        {
+            ContentKind = Core.MetadataContentKind.Animation,
+            Artwork = new Core.MetadataArtwork(
+                "https://bgm.tv/poster.jpg",
+                null,
+                null),
+        };
+        var tmdb = Subject(
+            "tmdb",
+            "209867",
+            "Frieren: Beyond Journey's End",
+            "TMDB overview") with
+        {
+            ContentKind = Core.MetadataContentKind.Animation,
+            Artwork = new Core.MetadataArtwork(
+                "https://image.tmdb.org/poster.jpg",
+                "https://image.tmdb.org/backdrop.jpg",
+                null),
+            RuntimeMinutes = 25,
+        };
+
+        var merged = MediaMetadataMergePolicy.Merge(
+            new MediaMetadataProviderSource(
+                "bangumi",
+                bangumi,
+                Episode(
+                    "bgm-1",
+                    bangumi.Id,
+                    null)),
+            [
+                new MediaMetadataProviderSource(
+                    "tmdb",
+                    tmdb,
+                    Episode(
+                        "tmdb-1",
+                        tmdb.Id,
+                        "https://image.tmdb.org/still.jpg")),
+            ]);
+
+        Assert.Equal(
+            MediaMetadataMergeProfile.Anime,
+            merged.Profile);
+        Assert.Equal(
+            "葬送的芙莉莲",
+            merged.Subject.Titles.Primary);
+        Assert.Equal(
+            "Bangumi overview",
+            merged.Subject.Overview);
+        Assert.Equal(
+            "https://image.tmdb.org/poster.jpg",
+            merged.Subject.Artwork.PosterUrl);
+        Assert.Equal(
+            "https://image.tmdb.org/backdrop.jpg",
+            merged.Subject.Artwork.BackdropUrl);
+        Assert.Equal(
+            "https://image.tmdb.org/still.jpg",
+            merged.Episode!.ThumbnailUrl);
+        Assert.Equal(
+            "tmdb",
+            merged.FieldSources["PosterUrl"]);
+        Assert.Equal(
+            "tmdb",
+            merged.FieldSources["EpisodeThumbnailUrl"]);
+        Assert.Equal(
+            "bangumi",
+            merged.FieldSources["Overview"]);
+    }
+
+    [Fact]
+    public void JapaneseLiveActionProfilePrefersTmdbDetailsAndVisuals()
+    {
+        var bangumi = Subject(
+            "bangumi",
+            "12345",
+            "ドラゴン桜",
+            "Bangumi overview") with
+        {
+            ContentKind = Core.MetadataContentKind.LiveAction,
+            OriginalLanguage = "ja",
+            OriginCountryCodes = ["JP"],
+            Artwork = new Core.MetadataArtwork(
+                "https://bgm.tv/dragon.jpg",
+                null,
+                null),
+        };
+        var tmdb = Subject(
+            "tmdb",
+            "55555",
+            "Dragon Zakura",
+            "TMDB overview") with
+        {
+            ContentKind = Core.MetadataContentKind.LiveAction,
+            OriginalLanguage = "ja",
+            OriginCountryCodes = ["JP"],
+            RuntimeMinutes = 54,
+            Artwork = new Core.MetadataArtwork(
+                "https://image.tmdb.org/dragon.jpg",
+                "https://image.tmdb.org/dragon-bg.jpg",
+                null),
+        };
+
+        var merged = MediaMetadataMergePolicy.Merge(
+            new MediaMetadataProviderSource(
+                "tmdb",
+                tmdb,
+                null),
+            [
+                new MediaMetadataProviderSource(
+                    "bangumi",
+                    bangumi,
+                    null),
+            ]);
+
+        Assert.Equal(
+            MediaMetadataMergeProfile.JapaneseLiveAction,
+            merged.Profile);
+        Assert.Equal(
+            "TMDB overview",
+            merged.Subject.Overview);
+        Assert.Equal(
+            "https://image.tmdb.org/dragon.jpg",
+            merged.Subject.Artwork.PosterUrl);
+        Assert.Equal(
+            54,
+            merged.Subject.RuntimeMinutes);
+    }
+
+    [Fact]
     public void LiveActionPrimaryKeepsTmdbFieldsAndOnlyAddsBangumiIdentity()
     {
         var tmdb = Subject(

@@ -64,6 +64,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-FieldMergeStage3Contract.ps1
 
+      - name: Validate Eizo 0.5.6 merge profiles contract
+        shell: pwsh
+        run: ./scripts/Test-MergeProfilesStage3Contract.ps1
+
       - name: Validate Bangumi public integration contract
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1
