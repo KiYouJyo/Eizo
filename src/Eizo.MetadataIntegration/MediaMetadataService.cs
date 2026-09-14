@@ -8,12 +8,12 @@ namespace Eizo.MetadataIntegration;
 
 public sealed record MediaMetadataServiceOptions(
     bool EnableBangumi = true,
-    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.8 (https://github.com/KiYouJyo/Eizo)",
+    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.9 (https://github.com/KiYouJyo/Eizo)",
     string PreferredLanguage = "zh-CN",
     string? TmdbReadAccessToken = null,
     string? CacheDirectory = null,
     bool EnableArtworkProviders = true,
-    string AniListUserAgent = "KiYouJyo/Eizo/0.5.8 (https://github.com/KiYouJyo/Eizo)");
+    string AniListUserAgent = "KiYouJyo/Eizo/0.5.9 (https://github.com/KiYouJyo/Eizo)");
 
 public sealed class MediaMetadataService
 {
@@ -158,6 +158,100 @@ public sealed class MediaMetadataService
     public static string RuntimeVersion => ProbeRuntime().Version;
 
     public bool IsAvailable => _resolver is not null;
+
+    public async Task<IReadOnlyList<MediaMetadataMatchCandidate>>
+        SearchCandidatesAsync(
+            HostRecognition.MediaRecognitionSnapshot recognition,
+            string? query = null,
+            string? provider = null,
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(recognition);
+
+        var mediaKind = ParseMediaKind(
+            recognition.MediaKind);
+        if (_resolver is null ||
+            mediaKind == RecognitionContracts.MediaKind.Unknown)
+        {
+            return Array.Empty<MediaMetadataMatchCandidate>();
+        }
+
+        var titles = new List<string>();
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            AddTitle(titles, query);
+        }
+        else
+        {
+            AddTitle(titles, recognition.Title);
+            foreach (var candidate in recognition.TitleCandidates
+                         .OrderByDescending(static item => item.IsPrimary)
+                         .ThenByDescending(static item => item.Confidence))
+            {
+                AddTitle(titles, candidate.Title);
+                if (titles.Count >= 4)
+                    break;
+            }
+        }
+
+        if (titles.Count == 0)
+            return Array.Empty<MediaMetadataMatchCandidate>();
+
+        var request = new Core.MetadataSearchRequest(
+            titles,
+            recognition.Year,
+            mediaKind,
+            recognition.SeasonNumber,
+            recognition.EpisodeNumber ??
+            recognition.SpecialNumber,
+            _preferredLanguage,
+            Limit: 20);
+
+        Core.MetadataResolution resolution;
+        if (!string.IsNullOrWhiteSpace(provider) &&
+            _providerResolvers.TryGetValue(
+                provider,
+                out var providerResolver))
+        {
+            resolution = await providerResolver
+                .ResolveAsync(
+                    request,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            resolution = await _resolver
+                .ResolveAsync(
+                    request,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return resolution.Candidates
+            .GroupBy(
+                static item =>
+                    $"{item.Candidate.Id.Provider}|{item.Candidate.Id.Value}",
+                StringComparer.OrdinalIgnoreCase)
+            .Select(static group => group
+                .OrderByDescending(static item => item.Score)
+                .First())
+            .OrderByDescending(static item => item.Score)
+            .ThenBy(static item =>
+                item.Candidate.ProviderRank)
+            .Take(20)
+            .Select(static item =>
+                new MediaMetadataMatchCandidate(
+                    item.Candidate.Id.Provider,
+                    item.Candidate.Id.Value,
+                    item.Candidate.Id.Kind.ToString(),
+                    item.Candidate.Titles.Primary,
+                    item.Candidate.Titles.Original,
+                    item.Candidate.Year,
+                    item.Candidate.ContentKind.ToString(),
+                    item.Score))
+            .ToArray();
+    }
 
     public Task<MediaMetadataSnapshot?> EnrichAsync(
         HostRecognition.MediaRecognitionSnapshot recognition,
