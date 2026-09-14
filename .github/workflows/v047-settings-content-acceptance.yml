@@ -3,7 +3,7 @@ name: Eizo v0.4.7 settings integration acceptance
 on:
   push:
     branches:
-      - "feat/v0.4.7-settings-content"
+      - "feat/settings-content-integration"
   workflow_dispatch:
 
 permissions:
