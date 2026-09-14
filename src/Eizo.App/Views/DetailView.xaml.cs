@@ -296,8 +296,6 @@ public sealed partial class DetailView : UserControl
         object sender,
         RoutedEventArgs e)
     {
-        e.Handled = true;
-
         if (sender is not Button
             {
                 Tag: CatalogMediaItemModel item
