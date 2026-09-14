@@ -664,6 +664,30 @@ public sealed partial class PlayerView : UserControl
         });
     }
 
+    private static async Task<SubtitleDocument?>
+        LoadEmbeddedSubtitleDocumentAsync(
+            PlaybackSource source,
+            SubtitleTrackInfo selectedTrack,
+            IReadOnlyList<SubtitleTrackInfo> subtitleTracks,
+            CancellationToken cancellationToken)
+    {
+        using var budget =
+            CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken);
+
+        // Remote subtitle extraction must remain opportunistic. A bounded budget
+        // prevents subtitle parsing from consuming the active WebDAV stream long
+        // enough to degrade playback or seeks.
+        if (source.RandomAccessSource is not null)
+            budget.CancelAfter(TimeSpan.FromSeconds(3));
+
+        return await EmbeddedSubtitleService.LoadDocumentAsync(
+            source,
+            selectedTrack,
+            subtitleTracks,
+            budget.Token);
+    }
+
     private async Task TryPromoteSelectedEmbeddedSubtitleAsync(
         IPlaybackEngine engine,
         PlaybackSource source,
@@ -694,7 +718,7 @@ public sealed partial class PlayerView : UserControl
 
         try
         {
-            document = await EmbeddedSubtitleService.LoadDocumentAsync(
+            document = await LoadEmbeddedSubtitleDocumentAsync(
                 source,
                 track,
                 engine.Tracks.SubtitleTracks,
@@ -1093,7 +1117,7 @@ public sealed partial class PlayerView : UserControl
             try
             {
                 var document =
-                    await EmbeddedSubtitleService.LoadDocumentAsync(
+                    await LoadEmbeddedSubtitleDocumentAsync(
                         source,
                         embeddedTrack,
                         engine.Tracks.SubtitleTracks,
@@ -1239,7 +1263,7 @@ public sealed partial class PlayerView : UserControl
             try
             {
                 var document =
-                    await EmbeddedSubtitleService.LoadDocumentAsync(
+                    await LoadEmbeddedSubtitleDocumentAsync(
                         source,
                         embeddedTrack,
                         _engine?.Tracks.SubtitleTracks ??
