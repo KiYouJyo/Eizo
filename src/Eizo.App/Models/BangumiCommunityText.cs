@@ -26,7 +26,10 @@ internal static partial class BangumiCommunityText
         value = BreakTagRegex().Replace(value, "\n");
         value = UrlTagRegex().Replace(value, "$2 ($1)");
         value = SimpleUrlTagRegex().Replace(value, "$1");
-        value = ImageTagRegex().Replace(value, "$1");
+        value = ImageTagRegex().Replace(value, string.Empty);
+        value = PhotoTagRegex().Replace(value, string.Empty);
+        value = PhotoEqualsTagRegex().Replace(value, string.Empty);
+        value = HtmlImageTagRegex().Replace(value, string.Empty);
         value = AnyBbCodeTagRegex().Replace(value, string.Empty);
         value = ExcessBlankLinesRegex().Replace(value, "\n\n");
 
@@ -43,14 +46,16 @@ internal static partial class BangumiCommunityText
         var blocks = new List<BangumiCommunityContentBlock>();
         var cursor = 0;
 
-        foreach (Match match in ImageTagRegex().Matches(normalized))
+        foreach (var image in EnumerateImages(normalized))
         {
+            if (image.Index < cursor)
+                continue;
+
             AddTextBlocks(
-                normalized[cursor..match.Index],
+                normalized[cursor..image.Index],
                 blocks);
 
-            var target = match.Groups[1].Value.Trim();
-            var imageUrl = ResolveImageUrl(target);
+            var imageUrl = ResolveImageUrl(image.Target);
             if (!string.IsNullOrWhiteSpace(imageUrl))
             {
                 blocks.Add(
@@ -59,7 +64,7 @@ internal static partial class BangumiCommunityText
                         imageUrl));
             }
 
-            cursor = match.Index + match.Length;
+            cursor = image.Index + image.Length;
         }
 
         AddTextBlocks(
@@ -67,6 +72,58 @@ internal static partial class BangumiCommunityText
             blocks);
 
         return blocks;
+    }
+
+    private static IReadOnlyList<ImageToken> EnumerateImages(
+        string value)
+    {
+        var tokens = new List<ImageToken>();
+
+        AddMatches(
+            ImageTagRegex(),
+            value,
+            static match => match.Groups[1].Value,
+            tokens);
+        AddMatches(
+            PhotoTagRegex(),
+            value,
+            static match => match.Groups[1].Value,
+            tokens);
+        AddMatches(
+            PhotoEqualsTagRegex(),
+            value,
+            static match => match.Groups[1].Value,
+            tokens);
+        AddMatches(
+            HtmlImageTagRegex(),
+            value,
+            static match => match.Groups[1].Value,
+            tokens);
+
+        return tokens
+            .OrderBy(static token => token.Index)
+            .ThenByDescending(static token => token.Length)
+            .ToArray();
+    }
+
+    private static void AddMatches(
+        Regex regex,
+        string value,
+        Func<Match, string> selector,
+        ICollection<ImageToken> tokens)
+    {
+        foreach (Match match in regex.Matches(value))
+        {
+            var target = selector(match).Trim();
+            if (string.IsNullOrWhiteSpace(target))
+                continue;
+
+            tokens.Add(
+                new ImageToken(
+                    match.Index,
+                    match.Length,
+                    target));
+        }
     }
 
     private static void AddTextBlocks(
@@ -167,6 +224,13 @@ internal static partial class BangumiCommunityText
             return "https://lain.bgm.tv/" + target;
         }
 
+        if (target.StartsWith(
+                "photo/",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "https://lain.bgm.tv/pic/" + target;
+        }
+
         return BangumiImageRoot + target;
     }
 
@@ -174,6 +238,11 @@ internal static partial class BangumiCommunityText
         WebUtility.HtmlDecode(input)
             .Replace("\r\n", "\n", StringComparison.Ordinal)
             .Replace("\r", "\n", StringComparison.Ordinal);
+
+    private sealed record ImageToken(
+        int Index,
+        int Length,
+        string Target);
 
     [GeneratedRegex(
         @"\[br\s*/?\]",
@@ -196,7 +265,22 @@ internal static partial class BangumiCommunityText
     private static partial Regex ImageTagRegex();
 
     [GeneratedRegex(
-        @"^((?:[a-z0-9]{2}/){2}[^\s]+\.(?:jpe?g|png|gif|webp))$",
+        @"\[photo(?:=[^\]]+)?\](.*?)\[/photo\]",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Singleline)]
+    private static partial Regex PhotoTagRegex();
+
+    [GeneratedRegex(
+        @"\[photo=([^\]]+)\](?:\[/photo\])?",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Singleline)]
+    private static partial Regex PhotoEqualsTagRegex();
+
+    [GeneratedRegex(
+        @"<img\b[^>]*\bsrc\s*=\s*[""']?([^""' >]+)[""']?[^>]*>",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Singleline)]
+    private static partial Regex HtmlImageTagRegex();
+
+    [GeneratedRegex(
+        @"^((?:pic/photo/[a-z]/|photo/[a-z]/)?(?:[a-z0-9]{2}/){2}[^\s]+\.(?:jpe?g|png|gif|webp))$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex BarePhotoPathRegex();
 
