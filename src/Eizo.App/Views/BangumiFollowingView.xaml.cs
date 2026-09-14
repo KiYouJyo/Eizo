@@ -16,14 +16,40 @@ public sealed partial class BangumiFollowingView : UserControl
     private readonly BangumiAccountService _account =
         BangumiAccountService.Default;
     private readonly ObservableCollection<BangumiCardViewModel> _items = [];
+
+    private readonly IReadOnlyList<CollectionTabOption> _collectionTabs;
     private CancellationTokenSource? _loadCancellation;
+    private BangumiCollectionType _selectedCollectionType =
+        BangumiCollectionType.Doing;
     private int _nextOffset;
 
     public BangumiFollowingView()
     {
         InitializeComponent();
 
+        _collectionTabs =
+        [
+            new(
+                BangumiCollectionType.Wish,
+                L("想看", "見たい", "Wish")),
+            new(
+                BangumiCollectionType.Done,
+                L("看过", "見た", "Watched")),
+            new(
+                BangumiCollectionType.Doing,
+                L("在看", "見ている", "Watching")),
+            new(
+                BangumiCollectionType.OnHold,
+                L("搁置", "保留", "On hold")),
+            new(
+                BangumiCollectionType.Dropped,
+                L("抛弃", "断念", "Dropped")),
+        ];
+
         ResultsList.ItemsSource = _items;
+        CollectionSectionList.ItemsSource = _collectionTabs;
+        CollectionSectionList.SelectedIndex = 2;
+
         ApplyText();
         ApplyAccountState();
 
@@ -50,7 +76,10 @@ public sealed partial class BangumiFollowingView : UserControl
     private void ApplyText()
     {
         PageTitle.Text = T("Nav_MyFollowing");
-        PageSubtitle.Text = T("Bangumi_FollowingSubtitle");
+        PageSubtitle.Text = L(
+            "来自 Bangumi 账户的动画收藏",
+            "Bangumi アカウントのアニメコレクション",
+            "Anime collections from your Bangumi account");
         RefreshButtonText.Text = T("Bangumi_Refresh");
         ConnectButton.Content = T("Bangumi_Connect");
         DisconnectButton.Content = T("Bangumi_Disconnect");
@@ -86,6 +115,24 @@ public sealed partial class BangumiFollowingView : UserControl
         ApplyAccountState();
         await LoadAsync(
             forceProfileRefresh: true,
+            append: false);
+    }
+
+    private async void CollectionSectionList_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (CollectionSectionList.SelectedItem is not CollectionTabOption option)
+            return;
+
+        _selectedCollectionType = option.Type;
+
+        if (!IsLoaded)
+            return;
+
+        _nextOffset = 0;
+        await LoadAsync(
+            forceProfileRefresh: false,
             append: false);
     }
 
@@ -140,6 +187,7 @@ public sealed partial class BangumiFollowingView : UserControl
         _loadCancellation?.Dispose();
         _loadCancellation = new CancellationTokenSource();
         var cancellationToken = _loadCancellation.Token;
+        var requestedType = _selectedCollectionType;
 
         SetBusy(true);
 
@@ -160,9 +208,13 @@ public sealed partial class BangumiFollowingView : UserControl
 
             ApplyConnectedProfile(profile);
             var page =
-                await _account.GetFollowingAsync(
+                await _account.GetCollectionAsync(
+                    requestedType,
                     append ? _nextOffset : 0,
                     cancellationToken);
+
+            if (requestedType != _selectedCollectionType)
+                return;
 
             if (page is null)
             {
@@ -186,13 +238,16 @@ public sealed partial class BangumiFollowingView : UserControl
                     ? Visibility.Visible
                     : Visibility.Collapsed;
 
+            var label = GetCollectionTypeLabel(requestedType);
             StatusText.Text = _items.Count == 0
-                ? T("Bangumi_FollowingEmpty")
-                : string.Format(
-                    CultureInfo.CurrentCulture,
-                    T("Bangumi_FollowingCountFormat"),
-                    _items.Count,
-                    page.Total);
+                ? L(
+                    $"“{label}”中暂无动画",
+                    $"「{label}」にはアニメがありません",
+                    $"No anime in “{label}”")
+                : L(
+                    $"已显示 {_items.Count} / {page.Total} 部 · {label}",
+                    $"{_items.Count} / {page.Total} 件を表示 · {label}",
+                    $"Showing {_items.Count} of {page.Total} · {label}");
         }
         catch (OperationCanceledException)
         {
@@ -290,6 +345,7 @@ public sealed partial class BangumiFollowingView : UserControl
         ConnectButton.IsEnabled = !busy;
         DisconnectButton.IsEnabled = !busy;
         LoadMoreButton.IsEnabled = !busy;
+        CollectionSectionList.IsEnabled = !busy;
     }
 
     private void SetItems(
@@ -376,8 +432,26 @@ public sealed partial class BangumiFollowingView : UserControl
             subtitle,
             string.Join(" · ", meta),
             progress,
-            T("Bangumi_Watching"));
+            GetCollectionTypeLabel(collection.Type));
     }
+
+    private string GetCollectionTypeLabel(
+        BangumiCollectionType type) =>
+        type switch
+        {
+            BangumiCollectionType.Wish =>
+                L("想看", "見たい", "Wish"),
+            BangumiCollectionType.Done =>
+                L("看过", "見た", "Watched"),
+            BangumiCollectionType.Doing =>
+                L("在看", "見ている", "Watching"),
+            BangumiCollectionType.OnHold =>
+                L("搁置", "保留", "On hold"),
+            BangumiCollectionType.Dropped =>
+                L("抛弃", "断念", "Dropped"),
+            _ =>
+                L("收藏", "コレクション", "Collection"),
+        };
 
     private void ResultsList_ItemClick(
         object sender,
@@ -423,4 +497,8 @@ public sealed partial class BangumiFollowingView : UserControl
             static value =>
                 !string.IsNullOrWhiteSpace(value))
         ?? string.Empty;
+
+    private sealed record CollectionTabOption(
+        BangumiCollectionType Type,
+        string Label);
 }
