@@ -372,7 +372,7 @@ internal static class MatroskaCueSubtitleService
 
             if (targetId is null ||
                 position is null ||
-                position > long.MaxValue)
+                position > (ulong)long.MaxValue)
             {
                 continue;
             }
@@ -403,7 +403,7 @@ internal static class MatroskaCueSubtitleService
                 continue;
 
             var value = ReadUnsigned(payload, child);
-            if (value is > 0 and <= long.MaxValue)
+            if (value is > 0 && value.Value <= (ulong)long.MaxValue)
                 return (long)value.Value;
         }
 
@@ -566,21 +566,24 @@ internal static class MatroskaCueSubtitleService
 
                 if (track == targetTrack &&
                     cluster is not null &&
-                    cluster <= long.MaxValue &&
-                    time <= long.MaxValue)
+                    cluster.Value <= (ulong)long.MaxValue &&
+                    time.Value <= (ulong)long.MaxValue)
                 {
                     result.Add(
                         new CueEntry(
                             (long)time.Value,
                             (long)cluster.Value,
-                            relative is <= long.MaxValue
-                                ? (long?)relative
+                            relative is not null &&
+                            relative.Value <= (ulong)long.MaxValue
+                                ? (long)relative.Value
                                 : null,
-                            duration is <= long.MaxValue
-                                ? (long?)duration
+                            duration is not null &&
+                            duration.Value <= (ulong)long.MaxValue
+                                ? (long)duration.Value
                                 : null,
-                            blockNumber is <= int.MaxValue
-                                ? (int?)blockNumber
+                            blockNumber is not null &&
+                            blockNumber.Value <= int.MaxValue
+                                ? (int)blockNumber.Value
                                 : null));
                 }
             }
@@ -893,7 +896,7 @@ internal static class MatroskaCueSubtitleService
         }
         else
         {
-            if (sizeValue > long.MaxValue)
+            if (sizeValue > (ulong)long.MaxValue)
                 return null;
 
             size = (long)sizeValue;
