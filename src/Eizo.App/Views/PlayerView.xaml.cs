@@ -561,6 +561,7 @@ public sealed partial class PlayerView : UserControl
         CancellationToken token)
     {
         var selectionGeneration = _primarySubtitleGeneration;
+        var secondarySelectionGeneration = _secondarySubtitleGeneration;
         IReadOnlyList<ExternalSubtitleCandidate> candidates;
 
         try
@@ -682,6 +683,46 @@ public sealed partial class PlayerView : UserControl
             }
         }
 
+        SubtitleDocument? automaticSecondaryDocument = null;
+        ExternalSubtitleCandidate? automaticSecondaryCandidate = null;
+
+        if (_secondarySubtitleUri is null &&
+            settings.PreferredSecondarySubtitleLanguage != "auto")
+        {
+            var effectivePrimaryUri =
+                _primarySubtitleUri ??
+                automaticPrimaryCandidate?.Uri;
+
+            automaticSecondaryCandidate =
+                FindExternalSubtitleCandidate(
+                    candidates,
+                    settings.PreferredSecondarySubtitleLanguage,
+                    effectivePrimaryUri);
+
+            if (automaticSecondaryCandidate is not null)
+            {
+                try
+                {
+                    automaticSecondaryDocument =
+                        await ExternalSubtitleService.LoadDocumentAsync(
+                            automaticSecondaryCandidate,
+                            token);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    PlaybackTrace.Write(
+                        "view",
+                        "secondary-subtitle",
+                        "auto-load-error",
+                        exception.GetType().Name);
+                }
+            }
+        }
+
         token.ThrowIfCancellationRequested();
 
         Dispatch(() =>
@@ -702,6 +743,17 @@ public sealed partial class PlayerView : UserControl
                 _primarySubtitleUri = automaticPrimaryCandidate.Uri;
                 _primarySubtitleDocument = automaticPrimaryDocument;
                 UpdatePrimarySubtitle(_lastKnownPosition);
+            }
+
+            if (secondarySelectionGeneration == _secondarySubtitleGeneration &&
+                _secondarySubtitleUri is null &&
+                automaticSecondaryCandidate is not null &&
+                automaticSecondaryDocument is not null &&
+                automaticSecondaryCandidate.Uri != _primarySubtitleUri)
+            {
+                _secondarySubtitleUri = automaticSecondaryCandidate.Uri;
+                _secondarySubtitleDocument = automaticSecondaryDocument;
+                UpdateSecondarySubtitle(_lastKnownPosition);
             }
 
             RebuildSecondarySubtitleCombo();
@@ -2980,7 +3032,8 @@ public sealed partial class PlayerView : UserControl
 
     private static ExternalSubtitleCandidate? FindExternalSubtitleCandidate(
         IReadOnlyList<ExternalSubtitleCandidate> candidates,
-        string? language)
+        string? language,
+        Uri? excludedUri = null)
     {
         var preferred =
             PlaybackTrackPreferenceStore.NormalizeLanguage(
@@ -2989,16 +3042,17 @@ public sealed partial class PlayerView : UserControl
             return null;
 
         return candidates.FirstOrDefault(candidate =>
-            string.Equals(
-                PlaybackTrackPreferenceStore.NormalizeLanguage(
-                    candidate.Language),
-                preferred,
-                StringComparison.Ordinal) ||
-            string.Equals(
-                PlaybackTrackPreferenceStore.NormalizeLanguage(
-                    candidate.DisplayName),
-                preferred,
-                StringComparison.Ordinal));
+            candidate.Uri != excludedUri &&
+            (string.Equals(
+                 PlaybackTrackPreferenceStore.NormalizeLanguage(
+                     candidate.Language),
+                 preferred,
+                 StringComparison.Ordinal) ||
+             string.Equals(
+                 PlaybackTrackPreferenceStore.NormalizeLanguage(
+                     candidate.DisplayName),
+                 preferred,
+                 StringComparison.Ordinal)));
     }
 
     private static void RememberPrimarySubtitlePreference(
