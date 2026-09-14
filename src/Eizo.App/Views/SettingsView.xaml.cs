@@ -217,10 +217,7 @@ public sealed partial class SettingsView : UserControl
         {
             T("Settings_General"),
             T("Settings_Metadata"),
-            T("Settings_Playback"),
-            T("Settings_SubtitlesAudio"),
-            T("Settings_Network"),
-            T("Settings_Privacy")
+            T("Settings_Playback")
         };
 
         LanguageSectionTitle.Text = T("Settings_LanguageAppearance");
