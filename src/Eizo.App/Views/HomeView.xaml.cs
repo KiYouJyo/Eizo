@@ -202,12 +202,8 @@ public sealed partial class HomeView : UserControl
         if (_featuredSubject is { } subject &&
             _featuredItem is { } subjectItem)
         {
-            FeaturedTitle.Text = FirstNonEmpty(
-                subject.Metadata?.CanonicalTitle,
-                subject.Title);
-            FeaturedNativeTitle.Text = FirstNonEmpty(
-                subject.Metadata?.OriginalTitle,
-                subject.NativeTitle);
+            FeaturedTitle.Text = subject.Title;
+            FeaturedNativeTitle.Text = subject.NativeTitle;
             FeaturedMeta.Text = subject.Meta;
             FeaturedDescription.Text =
                 FirstNonEmpty(
@@ -226,12 +222,8 @@ public sealed partial class HomeView : UserControl
 
         if (_featuredItem is { } item)
         {
-            FeaturedTitle.Text = FirstNonEmpty(
-                item.Metadata?.CanonicalTitle,
-                item.DisplayTitle);
-            FeaturedNativeTitle.Text = FirstNonEmpty(
-                item.Metadata?.OriginalTitle,
-                item.SecondaryTitle);
+            FeaturedTitle.Text = item.DisplayTitle;
+            FeaturedNativeTitle.Text = item.SecondaryTitle;
             FeaturedMeta.Text = item.Meta;
             FeaturedDescription.Text =
                 FirstNonEmpty(
