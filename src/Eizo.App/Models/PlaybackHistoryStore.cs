@@ -39,6 +39,39 @@ internal sealed class PlaybackHistoryStore
         }
     }
 
+    internal PlaybackHistoryEntry? GetLatestEntry(
+        IEnumerable<CatalogMediaItemModel?> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        var keys = items
+            .Where(static item => item is not null)
+            .Select(static item => MediaCatalogStore.ItemKey(item!))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (keys.Length == 0)
+            return null;
+
+        lock (_sync)
+        {
+            PlaybackHistoryEntry? latest = null;
+            foreach (var key in keys)
+            {
+                if (!_entries.TryGetValue(key, out var entry))
+                    continue;
+
+                if (latest is null ||
+                    entry.LastWatchedUtc > latest.LastWatchedUtc)
+                {
+                    latest = entry;
+                }
+            }
+
+            return latest;
+        }
+    }
+
     internal TimeSpan GetResumePosition(
         CatalogMediaItemModel? item)
     {
