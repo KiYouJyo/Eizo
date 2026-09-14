@@ -359,10 +359,12 @@ public sealed partial class DetailView : UserControl
         };
 
     private static bool IsSameProviderIdentifier(
-        string key,
-        string value,
+        string? key,
+        string? value,
         string? provider,
         string? subjectId) =>
+        !string.IsNullOrWhiteSpace(key) &&
+        !string.IsNullOrWhiteSpace(value) &&
         !string.IsNullOrWhiteSpace(provider) &&
         !string.IsNullOrWhiteSpace(subjectId) &&
         string.Equals(
