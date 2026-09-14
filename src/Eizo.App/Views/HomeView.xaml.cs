@@ -213,11 +213,7 @@ public sealed partial class HomeView : UserControl
                     T("Home_FeaturedDescription"));
 
             HeroArtworkImage.Source = CreateArtwork(
-                FirstNonEmpty(
-                    subject.Metadata?.BackdropUrl,
-                    subjectItem.Metadata?.BackdropUrl,
-                    subject.Metadata?.PosterUrl,
-                    subjectItem.Metadata?.PosterUrl),
+                ResolveHeroArtworkUrl(subject),
                 decodePixelWidth: 1200);
 
             FeaturedPlayButton.IsEnabled = true;
@@ -900,6 +896,34 @@ public sealed partial class HomeView : UserControl
         }
 
         return string.Join(" · ", parts);
+    }
+
+    private static string ResolveHeroArtworkUrl(
+        CatalogSubjectModel subject)
+    {
+        var metadata = subject.Items
+            .Select(static item => item.Metadata)
+            .OfType<Eizo.MetadataIntegration.MediaMetadataSnapshot>()
+            .Where(static value => value.IsResolved)
+            .ToArray();
+
+        return FirstNonEmpty(
+            metadata
+                .Where(static value =>
+                    !string.IsNullOrWhiteSpace(value.BackdropUrl))
+                .OrderByDescending(static value =>
+                    !string.IsNullOrWhiteSpace(value.CanonicalTitle))
+                .Select(static value => value.BackdropUrl)
+                .FirstOrDefault(),
+            subject.Metadata?.BackdropUrl,
+            metadata
+                .Where(static value =>
+                    !string.IsNullOrWhiteSpace(value.PosterUrl))
+                .Select(static value => value.PosterUrl)
+                .FirstOrDefault(),
+            subject.Metadata?.PosterUrl,
+            subject.FirstPlayableItem?.Metadata?.BackdropUrl,
+            subject.FirstPlayableItem?.Metadata?.PosterUrl);
     }
 
     private static bool HasArtwork(
