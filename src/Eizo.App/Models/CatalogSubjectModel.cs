@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Eizo.Media;
 using Eizo.MetadataIntegration;
 
 namespace Eizo.Models;
@@ -24,8 +25,12 @@ public sealed record CatalogSubjectModel(
     MediaCategoryKind Category,
     string Meta,
     IReadOnlyList<CatalogEpisodeModel> Episodes,
-    IReadOnlyList<CatalogMediaItemModel> Items)
+    IReadOnlyList<CatalogMediaItemModel> Items,
+    EizoMedia Media,
+    EizoSeries? Series)
 {
+    public string GroupingKey { get; init; } = Key;
+
     public MediaMetadataSnapshot? Metadata =>
         Items
             .Select(static item => item.Metadata)
@@ -50,6 +55,7 @@ public sealed record CatalogSubjectModel(
             StringComparison.OrdinalIgnoreCase) ||
         Items.Count > 0 &&
         Items.All(static item =>
+            item.Media?.Format == MediaFormat.Movie ||
             string.Equals(
                 item.Recognition?.MediaKind,
                 "Movie",
@@ -210,15 +216,163 @@ internal static class CatalogSubjectAggregator
             metaParts.Add(metadata.Provider!);
         }
 
+        var subjectMedia = BuildSubjectMedia(
+            identity,
+            representative,
+            title!,
+            year,
+            category,
+            isMovieSubject,
+            items);
+        var series = isMovieSubject
+            ? null
+            : BuildSeries(subjectMedia, episodes);
+
         return new CatalogSubjectModel(
-            identity.Key,
+            subjectMedia.Id,
             identity.Basis,
             title!,
             nativeTitle ?? string.Empty,
             category,
             string.Join(" · ", metaParts),
             episodes,
-            items.ToArray());
+            items.ToArray(),
+            subjectMedia,
+            series)
+        {
+            GroupingKey = identity.Key,
+        };
+    }
+
+    private static EizoMedia BuildSubjectMedia(
+        MediaSubjectGroupingIdentity identity,
+        CatalogMediaItemModel representative,
+        string title,
+        int? year,
+        MediaCategoryKind category,
+        bool isMovieSubject,
+        IReadOnlyList<CatalogMediaItemModel> items)
+    {
+        var mediaItems = items
+            .Select(static item => item.Media)
+            .OfType<EizoMedia>()
+            .ToArray();
+
+        var externalIds = MediaExternalIds.Common(
+            mediaItems
+                .Select(static media =>
+                    (IEnumerable<KeyValuePair<string, string>>?)
+                    media.ExternalIds)
+                .ToArray());
+
+        var format = ResolveSubjectFormat(
+            isMovieSubject,
+            mediaItems);
+        var domain = ResolveSubjectDomain(
+            category,
+            mediaItems);
+        var origin = ResolveSubjectOrigin(mediaItems);
+        var identityTitle =
+            identity.TitleHint ??
+            representative.Recognition?.Title ??
+            title;
+        var identityYear =
+            identity.Basis.Contains(
+                "series-family",
+                StringComparison.OrdinalIgnoreCase) ||
+            identity.Basis.Contains(
+                "movie-family",
+                StringComparison.OrdinalIgnoreCase)
+                ? null
+                : representative.Recognition?.Year ?? year;
+        var id = EizoMediaIdFactory.CreateInternal(
+            identityTitle,
+            identityYear,
+            format);
+
+        return new EizoMedia(
+            id,
+            format,
+            domain,
+            origin,
+            externalIds);
+    }
+
+    private static EizoSeries BuildSeries(
+        EizoMedia media,
+        IReadOnlyList<CatalogEpisodeModel> episodes)
+    {
+        var seeds = episodes
+            .Select(static episode =>
+                new EizoHierarchyEpisodeSeed(
+                    MediaCatalogStore.ItemKey(episode.PrimaryItem),
+                    episode.SeasonNumber,
+                    episode.EpisodeNumber,
+                    episode.IsSpecial))
+            .ToArray();
+
+        return EizoMediaHierarchy.BuildSeries(media, seeds);
+    }
+
+    private static MediaFormat ResolveSubjectFormat(
+        bool isMovieSubject,
+        IReadOnlyList<EizoMedia> items)
+    {
+        if (isMovieSubject)
+            return MediaFormat.Movie;
+
+        var formats = items
+            .Select(static item => item.Format)
+            .Where(static format => format != MediaFormat.Unknown)
+            .Distinct()
+            .ToArray();
+
+        return formats.Length == 1
+            ? formats[0]
+            : MediaFormat.TvSeries;
+    }
+
+    private static MediaContentDomain ResolveSubjectDomain(
+        MediaCategoryKind category,
+        IReadOnlyList<EizoMedia> items)
+    {
+        if (category == MediaCategoryKind.Anime)
+            return MediaContentDomain.Animation;
+
+        var domains = items
+            .Select(static item => item.Domain)
+            .Where(static domain => domain != MediaContentDomain.Unknown)
+            .Distinct()
+            .ToArray();
+
+        return domains.Length == 1
+            ? domains[0]
+            : MediaContentDomain.Unknown;
+    }
+
+    private static MediaOrigin ResolveSubjectOrigin(
+        IReadOnlyList<EizoMedia> items)
+    {
+        var countryCodes = items
+            .SelectMany(static item => item.Origin.CountryCodes)
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Select(static value => value.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static value => value, StringComparer.Ordinal)
+            .ToList();
+
+        var primaryCountries = items
+            .Select(static item => item.Origin.PrimaryCountryCode)
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Select(static value => value!.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return new MediaOrigin(
+            primaryCountries.Length == 1
+                ? primaryCountries[0]
+                : null,
+            countryCodes);
     }
 
     private static IReadOnlyList<CatalogEpisodeModel> BuildEpisodes(
@@ -289,10 +443,12 @@ internal static class CatalogSubjectAggregator
         var metadata = primary.Metadata;
         var recognition = primary.Recognition;
 
-        var isMovie = string.Equals(
-            recognition?.MediaKind,
-            "Movie",
-            StringComparison.OrdinalIgnoreCase);
+        var isMovie =
+            primary.Media?.Format == MediaFormat.Movie ||
+            string.Equals(
+                recognition?.MediaKind,
+                "Movie",
+                StringComparison.OrdinalIgnoreCase);
 
         string? title;
         string? nativeTitle;
@@ -380,12 +536,18 @@ internal static class CatalogSubjectAggregator
     private static string? ResolveMovieIdentity(
         CatalogMediaItemModel item)
     {
-        if (!string.Equals(
+        if (item.Media?.Format != MediaFormat.Movie &&
+            !string.Equals(
                 item.Recognition?.MediaKind,
                 "Movie",
                 StringComparison.OrdinalIgnoreCase))
         {
             return null;
+        }
+
+        if (item.Media is { Format: MediaFormat.Movie, Id.Length: > 0 } media)
+        {
+            return media.Id;
         }
 
         if (item.Metadata is
@@ -436,6 +598,24 @@ internal static class CatalogCategoryClassifier
         if (item.Category is { } explicitCategory)
         {
             return explicitCategory;
+        }
+
+        if (item.Media is { } media)
+        {
+            if (media.Domain == MediaContentDomain.Animation)
+                return MediaCategoryKind.Anime;
+
+            if (media.Domain is
+                MediaContentDomain.LiveAction or
+                MediaContentDomain.Documentary)
+            {
+                return media.Format == MediaFormat.Movie
+                    ? MediaCategoryKind.Movies
+                    : MediaCategoryKind.Series;
+            }
+
+            if (media.Format == MediaFormat.Movie)
+                return MediaCategoryKind.Movies;
         }
 
         return Map(MediaLibraryGrouping.Classify(

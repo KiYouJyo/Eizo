@@ -1,12 +1,12 @@
 {
     "schemaVersion": 1,
     "product": {
-        "version": "0.4.7",
-        "packageVersion": "0.4.7.0",
+        "version": "0.5.0",
+        "packageVersion": "0.5.0.0",
         "title": {
-            "zh-CN": "设置页实际接入",
-            "ja-JP": "設定画面の実機能接続",
-            "en-US": "Settings Integration"
+            "zh-CN": "多源媒体模型基础",
+            "ja-JP": "マルチソースメディアモデル基盤",
+            "en-US": "Multi-source Media Model Foundation"
         }
     },
     "channels": {
