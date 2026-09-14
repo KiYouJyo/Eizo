@@ -638,7 +638,7 @@ public sealed partial class CatalogView : UserControl
 
         var builder = new StringBuilder();
         builder.AppendLine(
-            "NeedsReview,ReviewPriority,ReviewReason,EizoItemMediaId,EizoItemFormat,EizoItemDomain,EizoItemPrimaryOrigin,EizoItemOrigins,EizoItemExternalIds,EizoSubjectId,EizoSubjectGroupingKey,EizoSubjectGroupingBasis,EizoSubjectFormat,EizoSubjectDomain,EizoSubjectExternalIds,ProviderSeasonId,ProviderEpisodeId,MetadataEpisodeSeason,SeasonTitle,SeasonAirDate,SeasonPosterUrl,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataResolutionReason,MetadataSearchTitles,MetadataCandidateCount,MetadataAutoResolveThreshold,MetadataMinimumLead,MetadataBestScore,MetadataSecondScore,MetadataLead,MetadataTopCandidates,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataContentKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
+            "NeedsReview,ReviewPriority,ReviewReason,EizoItemMediaId,EizoItemFormat,EizoItemDomain,EizoItemPrimaryOrigin,EizoItemOrigins,EizoItemExternalIds,EizoSubjectId,EizoSubjectGroupingKey,EizoSubjectGroupingBasis,EizoSubjectFormat,EizoSubjectDomain,EizoSubjectExternalIds,ProviderSeasonId,ProviderEpisodeId,MetadataEpisodeSeason,SeasonTitle,SeasonAirDate,SeasonPosterUrl,Genres,RuntimeMinutes,ProductionCompanies,OriginCountryCodes,ProductionStatus,OriginalLanguage,CastCount,CrewCount,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataResolutionReason,MetadataSearchTitles,MetadataCandidateCount,MetadataAutoResolveThreshold,MetadataMinimumLead,MetadataBestScore,MetadataSecondScore,MetadataLead,MetadataTopCandidates,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataContentKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
 
         foreach (var item in items)
         {
@@ -749,6 +749,27 @@ public sealed partial class CatalogView : UserControl
                 metadata?.SeasonTitle ?? string.Empty,
                 metadata?.SeasonAirDate ?? string.Empty,
                 metadata?.SeasonPosterUrl ?? string.Empty,
+                metadata is null
+                    ? string.Empty
+                    : string.Join(" || ", metadata.Genres),
+                metadata?.RuntimeMinutes?.ToString(
+                    CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata is null
+                    ? string.Empty
+                    : string.Join(
+                        " || ",
+                        metadata.ProductionCompanies),
+                metadata is null
+                    ? string.Empty
+                    : string.Join(
+                        " || ",
+                        metadata.OriginCountryCodes),
+                metadata?.ProductionStatus ?? string.Empty,
+                metadata?.OriginalLanguage ?? string.Empty,
+                metadata?.Cast.Count.ToString(
+                    CultureInfo.InvariantCulture) ?? string.Empty,
+                metadata?.Crew.Count.ToString(
+                    CultureInfo.InvariantCulture) ?? string.Empty,
                 recognition?.RuntimeVersion ?? string.Empty,
                 source,
                 item.SourceTitle,

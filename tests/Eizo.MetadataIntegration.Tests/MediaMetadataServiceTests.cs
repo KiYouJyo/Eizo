@@ -497,7 +497,34 @@ public sealed class MediaMetadataServiceTests
                   "number_of_episodes": 62,
                   "poster_path": "/poster.jpg",
                   "backdrop_path": "/backdrop.jpg",
+                  "episode_run_time": [47],
+                  "status": "Ended",
+                  "original_language": "en",
+                  "origin_country": ["US"],
                   "genres": [{"id": 18, "name": "Drama"}],
+                  "production_companies": [
+                    {"id": 2605, "name": "High Bridge Productions"}
+                  ],
+                  "credits": {
+                    "cast": [
+                      {
+                        "id": 17419,
+                        "name": "Bryan Cranston",
+                        "character": "Walter White",
+                        "order": 0,
+                        "profile_path": "/cranston.jpg"
+                      }
+                    ],
+                    "crew": [
+                      {
+                        "id": 66633,
+                        "name": "Vince Gilligan",
+                        "job": "Executive Producer",
+                        "department": "Production",
+                        "profile_path": "/gilligan.jpg"
+                      }
+                    ]
+                  },
                   "external_ids": {
                     "imdb_id": "tt0903747",
                     "tvdb_id": 81189
@@ -562,6 +589,24 @@ public sealed class MediaMetadataServiceTests
         Assert.EndsWith("/pilot.jpg", result.EpisodeThumbnailUrl);
         Assert.Equal("1396", result.ExternalIds["tmdb"]);
         Assert.Equal("tt0903747", result.ExternalIds["imdb"]);
+        Assert.Equal("Drama", Assert.Single(result.Genres));
+        Assert.Equal(
+            "High Bridge Productions",
+            Assert.Single(result.ProductionCompanies));
+        Assert.Equal("US", Assert.Single(result.OriginCountryCodes));
+        Assert.Equal(47, result.RuntimeMinutes);
+        Assert.Equal("Ended", result.ProductionStatus);
+        Assert.Equal("en", result.OriginalLanguage);
+
+        var cast = Assert.Single(result.Cast);
+        Assert.Equal("Bryan Cranston", cast.Name);
+        Assert.Equal("Walter White", cast.Role);
+        Assert.EndsWith("/cranston.jpg", cast.ProfileUrl);
+
+        var crew = Assert.Single(result.Crew);
+        Assert.Equal("Vince Gilligan", crew.Name);
+        Assert.Equal("Executive Producer", crew.Role);
+        Assert.Equal("Production", crew.Department);
     }
 
     [Fact]
