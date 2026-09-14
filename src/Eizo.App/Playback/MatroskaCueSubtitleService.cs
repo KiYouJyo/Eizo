@@ -180,23 +180,41 @@ internal static class MatroskaCueSubtitleService
             return null;
         }
 
+        var texts = new string?[cueEntries.Count];
+        using var extractionGate = new SemaphoreSlim(12, 12);
+
+        var extractionTasks = cueEntries
+            .Select(async (cue, index) =>
+            {
+                await extractionGate.WaitAsync(cancellationToken);
+
+                try
+                {
+                    texts[index] = await ReadCueTextAsync(
+                        reader,
+                        segment.Value,
+                        target,
+                        cue,
+                        cancellationToken);
+                }
+                finally
+                {
+                    extractionGate.Release();
+                }
+            })
+            .ToArray();
+
+        await Task.WhenAll(extractionTasks);
+
         var extracted = new List<SubtitleCue>(cueEntries.Count);
 
         for (var index = 0; index < cueEntries.Count; index++)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var cue = cueEntries[index];
-            var text = await ReadCueTextAsync(
-                reader,
-                segment.Value,
-                target,
-                cue,
-                cancellationToken);
-
+            var text = texts[index];
             if (string.IsNullOrWhiteSpace(text))
                 continue;
 
+            var cue = cueEntries[index];
             var start = ScaleTime(cue.Time, timescale);
             var end = cue.Duration is > 0
                 ? start + ScaleTime(cue.Duration.Value, timescale)
