@@ -52,8 +52,14 @@ public sealed partial class DetailView : UserControl
         };
         SeasonComboBox.SelectedIndex = 0;
         EpisodeCountText.Text = "2";
-        InfoText.Text = T("Catalog_Unparsed");
+        MediaTypeInfoValue.Text = "-";
+        ReleaseDateInfoValue.Text = "-";
+        TotalEpisodesInfoValue.Text = "-";
+        LocalEpisodesInfoValue.Text = "-";
+        MediaSourcesInfoValue.Text = "-";
+        MetadataProviderInfoValue.Text = "-";
         ExternalIdsText.Text = "-";
+        ExternalIdsSection.Visibility = Visibility.Collapsed;
     }
 
     public DetailView(CatalogSubjectModel subject)
@@ -114,6 +120,12 @@ public sealed partial class DetailView : UserControl
             ? L("影片", "作品", "Films")
             : T("Media_Episodes");
         InfoTitle.Text = L("作品信息", "作品情報", "Title information");
+        MediaTypeInfoLabel.Text = L("作品类型", "作品種別", "Type");
+        ReleaseDateInfoLabel.Text = L("发布日期", "公開日", "Release date");
+        TotalEpisodesInfoLabel.Text = L("总集数", "総話数", "Total episodes");
+        LocalEpisodesInfoLabel.Text = L("本地集数", "ローカル話数", "Local episodes");
+        MediaSourcesInfoLabel.Text = L("媒体来源", "メディアソース", "Media sources");
+        MetadataProviderInfoLabel.Text = L("元数据来源", "メタデータ提供元", "Metadata provider");
         ExternalIdsTitle.Text = L("外部 ID", "外部 ID", "External IDs");
     }
 
@@ -186,26 +198,59 @@ public sealed partial class DetailView : UserControl
                 $"{sourceKind} · {sourceCount}")
             : sourceKind;
 
-        InfoText.Text = string.Join(
-            Environment.NewLine,
-            [
-                $"{L("数据来源", "データ提供元", "Provider")}: {provider}",
-                $"{L("作品 ID", "作品 ID", "Subject ID")}: {subjectId}",
-                $"{L("发布日期", "公開日", "Release date")}: {release}",
-                _subject.IsMovieSubject
-                    ? $"{L("本地影片", "ローカル作品", "Local films")}: {_subject.EpisodeCount}"
-                    : $"{L("本地集数", "ローカル話数", "Local episodes")}: {_subject.EpisodeCount}",
-                $"{L("媒体来源", "メディアソース", "Media sources")}: {sourceCount}",
-                $"{L("聚合依据", "グループ基準", "Grouping basis")}: {_subject.GroupingBasis}",
-            ]);
+        MediaTypeInfoValue.Text = ResolveMediaTypeLabel(_subject);
+        ReleaseDateInfoValue.Text = release;
 
-        ExternalIdsText.Text = metadata?.ExternalIds.Count > 0
+        if (_subject.IsMovieSubject)
+        {
+            TotalEpisodesInfoRow.Visibility = Visibility.Collapsed;
+            TotalEpisodesInfoDivider.Visibility = Visibility.Collapsed;
+            LocalEpisodesInfoLabel.Text =
+                L("本地影片", "ローカル作品", "Local films");
+        }
+        else
+        {
+            TotalEpisodesInfoRow.Visibility = Visibility.Visible;
+            TotalEpisodesInfoDivider.Visibility = Visibility.Visible;
+            LocalEpisodesInfoLabel.Text =
+                L("本地集数", "ローカル話数", "Local episodes");
+
+            var totalEpisodes =
+                metadata?.EpisodeCount is > 0
+                    ? metadata.EpisodeCount.Value
+                    : _subject.EpisodeCount;
+            TotalEpisodesInfoValue.Text =
+                totalEpisodes.ToString(CultureInfo.CurrentCulture);
+        }
+
+        LocalEpisodesInfoValue.Text =
+            _subject.EpisodeCount.ToString(
+                CultureInfo.CurrentCulture);
+        MediaSourcesInfoValue.Text =
+            ResolveMediaSourceSummary(_subject.Items);
+        MetadataProviderInfoValue.Text =
+            FormatMetadataProvider(provider);
+
+        var externalIds = metadata?.ExternalIds
+            .Where(pair =>
+                !IsSameProviderIdentifier(
+                    pair.Key,
+                    pair.Value,
+                    provider,
+                    subjectId))
+            .OrderBy(static pair => pair.Key)
+            .ToArray() ?? [];
+
+        ExternalIdsSection.Visibility =
+            externalIds.Length > 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        ExternalIdsText.Text = externalIds.Length > 0
             ? string.Join(
                 Environment.NewLine,
-                metadata.ExternalIds
-                    .OrderBy(static pair => pair.Key)
-                    .Select(static pair => $"{pair.Key}: {pair.Value}"))
-            : "-";
+                externalIds.Select(pair =>
+                    $"{FormatMetadataProvider(pair.Key)}: {pair.Value}"))
+            : string.Empty;
 
         if (_subject.IsMovieSubject)
         {
@@ -230,6 +275,104 @@ public sealed partial class DetailView : UserControl
 
         RebuildEpisodeList();
     }
+
+    private string ResolveMediaTypeLabel(
+        CatalogSubjectModel subject)
+    {
+        if (subject.IsMovieSubject ||
+            subject.Category == MediaCategoryKind.Movies)
+        {
+            return L("电影", "映画", "Movie");
+        }
+
+        return subject.Category switch
+        {
+            MediaCategoryKind.Anime =>
+                L("动画", "アニメ", "Anime"),
+            MediaCategoryKind.Series =>
+                L("电视剧", "テレビシリーズ", "TV series"),
+            _ =>
+                L("剧集", "シリーズ", "Series"),
+        };
+    }
+
+    private string ResolveMediaSourceSummary(
+        IReadOnlyList<CatalogMediaItemModel> items)
+    {
+        var labels = items
+            .Where(static item =>
+                item.Location is not null)
+            .GroupBy(
+                static item => item.Location!.SourceId,
+                StringComparer.Ordinal)
+            .Select(group =>
+            {
+                var source =
+                    MediaSourceStore.Default.Find(group.Key);
+                if (source is { IsBuiltIn: true })
+                {
+                    return L(
+                        "本地媒体",
+                        "ローカルメディア",
+                        "Local media");
+                }
+
+                if (source is not null &&
+                    !string.IsNullOrWhiteSpace(
+                        source.DisplayName))
+                {
+                    return source.DisplayName;
+                }
+
+                return group.First().Location?.Kind ==
+                       MediaLocationKind.LocalFile
+                    ? L(
+                        "本地媒体",
+                        "ローカルメディア",
+                        "Local media")
+                    : L(
+                        "远程媒体",
+                        "リモートメディア",
+                        "Remote media");
+            })
+            .Distinct(
+                StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+
+        return labels.Length > 0
+            ? string.Join(" · ", labels)
+            : L(
+                "未知来源",
+                "不明なソース",
+                "Unknown source");
+    }
+
+    private static string FormatMetadataProvider(
+        string? provider) =>
+        provider?.Trim().ToLowerInvariant() switch
+        {
+            "bangumi" => "Bangumi",
+            "anilist" => "AniList",
+            "tmdb" => "TMDB",
+            { Length: > 0 } value => value,
+            _ => "-",
+        };
+
+    private static bool IsSameProviderIdentifier(
+        string key,
+        string value,
+        string? provider,
+        string? subjectId) =>
+        !string.IsNullOrWhiteSpace(provider) &&
+        !string.IsNullOrWhiteSpace(subjectId) &&
+        string.Equals(
+            key.Trim(),
+            provider.Trim(),
+            StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(
+            value.Trim(),
+            subjectId.Trim(),
+            StringComparison.OrdinalIgnoreCase);
 
     private void ApplyPoster(string? posterUrl)
     {
