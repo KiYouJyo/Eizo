@@ -128,7 +128,7 @@ public sealed class MediaMetadataRefreshPolicyTests
             forceRefresh: true,
             DateTimeOffset.UtcNow);
 
-        Assert.Same(unresolved.Status, selected!.Status);
+        Assert.Equal(unresolved.Status, selected!.Status);
         Assert.Equal(
             MediaMetadataRefreshPolicy.Failed,
             selected.RefreshState);
