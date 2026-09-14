@@ -1,6 +1,7 @@
 using System.Globalization;
 using Eizo.Bangumi;
 using Eizo.Localization;
+using Eizo.MetadataIntegration;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -123,8 +124,15 @@ public sealed partial class DetailView : UserControl
         EpisodesTitle.Text = _subject?.IsMovieSubject == true
             ? L("影片", "作品", "Films")
             : T("Media_Episodes");
-        CastTitle.Text = L("角色与声优", "キャラクターと声優", "Characters & cast");
-        StaffTitle.Text = L("制作人员", "スタッフ", "Staff");
+        var isAnimation =
+            _subject is null ||
+            _subject.Category == MediaCategoryKind.Anime;
+        CastTitle.Text = isAnimation
+            ? L("角色与声优", "キャラクターと声優", "Characters & cast")
+            : L("演员", "キャスト", "Cast");
+        StaffTitle.Text = isAnimation
+            ? L("制作人员", "スタッフ", "Staff")
+            : L("主创与制作人员", "主要スタッフ", "Crew");
     }
 
     private void ApplySubject()
@@ -138,9 +146,10 @@ public sealed partial class DetailView : UserControl
         NativeTitleText.Text = string.IsNullOrWhiteSpace(_subject.NativeTitle)
             ? _subject.Title
             : _subject.NativeTitle;
-        MetaText.Text = _subject.Meta;
-
         var metadata = _subject.Metadata;
+        MetaText.Text = BuildMetadataSummary(
+            _subject,
+            metadata);
         OverviewText.Text = string.IsNullOrWhiteSpace(metadata?.Overview)
             ? L(
                 "尚无作品简介。",
@@ -234,9 +243,25 @@ public sealed partial class DetailView : UserControl
         if (_subject is null)
             return;
 
+        var metadata = _subject.Metadata;
+        var preferProviderCredits =
+            _subject.Category != MediaCategoryKind.Anime &&
+            HasMetadataCredits(metadata);
+        if (preferProviderCredits)
+        {
+            ApplyMetadataCredits(metadata!);
+            return;
+        }
+
         var subjectId = ResolveBangumiSubjectId();
         if (subjectId is null)
         {
+            if (HasMetadataCredits(metadata))
+            {
+                ApplyMetadataCredits(metadata!);
+                return;
+            }
+
             CharactersList.ItemsSource = null;
             StaffList.ItemsSource = null;
             CreditsStatusText.Text =
@@ -316,20 +341,173 @@ public sealed partial class DetailView : UserControl
         }
         catch
         {
-            CharactersList.ItemsSource = null;
-            StaffList.ItemsSource = null;
-            CreditsStatusText.Text =
-                L(
-                    "演职人员信息暂时无法加载。",
-                    "キャスト・スタッフ情報を読み込めません。",
-                    "Cast and staff information could not be loaded.");
-            CreditsStatusText.Visibility = Visibility.Visible;
+            if (HasMetadataCredits(metadata))
+            {
+                ApplyMetadataCredits(metadata!);
+            }
+            else
+            {
+                CharactersList.ItemsSource = null;
+                StaffList.ItemsSource = null;
+                CreditsStatusText.Text =
+                    L(
+                        "演职人员信息暂时无法加载。",
+                        "キャスト・スタッフ情報を読み込めません。",
+                        "Cast and staff information could not be loaded.");
+                CreditsStatusText.Visibility = Visibility.Visible;
+            }
         }
         finally
         {
             CreditsLoadingRing.IsActive = false;
             CreditsLoadingRing.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private string BuildMetadataSummary(
+        CatalogSubjectModel subject,
+        MediaMetadataSnapshot? metadata)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(subject.Meta))
+            parts.Add(subject.Meta);
+
+        if (metadata is null)
+            return string.Join(" · ", parts);
+
+        if (metadata.Genres.Count > 0)
+        {
+            parts.Add(string.Join(
+                " / ",
+                metadata.Genres.Take(4)));
+        }
+
+        if (metadata.RuntimeMinutes is > 0)
+        {
+            parts.Add(
+                L(
+                    $"{metadata.RuntimeMinutes} 分钟",
+                    $"{metadata.RuntimeMinutes}分",
+                    $"{metadata.RuntimeMinutes} min"));
+        }
+
+        if (metadata.OriginCountryCodes.Count > 0)
+        {
+            parts.Add(string.Join(
+                " / ",
+                metadata.OriginCountryCodes.Take(3)));
+        }
+
+        if (metadata.ProductionCompanies.Count > 0)
+        {
+            parts.Add(string.Join(
+                " / ",
+                metadata.ProductionCompanies.Take(2)));
+        }
+
+        return string.Join(
+            " · ",
+            parts.Where(static value =>
+                !string.IsNullOrWhiteSpace(value)));
+    }
+
+    private static bool HasMetadataCredits(
+        MediaMetadataSnapshot? metadata) =>
+        metadata is not null &&
+        (metadata.Cast.Count > 0 ||
+         metadata.Crew.Count > 0);
+
+    private void ApplyMetadataCredits(
+        MediaMetadataSnapshot metadata)
+    {
+        var cast = metadata.Cast
+            .OrderBy(static item => item.Order)
+            .ThenBy(static item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Take(8)
+            .Select(item =>
+                new CharacterCreditViewModel(
+                    item.Name,
+                    L("演员", "キャスト", "Cast"),
+                    string.IsNullOrWhiteSpace(item.Role)
+                        ? L("角色未收录", "役名未登録", "Role not listed")
+                        : item.Role!,
+                    CreateRemoteImage(
+                        item.ProfileUrl,
+                        160)))
+            .ToArray();
+
+        var crew = metadata.Crew
+            .Where(static item =>
+                !string.IsNullOrWhiteSpace(item.Role))
+            .OrderBy(static item =>
+                MetadataCrewPriority(
+                    item.Role,
+                    item.Department))
+            .ThenBy(static item => item.Order)
+            .ThenBy(static item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Take(12)
+            .Select(static item =>
+                new StaffCreditViewModel(
+                    item.Role!,
+                    item.Name))
+            .ToArray();
+
+        CharactersList.ItemsSource = cast;
+        StaffList.ItemsSource = crew;
+
+        CreditsStatusText.Visibility =
+            cast.Length == 0 &&
+            crew.Length == 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        if (cast.Length == 0 &&
+            crew.Length == 0)
+        {
+            CreditsStatusText.Text =
+                L(
+                    "暂无演职人员信息。",
+                    "キャスト・スタッフ情報はありません。",
+                    "No cast or staff information.");
+        }
+    }
+
+    private static int MetadataCrewPriority(
+        string? role,
+        string? department)
+    {
+        var value = $"{department} {role}";
+        if (value.Contains(
+                "Director",
+                StringComparison.OrdinalIgnoreCase))
+            return 0;
+        if (value.Contains(
+                "Writer",
+                StringComparison.OrdinalIgnoreCase) ||
+            value.Contains(
+                "Screenplay",
+                StringComparison.OrdinalIgnoreCase))
+            return 1;
+        if (value.Contains(
+                "Creator",
+                StringComparison.OrdinalIgnoreCase))
+            return 2;
+        if (value.Contains(
+                "Producer",
+                StringComparison.OrdinalIgnoreCase))
+            return 3;
+        if (value.Contains(
+                "Music",
+                StringComparison.OrdinalIgnoreCase))
+            return 4;
+        if (value.Contains(
+                "Camera",
+                StringComparison.OrdinalIgnoreCase) ||
+            value.Contains(
+                "Photography",
+                StringComparison.OrdinalIgnoreCase))
+            return 5;
+        return 20;
     }
 
     private int? ResolveBangumiSubjectId()

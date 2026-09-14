@@ -8,12 +8,12 @@ namespace Eizo.MetadataIntegration;
 
 public sealed record MediaMetadataServiceOptions(
     bool EnableBangumi = true,
-    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.2 (https://github.com/KiYouJyo/Eizo)",
+    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.3 (https://github.com/KiYouJyo/Eizo)",
     string PreferredLanguage = "zh-CN",
     string? TmdbReadAccessToken = null,
     string? CacheDirectory = null,
     bool EnableArtworkProviders = true,
-    string AniListUserAgent = "KiYouJyo/Eizo/0.5.2 (https://github.com/KiYouJyo/Eizo)");
+    string AniListUserAgent = "KiYouJyo/Eizo/0.5.3 (https://github.com/KiYouJyo/Eizo)");
 
 public sealed class MediaMetadataService
 {
@@ -437,6 +437,34 @@ public sealed class MediaMetadataService
                 SeasonOverview = episode?.SeasonOverview,
                 SeasonAirDate = episode?.SeasonAirDate?.ToString("yyyy-MM-dd"),
                 SeasonPosterUrl = episode?.SeasonPosterUrl,
+                Genres = subject.Genres.ToList(),
+                ProductionCompanies =
+                    subject.ProductionCompanies.ToList(),
+                OriginCountryCodes =
+                    subject.OriginCountryCodes.ToList(),
+                RuntimeMinutes = subject.RuntimeMinutes,
+                ProductionStatus = subject.Status,
+                OriginalLanguage = subject.OriginalLanguage,
+                Cast = subject.Cast
+                    .Select(static item =>
+                        new MediaPersonCreditSnapshot(
+                            item.ProviderPersonId,
+                            item.Name,
+                            item.Role,
+                            item.Department,
+                            item.ProfileUrl,
+                            item.Order))
+                    .ToList(),
+                Crew = subject.Crew
+                    .Select(static item =>
+                        new MediaPersonCreditSnapshot(
+                            item.ProviderPersonId,
+                            item.Name,
+                            item.Role,
+                            item.Department,
+                            item.ProfileUrl,
+                            item.Order))
+                    .ToList(),
             },
             providerRequest,
             result.Resolution,

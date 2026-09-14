@@ -22,6 +22,14 @@ public sealed record MetadataResolutionCandidateSnapshot(
     double Score,
     List<string> Evidence);
 
+public sealed record MediaPersonCreditSnapshot(
+    string ProviderPersonId,
+    string Name,
+    string? Role,
+    string? Department,
+    string? ProfileUrl,
+    int Order);
+
 public sealed record MediaMetadataSnapshot(
     string RuntimeVersion,
     string? RecognitionRuntimeVersion,
@@ -66,6 +74,22 @@ public sealed record MediaMetadataSnapshot(
     public string? SeasonAirDate { get; init; }
 
     public string? SeasonPosterUrl { get; init; }
+
+    public List<string> Genres { get; init; } = [];
+
+    public List<string> ProductionCompanies { get; init; } = [];
+
+    public List<string> OriginCountryCodes { get; init; } = [];
+
+    public int? RuntimeMinutes { get; init; }
+
+    public string? ProductionStatus { get; init; }
+
+    public string? OriginalLanguage { get; init; }
+
+    public List<MediaPersonCreditSnapshot> Cast { get; init; } = [];
+
+    public List<MediaPersonCreditSnapshot> Crew { get; init; } = [];
 
     public List<string> SearchTitles { get; init; } = [];
 
