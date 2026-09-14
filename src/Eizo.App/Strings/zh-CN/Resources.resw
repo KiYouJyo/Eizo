@@ -1278,4 +1278,13 @@
   <data name="Cache_StatusPaused" xml:space="preserve">
     <value>已暂停</value>
   </data>
+  <data name="Home_BangumiSearchPlaceholder" xml:space="preserve">
+    <value>搜索 Bangumi 动画条目</value>
+  </data>
+  <data name="Home_BangumiSearchResultsTitleFormat" xml:space="preserve">
+    <value>“{0}”的 Bangumi 搜索结果</value>
+  </data>
+  <data name="Home_BangumiSearchResultsCountFormat" xml:space="preserve">
+    <value>已显示 {0} / {1} 个结果</value>
+  </data>
 </root>
