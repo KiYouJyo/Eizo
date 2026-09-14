@@ -599,49 +599,86 @@ public sealed partial class PlayerView : UserControl
                 catalogItem)
             : null;
 
-        if (engine.Tracks.SelectedSubtitleTrackId is null &&
-            candidates.Count > 0 &&
+        if (candidates.Count > 0 &&
             !string.Equals(
                 remembered?.Kind,
                 "off",
                 StringComparison.OrdinalIgnoreCase))
         {
-            automaticPrimaryCandidate =
-                remembered is { Kind: "external" }
-                    ? FindExternalSubtitleCandidate(
-                        candidates,
-                        remembered.Language)
-                    : null;
+            var explicitExternalPreference = false;
 
-            if (automaticPrimaryCandidate is null &&
-                settings.PreferredSubtitleLanguage != "auto")
+            if (remembered is { Kind: "external" })
             {
                 automaticPrimaryCandidate =
                     FindExternalSubtitleCandidate(
                         candidates,
+                        remembered.Language);
+                explicitExternalPreference =
+                    automaticPrimaryCandidate is not null;
+            }
+
+            if (automaticPrimaryCandidate is null &&
+                settings.PreferredSubtitleLanguage != "auto")
+            {
+                var selectedNative =
+                    engine.Tracks.SelectedSubtitleTrackId is int nativeId
+                        ? engine.Tracks.SubtitleTracks.FirstOrDefault(
+                            track => track.Id == nativeId)
+                        : null;
+
+                var nativeMatchesPreference =
+                    selectedNative is not null &&
+                    TrackMatchesLanguage(
+                        selectedNative.Language,
+                        selectedNative.Name,
                         settings.PreferredSubtitleLanguage);
+
+                if (!nativeMatchesPreference)
+                {
+                    automaticPrimaryCandidate =
+                        FindExternalSubtitleCandidate(
+                            candidates,
+                            settings.PreferredSubtitleLanguage);
+                    explicitExternalPreference =
+                        automaticPrimaryCandidate is not null;
+                }
             }
 
-            automaticPrimaryCandidate ??= candidates[0];
-
-            try
+            if (automaticPrimaryCandidate is null &&
+                engine.Tracks.SelectedSubtitleTrackId is null)
             {
-                automaticPrimaryDocument =
-                    await ExternalSubtitleService.LoadDocumentAsync(
-                        automaticPrimaryCandidate,
+                automaticPrimaryCandidate = candidates[0];
+            }
+
+            if (automaticPrimaryCandidate is not null)
+            {
+                if (explicitExternalPreference &&
+                    engine.Tracks.SelectedSubtitleTrackId is not null)
+                {
+                    await engine.Tracks.SelectSubtitleTrackAsync(
+                        null,
                         token);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                PlaybackTrace.Write(
-                    "view",
-                    "primary-subtitle",
-                    "auto-load-error",
-                    exception.GetType().Name);
+                }
+
+                try
+                {
+                    automaticPrimaryDocument =
+                        await ExternalSubtitleService.LoadDocumentAsync(
+                            automaticPrimaryCandidate,
+                            token);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    PlaybackTrace.Write(
+                        "view",
+                        "primary-subtitle",
+                        "auto-load-error",
+                        exception.GetType().Name);
+                }
             }
         }
 
@@ -664,9 +701,6 @@ public sealed partial class PlayerView : UserControl
             {
                 _primarySubtitleUri = automaticPrimaryCandidate.Uri;
                 _primarySubtitleDocument = automaticPrimaryDocument;
-                RememberPrimarySubtitlePreference(
-                    automaticPrimaryCandidate,
-                    catalogItem);
                 UpdatePrimarySubtitle(_lastKnownPosition);
             }
 
