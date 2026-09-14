@@ -139,6 +139,14 @@ internal static class MatroskaCueSubtitleService
             selectedTrack,
             subtitleTracks);
 
+        PlaybackFallbackDiagnostics.Write(
+            "matroska-track-resolved",
+            source,
+            selectedTrack,
+            target is null
+                ? "unresolved"
+                : $"trackNumber={target.TrackNumber};codecId={target.CodecId};language={target.Language ?? "-"}");
+
         if (target is null || !IsSupportedTextCodec(target.CodecId))
         {
             PlaybackFallbackDiagnostics.Write(
