@@ -146,68 +146,61 @@ public sealed partial class DetailView : UserControl
             return;
         }
 
-        TitleText.Text = _subject.Title;
-        NativeTitleText.Text = string.IsNullOrWhiteSpace(_subject.NativeTitle)
-            ? _subject.Title
-            : _subject.NativeTitle;
+        var presentation =
+            CatalogSubjectPresentation.Create(_subject);
         var metadata = _subject.Metadata;
-        MetaText.Text = BuildMetadataSummary(
-            _subject,
-            metadata);
-        OverviewText.Text = string.IsNullOrWhiteSpace(metadata?.Overview)
-            ? L(
-                "尚无作品简介。",
-                "作品概要はまだありません。",
-                "No title overview is available yet.")
-            : metadata!.Overview;
 
-        ApplyPoster(metadata?.PosterUrl);
-        ApplyBackdrop(metadata?.BackdropUrl);
+        TitleText.Text = presentation.Title;
+        NativeTitleText.Text =
+            string.IsNullOrWhiteSpace(
+                presentation.SecondaryTitle)
+                ? presentation.Title
+                : presentation.SecondaryTitle;
+        MetaText.Text =
+            BuildMetadataSummary(presentation);
+        OverviewText.Text =
+            string.IsNullOrWhiteSpace(
+                presentation.Overview)
+                ? L(
+                    "尚无作品简介。",
+                    "作品概要はまだありません。",
+                    "No title overview is available yet.")
+                : presentation.Overview;
 
-        var provider = metadata?.Provider ?? "-";
-        var subjectId = metadata?.ProviderSubjectId ?? "-";
-        var release = metadata?.ReleaseDate ?? "-";
-        var sourceCount = _subject.Items
-            .Select(static item => item.Location?.SourceId)
-            .Where(static value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.Ordinal)
-            .Count();
-        var hasLocal = _subject.Items.Any(static item =>
-            item.Location?.Kind == MediaLocationKind.LocalFile);
-        var hasRemote = _subject.Items.Any(static item =>
-            item.Location?.Kind == MediaLocationKind.RemoteUri);
-        var sourceKind = (hasLocal, hasRemote) switch
-        {
-            (true, true) => L("本地 + 网盘", "ローカル + リモート", "Local + remote"),
-            (true, false) => L("本地", "ローカル", "Local"),
-            (false, true) => L("网盘", "リモート", "Remote"),
-            _ => L("未知来源", "不明なソース", "Unknown source"),
-        };
+        ApplyPoster(presentation.PosterUrl);
+        ApplyBackdrop(presentation.BackdropUrl);
 
-        var releaseYear = metadata?.ReleaseDate is { Length: > 0 } releaseText &&
-                          DateOnly.TryParse(releaseText, out var releaseDate)
-            ? releaseDate.Year.ToString(CultureInfo.CurrentCulture)
-            : _subject.Items
-                .Select(static item => item.Recognition?.Year)
-                .FirstOrDefault(static year => year is not null)?
-                .ToString() ?? "-";
+        var sourceKind =
+            (presentation.HasLocalSource,
+             presentation.HasRemoteSource) switch
+            {
+                (true, true) =>
+                    L("本地 + 网盘", "ローカル + リモート", "Local + remote"),
+                (true, false) =>
+                    L("本地", "ローカル", "Local"),
+                (false, true) =>
+                    L("网盘", "リモート", "Remote"),
+                _ =>
+                    L("未知来源", "不明なソース", "Unknown source"),
+            };
 
-        ReleaseStatText.Text = releaseYear;
-        EpisodeStatText.Text = _subject.IsMovieSubject
-            ? L(
-                $"{_subject.EpisodeCount} 部",
-                $"{_subject.EpisodeCount} 作品",
-                $"{_subject.EpisodeCount} films")
-            : L(
-                $"{_subject.EpisodeCount} 集",
-                $"{_subject.EpisodeCount} 話",
-                $"{_subject.EpisodeCount} episodes");
-        SourceStatText.Text = sourceCount > 0
-            ? L(
-                $"{sourceKind} · {sourceCount}",
-                $"{sourceKind} · {sourceCount}",
-                $"{sourceKind} · {sourceCount}")
-            : sourceKind;
+        ReleaseStatText.Text =
+            presentation.ReleaseYear?.ToString(
+                CultureInfo.CurrentCulture) ?? "-";
+        EpisodeStatText.Text =
+            presentation.IsMovie
+                ? L(
+                    $"{presentation.EpisodeCount} 部",
+                    $"{presentation.EpisodeCount} 作品",
+                    $"{presentation.EpisodeCount} films")
+                : L(
+                    $"{presentation.EpisodeCount} 集",
+                    $"{presentation.EpisodeCount} 話",
+                    $"{presentation.EpisodeCount} episodes");
+        SourceStatText.Text =
+            presentation.SourceCount > 0
+                ? $"{sourceKind} · {presentation.SourceCount}"
+                : sourceKind;
 
         if (_subject.IsMovieSubject)
         {
@@ -239,6 +232,7 @@ public sealed partial class DetailView : UserControl
             SeasonComboBox.Visibility = Visibility.Visible;
         }
 
+        ApplySeasonContext();
         RebuildEpisodeList();
     }
 
@@ -369,45 +363,48 @@ public sealed partial class DetailView : UserControl
     }
 
     private string BuildMetadataSummary(
-        CatalogSubjectModel subject,
-        MediaMetadataSnapshot? metadata)
+        CatalogSubjectPresentation presentation)
     {
         var parts = new List<string>();
 
-        if (!string.IsNullOrWhiteSpace(subject.Meta))
-            parts.Add(subject.Meta);
-
-        if (metadata is null)
-            return string.Join(" · ", parts);
-
-        if (metadata.Genres.Count > 0)
+        if (presentation.Genres.Count > 0)
         {
-            parts.Add(string.Join(
-                " / ",
-                metadata.Genres.Take(4)));
+            parts.Add(
+                string.Join(
+                    " / ",
+                    presentation.Genres.Take(4)));
         }
 
-        if (metadata.RuntimeMinutes is > 0)
+        if (presentation.RuntimeMinutes is > 0)
         {
             parts.Add(
                 L(
-                    $"{metadata.RuntimeMinutes} 分钟",
-                    $"{metadata.RuntimeMinutes}分",
-                    $"{metadata.RuntimeMinutes} min"));
+                    $"{presentation.RuntimeMinutes} 分钟",
+                    $"{presentation.RuntimeMinutes}分",
+                    $"{presentation.RuntimeMinutes} min"));
         }
 
-        if (metadata.OriginCountryCodes.Count > 0)
+        if (presentation.OriginCountryCodes.Count > 0)
         {
-            parts.Add(string.Join(
-                " / ",
-                metadata.OriginCountryCodes.Take(3)));
+            parts.Add(
+                string.Join(
+                    " / ",
+                    presentation.OriginCountryCodes.Take(3)));
         }
 
-        if (metadata.ProductionCompanies.Count > 0)
+        if (presentation.ProductionCompanies.Count > 0)
         {
-            parts.Add(string.Join(
-                " / ",
-                metadata.ProductionCompanies.Take(2)));
+            parts.Add(
+                string.Join(
+                    " / ",
+                    presentation.ProductionCompanies.Take(2)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                presentation.ProductionStatus))
+        {
+            parts.Add(
+                presentation.ProductionStatus!);
         }
 
         return string.Join(
@@ -1030,8 +1027,58 @@ public sealed partial class DetailView : UserControl
 
     private void SeasonComboBox_SelectionChanged(
         object sender,
-        SelectionChangedEventArgs e) =>
+        SelectionChangedEventArgs e)
+    {
+        ApplySeasonContext();
         RebuildEpisodeList();
+    }
+
+    private void ApplySeasonContext()
+    {
+        if (_subject is null)
+            return;
+
+        var subjectPoster =
+            _subject.Metadata?.PosterUrl;
+        if (SeasonComboBox.SelectedItem is not
+            SeasonOption option)
+        {
+            ApplyPoster(subjectPoster);
+            ToolTipService.SetToolTip(
+                SeasonComboBox,
+                null);
+            return;
+        }
+
+        var season = _subject.Series?.Seasons
+            .FirstOrDefault(item =>
+                item.Number == option.Number);
+        ApplyPoster(
+            string.IsNullOrWhiteSpace(
+                season?.PosterUrl)
+                ? subjectPoster
+                : season!.PosterUrl);
+
+        var seasonContext = new List<string>();
+        if (!string.IsNullOrWhiteSpace(
+                season?.AirDate))
+        {
+            seasonContext.Add(season!.AirDate!);
+        }
+        if (!string.IsNullOrWhiteSpace(
+                season?.Overview))
+        {
+            seasonContext.Add(season!.Overview!);
+        }
+
+        ToolTipService.SetToolTip(
+            SeasonComboBox,
+            seasonContext.Count == 0
+                ? null
+                : string.Join(
+                    Environment.NewLine,
+                    seasonContext));
+    }
 
     private void RebuildEpisodeList()
     {
@@ -1116,7 +1163,12 @@ public sealed partial class DetailView : UserControl
             episode.PrimaryItem,
             CreateRemoteImage(
                 thumbnailUrl,
-                360));
+                360))
+        {
+            AirDate =
+                episode.PrimaryItem.Metadata?
+                    .EpisodeAirDate ?? string.Empty,
+        };
     }
 
     private static string FormatPlaybackTime(
