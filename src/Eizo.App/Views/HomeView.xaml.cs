@@ -118,7 +118,7 @@ public sealed partial class HomeView : UserControl
 
         _continueItems = _history.Snapshot()
             .Where(entry => itemsByKey.ContainsKey(entry.ItemKey))
-            .Take(8)
+            .Take(4)
             .Select(entry =>
             {
                 var item = itemsByKey[entry.ItemKey];
