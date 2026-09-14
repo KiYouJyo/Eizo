@@ -97,6 +97,17 @@ public sealed record MediaMetadataSnapshot(
 
     public string? RoutingReason { get; init; }
 
+    public Dictionary<string, string> SeasonExternalIds { get; init; } =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string, string> EpisodeExternalIds { get; init; } =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string, string> FieldSources { get; init; } =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    public List<string> MergeContributors { get; init; } = [];
+
     public List<string> SearchTitles { get; init; } = [];
 
     public int CandidateCount { get; init; }

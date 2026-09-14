@@ -58,6 +58,12 @@ public static class MediaModelProjection
     public static Dictionary<string, string> ProjectSeasonExternalIds(
         MediaMetadataSnapshot? metadata)
     {
+        if (metadata?.SeasonExternalIds is { Count: > 0 })
+        {
+            return MediaExternalIds.Normalize(
+                metadata.SeasonExternalIds);
+        }
+
         if (metadata is not
             {
                 IsResolved: true,
@@ -80,6 +86,12 @@ public static class MediaModelProjection
     public static Dictionary<string, string> ProjectEpisodeExternalIds(
         MediaMetadataSnapshot? metadata)
     {
+        if (metadata?.EpisodeExternalIds is { Count: > 0 })
+        {
+            return MediaExternalIds.Normalize(
+                metadata.EpisodeExternalIds);
+        }
+
         if (metadata is not
             {
                 IsResolved: true,

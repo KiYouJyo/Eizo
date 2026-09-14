@@ -299,9 +299,43 @@ public sealed class MediaMetadataService
                 route);
         }
 
-        var subject = result.Subject;
-        var episode = result.Episode;
+        var supplementalResults =
+            await LoadSupplementalResultsAsync(
+                    request,
+                    route,
+                    result.Subject.Id.Provider,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        errors.AddRange(
+            supplementalResults
+                .SelectMany(static item =>
+                    item.ProviderErrors)
+                .Select(static error =>
+                    new MetadataProviderErrorSnapshot(
+                        error.Provider,
+                        error.ErrorType,
+                        error.Message)));
+
+        var mergeResult = MediaMetadataMergePolicy.Merge(
+            new MediaMetadataProviderSource(
+                result.Subject.Id.Provider,
+                result.Subject,
+                result.Episode),
+            supplementalResults
+                .Where(static item =>
+                    item.Subject is not null)
+                .Select(static item =>
+                    new MediaMetadataProviderSource(
+                        item.Subject!.Id.Provider,
+                        item.Subject!,
+                        item.Episode)));
+
+        var subject = mergeResult.Subject;
+        var episode = mergeResult.Episode;
         var artwork = subject.Artwork;
+        IReadOnlyList<string> artworkContributors =
+            Array.Empty<string>();
 
         if (_artworkResolver is not null &&
             string.IsNullOrWhiteSpace(artwork.BackdropUrl))
@@ -327,6 +361,7 @@ public sealed class MediaMetadataService
                         cancellationToken)
                     .ConfigureAwait(false);
 
+                var previousArtwork = artwork;
                 artwork = new Core.MetadataArtwork(
                     subject.Artwork.PosterUrl ??
                     artworkResult.Artwork.PosterUrl,
@@ -334,6 +369,24 @@ public sealed class MediaMetadataService
                     artworkResult.Artwork.BackdropUrl,
                     subject.Artwork.ThumbnailUrl ??
                     artworkResult.Artwork.ThumbnailUrl);
+                artworkContributors =
+                    artworkResult.Providers;
+
+                if (string.IsNullOrWhiteSpace(previousArtwork.PosterUrl) &&
+                    !string.IsNullOrWhiteSpace(artwork.PosterUrl) &&
+                    artworkResult.Providers.Count > 0)
+                {
+                    mergeResult.FieldSources["PosterUrl"] =
+                        string.Join("+", artworkResult.Providers);
+                }
+
+                if (string.IsNullOrWhiteSpace(previousArtwork.BackdropUrl) &&
+                    !string.IsNullOrWhiteSpace(artwork.BackdropUrl) &&
+                    artworkResult.Providers.Count > 0)
+                {
+                    mergeResult.FieldSources["BackdropUrl"] =
+                        string.Join("+", artworkResult.Providers);
+                }
 
                 errors.AddRange(
                     artworkResult.ProviderErrors.Select(
@@ -405,7 +458,7 @@ public sealed class MediaMetadataService
                                     cancellationToken)
                                 .ConfigureAwait(false);
 
-                        episodeThumbnailUrl = tmdbEpisodes
+                        var tmdbEpisode = tmdbEpisodes
                             .Where(item =>
                                 item.EpisodeNumber ==
                                     targetEpisodeNumber)
@@ -414,10 +467,32 @@ public sealed class MediaMetadataService
                                     targetSeason
                                     ? 0
                                     : 1)
-                            .Select(static item =>
-                                item.ThumbnailUrl)
-                            .FirstOrDefault(static url =>
-                                !string.IsNullOrWhiteSpace(url));
+                            .FirstOrDefault();
+
+                        if (tmdbEpisode is not null)
+                        {
+                            episodeThumbnailUrl =
+                                tmdbEpisode.ThumbnailUrl ??
+                                episodeThumbnailUrl;
+                            if (!string.IsNullOrWhiteSpace(
+                                    tmdbEpisode.ProviderEpisodeId))
+                            {
+                                mergeResult.EpisodeExternalIds["tmdb"] =
+                                    tmdbEpisode.ProviderEpisodeId;
+                            }
+                            if (!string.IsNullOrWhiteSpace(
+                                    tmdbEpisode.ProviderSeasonId))
+                            {
+                                mergeResult.SeasonExternalIds["tmdb"] =
+                                    tmdbEpisode.ProviderSeasonId;
+                            }
+                            if (!string.IsNullOrWhiteSpace(
+                                    tmdbEpisode.ThumbnailUrl))
+                            {
+                                mergeResult.FieldSources[
+                                    "EpisodeThumbnailUrl"] = "tmdb";
+                            }
+                        }
                     }
                     catch (OperationCanceledException)
                         when (cancellationToken.IsCancellationRequested)
@@ -510,6 +585,22 @@ public sealed class MediaMetadataService
                             item.ProfileUrl,
                             item.Order))
                     .ToList(),
+                SeasonExternalIds =
+                    new Dictionary<string, string>(
+                        mergeResult.SeasonExternalIds,
+                        StringComparer.OrdinalIgnoreCase),
+                EpisodeExternalIds =
+                    new Dictionary<string, string>(
+                        mergeResult.EpisodeExternalIds,
+                        StringComparer.OrdinalIgnoreCase),
+                FieldSources =
+                    new Dictionary<string, string>(
+                        mergeResult.FieldSources,
+                        StringComparer.OrdinalIgnoreCase),
+                MergeContributors = mergeResult.Contributors
+                    .Concat(artworkContributors)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
             },
             providerRequest,
             result.Resolution,
@@ -539,6 +630,58 @@ public sealed class MediaMetadataService
             corePath,
             providerPath,
             status);
+    }
+
+    private async Task<IReadOnlyList<Core.MetadataEnrichmentResult>>
+        LoadSupplementalResultsAsync(
+            Core.MetadataSearchRequest request,
+            MediaProviderRoute route,
+            string primaryProvider,
+            CancellationToken cancellationToken)
+    {
+        var results =
+            new List<Core.MetadataEnrichmentResult>();
+
+        foreach (var provider in route.EnumerateProviders()
+                     .Where(provider =>
+                         !string.Equals(
+                             provider,
+                             primaryProvider,
+                             StringComparison.OrdinalIgnoreCase)))
+        {
+            if (!_providerResolvers.TryGetValue(
+                    provider,
+                    out var resolver))
+            {
+                continue;
+            }
+
+            try
+            {
+                var candidate = await resolver
+                    .EnrichAsync(
+                        request,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (candidate.Resolution.IsResolved &&
+                    candidate.Subject is not null)
+                {
+                    results.Add(candidate);
+                }
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                // Supplemental data must never invalidate
+                // a successfully resolved primary provider.
+            }
+        }
+
+        return results;
     }
 
     private async Task<Core.MetadataEnrichmentResult>
