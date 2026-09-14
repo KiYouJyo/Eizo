@@ -42,8 +42,7 @@ public static class MediaModelProjection
 
         var id = existing is { Id.Length: > 0 }
             ? existing.Id
-            : EizoMediaIdFactory.Create(
-                externalIds,
+            : EizoMediaIdFactory.CreateInternal(
                 title,
                 recognition?.Year,
                 format);

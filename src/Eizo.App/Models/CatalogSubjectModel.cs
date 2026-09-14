@@ -29,6 +29,8 @@ public sealed record CatalogSubjectModel(
     EizoMedia Media,
     EizoSeries? Series)
 {
+    public string GroupingKey { get; init; } = Key;
+
     public MediaMetadataSnapshot? Metadata =>
         Items
             .Select(static item => item.Metadata)
@@ -215,6 +217,8 @@ internal static class CatalogSubjectAggregator
         }
 
         var subjectMedia = BuildSubjectMedia(
+            identity,
+            representative,
             title!,
             year,
             category,
@@ -225,7 +229,7 @@ internal static class CatalogSubjectAggregator
             : BuildSeries(subjectMedia, episodes);
 
         return new CatalogSubjectModel(
-            identity.Key,
+            subjectMedia.Id,
             identity.Basis,
             title!,
             nativeTitle ?? string.Empty,
@@ -234,10 +238,15 @@ internal static class CatalogSubjectAggregator
             episodes,
             items.ToArray(),
             subjectMedia,
-            series);
+            series)
+        {
+            GroupingKey = identity.Key,
+        };
     }
 
     private static EizoMedia BuildSubjectMedia(
+        MediaSubjectGroupingIdentity identity,
+        CatalogMediaItemModel representative,
         string title,
         int? year,
         MediaCategoryKind category,
@@ -263,10 +272,22 @@ internal static class CatalogSubjectAggregator
             category,
             mediaItems);
         var origin = ResolveSubjectOrigin(mediaItems);
-        var id = EizoMediaIdFactory.Create(
-            externalIds,
-            title,
-            year,
+        var identityTitle =
+            identity.TitleHint ??
+            representative.Recognition?.Title ??
+            title;
+        var identityYear =
+            identity.Basis.Contains(
+                "series-family",
+                StringComparison.OrdinalIgnoreCase) ||
+            identity.Basis.Contains(
+                "movie-family",
+                StringComparison.OrdinalIgnoreCase)
+                ? null
+                : representative.Recognition?.Year ?? year;
+        var id = EizoMediaIdFactory.CreateInternal(
+            identityTitle,
+            identityYear,
             format);
 
         return new EizoMedia(

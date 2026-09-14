@@ -26,6 +26,25 @@ public sealed class MediaModelProjectionTests
     }
 
     [Fact]
+    public void ProjectionStartingWithMetadataKeepsProviderOutOfInternalId()
+    {
+        var media = MediaModelProjection.Project(
+            Recognition("Breaking Bad", 2008),
+            Metadata(
+                provider: "tmdb",
+                id: "1396",
+                contentKind: "LiveAction",
+                externalIds: new Dictionary<string, string>
+                {
+                    ["imdb"] = "tt0903747",
+                }));
+
+        Assert.StartsWith("eizo:local:", media.Id);
+        Assert.DoesNotContain("1396", media.Id);
+        Assert.Equal("1396", media.GetExternalId("tmdb"));
+    }
+
+    [Fact]
     public void ProjectionPreservesEizoIdWhenNewProviderIdsArrive()
     {
         var recognition = Recognition("Breaking Bad", 2008);

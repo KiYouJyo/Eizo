@@ -85,6 +85,7 @@ try {
     & ./scripts/Restore-EizoMetadata.ps1
 
     Write-Host '== Validate v0.5.0 media model Stage 1 and prior release regressions =='
+    & ./scripts/Test-MediaModelStage1Contract.ps1
     & ./scripts/Test-BangumiPublicIntegration.ps1
     & ./scripts/Test-BangumiAccountIntegration.ps1
     & ./scripts/Test-BangumiOAuthIntegration.ps1

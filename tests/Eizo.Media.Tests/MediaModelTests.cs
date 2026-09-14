@@ -22,13 +22,11 @@ public sealed class MediaModelTests
     [Fact]
     public void LocalMediaIdIsStableAcrossEpisodesOfSameRecognizedWork()
     {
-        var left = EizoMediaIdFactory.Create(
-            externalIds: null,
+        var left = EizoMediaIdFactory.CreateInternal(
             title: "Breaking Bad",
             year: 2008,
             format: MediaFormat.TvSeries);
-        var right = EizoMediaIdFactory.Create(
-            externalIds: null,
+        var right = EizoMediaIdFactory.CreateInternal(
             title: "Breaking Bad",
             year: 2008,
             format: MediaFormat.TvSeries);

@@ -157,33 +157,11 @@ public static class MediaExternalIds
 
 public static class EizoMediaIdFactory
 {
-    private static readonly string[] PreferredExternalProviders =
-    [
-        "tmdb",
-        "bangumi",
-        "anilist",
-        "imdb",
-    ];
-
-    public static string Create(
-        IReadOnlyDictionary<string, string>? externalIds,
+    public static string CreateInternal(
         string? title,
         int? year,
         MediaFormat format)
     {
-        var normalizedIds = MediaExternalIds.Normalize(externalIds);
-        foreach (var provider in PreferredExternalProviders)
-        {
-            if (normalizedIds.TryGetValue(provider, out var id))
-                return $"eizo:{provider}:{id}";
-        }
-
-        var firstExternal = normalizedIds
-            .OrderBy(static pair => pair.Key, StringComparer.Ordinal)
-            .FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(firstExternal.Key))
-            return $"eizo:{firstExternal.Key}:{firstExternal.Value}";
-
         var normalizedTitle = NormalizeTitle(title);
         var seed = string.Create(
             CultureInfo.InvariantCulture,

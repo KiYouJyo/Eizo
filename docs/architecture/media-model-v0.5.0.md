@@ -32,3 +32,15 @@ The second Stage 1 pass projects aggregated catalog subjects into the internal m
 - season and episode ExternalIds remain explicit scopes and are only populated when a provider supplies IDs for that exact level.
 
 This keeps provider identity separate from the library hierarchy before TMDB routing is introduced.
+
+
+## Internal identity versus match evidence
+
+Catalog grouping keys such as `metadata|bangumi|...` and `recognition|...` are now treated as match evidence only.
+
+- `CatalogSubjectModel.Key` is the provider-agnostic Eizo media ID.
+- `CatalogSubjectModel.GroupingKey` preserves the current grouping/matching evidence for diagnostics.
+- External provider IDs remain in `ExternalIds` and never become the Eizo internal ID.
+- `MediaModelProjection` creates the same kind of internal ID whether metadata is already available or arrives later.
+
+This is the boundary required before field-level provider routing is introduced.

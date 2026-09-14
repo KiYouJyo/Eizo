@@ -40,6 +40,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-CacheSystemContract.ps1
 
+      - name: Validate Eizo 0.5.0 media model contract
+        shell: pwsh
+        run: ./scripts/Test-MediaModelStage1Contract.ps1
+
       - name: Validate Bangumi public integration contract
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1
@@ -109,6 +113,9 @@ jobs:
 
       - name: Run Metadata integration tests
         run: dotnet test tests/Eizo.MetadataIntegration.Tests/Eizo.MetadataIntegration.Tests.csproj --configuration Release
+
+      - name: Run media model tests
+        run: dotnet test tests/Eizo.Media.Tests/Eizo.Media.Tests.csproj --configuration Release
 
       - name: Run cache integration tests
         run: dotnet test tests/Eizo.Cache.Tests/Eizo.Cache.Tests.csproj --configuration Release
