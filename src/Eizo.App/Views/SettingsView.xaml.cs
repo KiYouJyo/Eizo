@@ -105,6 +105,9 @@ public sealed partial class SettingsView : UserControl
             PreferredSubtitleLanguageCombo.SelectedIndex =
                 LanguagePreferenceIndex(
                     settings.PreferredSubtitleLanguage);
+            PreferredSecondarySubtitleLanguageCombo.SelectedIndex =
+                LanguagePreferenceIndex(
+                    settings.PreferredSecondarySubtitleLanguage);
 
             PrimarySubtitlePositionSettingsSlider.Value =
                 Math.Clamp(
@@ -543,6 +546,25 @@ public sealed partial class SettingsView : UserControl
             });
     }
 
+    private void PreferredSecondarySubtitleLanguageCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_isSynchronizing ||
+            PreferredSecondarySubtitleLanguageCombo.SelectedIndex < 0)
+        {
+            return;
+        }
+
+        AppSettingsStore.Update(settings =>
+            settings with
+            {
+                PreferredSecondarySubtitleLanguage =
+                    LanguagePreferenceCode(
+                        PreferredSecondarySubtitleLanguageCombo.SelectedIndex)
+            });
+    }
+
     private void RememberSubtitleTrackToggle_Toggled(
         object sender,
         RoutedEventArgs e)
@@ -777,6 +799,10 @@ public sealed partial class SettingsView : UserControl
             T("Settings_PreferredSubtitleLanguage");
         PreferredSubtitleLanguageDescription.Text =
             T("Settings_PreferredSubtitleLanguageDescription");
+        PreferredSecondarySubtitleLanguageLabel.Text =
+            T("Settings_PreferredSecondarySubtitleLanguage");
+        PreferredSecondarySubtitleLanguageDescription.Text =
+            T("Settings_PreferredSecondarySubtitleLanguageDescription");
         RememberSubtitleTrackLabel.Text =
             T("Settings_RememberSubtitleTrack");
         RememberSubtitleTrackDescription.Text =
@@ -792,6 +818,8 @@ public sealed partial class SettingsView : UserControl
         PreferredAudioLanguageCombo.ItemsSource =
             trackLanguages;
         PreferredSubtitleLanguageCombo.ItemsSource =
+            trackLanguages.ToArray();
+        PreferredSecondarySubtitleLanguageCombo.ItemsSource =
             trackLanguages.ToArray();
 
         SubtitleStyleSectionTitle.Text =
