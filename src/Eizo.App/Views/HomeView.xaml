@@ -195,6 +195,7 @@
                   Grid.Row="2"
                   SelectionMode="None"
                   IsItemClickEnabled="False"
+                  ItemTemplate="{StaticResource SearchResultCardTemplate}"
                   ScrollViewer.HorizontalScrollMode="Disabled"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <GridView.ItemsPanel>
@@ -214,9 +215,6 @@
               <Setter Property="VerticalContentAlignment" Value="Stretch" />
             </Style>
           </GridView.ItemContainerStyle>
-          <GridView.ItemTemplate>
-            <StaticResource ResourceKey="SearchResultCardTemplate" />
-          </GridView.ItemTemplate>
         </GridView>
 
         <Button x:Name="SearchResultsLoadMoreButton"
