@@ -118,7 +118,7 @@
     </Grid>
 
     <GridView x:Name="ResultsList"
-              Grid.Row="5"
+              Grid.Row="4"
               Margin="0,12,0,0"
               SelectionMode="None"
               IsItemClickEnabled="True"
@@ -206,7 +206,7 @@
     </GridView>
 
     <Button x:Name="LoadMoreButton"
-            Grid.Row="4"
+            Grid.Row="5"
             Margin="0,8,0,0"
             HorizontalAlignment="Center"
             MinWidth="132"
