@@ -247,6 +247,9 @@
   <data name="Playback_PrimarySubtitleOpacity" xml:space="preserve">
     <value>Primary subtitle background opacity</value>
   </data>
+  <data name="Playback_NativeSubtitleStyleManagedByEngine" xml:space="preserve">
+    <value>Embedded subtitles are rendered by the playback engine. Position and background controls apply to external subtitles only.</value>
+  </data>
   <data name="Playback_SecondarySubtitleOpacity" xml:space="preserve">
     <value>Secondary subtitle background opacity</value>
   </data>
