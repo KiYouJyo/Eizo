@@ -11,7 +11,7 @@
   },
   "channels": {
     "github": {
-      "publish": false
+      "publish": true
     }
   }
 }
