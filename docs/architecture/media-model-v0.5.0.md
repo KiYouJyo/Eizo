@@ -44,3 +44,8 @@ Catalog grouping keys such as `metadata|bangumi|...` and `recognition|...` are n
 - `MediaModelProjection` creates the same kind of internal ID whether metadata is already available or arrives later.
 
 This is the boundary required before field-level provider routing is introduced.
+
+
+## Diagnostics
+
+The existing media-library recognition report now exports the Stage 1 model beside Recognition and Metadata provenance. Each row includes the item Eizo ID, the aggregated subject Eizo ID, grouping evidence, format/domain/origin and both item/subject ExternalIds. This makes real-library verification possible before routing rules begin changing provider behavior.

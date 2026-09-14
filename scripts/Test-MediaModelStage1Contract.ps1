@@ -18,6 +18,7 @@ $projection = Read-Text 'src/Eizo.MetadataIntegration/MediaModelProjection.cs'
 $item = Read-Text 'src/Eizo.App/Models/CatalogMediaItemModel.cs'
 $subject = Read-Text 'src/Eizo.App/Models/CatalogSubjectModel.cs'
 $store = Read-Text 'src/Eizo.App/Models/MediaCatalogStore.cs'
+$catalogView = Read-Text 'src/Eizo.App/Views/CatalogView.xaml.cs'
 
 foreach ($required in @(
     'public sealed record EizoMedia(',
@@ -53,6 +54,18 @@ if (-not $subject.Contains('public string GroupingKey { get; init; } = Key;', [S
 if (-not $store.Contains('SchemaVersion: 2', [StringComparison]::Ordinal) -or
     -not $store.Contains('SchemaVersion: 1 or 2', [StringComparison]::Ordinal)) {
     throw 'Catalog schema v2 migration contract is missing.'
+}
+
+foreach ($column in @(
+    'EizoItemMediaId',
+    'EizoSubjectId',
+    'EizoSubjectGroupingKey',
+    'EizoSubjectFormat',
+    'EizoSubjectDomain',
+    'EizoSubjectExternalIds')) {
+    if (-not $catalogView.Contains($column, [StringComparison]::Ordinal)) {
+        throw "Recognition report is missing media-model diagnostic column: $column"
+    }
 }
 
 Write-Host 'Eizo 0.5.0 media model Stage 1 contract PASS.'

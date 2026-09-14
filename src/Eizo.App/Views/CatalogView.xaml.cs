@@ -551,7 +551,10 @@ public sealed partial class CatalogView : UserControl
                 StringComparer.Ordinal);
 
         var csv = await Task.Run(
-            () => BuildRecognitionCsv(snapshot, sourceLabels));
+            () => BuildRecognitionCsv(
+                snapshot,
+                sourceLabels,
+                aggregation: CatalogSubjectAggregator.Build(snapshot)));
 
         await FileIO.WriteTextAsync(file, csv, UnicodeEncoding.Utf8);
 
@@ -560,9 +563,9 @@ public sealed partial class CatalogView : UserControl
             XamlRoot = XamlRoot,
             Title = L("识别报告已导出", "認識レポートを出力しました", "Recognition report exported"),
             Content = L(
-                "CSV 已同时包含 Recognition 与 Metadata 诊断：除原始文件名、逻辑路径、识别证据外，还记录实际 Provider 搜索词、候选数量、前两名分数与分差、解析阈值、ResolutionReason、Top Candidates 及评分证据。可直接筛选 MetadataResolutionReason 定位未刮削原因。",
-                "CSV には Recognition と Metadata の診断情報を統合しています。元ファイル名、論理パス、認識根拠、Metadata 状態、Provider、Subject ID、信頼度、外部 ID、Provider エラーを確認できます。",
-                "The CSV combines Recognition and Metadata diagnostics, including source names, logical paths, recognition evidence, Metadata status, provider, subject ID, confidence, external IDs and provider errors."),
+                "CSV 已同时包含 Eizo 内部媒体模型、Recognition 与 Metadata 诊断：可核对 Eizo Media ID、作品聚合 ID、GroupingKey、MediaFormat、ContentDomain、External IDs，以及 Provider 搜索词、候选分数和解析原因。",
+                "CSV には Eizo 内部メディアモデル、Recognition、Metadata の診断情報を統合しています。Eizo Media ID、作品 ID、GroupingKey、MediaFormat、ContentDomain、External IDs と Provider 診断を確認できます。",
+                "The CSV combines the Eizo internal media model with Recognition and Metadata diagnostics, including Eizo media/subject IDs, grouping evidence, format, domain, external IDs and provider resolution details."),
             CloseButtonText = L("关闭", "閉じる", "Close")
         };
         await dialog.ShowAsync();
@@ -617,11 +620,25 @@ public sealed partial class CatalogView : UserControl
 
     private static string BuildRecognitionCsv(
         IReadOnlyList<CatalogMediaItemModel> items,
-        IReadOnlyDictionary<string, string> sourceLabels)
+        IReadOnlyDictionary<string, string> sourceLabels,
+        CatalogLibraryAggregation aggregation)
     {
+        var subjectByItemKey = aggregation.Subjects
+            .SelectMany(subject => subject.Items.Select(item =>
+                new
+                {
+                    ItemKey = MediaCatalogStore.ItemKey(item),
+                    Subject = subject,
+                }))
+            .GroupBy(static value => value.ItemKey, StringComparer.Ordinal)
+            .ToDictionary(
+                static group => group.Key,
+                static group => group.First().Subject,
+                StringComparer.Ordinal);
+
         var builder = new StringBuilder();
         builder.AppendLine(
-            "NeedsReview,ReviewPriority,ReviewReason,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataResolutionReason,MetadataSearchTitles,MetadataCandidateCount,MetadataAutoResolveThreshold,MetadataMinimumLead,MetadataBestScore,MetadataSecondScore,MetadataLead,MetadataTopCandidates,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataContentKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
+            "NeedsReview,ReviewPriority,ReviewReason,EizoItemMediaId,EizoItemFormat,EizoItemDomain,EizoItemPrimaryOrigin,EizoItemOrigins,EizoItemExternalIds,EizoSubjectId,EizoSubjectGroupingKey,EizoSubjectGroupingBasis,EizoSubjectFormat,EizoSubjectDomain,EizoSubjectExternalIds,RuntimeVersion,Source,OriginalName,LogicalPath,Status,ConfidenceLevel,Confidence,IsAmbiguous,AppliedDisplayTitle,RecognizedTitle,EpisodeTitle,MediaKind,SpecialKind,EpisodePart,IsFinalEpisode,Season,Cour,Episode,EpisodeEnd,Special,Year,ErrorCode,TitleCandidates,Evidence,MetadataRuntimeVersion,MetadataRecognitionRuntimeVersion,MetadataRecognitionRuntimeMatch,MetadataStatus,MetadataResolutionReason,MetadataSearchTitles,MetadataCandidateCount,MetadataAutoResolveThreshold,MetadataMinimumLead,MetadataBestScore,MetadataSecondScore,MetadataLead,MetadataTopCandidates,MetadataProvider,MetadataSubjectId,MetadataSubjectKind,MetadataContentKind,MetadataConfidence,MetadataCanonicalTitle,MetadataOriginalTitle,MetadataLocalizedTitles,MetadataAliases,MetadataReleaseDate,MetadataEpisodeCount,MetadataEpisodeNumber,MetadataEpisodeTitle,MetadataEpisodeOriginalTitle,MetadataEpisodeAirDate,MetadataPosterUrl,MetadataBackdropUrl,MetadataExternalIds,MetadataErrors,MetadataUpdatedAtUtc");
 
         foreach (var item in items)
         {
@@ -645,6 +662,32 @@ public sealed partial class CatalogView : UserControl
                     " || ",
                     recognition.Evidence.Select(itemEvidence =>
                         $"{itemEvidence.Code}={itemEvidence.Value ?? "-"} [{itemEvidence.Weight:0.000}]"));
+
+            var media = item.Media;
+            var itemExternalIds = media is null
+                ? string.Empty
+                : string.Join(
+                    " || ",
+                    media.ExternalIds
+                        .OrderBy(static pair => pair.Key)
+                        .Select(static pair => $"{pair.Key}={pair.Value}"));
+            var itemOrigins = media is null
+                ? string.Empty
+                : string.Join(
+                    " || ",
+                    media.Origin.CountryCodes
+                        .OrderBy(static value => value, StringComparer.OrdinalIgnoreCase));
+
+            subjectByItemKey.TryGetValue(
+                MediaCatalogStore.ItemKey(item),
+                out var subject);
+            var subjectExternalIds = subject is null
+                ? string.Empty
+                : string.Join(
+                    " || ",
+                    subject.Media.ExternalIds
+                        .OrderBy(static pair => pair.Key)
+                        .Select(static pair => $"{pair.Key}={pair.Value}"));
 
             var metadata = item.Metadata;
             var metadataLocalizedTitles = metadata is null
@@ -687,6 +730,18 @@ public sealed partial class CatalogView : UserControl
                 needsReview ? "true" : "false",
                 reviewPriority,
                 ReviewReason(recognition),
+                media?.Id ?? string.Empty,
+                media?.Format.ToString() ?? string.Empty,
+                media?.Domain.ToString() ?? string.Empty,
+                media?.Origin.PrimaryCountryCode ?? string.Empty,
+                itemOrigins,
+                itemExternalIds,
+                subject?.Media.Id ?? string.Empty,
+                subject?.GroupingKey ?? string.Empty,
+                subject?.GroupingBasis ?? string.Empty,
+                subject?.Media.Format.ToString() ?? string.Empty,
+                subject?.Media.Domain.ToString() ?? string.Empty,
+                subjectExternalIds,
                 recognition?.RuntimeVersion ?? string.Empty,
                 source,
                 item.SourceTitle,
