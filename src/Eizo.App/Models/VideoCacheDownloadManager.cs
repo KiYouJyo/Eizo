@@ -21,6 +21,7 @@ internal sealed record VideoCacheDownloadSnapshot(
     long TotalBytes,
     long CompletedBlocks,
     long TotalBlocks,
+    double BytesPerSecond,
     string? Error,
     DateTimeOffset UpdatedUtc)
 {
@@ -123,6 +124,7 @@ internal sealed class VideoCacheDownloadManager
                         0,
                     CompletedBlocks: 0,
                     TotalBlocks: 0,
+                    BytesPerSecond: 0,
                     Error: null,
                     UpdatedUtc:
                         DateTimeOffset.UtcNow),
@@ -167,9 +169,11 @@ internal sealed class VideoCacheDownloadManager
                     {
                         Status =
                             VideoCacheDownloadStatus.Paused,
+                        BytesPerSecond = 0,
                         UpdatedUtc =
                             DateTimeOffset.UtcNow
                     };
+                ResetSpeedSample(entry);
                 changed = true;
             }
             else if (entry.Snapshot.Status ==
@@ -183,9 +187,11 @@ internal sealed class VideoCacheDownloadManager
                     {
                         Status =
                             VideoCacheDownloadStatus.Downloading,
+                        BytesPerSecond = 0,
                         UpdatedUtc =
                             DateTimeOffset.UtcNow
                     };
+                ResetSpeedSample(entry);
                 changed = true;
             }
         }
@@ -367,6 +373,7 @@ internal sealed class VideoCacheDownloadManager
                         result.BlockCount,
                     TotalBlocks =
                         result.BlockCount,
+                    BytesPerSecond = 0,
                     Error = null,
                     UpdatedUtc =
                         DateTimeOffset.UtcNow
@@ -380,6 +387,7 @@ internal sealed class VideoCacheDownloadManager
                 {
                     Status =
                         VideoCacheDownloadStatus.Canceled,
+                    BytesPerSecond = 0,
                     UpdatedUtc =
                         DateTimeOffset.UtcNow
                 });
@@ -393,6 +401,7 @@ internal sealed class VideoCacheDownloadManager
                 {
                     Status =
                         VideoCacheDownloadStatus.Failed,
+                    BytesPerSecond = 0,
                     Error =
                         exception.Message,
                     UpdatedUtc =
@@ -432,30 +441,86 @@ internal sealed class VideoCacheDownloadManager
 
     private void UpdateProgress(
         DownloadEntry entry,
-        WebDavVideoCacheProgress progress) =>
-        Update(
-            entry,
-            snapshot => snapshot with
+        WebDavVideoCacheProgress progress)
+    {
+        var now =
+            DateTimeOffset.UtcNow;
+
+        lock (_sync)
+        {
+            var elapsed =
+                (now -
+                 entry.LastSpeedSampleUtc)
+                .TotalSeconds;
+            var downloadedDelta =
+                progress.NetworkDownloadedBytes -
+                entry.LastNetworkDownloadedBytes;
+
+            if (downloadedDelta > 0 &&
+                elapsed > 0)
             {
-                GroupKey =
-                    progress.GroupKey,
-                Status =
-                    snapshot.Status ==
-                    VideoCacheDownloadStatus.Paused
-                        ? VideoCacheDownloadStatus.Paused
-                        : VideoCacheDownloadStatus.Downloading,
-                CompletedBytes =
-                    progress.CompletedBytes,
-                TotalBytes =
-                    progress.TotalBytes,
-                CompletedBlocks =
-                    progress.CompletedBlocks,
-                TotalBlocks =
-                    progress.TotalBlocks,
-                Error = null,
-                UpdatedUtc =
-                    DateTimeOffset.UtcNow
-            });
+                var instant =
+                    downloadedDelta /
+                    elapsed;
+
+                entry.SmoothedBytesPerSecond =
+                    entry.SmoothedBytesPerSecond <= 0
+                        ? instant
+                        : entry.SmoothedBytesPerSecond *
+                          0.65d +
+                          instant *
+                          0.35d;
+            }
+            else if (elapsed >= 1d)
+            {
+                entry.SmoothedBytesPerSecond = 0;
+            }
+
+            entry.LastNetworkDownloadedBytes =
+                progress.NetworkDownloadedBytes;
+            entry.LastSpeedSampleUtc = now;
+
+            var snapshot =
+                entry.Snapshot;
+
+            entry.Snapshot =
+                snapshot with
+                {
+                    GroupKey =
+                        progress.GroupKey,
+                    Status =
+                        snapshot.Status ==
+                        VideoCacheDownloadStatus.Paused
+                            ? VideoCacheDownloadStatus.Paused
+                            : VideoCacheDownloadStatus.Downloading,
+                    CompletedBytes =
+                        progress.CompletedBytes,
+                    TotalBytes =
+                        progress.TotalBytes,
+                    CompletedBlocks =
+                        progress.CompletedBlocks,
+                    TotalBlocks =
+                        progress.TotalBlocks,
+                    BytesPerSecond =
+                        snapshot.Status ==
+                        VideoCacheDownloadStatus.Paused
+                            ? 0
+                            : entry.SmoothedBytesPerSecond,
+                    Error = null,
+                    UpdatedUtc = now
+                };
+        }
+
+        RaiseChanged();
+    }
+
+    private static void ResetSpeedSample(
+        DownloadEntry entry)
+    {
+        entry.LastSpeedSampleUtc =
+            DateTimeOffset.UtcNow;
+        entry.SmoothedBytesPerSecond = 0;
+    }
 
     private void Update(
         DownloadEntry entry,
@@ -508,6 +573,13 @@ internal sealed class VideoCacheDownloadManager
         public CancellationTokenSource Cancellation { get; } = new();
 
         public TaskCompletionSource<bool>? ResumeSignal { get; set; }
+
+        public long LastNetworkDownloadedBytes { get; set; }
+
+        public DateTimeOffset LastSpeedSampleUtc { get; set; } =
+            DateTimeOffset.UtcNow;
+
+        public double SmoothedBytesPerSecond { get; set; }
 
         public Task Completion { get; set; } =
             Task.CompletedTask;

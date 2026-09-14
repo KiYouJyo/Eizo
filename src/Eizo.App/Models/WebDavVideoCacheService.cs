@@ -7,7 +7,8 @@ internal sealed record WebDavVideoCacheProgress(
     long CompletedBytes,
     long TotalBytes,
     long CompletedBlocks,
-    long TotalBlocks);
+    long TotalBlocks,
+    long NetworkDownloadedBytes);
 
 internal sealed record WebDavVideoCacheResult(
     string GroupKey,
@@ -100,6 +101,7 @@ internal sealed class WebDavVideoCacheService
             WebDavMediaCacheKeys.BlockCount(
                 contentLength);
         long completedBytes = 0;
+        long networkDownloadedBytes = 0;
 
         for (long blockIndex = 0;
              blockIndex < blockCount;
@@ -151,6 +153,8 @@ internal sealed class WebDavVideoCacheService
                         $"WebDAV returned {bytes.Length} bytes for a {expected}-byte media block.");
                 }
 
+                networkDownloadedBytes += bytes.Length;
+
                 await global::Eizo.CacheRuntime.Store.WriteBytesAsync(
                     CacheCategory.Media,
                     cacheKey,
@@ -173,7 +177,8 @@ internal sealed class WebDavVideoCacheService
                     completedBytes,
                     contentLength,
                     blockIndex + 1,
-                    blockCount));
+                    blockCount,
+                    networkDownloadedBytes));
         }
 
         await global::Eizo.CacheRuntime.Store.SetGroupPinnedAsync(

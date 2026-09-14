@@ -147,6 +147,8 @@ public sealed class CacheItemModel : INotifyPropertyChanged
     private string? _taskKey;
     private CachedVideoPlaybackRequest? _playbackRequest;
     private string _deleteText;
+    private string _speedText;
+    private bool _isDownloading;
 
     public CacheItemModel(
         string id,
@@ -163,7 +165,9 @@ public sealed class CacheItemModel : INotifyPropertyChanged
         CachedVideoPlaybackRequest? playbackRequest = null,
         string deleteText = "",
         bool isPaused = false,
-        bool isFailed = false)
+        bool isFailed = false,
+        string speedText = "",
+        bool isDownloading = false)
     {
         Id = id;
         _title = title;
@@ -180,6 +184,8 @@ public sealed class CacheItemModel : INotifyPropertyChanged
         _deleteText = deleteText;
         _isPaused = isPaused;
         _isFailed = isFailed;
+        _speedText = speedText;
+        _isDownloading = isDownloading;
     }
 
     public string Id { get; }
@@ -197,6 +203,8 @@ public sealed class CacheItemModel : INotifyPropertyChanged
     public string? TaskKey { get => _taskKey; private set => Set(ref _taskKey, value); }
     public CachedVideoPlaybackRequest? PlaybackRequest { get => _playbackRequest; private set => Set(ref _playbackRequest, value); }
     public string DeleteText { get => _deleteText; private set => Set(ref _deleteText, value); }
+    public string SpeedText { get => _speedText; private set => Set(ref _speedText, value); }
+    public bool IsDownloading { get => _isDownloading; private set => Set(ref _isDownloading, value); }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -228,6 +236,8 @@ public sealed class CacheItemModel : INotifyPropertyChanged
         TaskKey = value.TaskKey;
         PlaybackRequest = value.PlaybackRequest;
         DeleteText = value.DeleteText;
+        SpeedText = value.SpeedText;
+        IsDownloading = value.IsDownloading;
     }
 
     private void Set<T>(

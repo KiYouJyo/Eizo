@@ -380,6 +380,15 @@ public sealed partial class CacheView : UserControl
                       "%"
                     : T("Cache_StatusPreparing");
 
+            var isDownloading =
+                task.Status ==
+                VideoCacheDownloadStatus.Downloading;
+            var speedText =
+                isDownloading
+                    ? FormatSpeed(
+                        task.BytesPerSecond)
+                    : string.Empty;
+
             desired.Add(
                 new CacheItemModel(
                     "task:" + task.TaskKey,
@@ -411,7 +420,9 @@ public sealed partial class CacheView : UserControl
                         : null,
                     T("Cache_DeleteVideo"),
                     paused,
-                    failed));
+                    failed,
+                    speedText,
+                    isDownloading));
         }
 
         foreach (var group in snapshot.Entries
@@ -832,6 +843,21 @@ public sealed partial class CacheView : UserControl
         }
 
         return selected;
+    }
+
+    private static string FormatSpeed(
+        double bytesPerSecond)
+    {
+        var megabytesPerSecond =
+            Math.Max(
+                0d,
+                bytesPerSecond) /
+            (1024d * 1024d);
+
+        return megabytesPerSecond.ToString(
+                   "0.0",
+                   CultureInfo.CurrentCulture) +
+               " MB/s";
     }
 
     private static string FormatBytes(
