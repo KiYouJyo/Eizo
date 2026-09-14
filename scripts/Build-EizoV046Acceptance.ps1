@@ -34,6 +34,13 @@ if ([string]::IsNullOrWhiteSpace($env:RELEASE_CERTIFICATE_BASE64) -or
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$metadataPin = Get-Content -LiteralPath (Join-Path $repoRoot 'eng/Eizo.Metadata.json') -Raw | ConvertFrom-Json
+$expectedMetadataRuntimeVersion = [string]$metadataPin.version
+if ([string]::IsNullOrWhiteSpace($expectedMetadataRuntimeVersion)) {
+    throw 'Pinned Eizo.Metadata version is missing.'
+}
+$expectedMetadataRuntimeRegex = [regex]::Escape($expectedMetadataRuntimeVersion)
+
 Push-Location $repoRoot
 try {
     $runnerTemp = if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) { [IO.Path]::GetTempPath() } else { $env:RUNNER_TEMP }
@@ -221,7 +228,7 @@ try {
     }
     $bundledRuntimeLine = @(Get-Content -LiteralPath $bundledRuntimeLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
     $bundledAssembly = Join-Path ([string]$pkg.InstallLocation) 'Components\Bundled\Recognition\Eizo.Metadata.Recognition.dll'
-    if ($bundledRuntimeLine -notmatch '\tversion=0\.2\.20\texternal=False\tprobe=' -or
+    if ($bundledRuntimeLine -notmatch "\tversion=$expectedMetadataRuntimeRegex\texternal=False\tprobe=" -or
         $bundledRuntimeLine -notmatch ([regex]::Escape($bundledAssembly))) {
         throw "Bundled Recognition runtime was not actually invoked from the packaged fallback. Log:`n$bundledRuntimeLine"
     }
@@ -233,14 +240,14 @@ try {
     $bundledMetadataLine = @(Get-Content -LiteralPath $bundledMetadataLog | Where-Object { $_ -match '\tversion=' }) | Select-Object -Last 1
     $bundledCore = Join-Path ([string]$pkg.InstallLocation) 'Components\Bundled\Recognition\Eizo.Metadata.Core.dll'
     $bundledProviders = Join-Path ([string]$pkg.InstallLocation) 'Components\Bundled\Recognition\Eizo.Metadata.Providers.dll'
-    if ($bundledMetadataLine -notmatch '\tversion=0\.2\.20\texternal=False\tprobe=ok\t' -or
+    if ($bundledMetadataLine -notmatch "\tversion=$expectedMetadataRuntimeRegex\texternal=False\tprobe=ok\t" -or
         $bundledMetadataLine -notmatch ([regex]::Escape($bundledCore)) -or
         $bundledMetadataLine -notmatch ([regex]::Escape($bundledProviders))) {
         throw "Bundled Metadata Core/Providers were not actually invoked from the packaged fallback. Log:`n$bundledMetadataLine"
     }
 
     $running | Stop-Process -Force -ErrorAction SilentlyContinue
-    Write-Host 'Bundled Metadata 0.2.20 fallback and real Recognition/Core/Providers calls PASS.'
+    Write-Host "Bundled Metadata $expectedMetadataRuntimeVersion fallback and real Recognition/Core/Providers calls PASS."
 
     Write-Host '== Build one-click acceptance assets =='
     Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
