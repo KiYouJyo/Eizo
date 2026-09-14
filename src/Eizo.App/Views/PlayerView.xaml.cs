@@ -490,13 +490,18 @@ public sealed partial class PlayerView : UserControl
                 if (!_playIntent)
                     await engine.PauseAsync(token);
 
+                // Refresh native tracks before discovering external subtitles so an
+                // automatically selected embedded text track wins the primary slot.
+                // It is then promoted to the same WinUI overlay renderer used by
+                // external subtitles.
+                await engine.Tracks.RefreshAsync(token);
+
                 await DiscoverAndAttachExternalSubtitlesAsync(
                     engine,
                     source,
                     catalogItem,
                     token);
 
-                await engine.Tracks.RefreshAsync(token);
                 await TryPromoteSelectedEmbeddedSubtitleAsync(
                     engine,
                     source,
