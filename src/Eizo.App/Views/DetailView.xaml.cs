@@ -63,6 +63,37 @@ public sealed partial class DetailView : UserControl
         InitializeComponent();
         ApplyText();
         ApplySubject();
+
+        Loaded += DetailView_Loaded;
+        Unloaded += DetailView_Unloaded;
+    }
+
+    private void DetailView_Loaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        PlaybackHistoryStore.Default.Changed -=
+            PlaybackHistoryStore_Changed;
+        PlaybackHistoryStore.Default.Changed +=
+            PlaybackHistoryStore_Changed;
+
+        RebuildEpisodeList();
+    }
+
+    private void DetailView_Unloaded(
+        object sender,
+        RoutedEventArgs e)
+    {
+        PlaybackHistoryStore.Default.Changed -=
+            PlaybackHistoryStore_Changed;
+    }
+
+    private void PlaybackHistoryStore_Changed(
+        object? sender,
+        EventArgs e)
+    {
+        DispatcherQueue.TryEnqueue(
+            RebuildEpisodeList);
     }
 
     private string T(string key) => _localization.GetString(key);
@@ -274,17 +305,63 @@ public sealed partial class DetailView : UserControl
             ? FormatEpisodeNumber(value)
             : "-";
 
+        var history = PlaybackHistoryStore.Default.GetLatestEntry(
+            new CatalogMediaItemModel?[]
+            {
+                episode.PrimaryItem,
+            }.Concat(episode.AlternateItems));
+
+        var progress = history?.ProgressPercent ?? 0d;
+        var status = history is null ||
+                     history.PositionSeconds <= 0d
+            ? T("Category_Unwatched")
+            : progress >= 95d
+                ? L("已看完", "視聴済み", "Watched")
+                : L(
+                    $"已播放 {FormatPlaybackTime(history.PositionSeconds)}",
+                    $"{FormatPlaybackTime(history.PositionSeconds)} まで視聴",
+                    $"Played {FormatPlaybackTime(history.PositionSeconds)}");
+
+        var duration = history is { DurationSeconds: > 0d }
+            ? FormatPlaybackTime(history.DurationSeconds)
+            : string.Empty;
+
+        var thumbnailUrl =
+            episode.PrimaryItem.Metadata?.EpisodeThumbnailUrl;
+
+        if (string.IsNullOrWhiteSpace(thumbnailUrl))
+        {
+            thumbnailUrl =
+                episode.PrimaryItem.Metadata?.BackdropUrl;
+        }
+
+        if (string.IsNullOrWhiteSpace(thumbnailUrl))
+        {
+            thumbnailUrl = _subject?.Metadata?.BackdropUrl;
+        }
+
         return new EpisodeDisplayItemModel(
             number,
             episode.Title,
             episode.NativeTitle,
-            string.Empty,
-            string.Empty,
-            0,
+            duration,
+            status,
+            progress,
             episode.PrimaryItem,
             CreateRemoteImage(
-                episode.PrimaryItem.Metadata?.EpisodeThumbnailUrl,
-                320));
+                thumbnailUrl,
+                360));
+    }
+
+    private static string FormatPlaybackTime(
+        double totalSeconds)
+    {
+        var value = TimeSpan.FromSeconds(
+            Math.Max(0d, totalSeconds));
+
+        return value.TotalHours >= 1d
+            ? value.ToString(@"h\:mm\:ss", CultureInfo.CurrentCulture)
+            : value.ToString(@"m\:ss", CultureInfo.CurrentCulture);
     }
 
     private static string FormatEpisodeNumber(decimal value) =>
