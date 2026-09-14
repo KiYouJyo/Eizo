@@ -8,12 +8,12 @@ namespace Eizo.MetadataIntegration;
 
 public sealed record MediaMetadataServiceOptions(
     bool EnableBangumi = true,
-    string BangumiUserAgent = "KiYouJyo/Eizo/0.3.9 (https://github.com/KiYouJyo/Eizo)",
+    string BangumiUserAgent = "KiYouJyo/Eizo/0.4.7 (https://github.com/KiYouJyo/Eizo)",
     string PreferredLanguage = "zh-CN",
     string? TmdbReadAccessToken = null,
     string? CacheDirectory = null,
     bool EnableArtworkProviders = true,
-    string AniListUserAgent = "KiYouJyo/Eizo/0.4.6 (https://github.com/KiYouJyo/Eizo)");
+    string AniListUserAgent = "KiYouJyo/Eizo/0.4.7 (https://github.com/KiYouJyo/Eizo)");
 
 public sealed class MediaMetadataService
 {
@@ -27,6 +27,7 @@ public sealed class MediaMetadataService
 
     private readonly Core.MetadataResolver? _resolver;
     private readonly Core.MetadataArtworkResolver? _artworkResolver;
+    private readonly Core.IMetadataProvider? _tmdbProvider;
     private readonly string _preferredLanguage;
 
     public MediaMetadataService(
@@ -109,10 +110,11 @@ public sealed class MediaMetadataService
                 fileCache,
                 Core.MetadataCachePolicy.Default);
 
-            providers.Add(new Core.CachedMetadataProvider(
+            _tmdbProvider = new Core.CachedMetadataProvider(
                 persistentTmdb,
                 memoryCache,
-                Core.MetadataCachePolicy.Default));
+                Core.MetadataCachePolicy.Default);
+            providers.Add(_tmdbProvider);
 
             if (options.EnableArtworkProviders)
             {
@@ -312,6 +314,84 @@ public sealed class MediaMetadataService
             }
         }
 
+        var episodeThumbnailUrl = episode?.ThumbnailUrl;
+
+        if (string.IsNullOrWhiteSpace(episodeThumbnailUrl) &&
+            _tmdbProvider is not null)
+        {
+            var targetEpisodeNumber =
+                episode?.EpisodeNumber ??
+                recognition.EpisodeNumber ??
+                recognition.SpecialNumber;
+
+            if (targetEpisodeNumber is not null)
+            {
+                var tmdbCandidate = result.Resolution.Candidates
+                    .Where(static candidate =>
+                        string.Equals(
+                            candidate.Candidate.Id.Provider,
+                            "tmdb",
+                            StringComparison.OrdinalIgnoreCase) &&
+                        candidate.Candidate.Id.Kind ==
+                            Core.MetadataSubjectKind.Series)
+                    .Where(candidate =>
+                        candidate.Score >= AutoResolveThreshold)
+                    .OrderByDescending(static candidate =>
+                        candidate.Score)
+                    .ThenBy(static candidate =>
+                        candidate.Candidate.ProviderRank)
+                    .FirstOrDefault();
+
+                if (tmdbCandidate is not null)
+                {
+                    var targetSeason =
+                        episode?.SeasonNumber ??
+                        recognition.SeasonNumber ??
+                        (recognition.SpecialNumber is not null &&
+                         recognition.EpisodeNumber is null
+                            ? 0
+                            : 1);
+
+                    try
+                    {
+                        var tmdbEpisodes =
+                            await _tmdbProvider.GetEpisodesAsync(
+                                    tmdbCandidate.Candidate.Id,
+                                    targetSeason,
+                                    cancellationToken)
+                                .ConfigureAwait(false);
+
+                        episodeThumbnailUrl = tmdbEpisodes
+                            .Where(item =>
+                                item.EpisodeNumber ==
+                                    targetEpisodeNumber)
+                            .OrderBy(item =>
+                                item.SeasonNumber ==
+                                    targetSeason
+                                    ? 0
+                                    : 1)
+                            .Select(static item =>
+                                item.ThumbnailUrl)
+                            .FirstOrDefault(static url =>
+                                !string.IsNullOrWhiteSpace(url));
+                    }
+                    catch (OperationCanceledException)
+                        when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        errors.Add(
+                            new MetadataProviderErrorSnapshot(
+                                "tmdb-episode-artwork",
+                                exception.GetType().Name,
+                                exception.Message));
+                    }
+                }
+            }
+        }
+
         return WithResolutionDiagnostics(
             new MediaMetadataSnapshot(
                 RuntimeVersion,
@@ -339,7 +419,7 @@ public sealed class MediaMetadataService
                 episode?.Titles.Original,
                 episode?.Overview,
                 episode?.AirDate?.ToString("yyyy-MM-dd"),
-                episode?.ThumbnailUrl,
+                episodeThumbnailUrl,
                 result.Resolution.Confidence,
                 errors,
                 DateTimeOffset.UtcNow),
