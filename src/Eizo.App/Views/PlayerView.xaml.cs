@@ -104,6 +104,11 @@ public sealed partial class PlayerView : UserControl
                 0,
                 _queueItems.Count - 1);
             _currentSource = _queueItems[_queueIndex].Source;
+            _lastKnownPosition =
+                PlaybackHistoryStore.Default.GetResumePosition(
+                    _queueItems[_queueIndex].CatalogItem);
+            PlaybackHistoryStore.Default.Touch(
+                _queueItems[_queueIndex].CatalogItem);
         }
         else
         {
@@ -367,6 +372,10 @@ public sealed partial class PlayerView : UserControl
             if (_isPreparingForDetach || !ReferenceEquals(_engine, engine)) return;
             if (_seekDebounce is not null) return;
             _lastKnownPosition = e.Position;
+            PlaybackHistoryStore.Default.Record(
+                CurrentQueueItem?.CatalogItem,
+                e.Position,
+                _duration);
             CurrentTimeText.Text = FormatTime(e.Position);
             UpdatePrimarySubtitle(e.Position);
             UpdateSecondarySubtitle(e.Position);
@@ -381,6 +390,10 @@ public sealed partial class PlayerView : UserControl
         DispatchEngine(sender, () =>
         {
             _duration = e.Duration;
+            PlaybackHistoryStore.Default.Record(
+                CurrentQueueItem?.CatalogItem,
+                _lastKnownPosition,
+                e.Duration);
             _isUpdatingTimeline = true;
             try
             {
@@ -2371,6 +2384,11 @@ public sealed partial class PlayerView : UserControl
         }
         catch (Exception exception)
         { PlaybackTrace.Write("view", "detach", "error", exception.GetType().Name); }
+        PlaybackHistoryStore.Default.Record(
+            CurrentQueueItem?.CatalogItem,
+            _lastKnownPosition,
+            _duration);
+        PlaybackHistoryStore.Default.Flush();
         PlaybackTrace.Write("view", "detach", "complete");
     }
 
@@ -2560,7 +2578,11 @@ public sealed partial class PlayerView : UserControl
             item.Source.Uri.ToString(),
             _queueIndex,
             _queueItems.Count);
-        _lastKnownPosition = TimeSpan.Zero;
+        _lastKnownPosition =
+            PlaybackHistoryStore.Default.GetResumePosition(
+                item.CatalogItem);
+        PlaybackHistoryStore.Default.Touch(
+            item.CatalogItem);
         _duration = TimeSpan.Zero;
         _playIntent = autoplay;
 
