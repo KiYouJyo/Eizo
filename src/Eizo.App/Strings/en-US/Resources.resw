@@ -1393,4 +1393,10 @@
   <data name="Settings_SubtitleStyle" xml:space="preserve">
     <value>Subtitle position and background</value>
   </data>
+  <data name="Settings_PreferredSecondarySubtitleLanguage" xml:space="preserve">
+    <value>Preferred second subtitle language</value>
+  </data>
+  <data name="Settings_PreferredSecondarySubtitleLanguageDescription" xml:space="preserve">
+    <value>Choose the preferred language for the second subtitle. Auto does not enable a second subtitle by itself.</value>
+  </data>
 </root>
