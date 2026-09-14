@@ -1393,4 +1393,10 @@
   <data name="Settings_SubtitleStyle" xml:space="preserve">
     <value>字幕位置と背景</value>
   </data>
+  <data name="Settings_PreferredSecondarySubtitleLanguage" xml:space="preserve">
+    <value>優先第2字幕言語</value>
+  </data>
+  <data name="Settings_PreferredSecondarySubtitleLanguageDescription" xml:space="preserve">
+    <value>第2字幕の優先言語を選択します。自動では第2字幕を自動的に有効化しません。</value>
+  </data>
 </root>
