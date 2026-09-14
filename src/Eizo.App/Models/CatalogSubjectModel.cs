@@ -150,6 +150,8 @@ internal static class CatalogSubjectAggregator
             .OfType<MediaMetadataSnapshot>()
             .Where(static value => value.IsResolved)
             .OrderByDescending(static value =>
+                !string.IsNullOrWhiteSpace(value.BackdropUrl))
+            .ThenByDescending(static value =>
                 !string.IsNullOrWhiteSpace(value.PosterUrl))
             .ThenByDescending(static value =>
                 !string.IsNullOrWhiteSpace(value.CanonicalTitle) ||
