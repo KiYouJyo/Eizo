@@ -31,6 +31,7 @@ foreach ($required in @(
     'DefaultPlaybackRateCombo',
     'PreferredAudioLanguageCombo',
     'PreferredSubtitleLanguageCombo',
+    'PreferredSecondarySubtitleLanguageCombo',
     'RememberSubtitleTrackToggle',
     'PrimarySubtitlePositionSettingsSlider',
     'SecondarySubtitlePositionSettingsSlider',
@@ -62,7 +63,8 @@ foreach ($required in @(
     'LastPlaybackRate',
     'RememberSubtitleTrack',
     'PreferredAudioLanguage',
-    'PreferredSubtitleLanguage')) {
+    'PreferredSubtitleLanguage',
+    'PreferredSecondarySubtitleLanguage')) {
     if ($appSettings -notmatch [regex]::Escape($required)) {
         throw "Persisted settings contract missing: $required"
     }
@@ -88,6 +90,8 @@ foreach ($required in @(
     'ApplyTrackPreferencesAsync',
     'PreferredAudioLanguage',
     'PreferredSubtitleLanguage',
+    'PreferredSecondarySubtitleLanguage',
+    'automaticSecondaryCandidate',
     'RememberPrimarySubtitlePreference',
     'PlaybackTrackPreferenceStore')) {
     if ($player -notmatch [regex]::Escape($required)) {
