@@ -1,4 +1,4 @@
-using Eizo.Localization;
+using System.Globalization;
 using Eizo.MetadataIntegration;
 
 namespace Eizo.Models;
@@ -12,7 +12,7 @@ internal static class MediaTitleDisplayResolver
         if (metadata is { IsResolved: true })
         {
             var language =
-                AppLocalizationService.Default.CurrentLanguage;
+                ResolveCurrentLanguage();
             var localized =
                 FindLocalizedTitle(
                     metadata.LocalizedTitles,
@@ -61,7 +61,7 @@ internal static class MediaTitleDisplayResolver
                 metadata.CanonicalTitle,
                 FindLocalizedTitle(
                     metadata.LocalizedTitles,
-                    AppLocalizationService.Default.CurrentLanguage),
+                    ResolveCurrentLanguage()),
             };
 
             foreach (var candidate in candidates)
@@ -82,6 +82,18 @@ internal static class MediaTitleDisplayResolver
         }
 
         return string.Empty;
+    }
+
+    private static string ResolveCurrentLanguage()
+    {
+        var language = CultureInfo.CurrentUICulture.Name;
+        if (language.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
+            return "ja-JP";
+        if (language.StartsWith("en", StringComparison.OrdinalIgnoreCase))
+            return "en-US";
+        if (language.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+            return "zh-CN";
+        return "ja-JP";
     }
 
     private static string? FindLocalizedTitle(
