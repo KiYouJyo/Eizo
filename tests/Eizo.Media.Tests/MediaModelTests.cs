@@ -100,7 +100,11 @@ public sealed class MediaModelTests
                     new Dictionary<string, string>
                     {
                         ["tmdb"] = "62085",
-                    }),
+                    },
+                    SeasonTitle: "Season 1",
+                    SeasonOverview: "The first season.",
+                    SeasonAirDate: "2008-01-20",
+                    SeasonPosterUrl: "https://image.tmdb.org/t/p/original/season1.jpg"),
                 new(
                     "s2e1",
                     2,
@@ -119,6 +123,10 @@ public sealed class MediaModelTests
         Assert.Equal(2, series.Seasons.Count);
         Assert.Equal("3572", series.Seasons[0].ExternalIds["tmdb"]);
         Assert.Equal("3573", series.Seasons[1].ExternalIds["tmdb"]);
+        Assert.Equal("Season 1", series.Seasons[0].Title);
+        Assert.Equal("The first season.", series.Seasons[0].Overview);
+        Assert.Equal("2008-01-20", series.Seasons[0].AirDate);
+        Assert.EndsWith("season1.jpg", series.Seasons[0].PosterUrl);
         Assert.Equal(
             "62085",
             series.Seasons[0].Episodes[0].ExternalIds["tmdb"]);

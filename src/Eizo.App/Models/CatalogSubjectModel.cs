@@ -309,10 +309,20 @@ internal static class CatalogSubjectAggregator
                     episode.SeasonNumber,
                     episode.EpisodeNumber,
                     episode.IsSpecial,
-                    SeasonExternalIds: null,
+                    SeasonExternalIds:
+                        MediaModelProjection.ProjectSeasonExternalIds(
+                            episode.PrimaryItem.Metadata),
                     EpisodeExternalIds:
                         MediaModelProjection.ProjectEpisodeExternalIds(
-                            episode.PrimaryItem.Metadata)))
+                            episode.PrimaryItem.Metadata),
+                    SeasonTitle:
+                        episode.PrimaryItem.Metadata?.SeasonTitle,
+                    SeasonOverview:
+                        episode.PrimaryItem.Metadata?.SeasonOverview,
+                    SeasonAirDate:
+                        episode.PrimaryItem.Metadata?.SeasonAirDate,
+                    SeasonPosterUrl:
+                        episode.PrimaryItem.Metadata?.SeasonPosterUrl))
             .ToArray();
 
         return EizoMediaHierarchy.BuildSeries(media, seeds);

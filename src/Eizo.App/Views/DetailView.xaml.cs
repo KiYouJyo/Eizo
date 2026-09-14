@@ -205,11 +205,20 @@ public sealed partial class DetailView : UserControl
         else
         {
             var seasons = _subject.SeasonNumbers
-                .Select(season => new SeasonOption(
-                    season,
-                    season == 0
+                .Select(season =>
+                {
+                    var seasonModel = _subject.Series?.Seasons
+                        .FirstOrDefault(item => item.Number == season);
+                    var fallbackLabel = season == 0
                         ? L("特别篇", "スペシャル", "Specials")
-                        : $"Season {season}"))
+                        : $"Season {season}";
+
+                    return new SeasonOption(
+                        season,
+                        string.IsNullOrWhiteSpace(seasonModel?.Title)
+                            ? fallbackLabel
+                            : seasonModel!.Title!);
+                })
                 .ToArray();
 
             SeasonComboBox.ItemsSource = seasons;

@@ -57,6 +57,16 @@ public sealed record MediaMetadataSnapshot(
 
     public string? ProviderEpisodeId { get; init; }
 
+    public string? ProviderSeasonId { get; init; }
+
+    public string? SeasonTitle { get; init; }
+
+    public string? SeasonOverview { get; init; }
+
+    public string? SeasonAirDate { get; init; }
+
+    public string? SeasonPosterUrl { get; init; }
+
     public List<string> SearchTitles { get; init; } = [];
 
     public int CandidateCount { get; init; }
