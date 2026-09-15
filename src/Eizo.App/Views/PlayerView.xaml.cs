@@ -2884,7 +2884,10 @@ public sealed partial class PlayerView : UserControl
             _session.Cancel();
             PlaybackTrace.Write("view", "detach", "start");
             _fullscreenControlsTimer.Stop();
+            _directionHoldTimer.Stop();
             _loadingMetricsTimer.Stop();
+            CancelDirectionKeyGesture(restoreRate: true);
+            EndTimelineScrub();
             RemovePointerWheelHandler();
 
             _seekDebounce?.Cancel();
