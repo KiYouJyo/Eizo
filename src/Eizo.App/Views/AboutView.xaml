@@ -130,6 +130,11 @@
                     <TextBlock x:Name="RecognitionAvailableVersionText" Grid.Column="3" VerticalAlignment="Center" Text="—" />
                     <TextBlock Grid.Column="4" Text="Eizo.Metadata" VerticalAlignment="Center" />
                     <TextBlock x:Name="RecognitionUpdateStatusText" Grid.Column="5" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <Button x:Name="RecognitionReleaseNotesButton"
+                            Grid.Column="6"
+                            MinWidth="132"
+                            VerticalAlignment="Center"
+                            Click="RecognitionReleaseNotesButton_Click" />
                     <Button x:Name="CheckRecognitionUpdateButton"
                             Grid.Column="7"
                             MinWidth="132"
