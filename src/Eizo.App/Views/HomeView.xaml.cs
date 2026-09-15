@@ -926,6 +926,17 @@ public sealed partial class HomeView : UserControl
     private string T(string key) =>
         _localization.GetString(key);
 
+    private string L(
+        string zhCn,
+        string jaJp,
+        string enUs) =>
+        _localization.CurrentLanguage switch
+        {
+            "ja-JP" => jaJp,
+            "en-US" => enUs,
+            _ => zhCn,
+        };
+
     private void ApplyText()
     {
         PageTitle.Text = T("Nav_Home");
