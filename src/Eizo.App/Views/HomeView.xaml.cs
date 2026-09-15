@@ -236,7 +236,7 @@ public sealed partial class HomeView : UserControl
                 decodePixelWidth: 1200);
 
             FeaturedPlayButton.IsEnabled = true;
-            FeaturedDetailsButton.IsEnabled = true;
+            FeaturedDetailsButton.IsEnabled = false;
             UpdateHeroLayout();
             return;
         }
@@ -810,10 +810,8 @@ public sealed partial class HomeView : UserControl
             return;
         }
 
-        if (_featuredItem is { } item)
-            DetailRequested?.Invoke(
-                this,
-                item.DisplayTitle);
+        // Standalone/unparsed media has no real subject detail model.
+        // Keep the details button disabled rather than routing to legacy sample UI.
     }
 
     private void FeaturedPlayButton_Click(
@@ -821,14 +819,11 @@ public sealed partial class HomeView : UserControl
         RoutedEventArgs e)
     {
         if (_featuredItem is { } item)
+        {
             CatalogMediaRequested?.Invoke(
                 this,
                 item);
-        else if (!string.IsNullOrWhiteSpace(
-                     FeaturedTitle.Text))
-            PlayRequested?.Invoke(
-                this,
-                FeaturedTitle.Text);
+        }
     }
 
     private void MediaCard_Click(
