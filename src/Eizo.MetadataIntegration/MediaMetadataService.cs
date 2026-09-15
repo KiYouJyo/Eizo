@@ -8,12 +8,12 @@ namespace Eizo.MetadataIntegration;
 
 public sealed record MediaMetadataServiceOptions(
     bool EnableBangumi = true,
-    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.11 (https://github.com/KiYouJyo/Eizo)",
+    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.13 (https://github.com/KiYouJyo/Eizo)",
     string PreferredLanguage = "zh-CN",
     string? TmdbReadAccessToken = null,
     string? CacheDirectory = null,
     bool EnableArtworkProviders = true,
-    string AniListUserAgent = "KiYouJyo/Eizo/0.5.11 (https://github.com/KiYouJyo/Eizo)");
+    string AniListUserAgent = "KiYouJyo/Eizo/0.5.13 (https://github.com/KiYouJyo/Eizo)");
 
 public sealed class MediaMetadataService
 {
@@ -159,6 +159,18 @@ public sealed class MediaMetadataService
 
     public bool IsAvailable => _resolver is not null;
 
+    public IReadOnlyCollection<string> AvailableProviders =>
+        _providers.Keys
+            .OrderBy(static value =>
+                value,
+                StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    public bool IsProviderAvailable(
+        string provider) =>
+        !string.IsNullOrWhiteSpace(provider) &&
+        _providerResolvers.ContainsKey(provider);
+
     public async Task<IReadOnlyList<MediaMetadataMatchCandidate>>
         SearchCandidatesAsync(
             HostRecognition.MediaRecognitionSnapshot recognition,
@@ -208,11 +220,16 @@ public sealed class MediaMetadataService
             Limit: 20);
 
         Core.MetadataResolution resolution;
-        if (!string.IsNullOrWhiteSpace(provider) &&
-            _providerResolvers.TryGetValue(
-                provider,
-                out var providerResolver))
+        if (!string.IsNullOrWhiteSpace(provider))
         {
+            if (!_providerResolvers.TryGetValue(
+                    provider,
+                    out var providerResolver))
+            {
+                return Array.Empty<
+                    MediaMetadataMatchCandidate>();
+            }
+
             resolution = await providerResolver
                 .ResolveAsync(
                     request,
