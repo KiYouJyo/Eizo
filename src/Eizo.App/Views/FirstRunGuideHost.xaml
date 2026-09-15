@@ -96,7 +96,10 @@
                         Visibility="Collapsed"
                         Spacing="10">
               <Border Style="{StaticResource SettingsInnerCardStyle}">
-                <views:SourcesView x:Name="EmbeddedSourcesView" Height="430" />
+                <ContentControl x:Name="SourceSetupHost"
+                                Height="430"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch" />
               </Border>
             </StackPanel>
 
