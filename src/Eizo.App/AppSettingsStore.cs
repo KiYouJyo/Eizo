@@ -40,7 +40,7 @@ internal static class AppSettingsStore
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Eizo",
+        ProductFlavor.IsDemo ? "Eizo.Demo" : "Eizo",
         "settings.json");
 
     private static AppSettings _current = LoadCore();
