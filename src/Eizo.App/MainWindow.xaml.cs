@@ -1185,16 +1185,6 @@ public sealed partial class MainWindow : Window
         }.ShowAsync();
     }
 
-    private void ShowPlayerInDetailTab(ShellTabState state, string title, string episode)
-    {
-        state.MediaTitle = title;
-        state.Episode = episode;
-        ReplaceTabView(state, new PlayerView(title, episode));
-        state.Title = title + "—" + episode;
-        state.Glyph = "\uE768";
-        UpdateTabIdentity(state);
-    }
-
     private void AddTab(ShellTabState state, bool select)
     {
         state.Visual = CreateTabVisual(state);
