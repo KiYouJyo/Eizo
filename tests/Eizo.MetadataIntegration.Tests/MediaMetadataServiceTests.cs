@@ -640,12 +640,14 @@ public sealed class MediaMetadataServiceTests
     public async Task EnrichAsync_ManualBindingResolvesExactTmdbSubjectWhenSearchIsEmpty()
     {
         using var cache = new TempDirectory();
+        var searchCalls = 0;
         var handler = new RecordingHandler(request =>
         {
             var path = request.RequestUri!.AbsolutePath;
 
             if (path.EndsWith("/search/tv", StringComparison.Ordinal))
             {
+                searchCalls++;
                 return Json("""{"results":[]}""");
             }
 
@@ -737,6 +739,47 @@ public sealed class MediaMetadataServiceTests
         Assert.Equal(
             "Bound exact subject.",
             result.Overview);
+        Assert.Equal(0, searchCalls);
+    }
+
+    [Fact]
+    public async Task SearchCandidatesAsync_RequestedUnavailableProviderDoesNotFallback()
+    {
+        using var cache = new TempDirectory();
+        var bangumiCalls = 0;
+        var handler = new RecordingHandler(_ =>
+        {
+            bangumiCalls++;
+            return Json("""{"data":[],"total":0}""");
+        });
+
+        var service = new MediaMetadataService(
+            new MediaMetadataServiceOptions(
+                CacheDirectory: cache.Path),
+            bangumiHttpClient:
+                new HttpClient(handler));
+
+        Assert.True(
+            service.IsProviderAvailable("bangumi"));
+        Assert.False(
+            service.IsProviderAvailable("tmdb"));
+        Assert.DoesNotContain(
+            "tmdb",
+            service.AvailableProviders,
+            StringComparer.OrdinalIgnoreCase);
+
+        var candidates =
+            await service.SearchCandidatesAsync(
+                Recognition(
+                    "Breaking Bad",
+                    2008,
+                    1),
+                query: "Breaking Bad",
+                provider: "tmdb",
+                TestContext.Current.CancellationToken);
+
+        Assert.Empty(candidates);
+        Assert.Equal(0, bangumiCalls);
     }
 
     [Fact]
