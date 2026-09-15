@@ -18,6 +18,7 @@ $catalog = Read-Text 'src/Eizo.App/Views/CatalogView.xaml.cs'
 $detailXaml = Read-Text 'src/Eizo.App/Views/DetailView.xaml'
 $detail = Read-Text 'src/Eizo.App/Views/DetailView.xaml.cs'
 $homeView = Read-Text 'src/Eizo.App/Views/HomeView.xaml.cs'
+$main = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
 $project = Read-Text 'src/Eizo.App/Eizo.App.csproj'
 $manifest = Read-Text 'src/Eizo.App/Package.appxmanifest'
 $release = Read-Text 'release/release.json'
@@ -93,6 +94,22 @@ if ($homeView.Contains(
         'PlayRequested?.Invoke(',
         [StringComparison]::Ordinal)) {
     throw 'Home hero still routes to the legacy title-only sample detail/player path.'
+}
+
+foreach ($required in @(
+    'FeaturedNativeTitle.Visibility',
+    'FeaturedMeta.Visibility',
+    'FeaturedDescription.Visibility',
+    'FeaturedDetailsButton.Visibility')) {
+    if (-not $homeView.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Home real-content visibility handling is incomplete: $required"
+    }
+}
+
+if ($main.Contains(
+        'CategoryView',
+        [StringComparison]::Ordinal)) {
+    throw 'Legacy demo CategoryView wiring must not remain in the production shell.'
 }
 
 foreach ($required in @(
