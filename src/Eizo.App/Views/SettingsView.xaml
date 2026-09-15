@@ -227,6 +227,8 @@
                               Spacing="8">
                     <Button x:Name="TmdbSaveTokenButton"
                             Click="TmdbSaveTokenButton_Click" />
+                    <Button x:Name="TmdbVerifyTokenButton"
+                            Click="TmdbVerifyTokenButton_Click" />
                     <Button x:Name="TmdbRemoveTokenButton"
                             Click="TmdbRemoveTokenButton_Click" />
                   </StackPanel>
