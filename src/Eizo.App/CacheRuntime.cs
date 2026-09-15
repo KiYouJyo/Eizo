@@ -33,12 +33,15 @@ internal static class CacheRuntime
 
     internal static async Task RunStartupMaintenanceAsync()
     {
+        Eizo.StartupTrace.Mark("CacheRuntime.StartupMaintenance:begin");
         try
         {
             await EnforcePolicyAsync();
+            Eizo.StartupTrace.Mark("CacheRuntime.StartupMaintenance:end");
         }
         catch
         {
+            Eizo.StartupTrace.Mark("CacheRuntime.StartupMaintenance:error");
             // Cache maintenance is best-effort and must never block app startup.
         }
     }
