@@ -157,6 +157,40 @@ public sealed class MediaModelProjectionTests
     }
 
     [Fact]
+    public void TmdbProjectionDropsLegacyBangumiLibraryIdentity()
+    {
+        var recognition = Recognition("Example Series", 2024);
+        var existing = new EizoMedia(
+            "eizo:local:example",
+            MediaFormat.TvSeries,
+            MediaContentDomain.Animation,
+            MediaOrigin.Unknown,
+            new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["bangumi"] = "12345",
+                ["imdb"] = "tt1234567",
+            });
+
+        var projected = MediaModelProjection.Project(
+            recognition,
+            Metadata(
+                provider: "tmdb",
+                id: "98765",
+                contentKind: "Animation",
+                externalIds: new Dictionary<string, string>
+                {
+                    ["tmdb"] = "98765",
+                    ["imdb"] = "tt1234567",
+                }),
+            existing);
+
+        Assert.Equal("98765", projected.GetExternalId("tmdb"));
+        Assert.Equal("tt1234567", projected.GetExternalId("imdb"));
+        Assert.Null(projected.GetExternalId("bangumi"));
+    }
+
+    [Fact]
     public void ProjectionDistinguishesMovieAndOvaFormats()
     {
         var movie = Recognition("Oppenheimer", 2023) with
