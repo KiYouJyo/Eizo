@@ -406,14 +406,6 @@ public sealed partial class MainWindow : Window
 
     private void WireWorkspaceMediaView(HomeView view)
     {
-        view.DetailRequested += (_, title) =>
-            OpenDetail(
-                title,
-                startPlaying: false);
-        view.PlayRequested += (_, title) =>
-            OpenDetail(
-                title,
-                startPlaying: true);
         view.CatalogMediaRequested += async (_, item) =>
             await OpenCatalogMediaAsync(item);
         view.CatalogSubjectRequested += (_, subject) =>
@@ -428,12 +420,6 @@ public sealed partial class MainWindow : Window
             NavigateSelectedWorkspace(
                 "categories",
                 CategoryNav);
-    }
-
-    private void WireWorkspaceMediaView(CategoryView view)
-    {
-        view.DetailRequested += (_, title) => OpenDetail(title, startPlaying: false);
-        view.PlayRequested += (_, title) => OpenDetail(title, startPlaying: true);
     }
 
     private void WireWorkspaceMediaView(CatalogView view)
