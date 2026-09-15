@@ -127,8 +127,26 @@ public sealed partial class FirstRunGuideHost : UserControl
             L("播放", "再生", "Playback"),
             L("完成", "完了", "Finish")
         };
-        StepTrail.Text = string.Join("  ›  ", labels.Select(
-            (label, index) => index == _step ? $"【{label}】" : label));
+        var stepLabels = new[]
+        {
+            StepLabel0,
+            StepLabel1,
+            StepLabel2,
+            StepLabel3,
+            StepLabel4,
+            StepLabel5
+        };
+        for (var index = 0; index < stepLabels.Length; index++)
+        {
+            stepLabels[index].Text = index == _step
+                ? $"【{labels[index]}】"
+                : labels[index];
+            stepLabels[index].Opacity = index == _step
+                ? 1.0
+                : index < _step
+                    ? 0.78
+                    : 0.58;
+        }
         StepProgress.Value = _step + 1;
 
         (GuideTitle.Text, GuideBody.Text) = _step switch
@@ -170,6 +188,8 @@ public sealed partial class FirstRunGuideHost : UserControl
         PlaybackStep.Visibility = _step == 4 ? Visibility.Visible : Visibility.Collapsed;
         CompleteStep.Visibility = _step == 5 ? Visibility.Visible : Visibility.Collapsed;
 
+        BackButton.Content = L("上一步", "戻る", "Back");
+        BackButton.Visibility = _step > 0 ? Visibility.Visible : Visibility.Collapsed;
         BackButton.IsEnabled = _step > 0 && !_isBusy;
         SkipButton.Visibility = _step is >= 1 and <= 4 ? Visibility.Visible : Visibility.Collapsed;
         SkipButton.Content = L("稍后设置", "後で設定", "Set up later");
