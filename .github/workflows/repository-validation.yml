@@ -92,6 +92,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-RealContentUiCloseoutV0512Contract.ps1
 
+      - name: Validate Eizo 0.5.13 TMDB production integration contract
+        shell: pwsh
+        run: ./scripts/Test-TmdbProductionIntegrationV0513Contract.ps1
+
       - name: Validate Bangumi public integration contract
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1
