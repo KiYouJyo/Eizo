@@ -19,10 +19,12 @@ internal sealed class PlaybackHistoryStore
 
     private PlaybackHistoryStore()
     {
+        Eizo.StartupTrace.Mark("PlaybackHistoryStore.ctor:begin");
         _entries = LoadCore()
             .ToDictionary(
                 static entry => entry.ItemKey,
                 StringComparer.Ordinal);
+        Eizo.StartupTrace.Mark($"PlaybackHistoryStore.ctor:end entries={_entries.Count}");
     }
 
     internal static PlaybackHistoryStore Default { get; } = new();
