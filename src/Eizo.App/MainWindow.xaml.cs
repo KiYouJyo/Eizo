@@ -38,7 +38,8 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         StartupTrace.Mark("MainWindow.InitializeComponent:end");
 
-        Title = "Eizo 映藏";
+        Title = ProductFlavor.WindowTitle;
+        AppTitleText.Text = ProductFlavor.AppTitleText;
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Eizo.ico"));
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
