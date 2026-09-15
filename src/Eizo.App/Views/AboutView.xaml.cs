@@ -11,6 +11,7 @@ public sealed partial class AboutView : UserControl
 {
     private static readonly Uri ProductRepositoryUri = new("https://github.com/KiYouJyo/Eizo");
     private static readonly Uri ReleasesUri = new("https://github.com/KiYouJyo/Eizo/releases");
+    private static readonly Uri MetadataReleasesUri = new("https://github.com/KiYouJyo/Eizo.Metadata/releases");
     private static readonly Uri PrivacyUri = new("https://github.com/KiYouJyo/Eizo/blob/main/PRIVACY.md");
     private static readonly Uri TmdbUri = new("https://www.themoviedb.org");
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
@@ -178,6 +179,16 @@ public sealed partial class AboutView : UserControl
         var uri = _updates.ProductInfo.Release is { HtmlUrl.Length: > 0 } release
             ? new Uri(release.HtmlUrl)
             : ReleasesUri;
+        await Launcher.LaunchUriAsync(uri);
+    }
+
+    private async void RecognitionReleaseNotesButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var uri = _updates.RecognitionUpdateService.LatestRelease is { HtmlUrl.Length: > 0 } release
+            ? new Uri(release.HtmlUrl)
+            : MetadataReleasesUri;
         await Launcher.LaunchUriAsync(uri);
     }
 
@@ -406,6 +417,7 @@ public sealed partial class AboutView : UserControl
             "识别与元数据内核",
             "認識・メタデータコア",
             "Recognition & metadata runtime");
+        RecognitionReleaseNotesButton.Content = T("About_ReleaseNotes");
         CheckRecognitionUpdateButton.Content = T("About_CheckUpdates");
 
         TmdbAttributionTitle.Text =

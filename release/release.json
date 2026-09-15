@@ -1,12 +1,12 @@
 {
     "schemaVersion": 1,
     "product": {
-        "version": "0.5.14",
-        "packageVersion": "0.5.14.0",
+        "version": "0.6.0",
+        "packageVersion": "0.6.0.0",
         "title": {
-            "zh-CN": "刮削架构解耦与优化",
-            "ja-JP": "スクレイピング構成の分離と最適化",
-            "en-US": "Scraping Architecture Simplification"
+            "zh-CN": "播放器与详情体验完善",
+            "ja-JP": "プレーヤーと詳細画面の改善",
+            "en-US": "Player and Detail Experience"
         }
     },
     "channels": {

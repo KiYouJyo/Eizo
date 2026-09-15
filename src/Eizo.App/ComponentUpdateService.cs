@@ -38,6 +38,8 @@ internal sealed class ComponentUpdateService
         _definition = definition ?? throw new ArgumentNullException(nameof(definition));
     }
 
+    public GitHubReleaseInfo? LatestRelease => _pendingRelease;
+
     public ComponentUpdateResult CreateInitialResult()
     {
         var runtime = ComponentRuntimeBootstrapper.GetStatus(_definition);
@@ -52,6 +54,7 @@ internal sealed class ComponentUpdateService
         {
             var release = await GitHubUpdateService.GetLatestReleaseAsync(_definition.Repository, cancellationToken: cancellationToken).ConfigureAwait(false);
             if (release is null) return Fail(current, null, "NoRelease");
+            _pendingRelease = release;
             if (!GitHubUpdateService.TryParseVersionTag(release.TagName, out var parsedVersion))
                 return Fail(current, null, "InvalidVersion", release.TagName);
 

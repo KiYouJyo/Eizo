@@ -75,24 +75,23 @@ if (-not $project.Contains('../Eizo.Bangumi/Eizo.Bangumi.csproj', [StringCompari
     throw 'Bangumi product module must remain available after metadata decoupling.'
 }
 
-foreach ($required in @(
-    '<Version>0.5.14</Version>',
-    '<AssemblyVersion>0.5.14.0</AssemblyVersion>',
-    '<FileVersion>0.5.14.0</FileVersion>',
-    '<InformationalVersion>0.5.14</InformationalVersion>')) {
-    if (-not $project.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Project version is not closed on 0.5.14: $required"
-    }
-}
-if (-not $manifest.Contains('Version="0.5.14.0"', [StringComparison]::Ordinal)) {
-    throw 'Package manifest is not 0.5.14.0.'
-}
-foreach ($required in @(
-    '"version": "0.5.14"',
-    '"packageVersion": "0.5.14.0"',
-    '"en-US": "Scraping Architecture Simplification"')) {
-    if (-not $release.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Release metadata is not closed on 0.5.14: $required"
+[xml]$projectXml = $project
+[xml]$manifestXml = $manifest
+$releaseJson = $release | ConvertFrom-Json
+
+$currentProductVersion = [Version]::Parse(
+    [string]@($projectXml.Project.PropertyGroup | ForEach-Object Version | Where-Object { $_ })[0])
+$currentPackageVersion = [Version]::Parse(
+    [string]$manifestXml.Package.Identity.Version)
+$currentReleaseVersion = [Version]::Parse(
+    [string]$releaseJson.product.version)
+
+foreach ($versionCheck in @(
+    @{ Name = 'Project'; Value = $currentProductVersion },
+    @{ Name = 'Package'; Value = $currentPackageVersion },
+    @{ Name = 'Release'; Value = $currentReleaseVersion })) {
+    if ($versionCheck.Value -lt [Version]'0.5.14') {
+        throw "$($versionCheck.Name) version regressed below the 0.5.14 scraping-architecture baseline: $($versionCheck.Value)"
     }
 }
 
