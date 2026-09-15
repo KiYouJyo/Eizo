@@ -25,6 +25,16 @@ public static class MediaModelProjection
                 metadata.ProviderSubjectId;
         }
 
+        if (string.Equals(
+                metadata?.Provider,
+                "tmdb",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            // v0.5.14 library metadata is TMDB-only. Do not carry
+            // legacy Bangumi identity forward in projected media.
+            externalIds.Remove("bangumi");
+        }
+
         var format = ResolveFormat(recognition, metadata);
         if (format == MediaFormat.Unknown && existing is not null)
             format = existing.Format;
