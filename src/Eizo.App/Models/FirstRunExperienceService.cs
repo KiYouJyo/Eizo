@@ -31,12 +31,33 @@ internal sealed class FirstRunExperienceService
         lock (_gate) return LoadCore().CompletedGuideVersion < CurrentVersion;
     }
 
+    public int GetResumeStep()
+    {
+        lock (_gate)
+            return Math.Clamp(LoadCore().LastStep, 0, 5);
+    }
+
+    public void RecordStep(int step)
+    {
+        lock (_gate)
+        {
+            var state = LoadCore();
+            var normalized = Math.Clamp(step, 0, 5);
+            if (state.LastStep == normalized || state.CompletedGuideVersion >= CurrentVersion)
+                return;
+
+            state.LastStep = normalized;
+            _ = TrySave(state, out _);
+        }
+    }
+
     public bool TryMarkCompleted(out string? error)
     {
         lock (_gate)
         {
             var state = LoadCore();
             state.CompletedGuideVersion = CurrentVersion;
+            state.LastStep = 5;
             return TrySave(state, out error);
         }
     }
@@ -54,6 +75,8 @@ internal sealed class FirstRunExperienceService
             if (loaded is null ||
                 loaded.StateSchemaVersion <= 0 ||
                 loaded.CompletedGuideVersion < 0 ||
+                loaded.LastStep < 0 ||
+                loaded.LastStep > 5 ||
                 loaded.StateSchemaVersion > CurrentSchemaVersion)
             {
                 return _state = NewPendingState();
@@ -101,6 +124,7 @@ internal sealed class FirstRunExperienceService
     private static FirstRunGuideState NewPendingState() => new()
     {
         StateSchemaVersion = CurrentSchemaVersion,
-        CompletedGuideVersion = 0
+        CompletedGuideVersion = 0,
+        LastStep = 0
     };
 }
