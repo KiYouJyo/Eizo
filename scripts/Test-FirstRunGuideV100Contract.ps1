@@ -83,5 +83,25 @@ if (-not $code.Contains('VirtualKey.Escape') -or
     throw 'First-run interruption/completion semantics are missing.'
 }
 
+foreach ($stepLabel in 0..5) {
+    if (-not $xaml.Contains("x:Name=`"StepLabel$stepLabel`"")) {
+        throw "First-run stepper is missing evenly distributed label StepLabel$stepLabel."
+    }
+}
+if (-not $xaml.Contains('ColumnDefinitions="*,*,*,*,*,*"') -or
+    -not $code.Contains('BackButton.Content = L("上一步"') -or
+    -not $code.Contains('BackButton.Visibility = _step > 0') -or
+    -not $xaml.Contains('x:Name="SkipButton"') -or
+    -not $xaml.Contains('HorizontalAlignment="Left"')) {
+    throw 'First-run stepper/footer alignment contract is missing.'
+}
+
+$sourcesXaml = Read-Text 'src/Eizo.App/Views/SourcesView.xaml'
+if (-not $sourcesXaml.Contains('ColumnDefinitions="*,260,Auto"') -or
+    -not $sourcesXaml.Contains('Width="128"') -or
+    -not $sourcesXaml.Contains('Spacing="8"')) {
+    throw 'Media source card actions must be compact, grouped, and centered.'
+}
+
 Write-Host 'Eizo 1.0 first-run guide contract PASS.'
 Write-Host 'Six steps: Welcome / Sources / TMDB / Bangumi / Playback / Finish.'
