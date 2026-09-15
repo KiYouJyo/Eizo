@@ -721,6 +721,9 @@ public sealed class MediaCatalogStore
         }
     }
 
+    private const int MetadataSubjectParallelism = 3;
+    private const int MetadataSeasonParallelism = 2;
+
     private static async Task<int> EnrichMetadataAsync(
         string sourceId,
         CatalogMediaItemModel[] discovered,
@@ -739,32 +742,141 @@ public sealed class MediaCatalogStore
                 : NeedsMetadataEnrichment(entry.Item))
             .ToArray();
 
+        if (pending.Length == 0)
+        {
+            progress?.Invoke(
+                new MediaScanProgress(
+                    sourceId,
+                    DirectoriesProcessed: 0,
+                    DirectoriesPending: 0,
+                    VideosDiscovered: discovered.Length,
+                    CurrentPath: null,
+                    Stage: MediaScanStage.Metadata,
+                    MetadataProcessed: 0,
+                    MetadataTotal: 0,
+                    MetadataResolved: 0,
+                    MetadataUnresolved: 0,
+                    MetadataErrors: 0));
+            return 0;
+        }
+
+        // v0.5.14 schedules metadata by logical subject instead of by file.
+        // The representative item establishes the persisted TMDB identity.
+        // Remaining episodes then reuse the exact subject ID; different
+        // subjects are allowed to make progress concurrently.
+        var subjectBatches = pending
+            .GroupBy(
+                entry => MetadataSubjectKey(entry.Item),
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group => group
+                .OrderBy(entry =>
+                    entry.Item.Recognition?.SeasonNumber ??
+                    int.MaxValue)
+                .ThenBy(entry =>
+                    entry.Item.Recognition?.EpisodeNumber ??
+                    entry.Item.Recognition?.SpecialNumber ??
+                    decimal.MaxValue)
+                .ThenBy(entry => entry.Index)
+                .ToArray())
+            .ToArray();
+
         var processed = 0;
         var resolved = 0;
         var unresolved = 0;
         var errors = 0;
-        var consecutiveTransportErrors = 0;
-        var cooldownLevel = 0;
+        var progressSync = new object();
 
         ReportMetadataProgress();
 
-        foreach (var entry in pending)
+        using var subjectGate =
+            new SemaphoreSlim(
+                MetadataSubjectParallelism,
+                MetadataSubjectParallelism);
+
+        var subjectTasks = subjectBatches.Select(
+            async batch =>
+            {
+                await subjectGate.WaitAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                try
+                {
+                    await ProcessSubjectBatchAsync(batch)
+                        .ConfigureAwait(false);
+                }
+                finally
+                {
+                    subjectGate.Release();
+                }
+            });
+
+        await Task.WhenAll(subjectTasks)
+            .ConfigureAwait(false);
+
+        return processed;
+
+        async Task ProcessSubjectBatchAsync(
+            (CatalogMediaItemModel Item, int Index)[] batch)
+        {
+            if (batch.Length == 0)
+                return;
+
+            // Resolve one representative first. UpsertAutomatic persists the
+            // TMDB subject ID before follower episodes are scheduled.
+            await ProcessEntryAsync(batch[0])
+                .ConfigureAwait(false);
+
+            if (batch.Length == 1)
+                return;
+
+            var seasonBatches = batch
+                .Skip(1)
+                .GroupBy(entry =>
+                    entry.Item.Recognition?.SeasonNumber ??
+                    0)
+                .Select(static group =>
+                    group.ToArray())
+                .ToArray();
+
+            using var seasonGate =
+                new SemaphoreSlim(
+                    MetadataSeasonParallelism,
+                    MetadataSeasonParallelism);
+
+            var seasonTasks = seasonBatches.Select(
+                async seasonBatch =>
+                {
+                    await seasonGate.WaitAsync(
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    try
+                    {
+                        // Keep episodes inside one season ordered. The first
+                        // episode warms the TMDB season cache; following
+                        // episodes become local cache lookups plus mapping.
+                        foreach (var entry in seasonBatch)
+                        {
+                            await ProcessEntryAsync(entry)
+                                .ConfigureAwait(false);
+                        }
+                    }
+                    finally
+                    {
+                        seasonGate.Release();
+                    }
+                });
+
+            await Task.WhenAll(seasonTasks)
+                .ConfigureAwait(false);
+        }
+
+        async Task ProcessEntryAsync(
+            (CatalogMediaItemModel Item, int Index) entry)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (consecutiveTransportErrors >=
-                MetadataTransportFailuresBeforeCooldown)
-            {
-                await Task.Delay(
-                        MetadataTransportCooldown(cooldownLevel),
-                        cancellationToken)
-                    .ConfigureAwait(false);
-                consecutiveTransportErrors = 0;
-                cooldownLevel++;
-            }
-
             var recognition = entry.Item.Recognition!;
-            var binding = IdentityBindings.GetHint(
+            var binding = IdentityBindings.GetTmdbHint(
                 entry.Item.Media?.Id);
             var candidateMetadata =
                 await EnrichMetadataWithTransportRetryAsync(
@@ -779,6 +891,7 @@ public sealed class MediaCatalogStore
                 forceRefresh,
                 DateTimeOffset.UtcNow);
 
+            var status = metadata?.Status;
             if (metadata is not null)
             {
                 discovered[entry.Index] = entry.Item with
@@ -796,14 +909,16 @@ public sealed class MediaCatalogStore
                         entry.Item.Media?.Id,
                         metadata);
                 }
+            }
 
-                switch (metadata.Status)
+            lock (progressSync)
+            {
+                processed++;
+
+                switch (status)
                 {
                     case MediaMetadataStatus.Resolved:
                         resolved++;
-                        break;
-                    case MediaMetadataStatus.Unresolved:
-                        unresolved++;
                         break;
                     case MediaMetadataStatus.Error:
                         errors++;
@@ -813,24 +928,8 @@ public sealed class MediaCatalogStore
                         break;
                 }
 
-                if (IsTransportMetadataFailure(metadata))
-                {
-                    consecutiveTransportErrors++;
-                }
-                else
-                {
-                    consecutiveTransportErrors = 0;
-                    cooldownLevel = 0;
-                }
+                ReportMetadataProgress();
             }
-            else
-            {
-                unresolved++;
-                consecutiveTransportErrors = 0;
-            }
-
-            processed++;
-            ReportMetadataProgress();
         }
 
         void ReportMetadataProgress() =>
@@ -847,8 +946,23 @@ public sealed class MediaCatalogStore
                     MetadataResolved: resolved,
                     MetadataUnresolved: unresolved,
                     MetadataErrors: errors));
+    }
 
-        return processed;
+    private static string MetadataSubjectKey(
+        CatalogMediaItemModel item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.Media?.Id))
+            return item.Media.Id;
+
+        var recognition = item.Recognition;
+        return string.Join(
+            "|",
+            recognition?.MediaKind ?? string.Empty,
+            recognition?.Title?.Trim()
+                .ToUpperInvariant() ?? string.Empty,
+            recognition?.Year?.ToString(
+                CultureInfo.InvariantCulture) ??
+            string.Empty);
     }
 
     private static async Task<MediaMetadataSnapshot?> EnrichMetadataWithTransportRetryAsync(
