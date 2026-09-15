@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+ <defs>
+  <linearGradient id="g01" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10243e"/><stop offset=".52" stop-color="#477fc4"/><stop offset="1" stop-color="#f2b6a7"/></linearGradient>
+  <radialGradient id="r01" cx=".72" cy=".18" r=".75"><stop stop-color="#f5d9c2" stop-opacity=".75"/><stop offset="1" stop-color="#f5d9c2" stop-opacity="0"/></radialGradient>
+ </defs>
+ <rect width="600" height="900" fill="url(#g01)"/>
+ <rect width="600" height="900" fill="url(#r01)"/>
+ <circle cx="90" cy="120" r="3" fill="#fff" opacity=".8"/><circle cx="475" cy="150" r="2" fill="#fff" opacity=".65"/><circle cx="390" cy="90" r="2.5" fill="#fff" opacity=".65"/>
+ <path d="M70 690 L530 690 M110 640 L490 640" stroke="#f5d9c2" stroke-width="8" opacity=".45"/><path d="M300 90 L300 760" stroke="#f2b6a7" stroke-width="4" opacity=".35"/><circle cx="300" cy="230" r="110" fill="#f2b6a7" opacity=".12"/>
+ <path d="M0 830 C120 790 230 850 350 812 C460 778 520 800 600 760 L600 900 L0 900 Z" fill="#10243e" opacity=".6"/>
+</svg>
