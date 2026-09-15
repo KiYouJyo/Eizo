@@ -45,6 +45,12 @@ public sealed class MediaCatalogStore
 
     private MediaCatalogStore()
     {
+        if (ProductFlavor.IsDemo)
+        {
+            _items = DemoCatalogData.Create();
+            return;
+        }
+
         _items = LoadCore();
         if (PruneMissingLocalFilesCore())
         {
@@ -1533,6 +1539,9 @@ public sealed class MediaCatalogStore
 
     private static void SaveCore(IReadOnlyList<CatalogMediaItemModel> items)
     {
+        if (ProductFlavor.IsDemo)
+            return;
+
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
