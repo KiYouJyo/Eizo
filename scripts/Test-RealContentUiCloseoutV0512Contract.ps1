@@ -73,6 +73,7 @@ foreach ($required in @(
     'OverviewText.Visibility',
     'ReleaseStatBadge.Visibility',
     'EpisodeEmptyStateText.Visibility',
+    'PlayButton.Visibility',
     'ShowMetadataActionStatus(')) {
     if (-not $detail.Contains($required, [StringComparison]::Ordinal)) {
         throw "Detail-page real-content state handling is incomplete: $required"
@@ -82,7 +83,10 @@ foreach ($required in @(
 foreach ($forbidden in @(
     'SourceStatText.Text = L("示例", "サンプル", "Sample")',
     '"一级魔法使考试"',
-    '"一級魔法使試験"')) {
+    '"一級魔法使試験"',
+    '"第18话"',
+    'public DetailView(string title)',
+    'public event EventHandler<string>? PlayRequested;')) {
     if ($detail.Contains($forbidden, [StringComparison]::Ordinal)) {
         throw "Legacy sample detail content remains reachable: $forbidden"
     }
@@ -113,6 +117,21 @@ foreach ($shellText in @($main, $responsive)) {
             [StringComparison]::Ordinal)) {
         throw 'Legacy demo CategoryView wiring must not remain in the production shell.'
     }
+}
+
+foreach ($forbidden in @(
+    'OpenDetail(string title',
+    'ShowDetailInTab(',
+    'ShowPlayerInDetailTab(')) {
+    if ($main.Contains($forbidden, [StringComparison]::Ordinal)) {
+        throw "Legacy title-only detail/player route remains in the production shell: $forbidden"
+    }
+}
+
+if ($detailXaml.Contains(
+        'FavoriteButton',
+        [StringComparison]::Ordinal)) {
+    throw 'Nonfunctional FavoriteButton must not remain in the real-content detail UI.'
 }
 
 foreach ($required in @(
