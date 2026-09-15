@@ -200,10 +200,14 @@ public sealed partial class HomeView : UserControl
         if (_featuredSubject is { } subject &&
             _featuredItem is { } subjectItem)
         {
-            FeaturedTitle.Text = subject.Title;
-            FeaturedNativeTitle.Text = subject.NativeTitle;
+            var presentation =
+                CatalogSubjectPresentation.Create(subject);
+
+            FeaturedTitle.Text = presentation.Title;
+            FeaturedNativeTitle.Text = presentation.SecondaryTitle;
             FeaturedNativeTitle.Visibility =
-                string.IsNullOrWhiteSpace(subject.NativeTitle)
+                string.IsNullOrWhiteSpace(
+                    presentation.SecondaryTitle)
                     ? Visibility.Collapsed
                     : Visibility.Visible;
             FeaturedMeta.Text = subject.Meta;
@@ -212,7 +216,7 @@ public sealed partial class HomeView : UserControl
                     ? Visibility.Collapsed
                     : Visibility.Visible;
             FeaturedDescription.Text =
-                subject.Metadata?.Overview ?? string.Empty;
+                presentation.Overview;
             FeaturedDescription.Visibility =
                 string.IsNullOrWhiteSpace(FeaturedDescription.Text)
                     ? Visibility.Collapsed
