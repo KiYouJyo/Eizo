@@ -47,6 +47,26 @@ internal static class MetadataMatchDialog
             return null;
         }
 
+        var providerOptions =
+            new List<ProviderOption>
+            {
+                new(
+                    L("全部", "すべて", "All"),
+                    null),
+                new(
+                    "Bangumi",
+                    "bangumi"),
+            };
+
+        if (MediaScanCoordinator.Default
+                .IsTmdbConfigured)
+        {
+            providerOptions.Add(
+                new ProviderOption(
+                    "TMDB",
+                    "tmdb"));
+        }
+
         var providerBox = new ComboBox
         {
             Header = L(
@@ -55,18 +75,7 @@ internal static class MetadataMatchDialog
                 "Provider"),
             HorizontalAlignment =
                 HorizontalAlignment.Stretch,
-            ItemsSource = new[]
-            {
-                new ProviderOption(
-                    L("全部", "すべて", "All"),
-                    null),
-                new ProviderOption(
-                    "Bangumi",
-                    "bangumi"),
-                new ProviderOption(
-                    "TMDB",
-                    "tmdb"),
-            },
+            ItemsSource = providerOptions,
             DisplayMemberPath =
                 nameof(ProviderOption.Label),
             SelectedIndex = 0,
@@ -214,6 +223,21 @@ internal static class MetadataMatchDialog
             MinWidth = 520,
         };
         content.Children.Add(providerBox);
+        if (!MediaScanCoordinator.Default
+                .IsTmdbConfigured)
+        {
+            content.Children.Add(
+                new TextBlock
+                {
+                    Text = L(
+                        "TMDB 尚未配置，可在设置 → 元数据中添加 Read Access Token。",
+                        "TMDB は未設定です。設定 → メタデータで Read Access Token を追加できます。",
+                        "TMDB is not configured. Add a Read Access Token in Settings → Metadata."),
+                    Opacity = 0.62,
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap,
+                });
+        }
         content.Children.Add(queryBox);
         content.Children.Add(searchButton);
         content.Children.Add(statusText);
