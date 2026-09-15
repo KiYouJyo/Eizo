@@ -17,7 +17,7 @@ $catalogXaml = Read-Text 'src/Eizo.App/Views/CatalogView.xaml'
 $catalog = Read-Text 'src/Eizo.App/Views/CatalogView.xaml.cs'
 $detailXaml = Read-Text 'src/Eizo.App/Views/DetailView.xaml'
 $detail = Read-Text 'src/Eizo.App/Views/DetailView.xaml.cs'
-$home = Read-Text 'src/Eizo.App/Views/HomeView.xaml.cs'
+$homeView = Read-Text 'src/Eizo.App/Views/HomeView.xaml.cs'
 $project = Read-Text 'src/Eizo.App/Eizo.App.csproj'
 $manifest = Read-Text 'src/Eizo.App/Package.appxmanifest'
 $release = Read-Text 'release/release.json'
@@ -86,10 +86,10 @@ foreach ($forbidden in @(
     }
 }
 
-if ($home.Contains(
+if ($homeView.Contains(
         'DetailRequested?.Invoke(',
         [StringComparison]::Ordinal) -or
-    $home.Contains(
+    $homeView.Contains(
         'PlayRequested?.Invoke(',
         [StringComparison]::Ordinal)) {
     throw 'Home hero still routes to the legacy title-only sample detail/player path.'
