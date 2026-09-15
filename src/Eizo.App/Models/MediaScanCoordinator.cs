@@ -492,7 +492,10 @@ public sealed class MediaScanCoordinator
             "MetadataCache");
 
         var options = new MediaMetadataServiceOptions(
-            EnableBangumi: true,
+            // v0.5.14: the local media library has a single online
+            // metadata authority. Bangumi remains available to the
+            // discovery/community product surface, not scraping.
+            EnableBangumi: false,
             PreferredLanguage:
                 AppLocalizationService.Default.CurrentLanguage,
             TmdbReadAccessToken:
