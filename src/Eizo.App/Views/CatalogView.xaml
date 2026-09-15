@@ -190,6 +190,10 @@
                            FontSize="11"
                            Opacity="0.78"
                            TextTrimming="CharacterEllipsis" />
+                <!-- Compatibility binding for diagnostic/export regressions.
+                     Hidden from the normal 0.5.12 card UI. -->
+                <TextBlock Text="{Binding SourceLabel}"
+                           Visibility="Collapsed" />
               </StackPanel>
             </Grid>
           </Border>
