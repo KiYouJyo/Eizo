@@ -5,7 +5,7 @@
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap rescap">
-  <Identity Name="Eizo" Publisher="CN=AppPublisher" Version="0.6.0.0" />
+  <Identity Name="Eizo" Publisher="CN=AppPublisher" Version="0.6.1.0" />
   <mp:PhoneIdentity PhoneProductId="89A07165-44A4-43FC-8428-5C4520B35CF9" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>Eizo</DisplayName>
@@ -26,9 +26,15 @@
       <uap:VisualElements
         DisplayName="Eizo"
         Description="A native Windows media library for anime, Japanese drama, movies and personal media."
-        BackgroundColor="transparent"
+        BackgroundColor="#FFFFFF"
         Square150x150Logo="Assets\Square150x150Logo.png"
-        Square44x44Logo="Assets\Square44x44Logo.png" />
+        Square44x44Logo="Assets\AppList.png">
+        <uap:DefaultTile
+          Wide310x150Logo="Assets\Wide310x150Logo.png"
+          Square310x310Logo="Assets\Square310x310Logo.png"
+          Square71x71Logo="Assets\Square71x71Logo.png" />
+        <uap:SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#FFFFFF" />
+      </uap:VisualElements>
       <Extensions>
         <uap:Extension Category="windows.protocol">
           <uap:Protocol Name="eizo">

@@ -17,11 +17,12 @@
         <Border Style="{StaticResource SettingsSectionCardStyle}">
           <StackPanel Spacing="16">
             <Grid ColumnDefinitions="64,18,*" MinHeight="64">
-              <Border Width="64" Height="64" CornerRadius="10"
-                      Background="{ThemeResource EizoSelectionBrush}">
-                <TextBlock Text="E" FontSize="30" FontWeight="SemiBold"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-              </Border>
+              <Image Width="64"
+                     Height="64"
+                     Source="ms-appx:///Assets/AboutLogo.png"
+                     Stretch="Uniform"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center" />
               <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
                 <TextBlock Text="映藏 Eizo" FontSize="24" FontWeight="SemiBold" />
                 <TextBlock Text="映藏" FontSize="16" />

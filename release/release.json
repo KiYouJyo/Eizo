@@ -1,12 +1,12 @@
 {
     "schemaVersion": 1,
     "product": {
-        "version": "0.6.0",
-        "packageVersion": "0.6.0.0",
+        "version": "0.6.1",
+        "packageVersion": "0.6.1.0",
         "title": {
-            "zh-CN": "播放器与详情体验完善",
-            "ja-JP": "プレーヤーと詳細画面の改善",
-            "en-US": "Player and Detail Experience"
+            "zh-CN": "应用视觉资产更新",
+            "ja-JP": "アプリビジュアルアセット更新",
+            "en-US": "Application Visual Asset Refresh"
         }
     },
     "channels": {

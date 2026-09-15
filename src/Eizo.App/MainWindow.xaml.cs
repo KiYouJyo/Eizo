@@ -36,6 +36,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
 
         Title = "Eizo 映藏";
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Eizo.ico"));
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
