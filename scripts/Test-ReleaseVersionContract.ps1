@@ -112,11 +112,13 @@ finally {
     Remove-Item -LiteralPath $releaseBodyPath -Force -ErrorAction SilentlyContinue
 }
 
-$currentAcceptanceScript = "scripts/Build-EizoV$($version.Replace('.', '').PadLeft(4,'0'))Acceptance.ps1"
-# Current naming convention is V0311 for 0.3.11 and V042 for 0.4.2.
-$currentAcceptanceScript = "scripts/Build-EizoV0$($version.Split('.')[1])$($version.Split('.')[2])Acceptance.ps1"
+# Acceptance assets use all numeric SemVer components without dots:
+# 0.6.1 -> 061, 0.3.11 -> 0311, 1.0.0 -> 100.
+$versionParts = $version.Split('.')
+$acceptanceKey = "$($versionParts[0])$($versionParts[1])$($versionParts[2])"
+$currentAcceptanceScript = "scripts/Build-EizoV${acceptanceKey}Acceptance.ps1"
 
-$workflowPrefix = "v0$($version.Split('.')[1])$($version.Split('.')[2])-"
+$workflowPrefix = "v${acceptanceKey}-"
 $currentAcceptanceWorkflow = @(
     Get-ChildItem -LiteralPath (Join-Path $repoRoot '.github/workflows') -File -Filter "$workflowPrefix*acceptance.yml"
     | Sort-Object Name
