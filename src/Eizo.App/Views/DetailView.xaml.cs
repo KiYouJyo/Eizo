@@ -18,57 +18,8 @@ public sealed partial class DetailView : UserControl
         BangumiRepository.Default;
     private CancellationTokenSource? _creditsLoadCancellation;
 
-    public event EventHandler<string>? PlayRequested;
     public event EventHandler<CatalogMediaItemModel>? MediaPlayRequested;
     public event EventHandler<CatalogSubjectModel>? SubjectUpdated;
-
-    public DetailView(string title)
-    {
-        InitializeComponent();
-        ApplyText();
-
-        TitleText.Text = title;
-        NativeTitleText.Text = string.Empty;
-        NativeTitleText.Visibility = Visibility.Collapsed;
-        MetaText.Text = string.Empty;
-        MetaText.Visibility = Visibility.Collapsed;
-        OverviewText.Text =
-            L(
-                "此内容尚未连接到媒体库作品。",
-                "このコンテンツはまだメディアライブラリの作品に関連付けられていません。",
-                "This content is not linked to a media-library title yet.");
-        OverviewText.Visibility = Visibility.Visible;
-
-        ReleaseStatText.Text = string.Empty;
-        EpisodeStatText.Text = string.Empty;
-        SourceStatText.Text = string.Empty;
-        ReleaseStatBadge.Visibility = Visibility.Collapsed;
-        EpisodeStatBadge.Visibility = Visibility.Collapsed;
-        SourceStatBadge.Visibility = Visibility.Collapsed;
-
-        EpisodeList.ItemsSource =
-            Array.Empty<EpisodeDisplayItemModel>();
-        EpisodeList.Visibility = Visibility.Collapsed;
-        EpisodeEmptyStateText.Text =
-            L(
-                "没有可播放的媒体条目。",
-                "再生できるメディア項目がありません。",
-                "No playable media items are available.");
-        EpisodeEmptyStateText.Visibility = Visibility.Visible;
-
-        SeasonComboBox.ItemsSource =
-            Array.Empty<SeasonOption>();
-        SeasonComboBox.SelectedIndex = -1;
-        SeasonComboBox.Visibility = Visibility.Collapsed;
-        EpisodeCountText.Text = "0";
-
-        CreditsStatusText.Text =
-            L(
-                "暂无演职人员信息。",
-                "キャスト・スタッフ情報はありません。",
-                "No cast or staff information.");
-        CreditsStatusText.Visibility = Visibility.Visible;
-    }
 
     public DetailView(CatalogSubjectModel subject)
     {
@@ -230,6 +181,14 @@ public sealed partial class DetailView : UserControl
             string.IsNullOrWhiteSpace(SourceStatText.Text)
                 ? Visibility.Collapsed
                 : Visibility.Visible;
+
+        var hasPlayableItem =
+            _subject.FirstPlayableItem is not null;
+        PlayButton.IsEnabled = hasPlayableItem;
+        PlayButton.Visibility =
+            hasPlayableItem
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
         if (_subject.IsMovieSubject)
         {
@@ -1173,7 +1132,6 @@ public sealed partial class DetailView : UserControl
             }
         }
 
-        PlayRequested?.Invoke(this, "第18话");
     }
 
     private sealed record CharacterCreditViewModel(
