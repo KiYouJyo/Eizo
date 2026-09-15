@@ -14,10 +14,6 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: eizo-pages
-  cancel-in-progress: true
-
 jobs:
   deploy:
     environment:
