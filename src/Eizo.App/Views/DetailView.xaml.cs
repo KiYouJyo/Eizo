@@ -5,7 +5,7 @@ using Eizo.MetadataIntegration;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Media;
 
 namespace Eizo.Views;
 
@@ -831,31 +831,10 @@ public sealed partial class DetailView : UserControl
     private void ApplyBackdrop(string? backdropUrl) =>
         BackdropImage.Source = CreateRemoteImage(backdropUrl, 1400);
 
-    private static BitmapImage? CreateRemoteImage(
+    private static ImageSource? CreateRemoteImage(
         string? url,
-        int decodePixelWidth)
-    {
-        if (string.IsNullOrWhiteSpace(url) ||
-            !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
-            (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-             !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
-        {
-            return null;
-        }
-
-        try
-        {
-            return new BitmapImage
-            {
-                UriSource = uri,
-                DecodePixelWidth = decodePixelWidth,
-            };
-        }
-        catch
-        {
-            return null;
-        }
-    }
+        int decodePixelWidth) =>
+        ArtworkImageSource.Create(url, decodePixelWidth);
 
     private void SeasonComboBox_SelectionChanged(
         object sender,
@@ -1136,7 +1115,7 @@ public sealed partial class DetailView : UserControl
         string Name,
         string Relation,
         string ActorText,
-        BitmapImage? Image);
+        ImageSource? Image);
 
     private sealed record StaffCreditViewModel(
         string Relation,
