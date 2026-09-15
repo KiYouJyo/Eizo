@@ -58,13 +58,15 @@ foreach ($required in @(
 
 foreach ($required in @(
     'MetadataMatchDialog',
-    'SearchMetadataMatchesAsync(',
-    'Bangumi',
-    'TMDB')) {
+    'SearchMetadataMatchesAsync(')) {
     if (-not $dialog.Contains($required, [StringComparison]::Ordinal)) {
         throw "Shared manual-match dialog is incomplete: $required"
     }
 }
+
+# Provider selection is owned by the active metadata architecture.
+# v0.5.11 guarantees per-title manual matching, not a permanent
+# multi-provider chooser. Later releases may intentionally simplify it.
 
 foreach ($required in @(
     'AddSubjectMetadataActions(',
