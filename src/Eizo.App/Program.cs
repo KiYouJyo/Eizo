@@ -10,7 +10,9 @@ public static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        StartupTrace.Mark("Program.Main:begin");
         ComWrappersSupport.InitializeComWrappers();
+        StartupTrace.Mark("ComWrappersSupport.InitializeComWrappers:end");
 
         var currentInstance = AppInstance.GetCurrent();
         var mainInstance = AppInstance.FindOrRegisterForKey(SingleInstanceActivation.InstanceKey);
@@ -35,12 +37,16 @@ public static class Program
         mainInstance.Activated += (_, activationArguments) =>
             App.OnRedirectedActivation(activationArguments);
 
+        StartupTrace.Mark("Application.Start:begin");
         Application.Start(callbackParameters =>
         {
+            StartupTrace.Mark("Application.Start callback:begin");
             var synchronizationContext =
                 new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());
             SynchronizationContext.SetSynchronizationContext(synchronizationContext);
+            StartupTrace.Mark("App ctor:begin");
             _ = new App();
+            StartupTrace.Mark("App ctor:end");
         });
     }
 }
