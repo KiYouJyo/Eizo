@@ -11,7 +11,9 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Foundation;
+using Windows.Storage.Streams;
 using Windows.System;
 
 namespace Eizo.Views;
@@ -23,6 +25,7 @@ public sealed partial class PlayerView : UserControl
     private PlaybackOperationSession _session = new();
     private Task? _detachTask;
     private readonly DispatcherTimer _fullscreenControlsTimer;
+    private readonly DispatcherTimer _directionHoldTimer;
     private readonly DispatcherTimer _loadingMetricsTimer;
 
     private IPlaybackEngine? _engine;
@@ -54,6 +57,11 @@ public sealed partial class PlayerView : UserControl
     private bool _positionUiUpdatePending;
     private PointerEventHandler? _pointerWheelHandler;
     private CancellationTokenSource? _seekDebounce;
+    private bool _isScrubbingTimeline;
+    private VirtualKey? _heldDirectionKey;
+    private bool _directionHoldActive;
+    private double _rateBeforeDirectionHold = 1d;
+    private bool _isUpdatingPlaybackRateUi;
     private bool _loadingMetricsRefreshInFlight;
     private bool _isLoadingStatusVisible;
     private long? _lastLoadingReadBytes;
@@ -134,9 +142,17 @@ public sealed partial class PlayerView : UserControl
 
         _fullscreenControlsTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromSeconds(2.5)
+            Interval = TimeSpan.FromSeconds(
+                AppSettingsStore.NormalizeFullscreenControlsTimeout(
+                    AppSettingsStore.Current.FullscreenControlsTimeoutSeconds))
         };
         _fullscreenControlsTimer.Tick += FullscreenControlsTimer_Tick;
+
+        _directionHoldTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(420)
+        };
+        _directionHoldTimer.Tick += DirectionHoldTimer_Tick;
 
         _loadingMetricsTimer = new DispatcherTimer
         {
@@ -315,7 +331,7 @@ public sealed partial class PlayerView : UserControl
             QueueTrackUiUpdate();
             UpdateNavigationAvailability();
             UpdateDiagnosticsUi(engine.Diagnostics.Current);
-            PlaybackRateSlider.Value = RateToSliderValue(engine.PlaybackRate);
+            UpdatePlaybackRateUi(engine.PlaybackRate);
             UpdateVolumeUi(_volume);
         });
     }
@@ -929,6 +945,124 @@ public sealed partial class PlayerView : UserControl
         }
     }
 
+    private void PlaybackSlider_PointerPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (_engine is null ||
+            _duration <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        _isScrubbingTimeline = true;
+        _fullscreenControlsTimer.Stop();
+        UpdateSeekPreviewFromPointer(e);
+        ShowFullscreenControls(restartAutoHide: false);
+    }
+
+    private void PlaybackSlider_PointerMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (!_isScrubbingTimeline)
+            return;
+
+        UpdateSeekPreviewFromPointer(e);
+        ShowFullscreenControls(restartAutoHide: false);
+    }
+
+    private void PlaybackSlider_PointerReleased(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        EndTimelineScrub();
+
+    private void PlaybackSlider_PointerCanceled(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        EndTimelineScrub();
+
+    private void PlaybackSlider_PointerCaptureLost(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        EndTimelineScrub();
+
+    private void UpdateSeekPreviewFromPointer(
+        PointerRoutedEventArgs e)
+    {
+        if (PlaybackSlider.ActualWidth <= 0d)
+            return;
+
+        var sliderPoint =
+            e.GetCurrentPoint(
+                PlaybackSlider).Position;
+        var fraction =
+            Math.Clamp(
+                sliderPoint.X /
+                    PlaybackSlider.ActualWidth,
+                0d,
+                1d);
+        var targetSeconds =
+            PlaybackSlider.Minimum +
+            ((PlaybackSlider.Maximum -
+              PlaybackSlider.Minimum) * fraction);
+
+        SeekPreviewTimeText.Text =
+            FormatTime(
+                TimeSpan.FromSeconds(
+                    Math.Max(0d, targetSeconds)));
+
+        var rootPoint =
+            e.GetCurrentPoint(
+                PlayerContentRoot).Position;
+        var previewWidth = 224d;
+        var horizontalPadding = 12d;
+        var maxLeft =
+            Math.Max(
+                horizontalPadding,
+                PlayerContentRoot.ActualWidth -
+                previewWidth -
+                horizontalPadding);
+        SeekPreviewTranslateTransform.X =
+            Math.Clamp(
+                rootPoint.X -
+                (previewWidth / 2d),
+                horizontalPadding,
+                maxLeft);
+
+        SeekPreviewPopup.Margin =
+            new Thickness(
+                0d,
+                0d,
+                0d,
+                Math.Max(
+                    112d,
+                    PlayerControlsPanel.ActualHeight +
+                    8d));
+        SeekPreviewPopup.Visibility =
+            Visibility.Visible;
+    }
+
+    private void EndTimelineScrub()
+    {
+        if (!_isScrubbingTimeline &&
+            SeekPreviewPopup.Visibility ==
+                Visibility.Collapsed)
+        {
+            return;
+        }
+
+        _isScrubbingTimeline = false;
+        SeekPreviewPopup.Visibility =
+            Visibility.Collapsed;
+        SeekPreviewLoadingRing.IsActive = false;
+        SeekPreviewLoadingRing.Visibility =
+            Visibility.Collapsed;
+
+        if (_isVideoFullscreen)
+            RestartFullscreenAutoHide();
+    }
+
     private async void PlaybackSlider_ValueChanged(
         object sender,
         Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
@@ -946,26 +1080,107 @@ public sealed partial class PlayerView : UserControl
         var token = request.Token;
         var target = TimeSpan.FromSeconds(e.NewValue);
 
+        if (_isScrubbingTimeline)
+        {
+            SeekPreviewTimeText.Text =
+                FormatTime(target);
+            SeekPreviewLoadingRing.IsActive = true;
+            SeekPreviewLoadingRing.Visibility =
+                Visibility.Visible;
+        }
+
         try
         {
             await Task.Delay(80, token);
             await RunOperationAsync(
                 engine,
                 "seek",
-                async ct => await engine.SeekAsync(target, ct),
+                async ct =>
+                    await engine.SeekAsync(
+                        target,
+                        ct),
                 latest: true,
                 token: token);
+
+            if (_isScrubbingTimeline &&
+                engine is IPlaybackFrameCapture frameCapture)
+            {
+                // Allow the decoder a short moment to present the newly
+                // sought frame before asking LibVLC for a snapshot.
+                await Task.Delay(45, token);
+                var frame =
+                    await frameCapture.CaptureFrameAsync(
+                        320,
+                        180,
+                        token);
+
+                if (frame is { Length: > 0 } &&
+                    _isScrubbingTimeline &&
+                    ReferenceEquals(
+                        _seekDebounce,
+                        request))
+                {
+                    await SetSeekPreviewImageAsync(
+                        frame,
+                        token);
+                }
+            }
         }
         catch (OperationCanceledException)
         {
         }
         catch (Exception exception)
-        { PlaybackTrace.Write("view", "seek", "error", exception.GetType().Name); }
+        {
+            PlaybackTrace.Write(
+                "view",
+                "seek",
+                "error",
+                exception.GetType().Name);
+        }
         finally
         {
-            if (ReferenceEquals(_seekDebounce, request)) _seekDebounce = null;
+            if (ReferenceEquals(
+                    _seekDebounce,
+                    request))
+            {
+                _seekDebounce = null;
+                SeekPreviewLoadingRing.IsActive =
+                    false;
+                SeekPreviewLoadingRing.Visibility =
+                    Visibility.Collapsed;
+            }
+
             request.Dispose();
         }
+    }
+
+    private async Task SetSeekPreviewImageAsync(
+        byte[] pngBytes,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        using var stream =
+            new InMemoryRandomAccessStream();
+        using (var output =
+               stream.GetOutputStreamAt(0))
+        using (var writer =
+               new DataWriter(output))
+        {
+            writer.WriteBytes(pngBytes);
+            await writer.StoreAsync();
+            await writer.FlushAsync();
+            writer.DetachStream();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        stream.Seek(0);
+
+        var image = new BitmapImage();
+        await image.SetSourceAsync(stream);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        SeekPreviewImage.Source = image;
     }
 
     private async void SubtitleTrackCombo_SelectionChanged(
@@ -1757,6 +1972,12 @@ public sealed partial class PlayerView : UserControl
             _sidebarCollapsedByUser = !_sidebarCollapsedByUser;
 
         UpdateSidebarVisibility();
+
+        if (_isVideoFullscreen)
+        {
+            ShowFullscreenControls(restartAutoHide: true);
+            Focus(FocusState.Programmatic);
+        }
     }
 
     private void SidebarDismissLayer_PointerPressed(
@@ -1769,19 +1990,19 @@ public sealed partial class PlayerView : UserControl
         e.Handled = true;
         _sidebarVisibleInFullscreen = false;
         UpdateSidebarVisibility();
+        ShowFullscreenControls(restartAutoHide: true);
+        Focus(FocusState.Programmatic);
     }
 
     private void PlaybackRateSlider_ValueChanged(
         object sender,
         Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
+        if (_isUpdatingPlaybackRateUi)
+            return;
+
         var rate = SliderValueToRate(e.NewValue);
-
-        if (PlaybackRateValueText is not null)
-            PlaybackRateValueText.Text = $"{rate:0.00}×";
-
-        if (PlaybackRateButton is not null)
-            PlaybackRateButton.Content = $"{rate:0.##}×";
+        UpdatePlaybackRateLabels(rate);
 
         if (_engine is not { } engine)
             return;
@@ -1802,6 +2023,54 @@ public sealed partial class PlayerView : UserControl
         {
             ShowStatus(T("Status_Error"));
         }
+    }
+
+    private void SetTemporaryPlaybackRate(
+        double rate)
+    {
+        if (_engine is not { } engine)
+            return;
+
+        var normalized =
+            Math.Clamp(rate, 0.5d, 2d);
+        try
+        {
+            engine.PlaybackRate = normalized;
+            UpdatePlaybackRateUi(normalized);
+        }
+        catch
+        {
+            ShowStatus(T("Status_Error"));
+        }
+    }
+
+    private void UpdatePlaybackRateUi(
+        double rate)
+    {
+        var normalized =
+            Math.Clamp(rate, 0.5d, 2d);
+
+        _isUpdatingPlaybackRateUi = true;
+        try
+        {
+            PlaybackRateSlider.Value =
+                RateToSliderValue(normalized);
+            UpdatePlaybackRateLabels(normalized);
+        }
+        finally
+        {
+            _isUpdatingPlaybackRateUi = false;
+        }
+    }
+
+    private void UpdatePlaybackRateLabels(
+        double rate)
+    {
+        if (PlaybackRateValueText is not null)
+            PlaybackRateValueText.Text = $"{rate:0.00}×";
+
+        if (PlaybackRateButton is not null)
+            PlaybackRateButton.Content = $"{rate:0.##}×";
     }
 
     private static double SliderValueToRate(double sliderValue)
@@ -2144,7 +2413,10 @@ public sealed partial class PlayerView : UserControl
     private void PlayerView_Unloaded(object sender, RoutedEventArgs e)
     {
         _fullscreenControlsTimer.Stop();
+        _directionHoldTimer.Stop();
         _loadingMetricsTimer.Stop();
+        CancelDirectionKeyGesture(restoreRate: true);
+        EndTimelineScrub();
         RemovePointerWheelHandler();
 
         if (_isVideoFullscreen)
@@ -2207,11 +2479,110 @@ public sealed partial class PlayerView : UserControl
 
     private void PlayerView_KeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (!_isVideoFullscreen || e.Key != VirtualKey.Escape)
+        if (!_isVideoFullscreen)
             return;
 
-        SetVideoFullscreen(false);
+        if (e.Key == VirtualKey.Escape)
+        {
+            CancelDirectionKeyGesture(restoreRate: true);
+            SetVideoFullscreen(false);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key is not (VirtualKey.Left or VirtualKey.Right) ||
+            _engine is null ||
+            _currentSource is null)
+        {
+            return;
+        }
+
+        // Ignore keyboard auto-repeat. A single timer decides whether the
+        // gesture is a tap (10-second seek) or a hold (temporary speed).
+        if (_heldDirectionKey == e.Key)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        CancelDirectionKeyGesture(restoreRate: true);
+        _heldDirectionKey = e.Key;
+        _directionHoldActive = false;
+        _rateBeforeDirectionHold =
+            Math.Clamp(_engine.PlaybackRate, 0.5d, 2d);
+        _directionHoldTimer.Stop();
+        _directionHoldTimer.Start();
+        ShowFullscreenControls(restartAutoHide: false);
         e.Handled = true;
+    }
+
+    private void PlayerView_KeyUp(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key is not (VirtualKey.Left or VirtualKey.Right) ||
+            _heldDirectionKey != e.Key)
+        {
+            return;
+        }
+
+        _directionHoldTimer.Stop();
+        var wasHold = _directionHoldActive;
+        var key = _heldDirectionKey.Value;
+        _heldDirectionKey = null;
+        _directionHoldActive = false;
+
+        if (wasHold)
+        {
+            SetTemporaryPlaybackRate(
+                _rateBeforeDirectionHold);
+        }
+        else
+        {
+            _ = SeekRelativeAsync(
+                key == VirtualKey.Left
+                    ? TimeSpan.FromSeconds(-10)
+                    : TimeSpan.FromSeconds(10));
+        }
+
+        ShowFullscreenControls(restartAutoHide: true);
+        e.Handled = true;
+    }
+
+    private void DirectionHoldTimer_Tick(
+        object? sender,
+        object e)
+    {
+        _directionHoldTimer.Stop();
+
+        if (!_isVideoFullscreen ||
+            _heldDirectionKey is not { } key ||
+            _engine is null)
+        {
+            CancelDirectionKeyGesture(
+                restoreRate: true);
+            return;
+        }
+
+        _directionHoldActive = true;
+        SetTemporaryPlaybackRate(
+            key == VirtualKey.Left ? 0.5d : 2d);
+        ShowFullscreenControls(restartAutoHide: false);
+    }
+
+    private void CancelDirectionKeyGesture(
+        bool restoreRate)
+    {
+        _directionHoldTimer.Stop();
+
+        if (restoreRate &&
+            _directionHoldActive &&
+            _engine is not null)
+        {
+            SetTemporaryPlaybackRate(
+                _rateBeforeDirectionHold);
+        }
+
+        _heldDirectionKey = null;
+        _directionHoldActive = false;
     }
 
     private void FullscreenControlsTimer_Tick(object? sender, object e)
@@ -2231,6 +2602,13 @@ public sealed partial class PlayerView : UserControl
     private void SetVideoFullscreen(bool enabled)
     {
         if (_isPreparingForDetach || _isVideoFullscreen == enabled) return;
+
+        if (!enabled)
+        {
+            CancelDirectionKeyGesture(restoreRate: true);
+            EndTimelineScrub();
+        }
+
         _isVideoFullscreen = enabled;
         var generation = ++_fullscreenGeneration;
         PlaybackTrace.Write("view", "fullscreen", "requested", enabled.ToString());
@@ -2379,10 +2757,24 @@ public sealed partial class PlayerView : UserControl
             : SplitViewDisplayMode.Inline;
 
         PlayerSplitView.IsPaneOpen = shouldShow;
+        var dismissSidebar =
+            _isVideoFullscreen && shouldShow;
         SidebarDismissLayer.Visibility =
-            _isVideoFullscreen && shouldShow
+            dismissSidebar
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+        SidebarDismissLayer.IsHitTestVisible =
+            dismissSidebar;
+        SidebarDismissLayer.Margin =
+            new Thickness(
+                0d,
+                0d,
+                0d,
+                dismissSidebar
+                    ? Math.Max(
+                        112d,
+                        PlayerControlsPanel.ActualHeight + 8d)
+                    : 0d);
 
         SidebarToggleIcon.Symbol = shouldShow
             ? Symbol.ClosePane
@@ -2416,8 +2808,16 @@ public sealed partial class PlayerView : UserControl
     {
         _fullscreenControlsTimer.Stop();
 
+        var timeoutSeconds =
+            AppSettingsStore.NormalizeFullscreenControlsTimeout(
+                AppSettingsStore.Current.FullscreenControlsTimeoutSeconds);
+        _fullscreenControlsTimer.Interval =
+            TimeSpan.FromSeconds(timeoutSeconds);
+
         if (_isVideoFullscreen &&
-            _engine?.State == PlaybackState.Playing)
+            _engine?.State == PlaybackState.Playing &&
+            !_isScrubbingTimeline &&
+            _heldDirectionKey is null)
         {
             _fullscreenControlsTimer.Start();
         }
@@ -2494,7 +2894,10 @@ public sealed partial class PlayerView : UserControl
             _session.Cancel();
             PlaybackTrace.Write("view", "detach", "start");
             _fullscreenControlsTimer.Stop();
+            _directionHoldTimer.Stop();
             _loadingMetricsTimer.Stop();
+            CancelDirectionKeyGesture(restoreRate: true);
+            EndTimelineScrub();
             RemovePointerWheelHandler();
 
             _seekDebounce?.Cancel();

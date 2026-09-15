@@ -48,8 +48,10 @@ if (-not $coordinator.Contains(
 }
 
 foreach ($required in @(
-    'x:Name="MoreButton"',
-    'Click="MoreButton_Click"')) {
+    'x:Name="RescrapeButton"',
+    'Click="RescrapeButton_Click"',
+    'x:Name="ManualMatchButton"',
+    'Click="ManualMatchButton_Click"')) {
     if (-not $detailXaml.Contains($required, [StringComparison]::Ordinal)) {
         throw "Detail-page real-content action entry is missing: $required"
     }

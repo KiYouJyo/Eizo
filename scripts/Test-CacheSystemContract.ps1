@@ -107,7 +107,7 @@ Assert-Contains $mainWindow 'PlaybackSource.FromRandomAccess' 'WebDAV playback i
 Assert-Contains $mainWindow 'TryGetKnownRangeSupport' 'Playback queue does not reuse verified WebDAV range capability.'
 Assert-Contains $mainWindow 'OpenCachedVideo' 'Main window does not handle completed cache-card playback.'
 Assert-Contains $mainWindow 'CachedVideoRandomAccessSource' 'Completed cache-card playback still depends on the network data path.'
-Assert-Contains $playbackPin '"version": "0.2.2"' 'Eizo is not pinned to Playback 0.2.2.'
+Assert-Contains $playbackPin '"version": "0.2.3"' 'Eizo is not pinned to Playback 0.2.3.'
 if ($playbackPin.Contains('"patch"', [StringComparison]::Ordinal)) {
     throw 'Playback pin still relies on the legacy Eizo-local source patch.'
 }
