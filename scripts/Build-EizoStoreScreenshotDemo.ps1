@@ -24,13 +24,21 @@ try {
     New-Item -ItemType Directory -Force -Path $assets, $appPackages | Out-Null
 
     $demoManifest = $originalManifest
-        .Replace('<Identity Name="Eizo" Publisher="CN=AppPublisher" Version="1.0.0.0" />',
-                 '<Identity Name="Eizo.Demo" Publisher="CN=AppPublisher" Version="1.0.0.0" />')
-        .Replace('<DisplayName>Eizo</DisplayName>', '<DisplayName>Eizo Demo</DisplayName>')
-        .Replace('DisplayName="Eizo"', 'DisplayName="Eizo Demo"')
-        .Replace('<uap:Protocol Name="eizo">', '<uap:Protocol Name="eizo-demo">')
-        .Replace('<uap:DisplayName>Eizo Bangumi sign-in</uap:DisplayName>',
-                 '<uap:DisplayName>Eizo Demo Bangumi sign-in</uap:DisplayName>')
+    $demoManifest = $demoManifest.Replace(
+        '<Identity Name="Eizo" Publisher="CN=AppPublisher" Version="1.0.0.0" />',
+        '<Identity Name="Eizo.Demo" Publisher="CN=AppPublisher" Version="1.0.0.0" />')
+    $demoManifest = $demoManifest.Replace(
+        '<DisplayName>Eizo</DisplayName>',
+        '<DisplayName>Eizo Demo</DisplayName>')
+    $demoManifest = $demoManifest.Replace(
+        'DisplayName="Eizo"',
+        'DisplayName="Eizo Demo"')
+    $demoManifest = $demoManifest.Replace(
+        '<uap:Protocol Name="eizo">',
+        '<uap:Protocol Name="eizo-demo">')
+    $demoManifest = $demoManifest.Replace(
+        '<uap:DisplayName>Eizo Bangumi sign-in</uap:DisplayName>',
+        '<uap:DisplayName>Eizo Demo Bangumi sign-in</uap:DisplayName>')
 
     if ($demoManifest -eq $originalManifest) {
         throw 'Demo manifest transformation did not change the source manifest.'
