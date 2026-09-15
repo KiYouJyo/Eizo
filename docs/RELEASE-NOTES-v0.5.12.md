@@ -1,4 +1,8 @@
-# Eizo 0.5.12 — 真实内容 UI 收口
+简体中文 | [日本語](RELEASE-NOTES-v0.5.12.ja.md) | [English](RELEASE-NOTES-v0.5.12.en.md)
+
+# Eizo v0.5.12
+
+## Real Content UI / Close-out：真实内容 UI 收口
 
 0.5.12 继续沿用已经确定的界面框架，把 0.5.9–0.5.11 已接通的真实媒体内容整理成稳定的用户界面状态，不新增 AniList，也不重做页面结构。
 
