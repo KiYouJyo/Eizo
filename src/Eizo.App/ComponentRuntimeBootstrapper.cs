@@ -352,7 +352,10 @@ internal static class ComponentRuntimeBootstrapper
             // Environment.LocalApplicationData may be virtualized for packaged processes.
             var localState = Windows.Storage.ApplicationData.Current.LocalFolder.Path;
             if (!string.IsNullOrWhiteSpace(localState))
-                return Path.Combine(localState, "Eizo", "Components");
+                return Path.Combine(
+                    localState,
+                    ProductFlavor.IsDemo ? "Eizo.Demo" : "Eizo",
+                    "Components");
         }
         catch
         {
@@ -361,7 +364,7 @@ internal static class ComponentRuntimeBootstrapper
 
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Eizo",
+            ProductFlavor.IsDemo ? "Eizo.Demo" : "Eizo",
             "Components");
     }
 
