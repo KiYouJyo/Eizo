@@ -14,6 +14,8 @@
 - Show an explicit empty state when the selected season has no real playable media.
 - Remove sample seasons, episodes, and Sample source labels from the legacy title-only detail fallback.
 - Prevent standalone/unaggregated home items from opening the legacy sample detail path while keeping direct playback of the real media item.
+- Hide missing Hero subtitle/metadata/overview fields and suppress meaningless actions for an empty library.
+- Remove the obsolete CategoryView that still contained Sample Movie and other demo-only data.
 
 ## Scope
 
