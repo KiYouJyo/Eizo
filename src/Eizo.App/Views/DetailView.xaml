@@ -239,7 +239,8 @@
                       <ProgressBar Value="{x:Bind Progress}"
                                    Maximum="100"
                                    Height="3"
-                                   Margin="0,2,0,0" />
+                                   Margin="0,2,0,0"
+                                   Visibility="{x:Bind ProgressVisibility}" />
                     </StackPanel>
 
                     <Button Grid.Column="3"
