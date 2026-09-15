@@ -53,6 +53,12 @@ if ($expected.Project -ne $version -or
     throw "Release version mismatch: $($expected | ConvertTo-Json -Compress) expected=$version/$packageVersion"
 }
 
+$expectedPublisherDisplayName = 'Jo Kiyō'
+$publisherDisplayName = [string]$manifest.Package.Properties.PublisherDisplayName
+if ($publisherDisplayName -cne $expectedPublisherDisplayName) {
+    throw "Store publisher display name mismatch: actual='$publisherDisplayName' expected='$expectedPublisherDisplayName'"
+}
+
 $appVersionProvider = Read-Text 'src/Eizo.App/AppVersionProvider.cs'
 if ($appVersionProvider -match 'const\s+string\s+(?:Version|DisplayVersion)' -or
     $appVersionProvider -match '(?<!\d)0\.3\.\d+(?!\d)') {
