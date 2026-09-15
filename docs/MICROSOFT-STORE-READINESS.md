@@ -29,18 +29,27 @@ This document tracks repository-side readiness for the first Microsoft Store sub
 - [x] Settings action to reopen the guide
 - [x] Dedicated 1.0 validation and signed sideload acceptance flow
 
-## Partner Center blockers
+## Partner Center identity
 
-The Store publisher display name is pinned to `Jo Kiyō` and the StoreUpload pipeline deep-verifies the main x64 package plus every generated scale resource package.
+Partner Center has assigned the production Store identity:
 
-The source manifest intentionally still contains the sideload identity:
+- Package Identity Name: `JoKiy.Eizo`
+- Publisher: `CN=C4E4B33A-7B77-4121-897C-7D720A5471F8`
+- Publisher display name: `Jo Kiyō`
+- Package Family Name: `JoKiy.Eizo_4wdwgytaw3v2m`
+
+These values are pinned in `release/MicrosoftStore/store-identity.json`.
+
+The repository source manifest intentionally keeps the GitHub sideload identity:
 
 - `Identity Name="Eizo"`
 - `Publisher="CN=AppPublisher"`
 
-Do not invent Store values. After the product name is reserved in Partner Center, replace the package Identity Name and Publisher with the exact values assigned by Partner Center before producing the Store submission package.
+The StoreUpload build injects the Partner Center identity only into the Store build workspace, then restores the source manifest. This keeps the existing GitHub signing certificate compatible while producing Partner Center-compatible Store packages.
 
-The final Store package must be produced with the Store-upload build mode and with package signing disabled; Microsoft signs accepted Store packages.
+The StoreUpload pipeline deep-verifies the main x64 package plus every generated scale resource package for Identity Name, Publisher, and PublisherDisplayName before uploading the artifact.
+
+The final Store package is produced with Store-upload build mode and package signing disabled; Microsoft signs accepted Store packages.
 
 ## Store listing inputs
 
@@ -63,8 +72,8 @@ Prepare the final listing in Simplified Chinese, Japanese, and English:
 
 Before generating the Store upload package:
 
-1. Partner Center product name reserved.
-2. Manifest identity synchronized from Partner Center.
+1. Partner Center product name reserved. ✅
+2. Store identity synchronized from Partner Center. ✅
 3. Repository validation PASS on the final 1.0 commit.
 4. Stage 7 playback integration PASS.
 5. Signed sideload acceptance package installs and launches successfully.
