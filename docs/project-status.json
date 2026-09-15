@@ -6,5 +6,6 @@
   "windows": "Windows 10 2004+ / Windows 11",
   "architecture": "x64",
   "storeStatus": "Preparing",
+  "pages": "https://kiyoujyo.github.io/Eizo/",
   "updated": "2026-09-15"
 }
