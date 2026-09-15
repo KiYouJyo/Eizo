@@ -26,6 +26,7 @@ internal sealed record AppSettings(
     bool MetadataAutoScrapeOnScan = true,
     bool MetadataArtworkEnrichment = true,
     bool AutoPlayNextEpisode = true,
+    int FullscreenControlsTimeoutSeconds = 4,
     bool RememberPlaybackRate = true,
     double DefaultPlaybackRate = 1d,
     double LastPlaybackRate = 1d,
@@ -118,6 +119,9 @@ internal static class AppSettingsStore
                         out _)
                         ? loaded.AutoPlayNextEpisode
                         : true,
+                FullscreenControlsTimeoutSeconds =
+                    NormalizeFullscreenControlsTimeout(
+                        loaded.FullscreenControlsTimeoutSeconds),
                 RememberPlaybackRate =
                     root.TryGetProperty(
                         nameof(AppSettings.RememberPlaybackRate),
@@ -164,6 +168,17 @@ internal static class AppSettingsStore
             return new AppSettings();
         }
     }
+
+    internal static int NormalizeFullscreenControlsTimeout(
+        int seconds) =>
+        seconds switch
+        {
+            2 => 2,
+            4 => 4,
+            6 => 6,
+            10 => 10,
+            _ => 4
+        };
 
     private static string NormalizeLanguagePreference(string? value) =>
         value?.Trim().ToLowerInvariant() switch
