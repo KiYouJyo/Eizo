@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Eizo.Views;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
@@ -19,6 +20,8 @@ public sealed partial class MainWindow
     private bool _startupSplashShown;
     private bool _startupMinimumDurationSatisfied;
     private bool _startupMainContentLoaded;
+    private bool _startupDeferredInitializationStarted;
+    private bool _startupDeferredInitializationCompleted;
     private bool _startupVisualCompleted;
     private bool _startupWatchdogStarted;
     private readonly Stopwatch _startupSplashVisibleClock = new();
@@ -89,8 +92,54 @@ public sealed partial class MainWindow
     {
         CompositionTarget.Rendering -= OnStartupSplashRendered;
         StartupTrace.Mark("Startup.FirstCompositionFrame");
-        StartupTrace.FlushSoon();
         StartMinimumSplashDuration();
+        StartDeferredStartupInitialization();
+    }
+
+    private void StartDeferredStartupInitialization()
+    {
+        if (_startupDeferredInitializationStarted)
+            return;
+
+        _startupDeferredInitializationStarted = true;
+        _ = InitializeDeferredStartupAsync();
+    }
+
+    private async Task InitializeDeferredStartupAsync()
+    {
+        try
+        {
+            StartupTrace.Mark("Startup.DeferredInitialization:begin");
+
+            // Cache maintenance used to be invoked before MainWindow.Activate().
+            // Run it only after the first splash frame, and off the UI thread.
+            _ = Task.Run(async () =>
+                await CacheRuntime.RunStartupMaintenanceAsync());
+
+            StartupTrace.Mark("Startup.CreateWorkspaceTab:begin");
+            CreateWorkspaceTab(select: true);
+            StartupTrace.Mark("Startup.CreateWorkspaceTab:end");
+
+            if (_selectedTabKey is not null &&
+                _tabs.TryGetValue(_selectedTabKey, out var state) &&
+                state.View is HomeView home)
+            {
+                StartupTrace.Mark("Startup.HomeInitialContent:begin");
+                await home.EnsureInitialContentAsync();
+                StartupTrace.Mark("Startup.HomeInitialContent:end");
+            }
+        }
+        catch (Exception exception)
+        {
+            StartupTrace.Mark($"Startup.DeferredInitialization:error {exception.GetType().Name}");
+        }
+        finally
+        {
+            _startupDeferredInitializationCompleted = true;
+            StartupTrace.Mark("Startup.DeferredInitialization:end");
+            StartupTrace.FlushSoon();
+            TryCompleteStartupVisual();
+        }
     }
 
     private void StartMinimumSplashDuration()
@@ -116,6 +165,7 @@ public sealed partial class MainWindow
         if (!_startupMainContentLoaded ||
             !_startupImageReady ||
             !_startupMinimumDurationSatisfied ||
+            !_startupDeferredInitializationCompleted ||
             _startupVisualCompleted)
         {
             return;
