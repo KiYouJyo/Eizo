@@ -48,25 +48,29 @@
               <TextBlock x:Name="NativeTitleText"
                          FontSize="15"
                          Opacity="0.72"
-                         TextWrapping="Wrap" />
+                         TextWrapping="Wrap"
+                         Visibility="Collapsed" />
 
               <StackPanel Orientation="Horizontal"
                           Spacing="8">
-                <Border Padding="9,4"
+                <Border x:Name="ReleaseStatBadge"
+                        Padding="9,4"
                         CornerRadius="12"
                         Background="{ThemeResource EizoSelectionBrush}">
                   <TextBlock x:Name="ReleaseStatText"
                              FontSize="12"
                              FontWeight="SemiBold" />
                 </Border>
-                <Border Padding="9,4"
+                <Border x:Name="EpisodeStatBadge"
+                        Padding="9,4"
                         CornerRadius="12"
                         Background="{ThemeResource EizoSelectionBrush}">
                   <TextBlock x:Name="EpisodeStatText"
                              FontSize="12"
                              FontWeight="SemiBold" />
                 </Border>
-                <Border Padding="9,4"
+                <Border x:Name="SourceStatBadge"
+                        Padding="9,4"
                         CornerRadius="12"
                         Background="{ThemeResource EizoSelectionBrush}">
                   <TextBlock x:Name="SourceStatText"
@@ -77,13 +81,15 @@
 
               <TextBlock x:Name="MetaText"
                          Style="{StaticResource MetadataText}"
-                         TextWrapping="Wrap" />
+                         TextWrapping="Wrap"
+                         Visibility="Collapsed" />
               <TextBlock x:Name="OverviewText"
                          MaxWidth="820"
                          MaxHeight="118"
                          TextWrapping="Wrap"
                          TextTrimming="CharacterEllipsis"
-                         Style="{StaticResource BodyText}" />
+                         Style="{StaticResource BodyText}"
+                         Visibility="Collapsed" />
               <StackPanel Orientation="Horizontal"
                           Spacing="8">
                 <Button x:Name="PlayButton"
@@ -103,6 +109,11 @@
           </Grid>
         </Grid>
       </Border>
+
+      <InfoBar x:Name="MetadataActionStatusBar"
+               IsOpen="False"
+               IsClosable="True"
+               Severity="Informational" />
 
       <Grid MinHeight="520"
             ColumnDefinitions="2.15*,1*"
@@ -127,6 +138,13 @@
                         DisplayMemberPath="Label"
                         SelectionChanged="SeasonComboBox_SelectionChanged" />
             </Grid>
+
+            <TextBlock x:Name="EpisodeEmptyStateText"
+                       Grid.Row="1"
+                       Margin="4,18,4,0"
+                       Style="{StaticResource MetadataText}"
+                       TextWrapping="Wrap"
+                       Visibility="Collapsed" />
 
             <ListView x:Name="EpisodeList"
                       Grid.Row="1"
