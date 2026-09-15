@@ -82,8 +82,9 @@ public sealed class MediaScanCoordinator
 
         _metadataService = CreateMetadataServiceLazy();
         return await MediaCatalogStore.Default
-            .ScrapeSubjectMetadataAsync(
-                subject,
+            .ScrapeMediaItemsMetadataAsync(
+                subject.Items,
+                subject.Media.Id,
                 _metadataService.Value,
                 progress: null,
                 cancellationToken)

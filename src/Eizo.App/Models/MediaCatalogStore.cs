@@ -401,15 +401,16 @@ public sealed class MediaCatalogStore
         return processed;
     }
 
-    public Task<int> ScrapeSubjectMetadataAsync(
-        CatalogSubjectModel subject,
+    public Task<int> ScrapeMediaItemsMetadataAsync(
+        IReadOnlyCollection<CatalogMediaItemModel> items,
+        string progressScopeId,
         MediaMetadataService? metadataService,
         Action<MediaScanProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(subject);
+        ArgumentNullException.ThrowIfNull(items);
 
-        var targetKeys = subject.Items
+        var targetKeys = items
             .Select(LocationKey)
             .Where(static key =>
                 !string.IsNullOrWhiteSpace(key))
@@ -419,7 +420,7 @@ public sealed class MediaCatalogStore
 
         return ScrapeTargetMetadataAsync(
             targetKeys,
-            subject.Media.Id,
+            progressScopeId,
             metadataService,
             progress,
             cancellationToken);

@@ -21,7 +21,7 @@ $catalog = Read-Text 'src/Eizo.App/Views/CatalogView.xaml.cs'
 $detail = Read-Text 'src/Eizo.App/Views/DetailView.xaml.cs'
 
 foreach ($required in @(
-    'public Task<int> ScrapeSubjectMetadataAsync(',
+    'public Task<int> ScrapeMediaItemsMetadataAsync(',
     'public Task<int> ScrapeItemMetadataAsync(',
     'ScrapeTargetMetadataAsync(',
     'CommitTargetedMetadata(',
