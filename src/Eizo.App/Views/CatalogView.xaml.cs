@@ -128,7 +128,6 @@ public sealed partial class CatalogView : UserControl
         var query = SearchBox?.Text?.Trim() ?? string.Empty;
         var snapshot = _catalog.SnapshotForDisplay();
         var aggregation = CatalogSubjectAggregator.Build(snapshot);
-        UpdateRecognitionSummary(snapshot, aggregation);
         var displayEntries = aggregation.Subjects
             .Select(static subject =>
                 CatalogDisplayEntry.FromSubject(subject))
@@ -340,7 +339,7 @@ public sealed partial class CatalogView : UserControl
             subtitle,
             string.Join(" · ", metaParts),
             sourceLabel,
-            RecognitionLabel(item) ?? CategoryLabel(category));
+            CategoryLabel(category));
     }
 
     private static BitmapImage? CreateArtwork(
@@ -405,39 +404,6 @@ public sealed partial class CatalogView : UserControl
             AddSubjectMetadataActions(
                 flyout,
                 subject);
-
-            if (flyout.Items.Count > 0)
-            {
-                flyout.Items.Add(
-                    new MenuFlyoutSeparator());
-            }
-        }
-
-        if (viewModel.Item is { Recognition: { } } item)
-        {
-            var detailsItem = new MenuFlyoutItem
-            {
-                Text = "Recognition details",
-                Tag = item
-            };
-            detailsItem.Click += RecognitionDetails_Click;
-            flyout.Items.Add(detailsItem);
-        }
-
-        var metadataOwner = viewModel.Item?.Metadata is not null
-            ? viewModel.Item
-            : viewModel.Subject?.Items.FirstOrDefault(static item =>
-                item.Metadata is not null);
-
-        if (metadataOwner is not null)
-        {
-            var metadataItem = new MenuFlyoutItem
-            {
-                Text = "Metadata details",
-                Tag = metadataOwner
-            };
-            metadataItem.Click += MetadataDetails_Click;
-            flyout.Items.Add(metadataItem);
         }
 
         container.ContextFlyout =
@@ -521,8 +487,30 @@ public sealed partial class CatalogView : UserControl
             return;
         }
 
-        await CatalogSubjectMetadataActions
-            .RefreshAsync(subject);
+        ShowActionStatus(
+            L("正在重新刮削此作品…", "この作品のメタデータを再取得しています…", "Refreshing this title…"),
+            InfoBarSeverity.Informational);
+
+        try
+        {
+            var refreshed =
+                await CatalogSubjectMetadataActions
+                    .RefreshAsync(subject);
+
+            ShowActionStatus(
+                refreshed is null
+                    ? L("重新刮削已完成，但未找到更新后的作品。", "再取得は完了しましたが、更新後の作品を確認できませんでした。", "Refresh finished, but the updated title could not be found.")
+                    : L("作品信息已更新。", "作品情報を更新しました。", "Title metadata updated."),
+                refreshed is null
+                    ? InfoBarSeverity.Warning
+                    : InfoBarSeverity.Success);
+        }
+        catch
+        {
+            ShowActionStatus(
+                L("重新刮削失败，请稍后重试。", "メタデータの再取得に失敗しました。後でもう一度お試しください。", "Metadata refresh failed. Try again later."),
+                InfoBarSeverity.Error);
+        }
     }
 
     private async void SubjectManualMatch_Click(
@@ -545,10 +533,32 @@ public sealed partial class CatalogView : UserControl
         if (candidate is null)
             return;
 
-        await CatalogSubjectMetadataActions
-            .ApplyManualMatchAsync(
-                subject,
-                candidate);
+        ShowActionStatus(
+            L("正在应用手动匹配…", "手動照合を適用しています…", "Applying manual match…"),
+            InfoBarSeverity.Informational);
+
+        try
+        {
+            var refreshed =
+                await CatalogSubjectMetadataActions
+                    .ApplyManualMatchAsync(
+                        subject,
+                        candidate);
+
+            ShowActionStatus(
+                refreshed is null
+                    ? L("匹配已保存，但未找到更新后的作品。", "照合は保存されましたが、更新後の作品を確認できませんでした。", "The match was saved, but the updated title could not be found.")
+                    : L("手动匹配已应用。", "手動照合を適用しました。", "Manual match applied."),
+                refreshed is null
+                    ? InfoBarSeverity.Warning
+                    : InfoBarSeverity.Success);
+        }
+        catch
+        {
+            ShowActionStatus(
+                L("应用手动匹配失败，请稍后重试。", "手動照合の適用に失敗しました。後でもう一度お試しください。", "Could not apply the manual match. Try again later."),
+                InfoBarSeverity.Error);
+        }
     }
 
     private async void SubjectClearManualMatch_Click(
@@ -563,82 +573,41 @@ public sealed partial class CatalogView : UserControl
             return;
         }
 
-        await CatalogSubjectMetadataActions
-            .ClearManualMatchAsync(
-                tag.Subject,
-                tag.Provider);
+        ShowActionStatus(
+            L("正在清除手动匹配…", "手動照合を解除しています…", "Clearing manual match…"),
+            InfoBarSeverity.Informational);
+
+        try
+        {
+            var refreshed =
+                await CatalogSubjectMetadataActions
+                    .ClearManualMatchAsync(
+                        tag.Subject,
+                        tag.Provider);
+
+            ShowActionStatus(
+                refreshed is null
+                    ? L("手动匹配已清除，但未找到更新后的作品。", "手動照合は解除されましたが、更新後の作品を確認できませんでした。", "The manual match was cleared, but the updated title could not be found.")
+                    : L("手动匹配已清除。", "手動照合を解除しました。", "Manual match cleared."),
+                refreshed is null
+                    ? InfoBarSeverity.Warning
+                    : InfoBarSeverity.Success);
+        }
+        catch
+        {
+            ShowActionStatus(
+                L("清除手动匹配失败，请稍后重试。", "手動照合の解除に失敗しました。後でもう一度お試しください。", "Could not clear the manual match. Try again later."),
+                InfoBarSeverity.Error);
+        }
     }
 
-    private async void RecognitionDetails_Click(
-        object sender,
-        RoutedEventArgs e)
+    private void ShowActionStatus(
+        string message,
+        InfoBarSeverity severity)
     {
-        if (sender is not MenuFlyoutItem
-            {
-                Tag: CatalogMediaItemModel
-                {
-                    Recognition: { } recognition
-                }
-            })
-        {
-            return;
-        }
-
-        var details = new TextBox
-        {
-            Text = BuildRecognitionDetails(recognition),
-            IsReadOnly = true,
-            AcceptsReturn = true,
-            TextWrapping = TextWrapping.Wrap,
-            FontFamily = new FontFamily("Cascadia Mono"),
-            Height = 420,
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-
-        var dialog = new ContentDialog
-        {
-            Title = "Recognition details",
-            Content = details,
-            CloseButtonText = "Close",
-            XamlRoot = XamlRoot
-        };
-
-        await dialog.ShowAsync();
-    }
-
-    private async void MetadataDetails_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (sender is not MenuFlyoutItem
-            {
-                Tag: CatalogMediaItemModel
-                {
-                    Metadata: { } metadata
-                }
-            })
-        {
-            return;
-        }
-
-        var details = new TextBox
-        {
-            Text = BuildMetadataDetails(metadata),
-            IsReadOnly = true,
-            AcceptsReturn = true,
-            TextWrapping = TextWrapping.Wrap,
-            FontFamily = new FontFamily("Cascadia Mono"),
-            Height = 420,
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-
-        await new ContentDialog
-        {
-            Title = "Metadata details",
-            Content = details,
-            CloseButtonText = "Close",
-            XamlRoot = XamlRoot
-        }.ShowAsync();
+        ActionStatusBar.Message = message;
+        ActionStatusBar.Severity = severity;
+        ActionStatusBar.IsOpen = true;
     }
 
     private async void ExportRecognitionButton_Click(
@@ -697,53 +666,6 @@ public sealed partial class CatalogView : UserControl
             CloseButtonText = L("关闭", "閉じる", "Close")
         };
         await dialog.ShowAsync();
-    }
-
-    private void UpdateRecognitionSummary(
-        IReadOnlyList<CatalogMediaItemModel> items,
-        CatalogLibraryAggregation aggregation)
-    {
-        var recognized = 0;
-        var ambiguous = 0;
-        var unresolved = 0;
-        var errors = 0;
-        var missing = 0;
-        var review = 0;
-
-        foreach (var item in items)
-        {
-            var recognition = item.Recognition;
-            if (recognition is null)
-            {
-                missing++;
-                review++;
-                continue;
-            }
-
-            switch (recognition.Status)
-            {
-                case MediaRecognitionStatus.Recognized:
-                    recognized++;
-                    break;
-                case MediaRecognitionStatus.Ambiguous:
-                    ambiguous++;
-                    break;
-                case MediaRecognitionStatus.Unresolved:
-                    unresolved++;
-                    break;
-                case MediaRecognitionStatus.Error:
-                    errors++;
-                    break;
-            }
-
-            if (NeedsReview(recognition))
-                review++;
-        }
-
-        RecognitionSummary.Text = L(
-            $"媒体库：作品 {aggregation.Subjects.Count} · 独立媒体 {aggregation.StandaloneItems.Count} · 文件 {items.Count} ｜ 识别：已识别 {recognized} · 歧义 {ambiguous} · 未解决 {unresolved} · 错误 {errors} · 无快照 {missing} · 建议复核 {review}",
-            $"メディアライブラリ：作品 {aggregation.Subjects.Count} · 単独メディア {aggregation.StandaloneItems.Count} · ファイル {items.Count} ｜ 認識：認識済み {recognized} · 曖昧 {ambiguous} · 未解決 {unresolved} · エラー {errors} · スナップショットなし {missing} · 要確認 {review}",
-            $"Library: {aggregation.Subjects.Count} titles · {aggregation.StandaloneItems.Count} standalone media · {items.Count} files | Recognition: {recognized} recognized · {ambiguous} ambiguous · {unresolved} unresolved · {errors} errors · {missing} missing snapshots · {review} review candidates");
     }
 
     private static string BuildRecognitionCsv(
@@ -1054,9 +976,6 @@ public sealed partial class CatalogView : UserControl
         return $"\"{value.Replace("\"", "\"\"")}\"";
     }
 
-    private static bool NeedsReview(MediaRecognitionSnapshot recognition) =>
-        !string.IsNullOrEmpty(ReviewPriority(recognition));
-
     private static string ReviewPriority(MediaRecognitionSnapshot? recognition)
     {
         if (recognition is null)
@@ -1102,148 +1021,6 @@ public sealed partial class CatalogView : UserControl
             return "MediumConfidence";
         return string.Empty;
     }
-
-    private static string BuildMetadataDetails(
-        Eizo.MetadataIntegration.MediaMetadataSnapshot metadata)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine($"Runtime version: {metadata.RuntimeVersion}");
-        builder.AppendLine($"Recognition runtime: {metadata.RecognitionRuntimeVersion ?? "-"}");
-        builder.AppendLine($"Provider: {metadata.Provider ?? "-"}");
-        builder.AppendLine($"Subject ID: {metadata.ProviderSubjectId ?? "-"}");
-        builder.AppendLine($"Subject kind: {metadata.SubjectKind ?? "-"}");
-        builder.AppendLine($"Content kind: {metadata.ContentKind ?? "-"}");
-        builder.AppendLine($"Confidence: {metadata.Confidence:0.000}");
-        builder.AppendLine($"Resolution reason: {metadata.ResolutionReason ?? "-"}");
-        builder.AppendLine($"Candidates: {metadata.CandidateCount}");
-        builder.AppendLine($"Threshold: {metadata.AutoResolveThreshold:0.000}");
-        builder.AppendLine($"Minimum lead: {metadata.MinimumLead:0.000}");
-        builder.AppendLine($"Best score: {metadata.BestScore?.ToString("0.000", CultureInfo.InvariantCulture) ?? "-"}");
-        builder.AppendLine($"Second score: {metadata.SecondScore?.ToString("0.000", CultureInfo.InvariantCulture) ?? "-"}");
-        builder.AppendLine($"Lead: {metadata.Lead?.ToString("0.000", CultureInfo.InvariantCulture) ?? "-"}");
-        builder.AppendLine($"Canonical title: {metadata.CanonicalTitle ?? "-"}");
-        builder.AppendLine($"Original title: {metadata.OriginalTitle ?? "-"}");
-        builder.AppendLine($"Release date: {metadata.ReleaseDate ?? "-"}");
-        builder.AppendLine($"Episode count: {metadata.EpisodeCount?.ToString(CultureInfo.InvariantCulture) ?? "-"}");
-        builder.AppendLine($"Episode: {FormatNullableNumber(metadata.EpisodeNumber)}");
-        builder.AppendLine($"Episode title: {metadata.EpisodeTitle ?? "-"}");
-        builder.AppendLine($"Episode original title: {metadata.EpisodeOriginalTitle ?? "-"}");
-        builder.AppendLine($"Episode air date: {metadata.EpisodeAirDate ?? "-"}");
-        builder.AppendLine($"Poster: {metadata.PosterUrl ?? "-"}");
-        builder.AppendLine($"Backdrop: {metadata.BackdropUrl ?? "-"}");
-        builder.AppendLine($"Updated: {metadata.UpdatedAtUtc:O}");
-
-        if (metadata.SearchTitles.Count > 0)
-        {
-            builder.AppendLine();
-            builder.AppendLine("Provider search titles:");
-            foreach (var title in metadata.SearchTitles)
-                builder.AppendLine($"  - {title}");
-        }
-
-        if (metadata.TopCandidates.Count > 0)
-        {
-            builder.AppendLine();
-            builder.AppendLine("Top metadata candidates:");
-            foreach (var candidate in metadata.TopCandidates)
-            {
-                builder.AppendLine(
-                    $"  - {candidate.Provider}:{candidate.ProviderSubjectId} | {candidate.Title} | score={candidate.Score:0.000} | year={candidate.Year?.ToString(CultureInfo.InvariantCulture) ?? "-"} | rank={candidate.ProviderRank}");
-                foreach (var evidence in candidate.Evidence)
-                    builder.AppendLine($"      {evidence}");
-            }
-        }
-
-        if (metadata.ExternalIds.Count > 0)
-        {
-            builder.AppendLine();
-            builder.AppendLine("External IDs:");
-            foreach (var pair in metadata.ExternalIds.OrderBy(static item => item.Key))
-                builder.AppendLine($"  - {pair.Key}: {pair.Value}");
-        }
-
-        if (metadata.Errors.Count > 0)
-        {
-            builder.AppendLine();
-            builder.AppendLine("Provider warnings:");
-            foreach (var error in metadata.Errors)
-                builder.AppendLine($"  - {error.Provider} | {error.ErrorType} | {error.Message}");
-        }
-
-        return builder.ToString().TrimEnd();
-    }
-
-    private static string BuildRecognitionDetails(
-        MediaRecognitionSnapshot recognition)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine($"Logical path: {recognition.LogicalPath}");
-        builder.AppendLine($"Runtime version: {recognition.RuntimeVersion ?? "legacy/unknown"}");
-        builder.AppendLine($"Status: {recognition.Status}");
-        builder.AppendLine($"MediaKind: {recognition.MediaKind}");
-        builder.AppendLine($"SpecialKind: {recognition.SpecialKind}");
-        builder.AppendLine($"EpisodePart: {recognition.EpisodePart}");
-        builder.AppendLine($"Final episode: {recognition.IsFinalEpisode}");
-        builder.AppendLine($"Title: {recognition.Title ?? "-"}");
-        builder.AppendLine($"EpisodeTitle: {recognition.EpisodeTitle ?? "-"}");
-        builder.AppendLine($"Season: {recognition.SeasonNumber?.ToString(CultureInfo.InvariantCulture) ?? "-"}");
-        builder.AppendLine($"Cour: {recognition.CourNumber?.ToString(CultureInfo.InvariantCulture) ?? "-"}");
-        builder.AppendLine($"Episode: {FormatNullableNumber(recognition.EpisodeNumber)}");
-        builder.AppendLine($"EpisodeEnd: {FormatNullableNumber(recognition.EpisodeEndNumber)}");
-        builder.AppendLine($"Special: {FormatNullableNumber(recognition.SpecialNumber)}");
-        builder.AppendLine($"Year: {recognition.Year?.ToString(CultureInfo.InvariantCulture) ?? "-"}");
-        builder.AppendLine($"Confidence: {recognition.Confidence:0.000} ({recognition.ConfidenceLevel})");
-        builder.AppendLine($"Ambiguous: {recognition.IsAmbiguous}");
-
-        if (!string.IsNullOrWhiteSpace(recognition.ErrorCode))
-            builder.AppendLine($"Error: {recognition.ErrorCode}");
-
-        builder.AppendLine();
-        builder.AppendLine("Title candidates:");
-        if (recognition.TitleCandidates.Count == 0)
-        {
-            builder.AppendLine("  - none");
-        }
-        else
-        {
-            foreach (var candidate in recognition.TitleCandidates)
-            {
-                builder.AppendLine(
-                    $"  - {candidate.Title} | {candidate.Confidence:0.000} | {candidate.Source} | primary={candidate.IsPrimary}");
-            }
-        }
-
-        builder.AppendLine();
-        builder.AppendLine("Evidence:");
-        if (recognition.Evidence.Count == 0)
-        {
-            builder.AppendLine("  - none");
-        }
-        else
-        {
-            foreach (var evidence in recognition.Evidence)
-            {
-                builder.AppendLine(
-                    $"  - {evidence.Code} | {evidence.Value ?? "-"} | {evidence.Weight:0.000}");
-            }
-        }
-
-        return builder.ToString().TrimEnd();
-    }
-
-    private static string? RecognitionLabel(CatalogMediaItemModel item) =>
-        item.Recognition switch
-        {
-            { Status: MediaRecognitionStatus.Recognized } recognition =>
-                $"Recognition · {recognition.ConfidenceLevel}",
-            { Status: MediaRecognitionStatus.Ambiguous } =>
-                "Recognition · Ambiguous",
-            { Status: MediaRecognitionStatus.Unresolved } =>
-                "Recognition · Unresolved",
-            { Status: MediaRecognitionStatus.Error } =>
-                "Recognition · Error",
-            _ => null
-        };
 
     private static bool Matches(
         CatalogDisplayEntry entry,

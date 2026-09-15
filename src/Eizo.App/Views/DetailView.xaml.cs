@@ -18,50 +18,8 @@ public sealed partial class DetailView : UserControl
         BangumiRepository.Default;
     private CancellationTokenSource? _creditsLoadCancellation;
 
-    public event EventHandler<string>? PlayRequested;
     public event EventHandler<CatalogMediaItemModel>? MediaPlayRequested;
     public event EventHandler<CatalogSubjectModel>? SubjectUpdated;
-
-    public DetailView(string title)
-    {
-        InitializeComponent();
-        ApplyText();
-
-        TitleText.Text = title;
-        NativeTitleText.Text = title;
-        MetaText.Text = string.Empty;
-        OverviewText.Text = T("Detail_Overview");
-        ReleaseStatText.Text = "-";
-        EpisodeStatText.Text = L("2 集", "2 話", "2 episodes");
-        SourceStatText.Text = L("示例", "サンプル", "Sample");
-
-        EpisodeList.ItemsSource = new EpisodeDisplayItemModel[]
-        {
-            new(
-                "18",
-                "一级魔法使考试",
-                "一級魔法使試験",
-                "23:41",
-                "12:08",
-                52),
-            new(
-                "19",
-                "周密的计划",
-                "入念な計画",
-                "24:03",
-                T("Category_Unwatched")),
-        };
-
-        SeasonComboBox.ItemsSource = new SeasonOption[]
-        {
-            new(1, "Season 1"),
-        };
-        SeasonComboBox.SelectedIndex = 0;
-        EpisodeCountText.Text = "2";
-        CreditsStatusText.Text =
-            L("暂无演职人员信息。", "キャスト・スタッフ情報はありません。", "No cast or staff information.");
-        CreditsStatusText.Visibility = Visibility.Visible;
-    }
 
     public DetailView(CatalogSubjectModel subject)
     {
@@ -121,7 +79,6 @@ public sealed partial class DetailView : UserControl
     private void ApplyText()
     {
         PlayButton.Content = T("Common_Continue");
-        FavoriteButton.Content = T("Common_Favorite");
         ToolTipService.SetToolTip(
             MoreButton,
             L("更多", "その他", "More"));
@@ -148,24 +105,31 @@ public sealed partial class DetailView : UserControl
 
         var presentation =
             CatalogSubjectPresentation.Create(_subject);
-        var metadata = _subject.Metadata;
 
         TitleText.Text = presentation.Title;
+
         NativeTitleText.Text =
+            presentation.SecondaryTitle;
+        NativeTitleText.Visibility =
             string.IsNullOrWhiteSpace(
                 presentation.SecondaryTitle)
-                ? presentation.Title
-                : presentation.SecondaryTitle;
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
         MetaText.Text =
             BuildMetadataSummary(presentation);
+        MetaText.Visibility =
+            string.IsNullOrWhiteSpace(MetaText.Text)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
         OverviewText.Text =
+            presentation.Overview;
+        OverviewText.Visibility =
             string.IsNullOrWhiteSpace(
                 presentation.Overview)
-                ? L(
-                    "尚无作品简介。",
-                    "作品概要はまだありません。",
-                    "No title overview is available yet.")
-                : presentation.Overview;
+                ? Visibility.Collapsed
+                : Visibility.Visible;
 
         ApplyPoster(presentation.PosterUrl);
         ApplyBackdrop(presentation.BackdropUrl);
@@ -180,13 +144,18 @@ public sealed partial class DetailView : UserControl
                     L("本地", "ローカル", "Local"),
                 (false, true) =>
                     L("网盘", "リモート", "Remote"),
-                _ =>
-                    L("未知来源", "不明なソース", "Unknown source"),
+                _ => string.Empty,
             };
 
         ReleaseStatText.Text =
             presentation.ReleaseYear?.ToString(
-                CultureInfo.CurrentCulture) ?? "-";
+                CultureInfo.CurrentCulture) ??
+            string.Empty;
+        ReleaseStatBadge.Visibility =
+            presentation.ReleaseYear is null
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
         EpisodeStatText.Text =
             presentation.IsMovie
                 ? L(
@@ -197,39 +166,70 @@ public sealed partial class DetailView : UserControl
                     $"{presentation.EpisodeCount} 集",
                     $"{presentation.EpisodeCount} 話",
                     $"{presentation.EpisodeCount} episodes");
+        EpisodeStatBadge.Visibility =
+            presentation.EpisodeCount > 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
         SourceStatText.Text =
-            presentation.SourceCount > 0
+            presentation.SourceCount > 0 &&
+            !string.IsNullOrWhiteSpace(sourceKind)
                 ? $"{sourceKind} · {presentation.SourceCount}"
-                : sourceKind;
+                : string.Empty;
+        SourceStatBadge.Visibility =
+            string.IsNullOrWhiteSpace(SourceStatText.Text)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        var hasPlayableItem =
+            _subject.FirstPlayableItem is not null;
+        PlayButton.IsEnabled = hasPlayableItem;
+        PlayButton.Visibility =
+            hasPlayableItem
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
         if (_subject.IsMovieSubject)
         {
-            SeasonComboBox.ItemsSource = Array.Empty<SeasonOption>();
+            SeasonComboBox.ItemsSource =
+                Array.Empty<SeasonOption>();
             SeasonComboBox.SelectedIndex = -1;
-            SeasonComboBox.Visibility = Visibility.Collapsed;
+            SeasonComboBox.Visibility =
+                Visibility.Collapsed;
         }
         else
         {
             var seasons = _subject.SeasonNumbers
                 .Select(season =>
                 {
-                    var seasonModel = _subject.Series?.Seasons
-                        .FirstOrDefault(item => item.Number == season);
-                    var fallbackLabel = season == 0
-                        ? L("特别篇", "スペシャル", "Specials")
-                        : $"Season {season}";
+                    var seasonModel =
+                        _subject.Series?.Seasons
+                            .FirstOrDefault(item =>
+                                item.Number == season);
+                    var fallbackLabel =
+                        season == 0
+                            ? L(
+                                "特别篇",
+                                "スペシャル",
+                                "Specials")
+                            : $"Season {season}";
 
                     return new SeasonOption(
                         season,
-                        string.IsNullOrWhiteSpace(seasonModel?.Title)
+                        string.IsNullOrWhiteSpace(
+                            seasonModel?.Title)
                             ? fallbackLabel
                             : seasonModel!.Title!);
                 })
                 .ToArray();
 
             SeasonComboBox.ItemsSource = seasons;
-            SeasonComboBox.SelectedIndex = seasons.Length > 0 ? 0 : -1;
-            SeasonComboBox.Visibility = Visibility.Visible;
+            SeasonComboBox.SelectedIndex =
+                seasons.Length > 0 ? 0 : -1;
+            SeasonComboBox.Visibility =
+                seasons.Length > 1
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
         }
 
         ApplySeasonContext();
@@ -651,20 +651,13 @@ public sealed partial class DetailView : UserControl
             };
             clearItem.Click += async (menuSender, _) =>
             {
-                if (menuSender is not MenuFlyoutItem
+                if (menuSender is MenuFlyoutItem
                     {
                         Tag: string provider
                     })
                 {
-                    return;
+                    await ClearManualMatchAsync(provider);
                 }
-
-                var refreshed =
-                    await CatalogSubjectMetadataActions
-                        .ClearManualMatchAsync(
-                            _subject,
-                            provider);
-                PublishRefreshedSubject(refreshed);
             };
             menu.Items.Add(clearItem);
         }
@@ -688,6 +681,10 @@ public sealed partial class DetailView : UserControl
             return;
 
         MoreButton.IsEnabled = false;
+        ShowMetadataActionStatus(
+            L("正在应用手动匹配…", "手動照合を適用しています…", "Applying manual match…"),
+            InfoBarSeverity.Informational);
+
         try
         {
             var refreshed =
@@ -695,7 +692,24 @@ public sealed partial class DetailView : UserControl
                     .ApplyManualMatchAsync(
                         _subject,
                         candidate);
+            if (refreshed is null)
+            {
+                ShowMetadataActionStatus(
+                    L("匹配已保存，但未找到更新后的作品。", "照合は保存されましたが、更新後の作品を確認できませんでした。", "The match was saved, but the updated title could not be found."),
+                    InfoBarSeverity.Warning);
+                return;
+            }
+
+            ShowMetadataActionStatus(
+                L("手动匹配已应用。", "手動照合を適用しました。", "Manual match applied."),
+                InfoBarSeverity.Success);
             PublishRefreshedSubject(refreshed);
+        }
+        catch
+        {
+            ShowMetadataActionStatus(
+                L("应用手动匹配失败，请稍后重试。", "手動照合の適用に失敗しました。後でもう一度お試しください。", "Could not apply the manual match. Try again later."),
+                InfoBarSeverity.Error);
         }
         finally
         {
@@ -709,17 +723,90 @@ public sealed partial class DetailView : UserControl
             return;
 
         MoreButton.IsEnabled = false;
+        ShowMetadataActionStatus(
+            L("正在重新刮削此作品…", "この作品のメタデータを再取得しています…", "Refreshing this title…"),
+            InfoBarSeverity.Informational);
+
         try
         {
             var refreshed =
                 await CatalogSubjectMetadataActions
                     .RefreshAsync(_subject);
+            if (refreshed is null)
+            {
+                ShowMetadataActionStatus(
+                    L("重新刮削已完成，但未找到更新后的作品。", "再取得は完了しましたが、更新後の作品を確認できませんでした。", "Refresh finished, but the updated title could not be found."),
+                    InfoBarSeverity.Warning);
+                return;
+            }
+
+            ShowMetadataActionStatus(
+                L("作品信息已更新。", "作品情報を更新しました。", "Title metadata updated."),
+                InfoBarSeverity.Success);
             PublishRefreshedSubject(refreshed);
+        }
+        catch
+        {
+            ShowMetadataActionStatus(
+                L("重新刮削失败，请稍后重试。", "メタデータの再取得に失敗しました。後でもう一度お試しください。", "Metadata refresh failed. Try again later."),
+                InfoBarSeverity.Error);
         }
         finally
         {
             MoreButton.IsEnabled = true;
         }
+    }
+
+    private async Task ClearManualMatchAsync(
+        string provider)
+    {
+        if (_subject is null)
+            return;
+
+        MoreButton.IsEnabled = false;
+        ShowMetadataActionStatus(
+            L("正在清除手动匹配…", "手動照合を解除しています…", "Clearing manual match…"),
+            InfoBarSeverity.Informational);
+
+        try
+        {
+            var refreshed =
+                await CatalogSubjectMetadataActions
+                    .ClearManualMatchAsync(
+                        _subject,
+                        provider);
+            if (refreshed is null)
+            {
+                ShowMetadataActionStatus(
+                    L("手动匹配已清除，但未找到更新后的作品。", "手動照合は解除されましたが、更新後の作品を確認できませんでした。", "The manual match was cleared, but the updated title could not be found."),
+                    InfoBarSeverity.Warning);
+                return;
+            }
+
+            ShowMetadataActionStatus(
+                L("手动匹配已清除。", "手動照合を解除しました。", "Manual match cleared."),
+                InfoBarSeverity.Success);
+            PublishRefreshedSubject(refreshed);
+        }
+        catch
+        {
+            ShowMetadataActionStatus(
+                L("清除手动匹配失败，请稍后重试。", "手動照合の解除に失敗しました。後でもう一度お試しください。", "Could not clear the manual match. Try again later."),
+                InfoBarSeverity.Error);
+        }
+        finally
+        {
+            MoreButton.IsEnabled = true;
+        }
+    }
+
+    private void ShowMetadataActionStatus(
+        string message,
+        InfoBarSeverity severity)
+    {
+        MetadataActionStatusBar.Message = message;
+        MetadataActionStatusBar.Severity = severity;
+        MetadataActionStatusBar.IsOpen = true;
     }
 
     private void PublishRefreshedSubject(
@@ -848,6 +935,21 @@ public sealed partial class DetailView : UserControl
         EpisodeCountText.Text = string.Create(
             CultureInfo.CurrentCulture,
             $"{episodes.Length} / {_subject.EpisodeCount}");
+
+        var hasEpisodes = episodes.Length > 0;
+        EpisodeList.Visibility =
+            hasEpisodes
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        EpisodeEmptyStateText.Text =
+            L(
+                "当前季没有可播放的媒体条目。",
+                "現在のシーズンには再生できるメディア項目がありません。",
+                "No playable media items are available for this season.");
+        EpisodeEmptyStateText.Visibility =
+            hasEpisodes
+                ? Visibility.Collapsed
+                : Visibility.Visible;
     }
 
     private EpisodeDisplayItemModel CreateEpisodeItem(
@@ -1028,8 +1130,6 @@ public sealed partial class DetailView : UserControl
                 return;
             }
         }
-
-        PlayRequested?.Invoke(this, "第18话");
     }
 
     private sealed record CharacterCreditViewModel(

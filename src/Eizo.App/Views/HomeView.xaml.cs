@@ -37,8 +37,6 @@ public sealed partial class HomeView : UserControl
     private CancellationTokenSource? _searchCancellation;
     private ResponsiveLayoutMode _responsiveMode = ResponsiveLayoutMode.Large;
 
-    public event EventHandler<string>? DetailRequested;
-    public event EventHandler<string>? PlayRequested;
     public event EventHandler<CatalogMediaItemModel>? CatalogMediaRequested;
     public event EventHandler<CatalogSubjectModel>? CatalogSubjectRequested;
     public event EventHandler<BangumiSubjectCard>? BangumiSubjectRequested;
@@ -202,20 +200,36 @@ public sealed partial class HomeView : UserControl
         if (_featuredSubject is { } subject &&
             _featuredItem is { } subjectItem)
         {
-            FeaturedTitle.Text = subject.Title;
-            FeaturedNativeTitle.Text = subject.NativeTitle;
+            var presentation =
+                CatalogSubjectPresentation.Create(subject);
+
+            FeaturedTitle.Text = presentation.Title;
+            FeaturedNativeTitle.Text = presentation.SecondaryTitle;
+            FeaturedNativeTitle.Visibility =
+                string.IsNullOrWhiteSpace(
+                    presentation.SecondaryTitle)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
             FeaturedMeta.Text = subject.Meta;
+            FeaturedMeta.Visibility =
+                string.IsNullOrWhiteSpace(subject.Meta)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
             FeaturedDescription.Text =
-                FirstNonEmpty(
-                    subject.Metadata?.Overview,
-                    T("Home_FeaturedDescription"));
+                presentation.Overview;
+            FeaturedDescription.Visibility =
+                string.IsNullOrWhiteSpace(FeaturedDescription.Text)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
 
             HeroArtworkImage.Source = CreateArtwork(
                 ResolveHeroArtworkUrl(subject),
                 decodePixelWidth: 1200);
 
             FeaturedPlayButton.IsEnabled = true;
+            FeaturedPlayButton.Visibility = Visibility.Visible;
             FeaturedDetailsButton.IsEnabled = true;
+            FeaturedDetailsButton.Visibility = Visibility.Visible;
             UpdateHeroLayout();
             return;
         }
@@ -224,11 +238,21 @@ public sealed partial class HomeView : UserControl
         {
             FeaturedTitle.Text = item.DisplayTitle;
             FeaturedNativeTitle.Text = item.SecondaryTitle;
+            FeaturedNativeTitle.Visibility =
+                string.IsNullOrWhiteSpace(item.SecondaryTitle)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
             FeaturedMeta.Text = item.Meta;
+            FeaturedMeta.Visibility =
+                string.IsNullOrWhiteSpace(item.Meta)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
             FeaturedDescription.Text =
-                FirstNonEmpty(
-                    item.Metadata?.Overview,
-                    T("Home_FeaturedDescription"));
+                item.Metadata?.Overview ?? string.Empty;
+            FeaturedDescription.Visibility =
+                string.IsNullOrWhiteSpace(FeaturedDescription.Text)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
             HeroArtworkImage.Source = CreateArtwork(
                 FirstNonEmpty(
                     item.Metadata?.BackdropUrl,
@@ -236,18 +260,25 @@ public sealed partial class HomeView : UserControl
                 decodePixelWidth: 1200);
 
             FeaturedPlayButton.IsEnabled = true;
-            FeaturedDetailsButton.IsEnabled = true;
+            FeaturedPlayButton.Visibility = Visibility.Visible;
+            FeaturedDetailsButton.IsEnabled = false;
+            FeaturedDetailsButton.Visibility = Visibility.Collapsed;
             UpdateHeroLayout();
             return;
         }
 
         FeaturedTitle.Text = T("Status_EmptyLibrary");
         FeaturedNativeTitle.Text = string.Empty;
+        FeaturedNativeTitle.Visibility = Visibility.Collapsed;
         FeaturedMeta.Text = string.Empty;
-        FeaturedDescription.Text = T("Home_FeaturedDescription");
+        FeaturedMeta.Visibility = Visibility.Collapsed;
+        FeaturedDescription.Text = string.Empty;
+        FeaturedDescription.Visibility = Visibility.Collapsed;
         HeroArtworkImage.Source = null;
         FeaturedPlayButton.IsEnabled = false;
+        FeaturedPlayButton.Visibility = Visibility.Collapsed;
         FeaturedDetailsButton.IsEnabled = false;
+        FeaturedDetailsButton.Visibility = Visibility.Collapsed;
         UpdateHeroLayout();
     }
 
@@ -810,10 +841,8 @@ public sealed partial class HomeView : UserControl
             return;
         }
 
-        if (_featuredItem is { } item)
-            DetailRequested?.Invoke(
-                this,
-                item.DisplayTitle);
+        // Standalone/unparsed media has no real subject detail model.
+        // Keep the details button disabled rather than routing to legacy sample UI.
     }
 
     private void FeaturedPlayButton_Click(
@@ -821,14 +850,11 @@ public sealed partial class HomeView : UserControl
         RoutedEventArgs e)
     {
         if (_featuredItem is { } item)
+        {
             CatalogMediaRequested?.Invoke(
                 this,
                 item);
-        else if (!string.IsNullOrWhiteSpace(
-                     FeaturedTitle.Text))
-            PlayRequested?.Invoke(
-                this,
-                FeaturedTitle.Text);
+        }
     }
 
     private void MediaCard_Click(

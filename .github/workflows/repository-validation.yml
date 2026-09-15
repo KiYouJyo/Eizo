@@ -88,6 +88,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-PerTitleMetadataV0511Contract.ps1
 
+      - name: Validate Eizo 0.5.12 real-content UI close-out contract
+        shell: pwsh
+        run: ./scripts/Test-RealContentUiCloseoutV0512Contract.ps1
+
       - name: Validate Bangumi public integration contract
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1

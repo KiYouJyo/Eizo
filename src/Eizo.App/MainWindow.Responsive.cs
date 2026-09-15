@@ -34,7 +34,5 @@ public sealed partial class MainWindow
 
         if (selected.View is HomeView home)
             home.SetResponsiveMode(mode);
-        else if (selected.View is CategoryView category)
-            category.SetResponsiveMode(mode);
     }
 }

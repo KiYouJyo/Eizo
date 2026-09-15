@@ -32,13 +32,10 @@ public sealed partial class MainWindow
                 continue;
             }
 
-            if (state.Kind == ShellTabKind.Detail && state.MediaTitle is { } mediaTitle)
-            {
-                if (state.Episode is { } episode)
-                    ShowPlayerInDetailTab(state, mediaTitle, episode);
-                else
-                    ShowDetailInTab(state, mediaTitle);
-            }
+            // Real-content detail/player tabs keep their current bound model and
+            // playback state across language changes. Rebuilding them from a title
+            // alone would lose the catalog subject identity and reintroduce the
+            // retired title-only fallback path.
         }
 
         if (selectedKey is not null && _tabs.ContainsKey(selectedKey))
