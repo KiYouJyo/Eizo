@@ -740,53 +740,6 @@ public sealed partial class CatalogView : UserControl
         await dialog.ShowAsync();
     }
 
-    private void UpdateRecognitionSummary(
-        IReadOnlyList<CatalogMediaItemModel> items,
-        CatalogLibraryAggregation aggregation)
-    {
-        var recognized = 0;
-        var ambiguous = 0;
-        var unresolved = 0;
-        var errors = 0;
-        var missing = 0;
-        var review = 0;
-
-        foreach (var item in items)
-        {
-            var recognition = item.Recognition;
-            if (recognition is null)
-            {
-                missing++;
-                review++;
-                continue;
-            }
-
-            switch (recognition.Status)
-            {
-                case MediaRecognitionStatus.Recognized:
-                    recognized++;
-                    break;
-                case MediaRecognitionStatus.Ambiguous:
-                    ambiguous++;
-                    break;
-                case MediaRecognitionStatus.Unresolved:
-                    unresolved++;
-                    break;
-                case MediaRecognitionStatus.Error:
-                    errors++;
-                    break;
-            }
-
-            if (NeedsReview(recognition))
-                review++;
-        }
-
-        RecognitionSummary.Text = L(
-            $"媒体库：作品 {aggregation.Subjects.Count} · 独立媒体 {aggregation.StandaloneItems.Count} · 文件 {items.Count} ｜ 识别：已识别 {recognized} · 歧义 {ambiguous} · 未解决 {unresolved} · 错误 {errors} · 无快照 {missing} · 建议复核 {review}",
-            $"メディアライブラリ：作品 {aggregation.Subjects.Count} · 単独メディア {aggregation.StandaloneItems.Count} · ファイル {items.Count} ｜ 認識：認識済み {recognized} · 曖昧 {ambiguous} · 未解決 {unresolved} · エラー {errors} · スナップショットなし {missing} · 要確認 {review}",
-            $"Library: {aggregation.Subjects.Count} titles · {aggregation.StandaloneItems.Count} standalone media · {items.Count} files | Recognition: {recognized} recognized · {ambiguous} ambiguous · {unresolved} unresolved · {errors} errors · {missing} missing snapshots · {review} review candidates");
-    }
-
     private static string BuildRecognitionCsv(
         IReadOnlyList<CatalogMediaItemModel> items,
         IReadOnlyDictionary<string, string> sourceLabels,
