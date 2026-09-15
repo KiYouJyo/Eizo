@@ -32,10 +32,14 @@ public sealed partial class FirstRunGuideHost : UserControl
         ApplyStaticText();
     }
 
-    public void Show()
+    public void Show() => ShowCore(resume: true);
+
+    public void ShowFromStart() => ShowCore(resume: false);
+
+    private void ShowCore(bool resume)
     {
         if (Visibility == Visibility.Visible) return;
-        _step = _state.GetResumeStep();
+        _step = resume ? _state.GetResumeStep() : 0;
         _isBusy = false;
         ApplyStaticText();
         SyncPlaybackControls();
