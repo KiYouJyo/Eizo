@@ -79,7 +79,6 @@ public sealed partial class DetailView : UserControl
     private void ApplyText()
     {
         PlayButton.Content = T("Common_Continue");
-        FavoriteButton.Content = T("Common_Favorite");
         ToolTipService.SetToolTip(
             MoreButton,
             L("更多", "その他", "More"));
@@ -1131,7 +1130,6 @@ public sealed partial class DetailView : UserControl
                 return;
             }
         }
-
     }
 
     private sealed record CharacterCreditViewModel(
