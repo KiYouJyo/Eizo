@@ -30,10 +30,12 @@ foreach ($required in @(
     }
 }
 
-if ($catalogXaml.Contains(
-        'Text="{Binding SourceLabel}"',
-        [StringComparison]::Ordinal)) {
-    throw 'Catalog cards still expose the technical source line.'
+foreach ($required in @(
+    'Text="{Binding SourceLabel}"',
+    'Visibility="Collapsed"')) {
+    if (-not $catalogXaml.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Catalog source diagnostics are not safely hidden: $required"
+    }
 }
 
 foreach ($required in @(
