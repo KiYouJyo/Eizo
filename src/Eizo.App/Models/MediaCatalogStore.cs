@@ -47,7 +47,9 @@ public sealed class MediaCatalogStore
     {
         _items = LoadCore();
         if (PruneMissingLocalFilesCore())
+        {
             SaveCore(_items);
+        }
     }
 
     public static MediaCatalogStore Default { get; } = new();

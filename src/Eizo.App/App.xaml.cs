@@ -18,8 +18,14 @@ public partial class App : Application
     {
         try
         {
+            StartupTrace.Mark("App.App:begin");
+            StartupTrace.Mark("ApplyPersistedLanguage:begin");
             Localization.AppLocalizationService.Default.ApplyPersistedLanguage(AppSettingsStore.Current);
+            StartupTrace.Mark("ApplyPersistedLanguage:end");
+            StartupTrace.Mark("App.InitializeComponent:begin");
             InitializeComponent();
+            StartupTrace.Mark("App.InitializeComponent:end");
+            StartupTrace.Mark("App.App:end");
         }
         catch (Exception ex)
         {
@@ -91,13 +97,19 @@ public partial class App : Application
     {
         try
         {
+            StartupTrace.Mark("App.OnLaunched:begin");
+            StartupTrace.Mark("MainWindow ctor:begin");
             _window = MainWindow = new MainWindow();
+            StartupTrace.Mark("MainWindow ctor:end");
 
-            _ = CacheRuntime.RunStartupMaintenanceAsync();
-
+            // Cache maintenance is deferred until the Mica startup overlay has
+            // painted its first compositor frame. Keep OnLaunched free of disk work.
             ActivatePendingRedirectedWindow();
+            StartupTrace.Mark("MainWindow.Activate:begin");
             _window.Activate();
+            StartupTrace.Mark("MainWindow.Activate:return");
             _ = ProcessPendingBangumiAuthAsync();
+            StartupTrace.Mark("App.OnLaunched:return");
         }
         catch (Exception ex)
         {

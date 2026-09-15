@@ -14,10 +14,10 @@ public sealed partial class HomeView : UserControl
         AppLocalizationService.Default;
     private readonly BangumiRepository _bangumi =
         BangumiRepository.Default;
-    private readonly MediaCatalogStore _catalog =
-        MediaCatalogStore.Default;
-    private readonly PlaybackHistoryStore _history =
-        PlaybackHistoryStore.Default;
+    private MediaCatalogStore? _catalog;
+    private PlaybackHistoryStore? _history;
+    private Task? _initializationTask;
+    private bool _storeEventsAttached;
 
     private readonly Dictionary<string, BangumiSubjectCard> _bangumiSeasonSubjects =
         new(StringComparer.Ordinal);
@@ -45,13 +45,15 @@ public sealed partial class HomeView : UserControl
 
     public HomeView()
     {
+        Eizo.StartupTrace.Mark("HomeView.ctor:begin");
         InitializeComponent();
+        Eizo.StartupTrace.Mark("HomeView.InitializeComponent:end");
         ApplyText();
-        RefreshLibraryContent();
         RebuildMediaGrids();
 
         Loaded += HomeView_Loaded;
         Unloaded += HomeView_Unloaded;
+        Eizo.StartupTrace.Mark("HomeView.ctor:end");
     }
 
     internal void SetResponsiveMode(ResponsiveLayoutMode mode)
@@ -72,21 +74,72 @@ public sealed partial class HomeView : UserControl
         object sender,
         RoutedEventArgs e)
     {
-        _catalog.Changed -= Catalog_Changed;
-        _catalog.Changed += Catalog_Changed;
-        _history.Changed -= History_Changed;
-        _history.Changed += History_Changed;
+        Eizo.StartupTrace.Mark("HomeView.Loaded:begin");
+        await EnsureInitialContentAsync();
+        AttachStoreEvents();
+        Eizo.StartupTrace.Mark("HomeView.Loaded:end");
+    }
 
+    internal Task EnsureInitialContentAsync() =>
+        _initializationTask ??= InitializeInitialContentCoreAsync();
+
+    private async Task InitializeInitialContentCoreAsync()
+    {
+        Eizo.StartupTrace.Mark("HomeView.InitializeInitialContent:begin");
+
+        // MediaCatalogStore / PlaybackHistoryStore both perform synchronous disk
+        // reads in their constructors. Warm them on a worker after the splash
+        // has painted instead of blocking WinUI's first compositor frame.
+        var stores = await Task.Run(static () =>
+            (Catalog: MediaCatalogStore.Default,
+             History: PlaybackHistoryStore.Default));
+
+        _catalog = stores.Catalog;
+        _history = stores.History;
+
+        Eizo.StartupTrace.Mark("HomeView.RefreshLibraryContent(deferred):begin");
         RefreshLibraryContent();
-        await LoadCurrentSeasonAsync();
+        Eizo.StartupTrace.Mark("HomeView.RefreshLibraryContent(deferred):end");
+
+        // Network/cache-backed seasonal content is deliberately not part of the
+        // startup gate. It can fill in after the local home surface is ready.
+        _ = LoadCurrentSeasonAsync();
+
+        Eizo.StartupTrace.Mark("HomeView.InitializeInitialContent:end");
+    }
+
+    private void AttachStoreEvents()
+    {
+        if (_storeEventsAttached ||
+            _catalog is null ||
+            _history is null)
+        {
+            return;
+        }
+
+        _catalog.Changed += Catalog_Changed;
+        _history.Changed += History_Changed;
+        _storeEventsAttached = true;
+    }
+
+    private void DetachStoreEvents()
+    {
+        if (!_storeEventsAttached)
+            return;
+
+        if (_catalog is not null)
+            _catalog.Changed -= Catalog_Changed;
+        if (_history is not null)
+            _history.Changed -= History_Changed;
+
+        _storeEventsAttached = false;
     }
 
     private void HomeView_Unloaded(
         object sender,
         RoutedEventArgs e)
     {
-        _catalog.Changed -= Catalog_Changed;
-        _history.Changed -= History_Changed;
+        DetachStoreEvents();
 
         _seasonCancellation?.Cancel();
         _seasonCancellation?.Dispose();
@@ -105,8 +158,15 @@ public sealed partial class HomeView : UserControl
 
     private void RefreshLibraryContent()
     {
-        var items = _catalog.SnapshotForDisplay();
+        var catalog = _catalog;
+        var history = _history;
+        if (catalog is null || history is null)
+            return;
+
+        var items = catalog.SnapshotForDisplay();
+        Eizo.StartupTrace.Mark($"HomeView.SnapshotForDisplay:end items={items.Count}");
         var aggregation = CatalogSubjectAggregator.Build(items);
+        Eizo.StartupTrace.Mark($"HomeView.CatalogSubjectAggregator.Build:end subjects={aggregation.Subjects.Count} standalone={aggregation.StandaloneItems.Count}");
 
         var itemsByKey = items.ToDictionary(
             MediaCatalogStore.ItemKey,
@@ -122,7 +182,7 @@ public sealed partial class HomeView : UserControl
                 static group => group.First().Subject,
                 StringComparer.Ordinal);
 
-        _continueItems = _history.Snapshot()
+        _continueItems = history.Snapshot()
             .Where(entry => itemsByKey.ContainsKey(entry.ItemKey))
             .Take(4)
             .Select(entry =>

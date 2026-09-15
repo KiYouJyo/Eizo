@@ -1,41 +1,85 @@
+[简体中文](README.md) | [日本語](README.ja-JP.md) | English
+
 # Eizo
 
-[简体中文](./README.md) · [日本語](./README.ja-JP.md)
+A native personal media library for Windows, optimized first for Japanese anime and drama while remaining useful for movies, TV series, and other personal media. Eizo brings recognition, metadata, playback, WebDAV, caching, and watch-state management into one WinUI 3 app.
 
-**Eizo** is a native Windows media library designed with Japanese anime and drama as first-class content, while also supporting movies, TV series, and other personal media.
+[![GitHub Release](https://img.shields.io/github/v/release/KiYouJyo/Eizo?display_name=tag&sort=semver&color=2F81F7&label=Release)](https://github.com/KiYouJyo/Eizo/releases/latest)
+[![CI](https://github.com/KiYouJyo/Eizo/actions/workflows/repository-validation.yml/badge.svg?branch=main)](https://github.com/KiYouJyo/Eizo/actions/workflows/repository-validation.yml)
+[![Windows](https://img.shields.io/badge/Windows-WinUI%203-0078D4?logo=windows&logoColor=white)](https://github.com/KiYouJyo/Eizo)
+[![Architecture](https://img.shields.io/badge/Architecture-x64-005A9E)](#system-requirements)
+[![Languages](https://img.shields.io/badge/Languages-%E4%B8%AD%E6%96%87%20%7C%20%E6%97%A5%E6%9C%AC%E8%AA%9E%20%7C%20English-6F42C1)](#languages)
+[![Local First](https://img.shields.io/badge/Design-Local--first-2EA043)](#privacy-and-network-access)
 
-> Current phase: repository foundation and localization infrastructure.
+## Get Eizo
 
-## Product direction
+- [Latest GitHub Release](https://github.com/KiYouJyo/Eizo/releases/latest): the `Eizo-v*-x64-one-click.zip` package is recommended for first-time installation.
+- [Project website](https://kiyoujyo.github.io/Eizo/): current version, feature overview, downloads, and support.
+- Advanced users can download the signed `.msixbundle` and `SHA256SUMS.txt` directly from Release Assets.
 
-- Media recognition and metadata optimized first for Japanese anime and drama
-- A unified media-source layer for local storage, WebDAV, and commercial cloud drives
-- Automatic metadata, related works, seasonal anime organization, and watch progress
-- High-quality playback powered by a mature open-source playback engine
-- A native Windows experience built with WinUI 3
-- Simplified Chinese, Japanese, and English UI
+## Core features
+
+- **Native media library** for local and WebDAV sources, scanning, classification, and title/season/episode aggregation.
+- **Japanese-media-first recognition** for seasons, episodes, OVA/OAD/ONA/SP, release groups, and technical tags while preserving native titles.
+- **Real metadata** from providers such as TMDB and Bangumi for artwork, summaries, seasons, episodes, cast, and staff.
+- **Playback** powered by LibVLC with resume state, seeking, speed controls, fullscreen, queue support, and common video formats.
+- **Subtitles** including external ASS/SSA/SRT, normalized embedded subtitle rendering, dual subtitles, and preferred languages.
+- **Cache and downloads** for remote video, including progress, pause/resume, and offline playback.
+- **Bangumi integration** for broadcast calendar, discovery, collections, and account-backed features.
+- **Native Windows experience** with WinUI 3, Mica, light/dark themes, three languages, and high-DPI visual assets.
+
+## Install and update
+
+### First install
+
+Download the one-click package from the [latest Release](https://github.com/KiYouJyo/Eizo/releases/latest), extract it, and follow the bundled instructions. It carries the installation bootstrap and publisher-certificate setup needed by the GitHub distribution.
+
+### Updates
+
+The About page can check GitHub Releases. Update packages are verified for integrity and publisher signature before installation.
+
+### Manual verification
+
+Each release also publishes the signed MSIXBundle and `SHA256SUMS.txt` for manual deployment, archiving, or verification.
+
+## Privacy and network access
+
+Eizo is local-first. Library indexes, settings, and playback history are stored locally by default, and local media files are not uploaded to an Eizo-operated server. Features such as metadata retrieval, Bangumi, update checks, and user-configured WebDAV access communicate with the corresponding third-party service or media source.
+
+See [Privacy](PRIVACY.md).
+
+## System requirements
+
+- Windows 10 version 2004 or later / Windows 11
+- x64
+- Windows App SDK Runtime
 
 ## Languages
 
-| Language | Locale | Product name |
-| --- | --- | --- |
-| Simplified Chinese | zh-CN | 映藏 |
-| Japanese | ja-JP | 映蔵 |
-| English | en-US | Eizo |
+Simplified Chinese, Japanese, and English are supported with a shared resource-key contract.
 
-All three resource files must expose exactly the same resource-key set. See [Localization](./docs/LOCALIZATION.md).
+## Documentation
 
-## Development roadmap
+- [Project website](https://kiyoujyo.github.io/Eizo/)
+- [Roadmap](docs/ROADMAP.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Playback integration](docs/PLAYBACK_INTEGRATION.md)
+- [Localization](docs/LOCALIZATION.md)
+- [UI guidelines](docs/UI_GUIDELINES.md)
+- [Release process](docs/RELEASE.md)
+- [Changelog](CHANGELOG.md)
+- [Privacy](PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-Foundation → Japanese media recognition → anime metadata → Japanese drama metadata → playback → library UX → WebDAV → Streaming Gateway → commercial cloud drives.
+## Development
 
-## Contributing
+```powershell
+dotnet restore Eizo.slnx
+dotnet test Eizo.slnx -c Debug
+```
 
-Read [CONTRIBUTING.md](./CONTRIBUTING.md) before submitting changes. User-facing strings must not be hard-coded; add them to all three localization resources.
+## Feedback
 
-## Security
-
-Follow [SECURITY.md](./SECURITY.md) for vulnerability reports. Never post credentials, tokens, signing material, or Microsoft Store secrets in public issues.
+Use [GitHub Issues](https://github.com/KiYouJyo/Eizo/issues) or the [support page](https://kiyoujyo.github.io/Eizo/support/).
 
 ---
 

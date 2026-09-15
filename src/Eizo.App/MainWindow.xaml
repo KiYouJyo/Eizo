@@ -5,137 +5,168 @@
     <MicaBackdrop />
   </Window.SystemBackdrop>
 
-  <Grid x:Name="WindowRoot" Background="Transparent" PreviewKeyDown="WindowRoot_PreviewKeyDown">
-    <Grid x:Name="RootGrid"
-          Background="Transparent"
-          RowDefinitions="48,*"
-          SizeChanged="RootGrid_SizeChanged"
-          UseLayoutRounding="True">
-      <Grid x:Name="AppTitleBar"
-            Grid.Row="0"
+  <Grid x:Name="WindowRoot"
+        Background="Transparent"
+        PreviewKeyDown="WindowRoot_PreviewKeyDown"
+        Loaded="OnStartupWindowRootLoaded">
+    <Grid x:Name="MainContent"
+          Opacity="0"
+          IsHitTestVisible="False">
+      <Grid x:Name="RootGrid"
             Background="Transparent"
-            ColumnDefinitions="128,*,132"
-            Padding="0,0,12,0">
-        <TextBlock Text="Eizo  映藏"
-                   Style="{StaticResource BodyText}"
-                   FontWeight="SemiBold"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center" />
-
-        <ScrollViewer Grid.Column="1"
-                      Height="32"
-                      Margin="0,8,12,8"
-                      HorizontalScrollMode="Auto"
-                      HorizontalScrollBarVisibility="Hidden"
-                      VerticalScrollMode="Disabled"
-                      VerticalScrollBarVisibility="Disabled"
-                      IsTabStop="False">
-          <StackPanel x:Name="ShellTabs"
-                      Orientation="Horizontal"
-                      Spacing="8"
-                      VerticalAlignment="Top">
-            <StackPanel x:Name="ShellTabItems"
-                        Orientation="Horizontal"
-                        Spacing="8" />
-            <Button x:Name="ShellNewTabButton"
-                    Width="32"
-                    Height="32"
-                    MinWidth="32"
-                    Padding="0"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    CornerRadius="7"
-                    HorizontalContentAlignment="Center"
-                    VerticalContentAlignment="Center"
-                    Click="ShellNewTabButton_Click">
-              <TextBlock Text="+"
-                         FontSize="17"
-                         Opacity="0.68" />
-            </Button>
-          </StackPanel>
-        </ScrollViewer>
-      </Grid>
-
-      <NavigationView x:Name="ShellNavigation"
-                      Grid.Row="1"
-                      Background="Transparent"
-                      AlwaysShowHeader="False"
-                      IsBackButtonVisible="Collapsed"
-                      IsSettingsVisible="False"
-                      Loaded="ShellNavigation_Loaded"
-                      ItemInvoked="ShellNavigation_ItemInvoked">
-        <NavigationView.Resources>
-          <Thickness x:Key="NavigationViewBorderThickness">0</Thickness>
-          <Thickness x:Key="NavigationViewPaneContentGridMargin">0</Thickness>
-          <Thickness x:Key="NavigationViewContentGridBorderThickness">0</Thickness>
-          <Thickness x:Key="NavigationViewMinimalContentGridBorderThickness">0</Thickness>
-        </NavigationView.Resources>
-
-        <NavigationView.MenuItems>
-          <NavigationViewItem x:Name="HomeNav" Tag="home" IsSelected="True">
-            <NavigationViewItem.Icon><SymbolIcon Symbol="Home" /></NavigationViewItem.Icon>
-          </NavigationViewItem>
-
-          <NavigationViewItem x:Name="BangumiNav"
-                              Tag="bangumi-following"
-                              SelectsOnInvoked="True"
-                              IsExpanded="True">
-            <NavigationViewItem.Icon><FontIcon Glyph="&#xE774;" /></NavigationViewItem.Icon>
-            <NavigationViewItem.MenuItems>
-              <NavigationViewItem x:Name="AnimeBlogsNav" Tag="bangumi-anime-blogs">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE8A5;" /></NavigationViewItem.Icon>
-              </NavigationViewItem>
-              <NavigationViewItem x:Name="CalendarNav" Tag="bangumi-calendar">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE787;" /></NavigationViewItem.Icon>
-              </NavigationViewItem>
-              <NavigationViewItem x:Name="SeasonalNav" Tag="bangumi-seasonal">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B2;" /></NavigationViewItem.Icon>
-              </NavigationViewItem>
-              <NavigationViewItem x:Name="DiscoverNav" Tag="bangumi-discover">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE721;" /></NavigationViewItem.Icon>
-              </NavigationViewItem>
-            </NavigationViewItem.MenuItems>
-          </NavigationViewItem>
-
-          <NavigationViewItem x:Name="CategoryNav"
-                              Tag="categories"
-                              SelectsOnInvoked="True"
-                              IsExpanded="True">
-            <NavigationViewItem.Icon><SymbolIcon Symbol="Library" /></NavigationViewItem.Icon>
-            <NavigationViewItem.MenuItems>
-              <NavigationViewItem x:Name="AnimeNav" Tag="anime">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B2;" /></NavigationViewItem.Icon>
-              </NavigationViewItem>
-              <NavigationViewItem x:Name="MoviesNav" Tag="movies">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE714;" /></NavigationViewItem.Icon>
-              </NavigationViewItem>
-              <NavigationViewItem x:Name="SeriesNav" Tag="series">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE8FD;" /></NavigationViewItem.Icon>
-              </NavigationViewItem>
-              <NavigationViewItem x:Name="SourcesNav" Tag="sources">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE753;" /></NavigationViewItem.Icon>
-              </NavigationViewItem>
-            </NavigationViewItem.MenuItems>
-          </NavigationViewItem>
-        </NavigationView.MenuItems>
-
-        <NavigationView.FooterMenuItems>
-          <NavigationViewItem x:Name="CacheNav" Tag="cache">
-            <NavigationViewItem.Icon><FontIcon Glyph="&#xE7C5;" /></NavigationViewItem.Icon>
-          </NavigationViewItem>
-          <NavigationViewItem x:Name="AboutNav" Tag="about">
-            <NavigationViewItem.Icon><SymbolIcon Symbol="Help" /></NavigationViewItem.Icon>
-          </NavigationViewItem>
-          <NavigationViewItem x:Name="SettingsNav" Tag="settings">
-            <NavigationViewItem.Icon><SymbolIcon Symbol="Setting" /></NavigationViewItem.Icon>
-          </NavigationViewItem>
-        </NavigationView.FooterMenuItems>
-
-        <Grid x:Name="MainContentHost"
+            RowDefinitions="48,*"
+            SizeChanged="RootGrid_SizeChanged"
+            Loaded="OnStartupMainContentLoaded"
+            UseLayoutRounding="True">
+        <Grid x:Name="AppTitleBar"
+              Grid.Row="0"
               Background="Transparent"
-              HorizontalAlignment="Stretch"
-              VerticalAlignment="Stretch" />
-      </NavigationView>
+              ColumnDefinitions="128,*,132"
+              Padding="0,0,12,0">
+          <TextBlock Text="Eizo  映藏"
+                     Style="{StaticResource BodyText}"
+                     FontWeight="SemiBold"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center" />
+
+          <ScrollViewer Grid.Column="1"
+                        Height="32"
+                        Margin="0,8,12,8"
+                        HorizontalScrollMode="Auto"
+                        HorizontalScrollBarVisibility="Hidden"
+                        VerticalScrollMode="Disabled"
+                        VerticalScrollBarVisibility="Disabled"
+                        IsTabStop="False">
+            <StackPanel x:Name="ShellTabs"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Top">
+              <StackPanel x:Name="ShellTabItems"
+                          Orientation="Horizontal"
+                          Spacing="8" />
+              <Button x:Name="ShellNewTabButton"
+                      Width="32"
+                      Height="32"
+                      MinWidth="32"
+                      Padding="0"
+                      Background="Transparent"
+                      BorderThickness="0"
+                      CornerRadius="7"
+                      HorizontalContentAlignment="Center"
+                      VerticalContentAlignment="Center"
+                      Click="ShellNewTabButton_Click">
+                <TextBlock Text="+"
+                           FontSize="17"
+                           Opacity="0.68" />
+              </Button>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+
+        <NavigationView x:Name="ShellNavigation"
+                        Grid.Row="1"
+                        Background="Transparent"
+                        AlwaysShowHeader="False"
+                        IsBackButtonVisible="Collapsed"
+                        IsSettingsVisible="False"
+                        Loaded="ShellNavigation_Loaded"
+                        ItemInvoked="ShellNavigation_ItemInvoked">
+          <NavigationView.Resources>
+            <Thickness x:Key="NavigationViewBorderThickness">0</Thickness>
+            <Thickness x:Key="NavigationViewPaneContentGridMargin">0</Thickness>
+            <Thickness x:Key="NavigationViewContentGridBorderThickness">0</Thickness>
+            <Thickness x:Key="NavigationViewMinimalContentGridBorderThickness">0</Thickness>
+          </NavigationView.Resources>
+
+          <NavigationView.MenuItems>
+            <NavigationViewItem x:Name="HomeNav" Tag="home" IsSelected="True">
+              <NavigationViewItem.Icon><SymbolIcon Symbol="Home" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+
+            <NavigationViewItem x:Name="BangumiNav"
+                                Tag="bangumi-following"
+                                SelectsOnInvoked="True"
+                                IsExpanded="True">
+              <NavigationViewItem.Icon><FontIcon Glyph="&#xE774;" /></NavigationViewItem.Icon>
+              <NavigationViewItem.MenuItems>
+                <NavigationViewItem x:Name="AnimeBlogsNav" Tag="bangumi-anime-blogs">
+                  <NavigationViewItem.Icon><FontIcon Glyph="&#xE8A5;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="CalendarNav" Tag="bangumi-calendar">
+                  <NavigationViewItem.Icon><FontIcon Glyph="&#xE787;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="SeasonalNav" Tag="bangumi-seasonal">
+                  <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B2;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="DiscoverNav" Tag="bangumi-discover">
+                  <NavigationViewItem.Icon><FontIcon Glyph="&#xE721;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+              </NavigationViewItem.MenuItems>
+            </NavigationViewItem>
+
+            <NavigationViewItem x:Name="CategoryNav"
+                                Tag="categories"
+                                SelectsOnInvoked="True"
+                                IsExpanded="True">
+              <NavigationViewItem.Icon><SymbolIcon Symbol="Library" /></NavigationViewItem.Icon>
+              <NavigationViewItem.MenuItems>
+                <NavigationViewItem x:Name="AnimeNav" Tag="anime">
+                  <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B2;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="MoviesNav" Tag="movies">
+                  <NavigationViewItem.Icon><FontIcon Glyph="&#xE714;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="SeriesNav" Tag="series">
+                  <NavigationViewItem.Icon><FontIcon Glyph="&#xE8FD;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="SourcesNav" Tag="sources">
+                  <NavigationViewItem.Icon><FontIcon Glyph="&#xE753;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+              </NavigationViewItem.MenuItems>
+            </NavigationViewItem>
+          </NavigationView.MenuItems>
+
+          <NavigationView.FooterMenuItems>
+            <NavigationViewItem x:Name="CacheNav" Tag="cache">
+              <NavigationViewItem.Icon><FontIcon Glyph="&#xE7C5;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem x:Name="AboutNav" Tag="about">
+              <NavigationViewItem.Icon><SymbolIcon Symbol="Help" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem x:Name="SettingsNav" Tag="settings">
+              <NavigationViewItem.Icon><SymbolIcon Symbol="Setting" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+          </NavigationView.FooterMenuItems>
+
+          <Grid x:Name="MainContentHost"
+                Background="Transparent"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch" />
+        </NavigationView>
+      </Grid>
+    </Grid>
+
+    <Grid x:Name="StartupOverlay"
+          Background="Transparent"
+          Canvas.ZIndex="100">
+      <StackPanel HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Spacing="18">
+        <Image x:Name="StartupLogo"
+               Source="ms-appx:///Assets/AboutLogo.png"
+               Width="183"
+               Height="183"
+               Stretch="Uniform"
+               HorizontalAlignment="Center"
+               ImageOpened="OnStartupLogoImageOpened"
+               ImageFailed="OnStartupLogoImageFailed" />
+        <ProgressRing x:Name="StartupProgressRing"
+                      Width="28"
+                      Height="28"
+                      IsActive="True"
+                      Foreground="#0067C0"
+                      HorizontalAlignment="Center" />
+      </StackPanel>
     </Grid>
   </Grid>
 </Window>

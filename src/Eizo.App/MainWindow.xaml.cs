@@ -33,9 +33,13 @@ public sealed partial class MainWindow : Window
 
     public MainWindow()
     {
+        StartupTrace.Mark("MainWindow.ctor:begin");
+        StartupTrace.Mark("MainWindow.InitializeComponent:begin");
         InitializeComponent();
+        StartupTrace.Mark("MainWindow.InitializeComponent:end");
 
         Title = "Eizo 映藏";
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Eizo.ico"));
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
@@ -43,7 +47,9 @@ public sealed partial class MainWindow : Window
         WindowRoot.RequestedTheme = ThemePreferenceStore.Load();
         UpdateTitleBarColors();
 
+        StartupTrace.Mark("RestoreWindowPlacement:begin");
         RestoreWindowPlacement();
+        StartupTrace.Mark("RestoreWindowPlacement:end");
         AppWindow.Changed += MainWindow_AppWindowChanged;
         Closed += MainWindow_WindowPlacementClosed;
 
@@ -58,7 +64,10 @@ public sealed partial class MainWindow : Window
             QueueNavigationPaneBackgroundUpdate();
         };
 
-        CreateWorkspaceTab(select: true);
+        // The real home page is intentionally created only after the startup
+        // overlay has painted its first frame. HomeView owns catalog/history
+        // initialization, which must never delay the first Mica splash frame.
+        StartupTrace.Mark("MainWindow.ctor:end");
     }
 
     private void RestoreWindowPlacement()
