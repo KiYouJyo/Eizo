@@ -5,7 +5,8 @@
              xmlns:controls="using:Eizo.Controls"
              xmlns:playback="using:Eizo.Playback.WinUI"
              IsTabStop="True"
-             KeyDown="PlayerView_KeyDown">
+             KeyDown="PlayerView_KeyDown"
+             KeyUp="PlayerView_KeyUp">
   <Grid x:Name="PlayerRoot"
         Background="Transparent"
         PointerMoved="PlayerRoot_PointerMoved"
@@ -135,6 +136,12 @@
                   Maximum="1"
                   Value="0"
                   StepFrequency="1"
+                  IsThumbToolTipEnabled="False"
+                  PointerPressed="PlaybackSlider_PointerPressed"
+                  PointerMoved="PlaybackSlider_PointerMoved"
+                  PointerReleased="PlaybackSlider_PointerReleased"
+                  PointerCanceled="PlaybackSlider_PointerCanceled"
+                  PointerCaptureLost="PlaybackSlider_PointerCaptureLost"
                   ValueChanged="PlaybackSlider_ValueChanged" />
           <TextBlock x:Name="CurrentTimeText"
                      Style="{StaticResource MetadataText}"
@@ -313,9 +320,48 @@
       </Grid>
           </Grid>
 
+          <Border x:Name="SeekPreviewPopup"
+                  Width="224"
+                  Height="148"
+                  Padding="4"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Bottom"
+                  Margin="0,0,0,116"
+                  CornerRadius="9"
+                  Background="{ThemeResource AppTransientSurfaceBrush}"
+                  BorderBrush="{ThemeResource AppTransientSurfaceBorderBrush}"
+                  BorderThickness="1"
+                  Visibility="Collapsed"
+                  IsHitTestVisible="False"
+                  Canvas.ZIndex="8">
+            <Border.RenderTransform>
+              <TranslateTransform x:Name="SeekPreviewTranslateTransform" />
+            </Border.RenderTransform>
+            <Grid RowDefinitions="*,Auto">
+              <Grid Background="#080D0E">
+                <Image x:Name="SeekPreviewImage"
+                       Stretch="UniformToFill" />
+                <ProgressRing x:Name="SeekPreviewLoadingRing"
+                              Width="24"
+                              Height="24"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              IsActive="False"
+                              Visibility="Collapsed" />
+              </Grid>
+              <TextBlock x:Name="SeekPreviewTimeText"
+                         Grid.Row="1"
+                         Margin="4,5,4,3"
+                         HorizontalAlignment="Center"
+                         Style="{StaticResource MetadataText}" />
+            </Grid>
+          </Border>
+
           <Border x:Name="SidebarDismissLayer"
                   Background="Transparent"
                   Visibility="Collapsed"
+                  IsHitTestVisible="False"
+                  Margin="0,0,0,112"
                   PointerPressed="SidebarDismissLayer_PointerPressed" />
         </Grid>
       </SplitView.Content>
