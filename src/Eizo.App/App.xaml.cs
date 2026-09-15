@@ -11,6 +11,7 @@ public partial class App : Application
     private static bool _redirectedActivationPending;
     private static Uri? _pendingBangumiAuth;
     private Window? _window;
+    private StartupWindow? _startupWindow;
 
     internal static MainWindow? MainWindow { get; private set; }
 
@@ -87,21 +88,55 @@ public partial class App : Application
         });
     }
 
-    protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+    protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
         try
         {
+            // Paint a tiny dedicated startup surface first. MainWindow currently
+            // constructs the full shell (NavigationView, tabs, pages, resources)
+            // synchronously, which can leave the native HWND showing only its
+            // default black/white background before the in-window overlay exists.
+            _startupWindow = new StartupWindow();
+            _startupWindow.Activate();
+
+            // Do not start the expensive shell construction until at least one
+            // actual compositor frame of the startup surface has been presented.
+            await _startupWindow.WaitForFirstFrameAsync();
+
             _window = MainWindow = new MainWindow();
 
             _ = CacheRuntime.RunStartupMaintenanceAsync();
 
             ActivatePendingRedirectedWindow();
             _window.Activate();
+
+            // Keep the startup window top-most until MainWindow has painted its
+            // own splash/logo frame. This prevents a second black/white gap while
+            // ownership is transferred between the lightweight and real windows.
+            await Task.WhenAny(
+                MainWindow.WaitForStartupSurfaceAsync(),
+                Task.Delay(TimeSpan.FromSeconds(3)));
+
+            var startupWindow = _startupWindow;
+            _startupWindow = null;
+            startupWindow?.Close();
+
+            MainWindow.RestoreAndActivate();
             _ = ProcessPendingBangumiAuthAsync();
         }
         catch (Exception ex)
         {
             WriteStartupFailure("App.OnLaunched", ex);
+
+            try
+            {
+                _startupWindow?.Close();
+                _startupWindow = null;
+            }
+            catch
+            {
+            }
+
             throw;
         }
     }
