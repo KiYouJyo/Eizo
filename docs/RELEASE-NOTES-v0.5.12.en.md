@@ -1,6 +1,8 @@
-# Eizo 0.5.12 — Real-content UI Close-out
+[简体中文](RELEASE-NOTES-v0.5.12.md) | [日本語](RELEASE-NOTES-v0.5.12.ja.md) | English
 
-Eizo 0.5.12 keeps the established UI framework and closes the remaining presentation gaps around the real media data wired in during 0.5.9–0.5.11. It does not add AniList or redesign the library/detail layout.
+# Eizo v0.5.12
+
+## Real Content UI / Close-out
 
 ## Included
 
