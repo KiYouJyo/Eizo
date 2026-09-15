@@ -6,7 +6,7 @@ using Windows.Graphics;
 
 namespace Eizo;
 
-internal sealed partial class StartupWindow : Window
+public sealed partial class StartupWindow : Window
 {
     private readonly TaskCompletionSource<bool> _firstFramePresented =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
