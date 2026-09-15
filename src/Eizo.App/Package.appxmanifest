@@ -9,7 +9,7 @@
   <mp:PhoneIdentity PhoneProductId="89A07165-44A4-43FC-8428-5C4520B35CF9" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>Eizo</DisplayName>
-    <PublisherDisplayName>AppPublisher</PublisherDisplayName>
+    <PublisherDisplayName>Jo Kiyō</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Dependencies>
