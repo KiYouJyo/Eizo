@@ -19,9 +19,46 @@
       <Grid RowDefinitions="Auto,*,Auto"
             RowSpacing="20">
         <StackPanel Grid.Row="0" Spacing="7">
-          <TextBlock x:Name="StepTrail"
-                     Style="{StaticResource MetadataText}"
-                     TextWrapping="Wrap" />
+          <Grid x:Name="StepTrailGrid"
+                ColumnDefinitions="*,*,*,*,*,*"
+                ColumnSpacing="8">
+            <TextBlock x:Name="StepLabel0"
+                       Grid.Column="0"
+                       Style="{StaticResource MetadataText}"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="StepLabel1"
+                       Grid.Column="1"
+                       Style="{StaticResource MetadataText}"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="StepLabel2"
+                       Grid.Column="2"
+                       Style="{StaticResource MetadataText}"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="StepLabel3"
+                       Grid.Column="3"
+                       Style="{StaticResource MetadataText}"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="StepLabel4"
+                       Grid.Column="4"
+                       Style="{StaticResource MetadataText}"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="StepLabel5"
+                       Grid.Column="5"
+                       Style="{StaticResource MetadataText}"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+          </Grid>
           <ProgressBar x:Name="StepProgress"
                        Minimum="0"
                        Maximum="6"
@@ -161,16 +198,25 @@
                         Spacing="16">
               <Border Style="{StaticResource SettingsInnerCardStyle}" Padding="18">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
-                  <StackPanel Spacing="5" VerticalAlignment="Center">
+                  <StackPanel Spacing="5"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Stretch">
                     <TextBlock x:Name="BangumiCardTitle"
-                               Style="{StaticResource SettingsRowLabelStyle}" />
+                               Style="{StaticResource SettingsRowLabelStyle}"
+                               HorizontalAlignment="Left"
+                               TextAlignment="Left" />
                     <TextBlock x:Name="BangumiCardBody"
                                Style="{StaticResource SettingsDescriptionStyle}"
+                               HorizontalAlignment="Left"
+                               TextAlignment="Left"
+                               Margin="0"
                                TextWrapping="Wrap"
                                MaxWidth="610" />
                     <TextBlock x:Name="BangumiStatusText"
                                Margin="0,5,0,0"
                                Style="{StaticResource MetadataText}"
+                               HorizontalAlignment="Left"
+                               TextAlignment="Left"
                                TextWrapping="Wrap" />
                   </StackPanel>
                   <Button x:Name="BangumiLoginButton"
@@ -271,11 +317,19 @@
         </ScrollViewer>
 
         <Grid Grid.Row="2"
-              ColumnDefinitions="*,Auto,Auto,Auto"
-              ColumnSpacing="8">
-          <Button x:Name="SkipButton" Grid.Column="1" Click="OnSkip" />
-          <Button x:Name="BackButton" Grid.Column="2" Click="OnBack" />
-          <Button x:Name="NextButton" Grid.Column="3" Click="OnNext" />
+              ColumnDefinitions="*,Auto"
+              ColumnSpacing="16">
+          <Button x:Name="SkipButton"
+                  Grid.Column="0"
+                  HorizontalAlignment="Left"
+                  Click="OnSkip" />
+          <StackPanel Grid.Column="1"
+                      Orientation="Horizontal"
+                      HorizontalAlignment="Right"
+                      Spacing="8">
+            <Button x:Name="BackButton" Click="OnBack" />
+            <Button x:Name="NextButton" Click="OnNext" />
+          </StackPanel>
         </Grid>
       </Grid>
     </Border>
