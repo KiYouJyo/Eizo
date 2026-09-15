@@ -31,6 +31,8 @@ This document tracks repository-side readiness for the first Microsoft Store sub
 
 ## Partner Center blockers
 
+The Store publisher display name is pinned to `Jo Kiyō` and the StoreUpload pipeline deep-verifies the main x64 package plus every generated scale resource package.
+
 The source manifest intentionally still contains the sideload identity:
 
 - `Identity Name="Eizo"`
