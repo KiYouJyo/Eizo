@@ -134,6 +134,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-MetadataScanLifecycleContract.ps1
 
+      - name: Validate Eizo 1.0 first-run guide contract
+        shell: pwsh
+        run: ./scripts/Test-FirstRunGuideV100Contract.ps1
+
       - name: Validate library aggregation visual UI contract
         shell: pwsh
         run: ./scripts/Test-LibraryAggregationUiContract.ps1
