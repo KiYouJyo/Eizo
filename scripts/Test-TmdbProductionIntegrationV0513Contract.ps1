@@ -107,8 +107,9 @@ if (-not $about.Contains($notice, [StringComparison]::Ordinal)) {
     throw 'Required TMDB attribution notice is missing from About.'
 }
 if (-not $aboutXaml.Contains('TmdbAttributionNotice', [StringComparison]::Ordinal) -or
+    -not $aboutXaml.Contains('blue_square_1-5bdc75aaebeb75dc7ae79426ddd9be3b2be1e342510f8202baf6bffa71d7f5c4.svg', [StringComparison]::Ordinal) -or
     -not $about.Contains('https://www.themoviedb.org', [StringComparison]::Ordinal)) {
-    throw 'TMDB About attribution/link is incomplete.'
+    throw 'TMDB About attribution/logo/link is incomplete.'
 }
 
 foreach ($required in @(
