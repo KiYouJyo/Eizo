@@ -62,10 +62,20 @@ if (-not $service.Contains('CurrentVersion = 1') -or
     throw 'First-run guide lifecycle/resume state contract is missing.'
 }
 
+$settingsXaml = Read-Text 'src/Eizo.App/Views/SettingsView.xaml'
+$settingsCode = Read-Text 'src/Eizo.App/Views/SettingsView.xaml.cs'
+$onboardingWindow = Read-Text 'src/Eizo.App/MainWindow.Onboarding.cs'
+
 if (-not $window.Contains('FirstRunGuideHost') -or
     -not $startup.Contains('ShouldShowAutomatically') -or
     -not $startup.Contains('FirstRunGuideHost.Show()')) {
     throw 'MainWindow startup does not host/launch the first-run guide.'
+}
+
+if (-not $settingsXaml.Contains('ReopenFirstRunGuideButton') -or
+    -not $settingsCode.Contains('ShowFirstRunGuideFromSettings') -or
+    -not $onboardingWindow.Contains('ShowFromStart')) {
+    throw 'Settings must expose a non-destructive first-run guide restart action.'
 }
 
 if (-not $code.Contains('VirtualKey.Escape') -or
