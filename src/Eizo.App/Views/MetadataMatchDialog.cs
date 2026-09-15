@@ -47,39 +47,24 @@ internal static class MetadataMatchDialog
             return null;
         }
 
-        var providerOptions =
-            new List<ProviderOption>
+        if (!MediaScanCoordinator.Default.IsTmdbConfigured)
+        {
+            await new ContentDialog
             {
-                new(
-                    L("全部", "すべて", "All"),
-                    null),
-                new(
-                    "Bangumi",
-                    "bangumi"),
-            };
-
-        if (MediaScanCoordinator.Default
-                .IsTmdbConfigured)
-        {
-            providerOptions.Add(
-                new ProviderOption(
-                    "TMDB",
-                    "tmdb"));
+                XamlRoot = xamlRoot,
+                Title = L(
+                    "TMDB 尚未配置",
+                    "TMDB は未設定です",
+                    "TMDB is not configured"),
+                Content = L(
+                    "媒体库元数据已由 TMDB 统一提供。请先在设置 → 元数据中配置 TMDB Read Access Token。",
+                    "メディアライブラリのメタデータは TMDB に統一されています。設定 → メタデータで TMDB Read Access Token を設定してください。",
+                    "Library metadata is now provided exclusively by TMDB. Configure a TMDB Read Access Token in Settings → Metadata first."),
+                CloseButtonText =
+                    L("关闭", "閉じる", "Close"),
+            }.ShowAsync();
+            return null;
         }
-
-        var providerBox = new ComboBox
-        {
-            Header = L(
-                "数据源",
-                "データソース",
-                "Provider"),
-            HorizontalAlignment =
-                HorizontalAlignment.Stretch,
-            ItemsSource = providerOptions,
-            DisplayMemberPath =
-                nameof(ProviderOption.Label),
-            SelectedIndex = 0,
-        };
 
         var queryBox = new TextBox
         {
@@ -148,15 +133,12 @@ internal static class MetadataMatchDialog
 
             try
             {
-                var provider =
-                    (providerBox.SelectedItem as
-                        ProviderOption)?.Provider;
                 var candidates =
                     await MediaScanCoordinator.Default
                         .SearchMetadataMatchesAsync(
                             recognition,
                             queryBox.Text,
-                            provider);
+                            provider: "tmdb");
 
                 foreach (var candidate in candidates)
                 {
@@ -196,9 +178,9 @@ internal static class MetadataMatchDialog
                 statusText.Text =
                     candidates.Count == 0
                         ? L(
-                            "没有找到匹配结果，可以更换关键词或数据源。",
-                            "一致する結果がありません。検索語またはデータソースを変更してください。",
-                            "No matches found. Try another query or provider.")
+                            "没有找到匹配结果，可以更换关键词后重试。",
+                            "一致する結果がありません。検索語を変更して再試行してください。",
+                            "No matches found. Try another search query.")
                         : L(
                             $"找到 {candidates.Count} 个候选。",
                             $"{candidates.Count} 件の候補があります。",
@@ -222,22 +204,6 @@ internal static class MetadataMatchDialog
             Spacing = 10,
             MinWidth = 520,
         };
-        content.Children.Add(providerBox);
-        if (!MediaScanCoordinator.Default
-                .IsTmdbConfigured)
-        {
-            content.Children.Add(
-                new TextBlock
-                {
-                    Text = L(
-                        "TMDB 尚未配置，可在设置 → 元数据中添加 Read Access Token。",
-                        "TMDB は未設定です。設定 → メタデータで Read Access Token を追加できます。",
-                        "TMDB is not configured. Add a Read Access Token in Settings → Metadata."),
-                    Opacity = 0.62,
-                    FontSize = 12,
-                    TextWrapping = TextWrapping.Wrap,
-                });
-        }
         content.Children.Add(queryBox);
         content.Children.Add(searchButton);
         content.Children.Add(statusText);
@@ -265,7 +231,4 @@ internal static class MetadataMatchDialog
             _ => zhCn,
         };
 
-    private sealed record ProviderOption(
-        string Label,
-        string? Provider);
 }
