@@ -112,27 +112,8 @@ if (-not $aboutXaml.Contains('TmdbAttributionNotice', [StringComparison]::Ordina
     throw 'TMDB About attribution/logo/link is incomplete.'
 }
 
-foreach ($required in @(
-    '<Version>0.5.13</Version>',
-    '<AssemblyVersion>0.5.13.0</AssemblyVersion>',
-    '<FileVersion>0.5.13.0</FileVersion>',
-    '<InformationalVersion>0.5.13</InformationalVersion>')) {
-    if (-not $project.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Project version is not closed on 0.5.13: $required"
-    }
-}
-
-if (-not $manifest.Contains('Version="0.5.13.0"', [StringComparison]::Ordinal)) {
-    throw 'Package manifest is not 0.5.13.0.'
-}
-
-foreach ($required in @(
-    '"version": "0.5.13"',
-    '"packageVersion": "0.5.13.0"',
-    '"en-US": "TMDB Production Integration"')) {
-    if (-not $release.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Release metadata is not closed on 0.5.13: $required"
-    }
-}
+# Product version is validated separately by Test-ReleaseVersionContract.ps1.
+# Keep this historical contract focused on the production TMDB behavior
+# introduced in 0.5.13 so later releases can reuse it as a regression test.
 
 Write-Host 'Eizo 0.5.13 TMDB production integration contract PASS.'
