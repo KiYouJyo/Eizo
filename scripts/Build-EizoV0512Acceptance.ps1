@@ -96,7 +96,7 @@ try {
     & ./scripts/Test-ScanPipelineStage5Contract.ps1
     & ./scripts/Test-RealContentUiV059Contract.ps1
     & ./scripts/Test-RealContentPresentationV0510Contract.ps1
-    & ./scripts/Test-PerTitleMetadataV0512Contract.ps1
+    & ./scripts/Test-PerTitleMetadataV0511Contract.ps1
     & ./scripts/Test-BangumiPublicIntegration.ps1
     & ./scripts/Test-BangumiAccountIntegration.ps1
     & ./scripts/Test-BangumiOAuthIntegration.ps1
