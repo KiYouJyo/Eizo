@@ -342,31 +342,10 @@ public sealed partial class CatalogView : UserControl
             CategoryLabel(category));
     }
 
-    private static BitmapImage? CreateArtwork(
+    private static ImageSource? CreateArtwork(
         string? url,
-        int decodePixelWidth)
-    {
-        if (string.IsNullOrWhiteSpace(url) ||
-            !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
-            (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-             !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
-        {
-            return null;
-        }
-
-        try
-        {
-            return new BitmapImage
-            {
-                UriSource = uri,
-                DecodePixelWidth = decodePixelWidth,
-            };
-        }
-        catch
-        {
-            return null;
-        }
-    }
+        int decodePixelWidth) =>
+        ArtworkImageSource.Create(url, decodePixelWidth);
 
     private void ResultsList_ItemClick(object sender, ItemClickEventArgs e)
     {
@@ -1197,7 +1176,7 @@ public sealed partial class CatalogView : UserControl
         CatalogMediaItemModel? Item,
         MediaCategoryKind? Category,
         string IconGlyph,
-        BitmapImage? Artwork,
+        ImageSource? Artwork,
         string Title,
         string Subtitle,
         string MetaLine,
