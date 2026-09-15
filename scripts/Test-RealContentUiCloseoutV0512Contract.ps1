@@ -19,6 +19,7 @@ $detailXaml = Read-Text 'src/Eizo.App/Views/DetailView.xaml'
 $detail = Read-Text 'src/Eizo.App/Views/DetailView.xaml.cs'
 $homeView = Read-Text 'src/Eizo.App/Views/HomeView.xaml.cs'
 $main = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
+$responsive = Read-Text 'src/Eizo.App/MainWindow.Responsive.cs'
 $project = Read-Text 'src/Eizo.App/Eizo.App.csproj'
 $manifest = Read-Text 'src/Eizo.App/Package.appxmanifest'
 $release = Read-Text 'release/release.json'
@@ -106,10 +107,12 @@ foreach ($required in @(
     }
 }
 
-if ($main.Contains(
-        'CategoryView',
-        [StringComparison]::Ordinal)) {
-    throw 'Legacy demo CategoryView wiring must not remain in the production shell.'
+foreach ($shellText in @($main, $responsive)) {
+    if ($shellText.Contains(
+            'CategoryView',
+            [StringComparison]::Ordinal)) {
+        throw 'Legacy demo CategoryView wiring must not remain in the production shell.'
+    }
 }
 
 foreach ($required in @(
