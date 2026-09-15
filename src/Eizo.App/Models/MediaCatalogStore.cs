@@ -401,6 +401,143 @@ public sealed class MediaCatalogStore
         return processed;
     }
 
+    public Task<int> ScrapeMediaItemsMetadataAsync(
+        IReadOnlyCollection<CatalogMediaItemModel> items,
+        string progressScopeId,
+        MediaMetadataService? metadataService,
+        Action<MediaScanProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        var targetKeys = items
+            .Select(LocationKey)
+            .Where(static key =>
+                !string.IsNullOrWhiteSpace(key))
+            .Select(static key => key!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return ScrapeTargetMetadataAsync(
+            targetKeys,
+            progressScopeId,
+            metadataService,
+            progress,
+            cancellationToken);
+    }
+
+    public Task<int> ScrapeItemMetadataAsync(
+        CatalogMediaItemModel item,
+        MediaMetadataService? metadataService,
+        Action<MediaScanProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        var key = LocationKey(item);
+        if (string.IsNullOrWhiteSpace(key))
+            return Task.FromResult(0);
+
+        return ScrapeTargetMetadataAsync(
+            [key],
+            item.Media?.Id ?? key,
+            metadataService,
+            progress,
+            cancellationToken);
+    }
+
+    private async Task<int> ScrapeTargetMetadataAsync(
+        IReadOnlyCollection<string> targetKeys,
+        string progressScopeId,
+        MediaMetadataService? metadataService,
+        Action<MediaScanProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        if (targetKeys.Count == 0)
+            return 0;
+
+        await EnsureRecognitionRuntimeCurrentAsync(
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var keySet = targetKeys.ToHashSet(
+            StringComparer.OrdinalIgnoreCase);
+
+        CatalogMediaItemModel[] current;
+        lock (_sync)
+        {
+            current = _items
+                .Where(item =>
+                    LocationKey(item) is { } key &&
+                    keySet.Contains(key))
+                .Where(IsAvailable)
+                .ToArray();
+        }
+
+        if (current.Length == 0)
+            return 0;
+
+        var processed = await EnrichMetadataAsync(
+                progressScopeId,
+                current,
+                metadataService,
+                progress,
+                cancellationToken,
+                forceRefresh: true)
+            .ConfigureAwait(false);
+
+        CommitTargetedMetadata(current);
+        Changed?.Invoke(this, EventArgs.Empty);
+        return processed;
+    }
+
+    private void CommitTargetedMetadata(
+        IReadOnlyList<CatalogMediaItemModel> updatedItems)
+    {
+        if (updatedItems.Count == 0)
+            return;
+
+        var updatedByLocation = updatedItems
+            .Select(item => (Item: item, Key: LocationKey(item)))
+            .Where(static entry =>
+                !string.IsNullOrWhiteSpace(entry.Key))
+            .ToDictionary(
+                static entry => entry.Key!,
+                static entry => entry.Item,
+                StringComparer.OrdinalIgnoreCase);
+
+        if (updatedByLocation.Count == 0)
+            return;
+
+        lock (_sync)
+        {
+            for (var index = 0; index < _items.Count; index++)
+            {
+                var key = LocationKey(_items[index]);
+                if (key is null ||
+                    !updatedByLocation.TryGetValue(
+                        key,
+                        out var updated))
+                {
+                    continue;
+                }
+
+                _items[index] = updated;
+            }
+
+            SaveCore(_items);
+        }
+    }
+
+    private static string? LocationKey(
+        CatalogMediaItemModel item)
+    {
+        var location = item.Location;
+        return location is null
+            ? null
+            : $"{location.SourceId}|{location.Locator}";
+    }
+
     private async Task<CatalogMediaItemModel[]> DiscoverRemoteSourceAsync(
         MediaSourceDefinition source,
         Action<MediaScanProgress>? progress,

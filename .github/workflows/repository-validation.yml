@@ -84,6 +84,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-RealContentPresentationV0510Contract.ps1
 
+      - name: Validate Eizo 0.5.11 per-title metadata contract
+        shell: pwsh
+        run: ./scripts/Test-PerTitleMetadataV0511Contract.ps1
+
       - name: Validate Bangumi public integration contract
         shell: pwsh
         run: ./scripts/Test-BangumiPublicIntegration.ps1

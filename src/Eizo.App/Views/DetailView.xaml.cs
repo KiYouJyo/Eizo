@@ -626,8 +626,8 @@ public sealed partial class DetailView : UserControl
         menu.Items.Add(matchItem);
 
         var binding =
-            MediaCatalogStore.Default.GetIdentityBinding(
-                _subject.Media.Id);
+            CatalogSubjectMetadataActions.GetBinding(
+                _subject);
         if (binding is
             {
                 IsManual: true,
@@ -659,12 +659,12 @@ public sealed partial class DetailView : UserControl
                     return;
                 }
 
-                MediaCatalogStore.Default
-                    .ClearManualIdentityBinding(
-                        _subject.Media.Id,
-                        provider,
-                        removeExternalId: true);
-                await RefreshSubjectMetadataAsync();
+                var refreshed =
+                    await CatalogSubjectMetadataActions
+                        .ClearManualMatchAsync(
+                            _subject,
+                            provider);
+                PublishRefreshedSubject(refreshed);
             };
             menu.Items.Add(clearItem);
         }
@@ -680,218 +680,27 @@ public sealed partial class DetailView : UserControl
             return;
         }
 
-        var recognition = _subject.Items
-            .Select(static item => item.Recognition)
-            .FirstOrDefault(static value =>
-                value is
-                {
-                    Status: Eizo.Recognition.MediaRecognitionStatus.Recognized,
-                    Title.Length: > 0,
-                });
-        if (recognition is null)
-        {
-            await ShowActionMessageAsync(
-                L(
-                    "无法手动匹配",
-                    "手動照合できません",
-                    "Manual match unavailable"),
-                L(
-                    "这个作品还没有可用于搜索的识别结果。",
-                    "検索に利用できる認識結果がありません。",
-                    "This title has no recognition result that can be searched."));
+        var candidate =
+            await MetadataMatchDialog.ShowAsync(
+                XamlRoot,
+                _subject);
+        if (candidate is null)
             return;
+
+        MoreButton.IsEnabled = false;
+        try
+        {
+            var refreshed =
+                await CatalogSubjectMetadataActions
+                    .ApplyManualMatchAsync(
+                        _subject,
+                        candidate);
+            PublishRefreshedSubject(refreshed);
         }
-
-        var providerBox = new ComboBox
+        finally
         {
-            Header = L(
-                "数据源",
-                "データソース",
-                "Provider"),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            ItemsSource = new[]
-            {
-                new ManualMatchProviderOption(
-                    L("全部", "すべて", "All"),
-                    null),
-                new ManualMatchProviderOption(
-                    "Bangumi",
-                    "bangumi"),
-                new ManualMatchProviderOption(
-                    "TMDB",
-                    "tmdb"),
-            },
-            DisplayMemberPath = nameof(
-                ManualMatchProviderOption.Label),
-            SelectedIndex = 0,
-        };
-
-        var queryBox = new TextBox
-        {
-            Header = L(
-                "搜索作品",
-                "作品を検索",
-                "Search title"),
-            Text = _subject.Title,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-        };
-
-        var searchButton = new Button
-        {
-            Content = L(
-                "搜索",
-                "検索",
-                "Search"),
-            HorizontalAlignment = HorizontalAlignment.Left,
-        };
-
-        var statusText = new TextBlock
-        {
-            Style = (Style)Resources["MetadataText"],
-            TextWrapping = TextWrapping.Wrap,
-        };
-
-        var results = new ListView
-        {
-            MinHeight = 220,
-            MaxHeight = 360,
-            SelectionMode = ListViewSelectionMode.Single,
-        };
-
-        var dialog = new ContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = L(
-                "手动匹配作品",
-                "作品を手動で照合",
-                "Manual match"),
-            PrimaryButtonText = L(
-                "使用此匹配",
-                "この照合を使用",
-                "Use this match"),
-            CloseButtonText = L(
-                "取消",
-                "キャンセル",
-                "Cancel"),
-            IsPrimaryButtonEnabled = false,
-        };
-
-        results.SelectionChanged += (_, _) =>
-            dialog.IsPrimaryButtonEnabled =
-                results.SelectedItem is ListViewItem;
-
-        searchButton.Click += async (_, _) =>
-        {
-            searchButton.IsEnabled = false;
-            dialog.IsPrimaryButtonEnabled = false;
-            results.Items.Clear();
-            statusText.Text = L(
-                "正在搜索…",
-                "検索中…",
-                "Searching…");
-
-            try
-            {
-                var provider =
-                    (providerBox.SelectedItem as
-                        ManualMatchProviderOption)?.Provider;
-                var candidates =
-                    await MediaScanCoordinator.Default
-                        .SearchMetadataMatchesAsync(
-                            recognition,
-                            queryBox.Text,
-                            provider);
-
-                foreach (var candidate in candidates)
-                {
-                    var textPanel = new StackPanel
-                    {
-                        Spacing = 3,
-                    };
-                    textPanel.Children.Add(
-                        new TextBlock
-                        {
-                            Text = candidate.DisplayTitle,
-                            FontWeight =
-                                Microsoft.UI.Text.FontWeights.SemiBold,
-                            TextWrapping =
-                                TextWrapping.Wrap,
-                        });
-                    textPanel.Children.Add(
-                        new TextBlock
-                        {
-                            Text = candidate.DisplayMeta,
-                            Opacity = 0.68,
-                            FontSize = 12,
-                            TextWrapping =
-                                TextWrapping.Wrap,
-                        });
-
-                    results.Items.Add(
-                        new ListViewItem
-                        {
-                            Tag = candidate,
-                            Content = textPanel,
-                            HorizontalContentAlignment =
-                                HorizontalAlignment.Stretch,
-                            Padding =
-                                new Thickness(10, 8, 10, 8),
-                        });
-                }
-
-                statusText.Text =
-                    candidates.Count == 0
-                        ? L(
-                            "没有找到匹配结果，可以更换关键词或数据源。",
-                            "一致する結果がありません。検索語またはデータソースを変更してください。",
-                            "No matches found. Try another query or provider.")
-                        : L(
-                            $"找到 {candidates.Count} 个候选。",
-                            $"{candidates.Count} 件の候補があります。",
-                            $"{candidates.Count} candidates found.");
-            }
-            catch
-            {
-                statusText.Text = L(
-                    "搜索失败，请稍后重试。",
-                    "検索に失敗しました。後でもう一度お試しください。",
-                    "Search failed. Try again later.");
-            }
-            finally
-            {
-                searchButton.IsEnabled = true;
-            }
-        };
-
-        var content = new StackPanel
-        {
-            Spacing = 10,
-            MinWidth = 520,
-        };
-        content.Children.Add(providerBox);
-        content.Children.Add(queryBox);
-        content.Children.Add(searchButton);
-        content.Children.Add(statusText);
-        content.Children.Add(results);
-        dialog.Content = content;
-
-        var result = await dialog.ShowAsync();
-        if (result != ContentDialogResult.Primary ||
-            results.SelectedItem is not ListViewItem
-            {
-                Tag: MediaMetadataMatchCandidate candidate
-            })
-        {
-            return;
+            MoreButton.IsEnabled = true;
         }
-
-        MediaCatalogStore.Default.SetManualIdentityBinding(
-            _subject.Media.Id,
-            candidate.Provider,
-            candidate.ProviderSubjectId,
-            makePrimary: true);
-
-        await RefreshSubjectMetadataAsync();
     }
 
     private async Task RefreshSubjectMetadataAsync()
@@ -902,64 +711,10 @@ public sealed partial class DetailView : UserControl
         MoreButton.IsEnabled = false;
         try
         {
-            var sourceIds = _subject.Items
-                .Select(static item =>
-                    item.Location?.SourceId)
-                .Where(static value =>
-                    !string.IsNullOrWhiteSpace(value))
-                .Select(static value => value!)
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-
-            foreach (var sourceId in sourceIds)
-            {
-                var source =
-                    MediaSourceStore.Default.Find(
-                        sourceId);
-                if (source is null)
-                    continue;
-
-                await MediaScanCoordinator.Default
-                    .StartMetadataAsync(source);
-            }
-
-            var aggregation =
-                CatalogSubjectAggregator.Build(
-                    MediaCatalogStore.Default
-                        .SnapshotForDisplay());
-            var refreshed = aggregation.Subjects
-                .FirstOrDefault(subject =>
-                    string.Equals(
-                        subject.Media.Id,
-                        _subject.Media.Id,
-                        StringComparison.OrdinalIgnoreCase));
-
-            if (refreshed is null)
-            {
-                var locations = _subject.Items
-                    .Select(static item =>
-                        item.Location is null
-                            ? null
-                            : $"{item.Location.SourceId}|{item.Location.Locator}")
-                    .Where(static value =>
-                        value is not null)
-                    .ToHashSet(
-                        StringComparer.OrdinalIgnoreCase);
-
-                refreshed = aggregation.Subjects
-                    .FirstOrDefault(subject =>
-                        subject.Items.Any(item =>
-                            item.Location is not null &&
-                            locations.Contains(
-                                $"{item.Location.SourceId}|{item.Location.Locator}")));
-            }
-
-            if (refreshed is not null)
-            {
-                SubjectUpdated?.Invoke(
-                    this,
-                    refreshed);
-            }
+            var refreshed =
+                await CatalogSubjectMetadataActions
+                    .RefreshAsync(_subject);
+            PublishRefreshedSubject(refreshed);
         }
         finally
         {
@@ -967,26 +722,16 @@ public sealed partial class DetailView : UserControl
         }
     }
 
-    private async Task ShowActionMessageAsync(
-        string title,
-        string message)
+    private void PublishRefreshedSubject(
+        CatalogSubjectModel? refreshed)
     {
-        if (XamlRoot is null)
-            return;
-
-        await new ContentDialog
+        if (refreshed is not null)
         {
-            XamlRoot = XamlRoot,
-            Title = title,
-            Content = message,
-            CloseButtonText =
-                L("关闭", "閉じる", "Close"),
-        }.ShowAsync();
+            SubjectUpdated?.Invoke(
+                this,
+                refreshed);
+        }
     }
-
-    private sealed record ManualMatchProviderOption(
-        string Label,
-        string? Provider);
 
     private void ApplyPoster(string? posterUrl)
     {

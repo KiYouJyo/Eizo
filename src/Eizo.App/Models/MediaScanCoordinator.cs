@@ -74,6 +74,39 @@ public sealed class MediaScanCoordinator
             .ConfigureAwait(false);
     }
 
+    public async Task<int> ScrapeSubjectMetadataAsync(
+        CatalogSubjectModel subject,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(subject);
+
+        _metadataService = CreateMetadataServiceLazy();
+        return await MediaCatalogStore.Default
+            .ScrapeMediaItemsMetadataAsync(
+                subject.Items,
+                subject.Media.Id,
+                _metadataService.Value,
+                progress: null,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<int> ScrapeItemMetadataAsync(
+        CatalogMediaItemModel item,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        _metadataService = CreateMetadataServiceLazy();
+        return await MediaCatalogStore.Default
+            .ScrapeItemMetadataAsync(
+                item,
+                _metadataService.Value,
+                progress: null,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public Task<MediaScanSnapshot> StartAsync(
         MediaSourceDefinition source,
         CancellationToken cancellationToken = default)

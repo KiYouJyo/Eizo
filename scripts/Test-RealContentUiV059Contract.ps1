@@ -18,6 +18,8 @@ $candidate = Read-Text 'src/Eizo.MetadataIntegration/MediaMetadataMatchCandidate
 $coordinator = Read-Text 'src/Eizo.App/Models/MediaScanCoordinator.cs'
 $detailXaml = Read-Text 'src/Eizo.App/Views/DetailView.xaml'
 $detail = Read-Text 'src/Eizo.App/Views/DetailView.xaml.cs'
+$actions = Read-Text 'src/Eizo.App/Models/CatalogSubjectMetadataActions.cs'
+$matchDialog = Read-Text 'src/Eizo.App/Views/MetadataMatchDialog.cs'
 $main = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
 $subject = Read-Text 'src/Eizo.App/Models/CatalogSubjectModel.cs'
 
@@ -55,16 +57,28 @@ foreach ($required in @(
 
 foreach ($required in @(
     'ShowManualMatchDialogAsync(',
-    'SetManualIdentityBinding(',
-    'ClearManualIdentityBinding(',
     'RefreshSubjectMetadataAsync(',
     'SubjectUpdated?.Invoke(',
-    'SearchMetadataMatchesAsync(',
     '重新刮削',
     '手动匹配')) {
     if (-not $detail.Contains($required, [StringComparison]::Ordinal)) {
         throw "Detail-page real-content workflow is incomplete: $required"
     }
+}
+
+foreach ($required in @(
+    'SetManualIdentityBinding(',
+    'ClearManualIdentityBinding(',
+    'ScrapeSubjectMetadataAsync(')) {
+    if (-not $actions.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Shared subject metadata action is incomplete: $required"
+    }
+}
+
+if (-not $matchDialog.Contains(
+        'SearchMetadataMatchesAsync(',
+        [StringComparison]::Ordinal)) {
+    throw 'Shared manual-match dialog does not call provider-neutral search.'
 }
 
 if (-not $main.Contains(
