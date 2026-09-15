@@ -945,6 +945,124 @@ public sealed partial class PlayerView : UserControl
         }
     }
 
+    private void PlaybackSlider_PointerPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (_engine is null ||
+            _duration <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        _isScrubbingTimeline = true;
+        _fullscreenControlsTimer.Stop();
+        UpdateSeekPreviewFromPointer(e);
+        ShowFullscreenControls(restartAutoHide: false);
+    }
+
+    private void PlaybackSlider_PointerMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (!_isScrubbingTimeline)
+            return;
+
+        UpdateSeekPreviewFromPointer(e);
+        ShowFullscreenControls(restartAutoHide: false);
+    }
+
+    private void PlaybackSlider_PointerReleased(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        EndTimelineScrub();
+
+    private void PlaybackSlider_PointerCanceled(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        EndTimelineScrub();
+
+    private void PlaybackSlider_PointerCaptureLost(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        EndTimelineScrub();
+
+    private void UpdateSeekPreviewFromPointer(
+        PointerRoutedEventArgs e)
+    {
+        if (PlaybackSlider.ActualWidth <= 0d)
+            return;
+
+        var sliderPoint =
+            e.GetCurrentPoint(
+                PlaybackSlider).Position;
+        var fraction =
+            Math.Clamp(
+                sliderPoint.X /
+                    PlaybackSlider.ActualWidth,
+                0d,
+                1d);
+        var targetSeconds =
+            PlaybackSlider.Minimum +
+            ((PlaybackSlider.Maximum -
+              PlaybackSlider.Minimum) * fraction);
+
+        SeekPreviewTimeText.Text =
+            FormatTime(
+                TimeSpan.FromSeconds(
+                    Math.Max(0d, targetSeconds)));
+
+        var rootPoint =
+            e.GetCurrentPoint(
+                PlayerContentRoot).Position;
+        var previewWidth = 224d;
+        var horizontalPadding = 12d;
+        var maxLeft =
+            Math.Max(
+                horizontalPadding,
+                PlayerContentRoot.ActualWidth -
+                previewWidth -
+                horizontalPadding);
+        SeekPreviewTranslateTransform.X =
+            Math.Clamp(
+                rootPoint.X -
+                (previewWidth / 2d),
+                horizontalPadding,
+                maxLeft);
+
+        SeekPreviewPopup.Margin =
+            new Thickness(
+                0d,
+                0d,
+                0d,
+                Math.Max(
+                    112d,
+                    PlayerControlsPanel.ActualHeight +
+                    8d));
+        SeekPreviewPopup.Visibility =
+            Visibility.Visible;
+    }
+
+    private void EndTimelineScrub()
+    {
+        if (!_isScrubbingTimeline &&
+            SeekPreviewPopup.Visibility ==
+                Visibility.Collapsed)
+        {
+            return;
+        }
+
+        _isScrubbingTimeline = false;
+        SeekPreviewPopup.Visibility =
+            Visibility.Collapsed;
+        SeekPreviewLoadingRing.IsActive = false;
+        SeekPreviewLoadingRing.Visibility =
+            Visibility.Collapsed;
+
+        if (_isVideoFullscreen)
+            RestartFullscreenAutoHide();
+    }
+
     private async void PlaybackSlider_ValueChanged(
         object sender,
         Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
@@ -962,26 +1080,107 @@ public sealed partial class PlayerView : UserControl
         var token = request.Token;
         var target = TimeSpan.FromSeconds(e.NewValue);
 
+        if (_isScrubbingTimeline)
+        {
+            SeekPreviewTimeText.Text =
+                FormatTime(target);
+            SeekPreviewLoadingRing.IsActive = true;
+            SeekPreviewLoadingRing.Visibility =
+                Visibility.Visible;
+        }
+
         try
         {
             await Task.Delay(80, token);
             await RunOperationAsync(
                 engine,
                 "seek",
-                async ct => await engine.SeekAsync(target, ct),
+                async ct =>
+                    await engine.SeekAsync(
+                        target,
+                        ct),
                 latest: true,
                 token: token);
+
+            if (_isScrubbingTimeline &&
+                engine is IPlaybackFrameCapture frameCapture)
+            {
+                // Allow the decoder a short moment to present the newly
+                // sought frame before asking LibVLC for a snapshot.
+                await Task.Delay(45, token);
+                var frame =
+                    await frameCapture.CaptureFrameAsync(
+                        320,
+                        180,
+                        token);
+
+                if (frame is { Length: > 0 } &&
+                    _isScrubbingTimeline &&
+                    ReferenceEquals(
+                        _seekDebounce,
+                        request))
+                {
+                    await SetSeekPreviewImageAsync(
+                        frame,
+                        token);
+                }
+            }
         }
         catch (OperationCanceledException)
         {
         }
         catch (Exception exception)
-        { PlaybackTrace.Write("view", "seek", "error", exception.GetType().Name); }
+        {
+            PlaybackTrace.Write(
+                "view",
+                "seek",
+                "error",
+                exception.GetType().Name);
+        }
         finally
         {
-            if (ReferenceEquals(_seekDebounce, request)) _seekDebounce = null;
+            if (ReferenceEquals(
+                    _seekDebounce,
+                    request))
+            {
+                _seekDebounce = null;
+                SeekPreviewLoadingRing.IsActive =
+                    false;
+                SeekPreviewLoadingRing.Visibility =
+                    Visibility.Collapsed;
+            }
+
             request.Dispose();
         }
+    }
+
+    private async Task SetSeekPreviewImageAsync(
+        byte[] pngBytes,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        using var stream =
+            new InMemoryRandomAccessStream();
+        using (var output =
+               stream.GetOutputStreamAt(0))
+        using (var writer =
+               new DataWriter(output))
+        {
+            writer.WriteBytes(pngBytes);
+            await writer.StoreAsync();
+            await writer.FlushAsync();
+            writer.DetachStream();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        stream.Seek(0);
+
+        var image = new BitmapImage();
+        await image.SetSourceAsync(stream);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        SeekPreviewImage.Source = image;
     }
 
     private async void SubtitleTrackCombo_SelectionChanged(
