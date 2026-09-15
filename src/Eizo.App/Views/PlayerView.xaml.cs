@@ -2765,6 +2765,16 @@ public sealed partial class PlayerView : UserControl
                 : Visibility.Collapsed;
         SidebarDismissLayer.IsHitTestVisible =
             dismissSidebar;
+        SidebarDismissLayer.Margin =
+            new Thickness(
+                0d,
+                0d,
+                0d,
+                dismissSidebar
+                    ? Math.Max(
+                        112d,
+                        PlayerControlsPanel.ActualHeight + 8d)
+                    : 0d);
 
         SidebarToggleIcon.Symbol = shouldShow
             ? Symbol.ClosePane
