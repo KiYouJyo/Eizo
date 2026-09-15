@@ -33,6 +33,23 @@ public sealed partial class DetailView : UserControl
         Unloaded += DetailView_Unloaded;
     }
 
+    private void HeroLayout_SizeChanged(
+        object sender,
+        SizeChangedEventArgs e)
+    {
+        // Base responsiveness on the actual detail-card width rather than the
+        // top-level window. DetailView lives inside the tab/workspace host, so
+        // AdaptiveTrigger can report the wrong effective width here.
+        var showArtwork = e.NewSize.Width >= 920d;
+        HeroArtwork.Visibility =
+            showArtwork
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        Grid.SetColumnSpan(
+            HeroContent,
+            showArtwork ? 1 : 2);
+    }
+
     private void DetailView_Loaded(
         object sender,
         RoutedEventArgs e)
