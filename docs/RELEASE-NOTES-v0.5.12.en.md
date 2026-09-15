@@ -16,6 +16,8 @@
 - Prevent standalone/unaggregated home items from opening the legacy sample detail path while keeping direct playback of the real media item.
 - Hide missing Hero subtitle/metadata/overview fields and suppress meaningless actions for an empty library.
 - Remove the obsolete CategoryView that still contained Sample Movie and other demo-only data.
+- Remove the legacy title-only detail/player fallback and its hard-coded episode 18 sample.
+- Remove the nonfunctional Favorite action and hide Play when no real playable media exists.
 
 ## Scope
 
