@@ -147,7 +147,7 @@
     </Grid>
 
     <Grid x:Name="StartupOverlay"
-          Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+          Background="Transparent"
           Canvas.ZIndex="100">
       <StackPanel HorizontalAlignment="Center"
                   VerticalAlignment="Center"
