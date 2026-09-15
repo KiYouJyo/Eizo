@@ -177,11 +177,18 @@ public sealed partial class FirstRunGuideHost : UserControl
         };
         NextButton.IsEnabled = !_isBusy;
 
+        if (_step == 1) EnsureSourcesViewLoaded();
         if (_step == 2) RefreshTmdbStatus();
         if (_step == 3) _ = RefreshBangumiStatusAsync(false);
         if (_step == 4) SyncPlaybackControls();
         if (_step == 5) RefreshSummary();
         GuideScrollViewer.ChangeView(null, 0, null, disableAnimation: true);
+    }
+
+    private void EnsureSourcesViewLoaded()
+    {
+        if (SourceSetupHost.Content is null)
+            SourceSetupHost.Content = new SourcesView();
     }
 
     private void SyncPlaybackControls()
