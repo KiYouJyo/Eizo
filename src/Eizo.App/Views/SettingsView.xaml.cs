@@ -272,6 +272,11 @@ public sealed partial class SettingsView : UserControl
             XamlRoot);
     }
 
+    private void ReopenFirstRunGuideButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        App.MainWindow?.ShowFirstRunGuideFromSettings();
+
     private void AppearanceCombo_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -932,6 +937,18 @@ public sealed partial class SettingsView : UserControl
             T("Settings_AppearanceLight"),
             T("Settings_AppearanceDark")
         };
+
+        OnboardingSectionTitle.Text =
+            L("首次使用", "初回セットアップ", "First-run setup");
+        OnboardingTitle.Text =
+            L("重新打开首次使用向导", "初回ガイドをもう一度開く", "Open the first-run guide again");
+        OnboardingDescription.Text =
+            L(
+                "重新查看功能介绍并调整媒体来源、TMDB、Bangumi 与播放偏好。不会重置现有媒体库或账户数据。",
+                "機能紹介をもう一度確認し、メディアソース、TMDB、Bangumi、再生設定を調整できます。既存のライブラリやアカウントデータはリセットしません。",
+                "Review the setup flow and adjust media sources, TMDB, Bangumi, and playback preferences without resetting your existing library or account data.");
+        ReopenFirstRunGuideButton.Content =
+            L("打开向导", "ガイドを開く", "Open guide");
 
         BangumiSectionTitle.Text =
             T("Bangumi_SettingsSection");
