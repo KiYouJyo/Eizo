@@ -87,6 +87,31 @@ public sealed partial class PlayerView : UserControl
         int initialQueueIndex = 0)
     {
         InitializeComponent();
+
+        // Slider/Thumb consumes pointer routed events internally. XAML event
+        // handlers therefore do not reliably see drag start/end. Listen with
+        // handledEventsToo so timeline scrubbing always opens the preview.
+        PlaybackSlider.AddHandler(
+            UIElement.PointerPressedEvent,
+            new PointerEventHandler(PlaybackSlider_PointerPressed),
+            true);
+        PlaybackSlider.AddHandler(
+            UIElement.PointerMovedEvent,
+            new PointerEventHandler(PlaybackSlider_PointerMoved),
+            true);
+        PlaybackSlider.AddHandler(
+            UIElement.PointerReleasedEvent,
+            new PointerEventHandler(PlaybackSlider_PointerReleased),
+            true);
+        PlaybackSlider.AddHandler(
+            UIElement.PointerCanceledEvent,
+            new PointerEventHandler(PlaybackSlider_PointerCanceled),
+            true);
+        PlaybackSlider.AddHandler(
+            UIElement.PointerCaptureLostEvent,
+            new PointerEventHandler(PlaybackSlider_PointerCaptureLost),
+            true);
+
         InitializeSubtitlePositionControls();
 
         _queueItems = queue?
@@ -956,6 +981,11 @@ public sealed partial class PlayerView : UserControl
         }
 
         _isScrubbingTimeline = true;
+        PlaybackTrace.Write(
+            "view",
+            "seek-preview",
+            "drag-start",
+            _engine?.GetType().Name ?? "no-engine");
         _fullscreenControlsTimer.Stop();
         UpdateSeekPreviewFromPointer(e);
         ShowFullscreenControls(restartAutoHide: false);
@@ -1123,6 +1153,23 @@ public sealed partial class PlayerView : UserControl
                     await SetSeekPreviewImageAsync(
                         frame,
                         token);
+                    PlaybackTrace.Write(
+                        "view",
+                        "seek-preview",
+                        "frame-ready",
+                        frame.Length.ToString(
+                            System.Globalization.CultureInfo.InvariantCulture));
+                }
+                else if (_isScrubbingTimeline &&
+                         ReferenceEquals(
+                             _seekDebounce,
+                             request))
+                {
+                    PlaybackTrace.Write(
+                        "view",
+                        "seek-preview",
+                        "frame-unavailable",
+                        engine.GetType().Name);
                 }
             }
         }
