@@ -13,36 +13,11 @@
               BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
               BorderThickness="1">
         <Grid x:Name="HeroLayout"
-              ColumnDefinitions="1.08*,0.92*">
-          <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup>
-              <VisualState x:Name="DetailHeroCompact">
-                <VisualState.StateTriggers>
-                  <AdaptiveTrigger MinWindowWidth="0" />
-                </VisualState.StateTriggers>
-                <VisualState.Setters>
-                  <Setter Target="HeroContent.(Grid.ColumnSpan)"
-                          Value="2" />
-                  <Setter Target="HeroArtwork.Visibility"
-                          Value="Collapsed" />
-                </VisualState.Setters>
-              </VisualState>
-              <VisualState x:Name="DetailHeroWide">
-                <VisualState.StateTriggers>
-                  <AdaptiveTrigger MinWindowWidth="900" />
-                </VisualState.StateTriggers>
-                <VisualState.Setters>
-                  <Setter Target="HeroContent.(Grid.ColumnSpan)"
-                          Value="1" />
-                  <Setter Target="HeroArtwork.Visibility"
-                          Value="Visible" />
-                </VisualState.Setters>
-              </VisualState>
-            </VisualStateGroup>
-          </VisualStateManager.VisualStateGroups>
+              ColumnDefinitions="1.05*,0.95*"
+              SizeChanged="HeroLayout_SizeChanged">
 
           <Grid x:Name="HeroContent"
-                Grid.ColumnSpan="2"
+                Grid.ColumnSpan="1"
                 Padding="22"
                 ColumnDefinitions="126,*"
                 ColumnSpacing="18">
@@ -143,7 +118,7 @@
           <Border x:Name="HeroArtwork"
                   Grid.Column="1"
                   Margin="12"
-                  Visibility="Collapsed"
+                  Visibility="Visible"
                   CornerRadius="9"
                   Background="{ThemeResource EizoSelectionBrush}">
             <Grid>
