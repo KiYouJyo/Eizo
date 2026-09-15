@@ -8,12 +8,12 @@ namespace Eizo.MetadataIntegration;
 
 public sealed record MediaMetadataServiceOptions(
     bool EnableBangumi = true,
-    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.11 (https://github.com/KiYouJyo/Eizo)",
+    string BangumiUserAgent = "KiYouJyo/Eizo/0.5.13 (https://github.com/KiYouJyo/Eizo)",
     string PreferredLanguage = "zh-CN",
     string? TmdbReadAccessToken = null,
     string? CacheDirectory = null,
     bool EnableArtworkProviders = true,
-    string AniListUserAgent = "KiYouJyo/Eizo/0.5.11 (https://github.com/KiYouJyo/Eizo)");
+    string AniListUserAgent = "KiYouJyo/Eizo/0.5.13 (https://github.com/KiYouJyo/Eizo)");
 
 public sealed class MediaMetadataService
 {
@@ -159,6 +159,18 @@ public sealed class MediaMetadataService
 
     public bool IsAvailable => _resolver is not null;
 
+    public IReadOnlyCollection<string> AvailableProviders =>
+        _providers.Keys
+            .OrderBy(static value =>
+                value,
+                StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    public bool IsProviderAvailable(
+        string provider) =>
+        !string.IsNullOrWhiteSpace(provider) &&
+        _providerResolvers.ContainsKey(provider);
+
     public async Task<IReadOnlyList<MediaMetadataMatchCandidate>>
         SearchCandidatesAsync(
             HostRecognition.MediaRecognitionSnapshot recognition,
@@ -208,11 +220,16 @@ public sealed class MediaMetadataService
             Limit: 20);
 
         Core.MetadataResolution resolution;
-        if (!string.IsNullOrWhiteSpace(provider) &&
-            _providerResolvers.TryGetValue(
-                provider,
-                out var providerResolver))
+        if (!string.IsNullOrWhiteSpace(provider))
         {
+            if (!_providerResolvers.TryGetValue(
+                    provider,
+                    out var providerResolver))
+            {
+                return Array.Empty<
+                    MediaMetadataMatchCandidate>();
+            }
+
             resolution = await providerResolver
                 .ResolveAsync(
                     request,
@@ -310,55 +327,79 @@ public sealed class MediaMetadataService
         MediaProviderRoute route;
         try
         {
-            var aggregateResolution = await _resolver
-                .ResolveAsync(request, cancellationToken)
-                .ConfigureAwait(false);
-            route = MediaProviderRouter.Choose(
-                aggregateResolution);
+            var boundPrimary =
+                ResolveConfiguredBoundPrimary(binding);
 
-            if (binding is not null &&
-                !string.IsNullOrWhiteSpace(
-                    binding.PrimaryProvider) &&
-                binding.ExternalIds.ContainsKey(
-                    binding.PrimaryProvider))
+            if (boundPrimary is not null)
             {
                 route = new MediaProviderRoute(
-                    binding.PrimaryProvider,
-                    route.EnumerateProviders()
+                    boundPrimary.Value.Provider,
+                    _providerResolvers.Keys
                         .Where(provider =>
                             !string.Equals(
                                 provider,
-                                binding.PrimaryProvider,
+                                boundPrimary.Value.Provider,
                                 StringComparison.OrdinalIgnoreCase))
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(static provider =>
+                            provider,
+                            StringComparer.OrdinalIgnoreCase)
                         .ToArray(),
-                    binding.IsManual
+                    binding!.IsManual
                         ? "ManualIdentityBinding"
                         : "PersistedIdentityBinding");
-            }
 
-            result = await EnrichWithRouteAsync(
-                    request,
-                    route,
-                    binding,
-                    cancellationToken)
-                .ConfigureAwait(false);
+                result = await EnrichBoundProviderAsync(
+                        boundPrimary.Value.Provider,
+                        boundPrimary.Value.ProviderSubjectId,
+                        request,
+                        cancellationToken)
+                    .ConfigureAwait(false);
 
-            var combinedErrors = aggregateResolution.ProviderErrors
-                .Concat(result.ProviderErrors)
-                .Distinct()
-                .ToArray();
-
-            result = result with
-            {
-                Resolution = result.Resolution with
+                if (!result.Resolution.IsResolved ||
+                    result.Subject is null)
                 {
-                    Candidates =
-                        aggregateResolution.Candidates,
+                    result = await EnrichWithRouteAsync(
+                            request,
+                            route,
+                            binding,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                var aggregateResolution = await _resolver
+                    .ResolveAsync(
+                        request,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                route = MediaProviderRouter.Choose(
+                    aggregateResolution);
+
+                result = await EnrichWithRouteAsync(
+                        request,
+                        route,
+                        binding,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                var combinedErrors =
+                    aggregateResolution.ProviderErrors
+                        .Concat(result.ProviderErrors)
+                        .Distinct()
+                        .ToArray();
+
+                result = result with
+                {
+                    Resolution = result.Resolution with
+                    {
+                        Candidates =
+                            aggregateResolution.Candidates,
+                        ProviderErrors = combinedErrors,
+                    },
                     ProviderErrors = combinedErrors,
-                },
-                ProviderErrors = combinedErrors,
-            };
+                };
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -755,6 +796,30 @@ public sealed class MediaMetadataService
             corePath,
             providerPath,
             status);
+    }
+
+    private (string Provider, string ProviderSubjectId)?
+        ResolveConfiguredBoundPrimary(
+            MediaIdentityBindingHint? binding)
+    {
+        if (binding is null ||
+            string.IsNullOrWhiteSpace(
+                binding.PrimaryProvider) ||
+            !_providerResolvers.ContainsKey(
+                binding.PrimaryProvider) ||
+            !binding.ExternalIds.TryGetValue(
+                binding.PrimaryProvider,
+                out var providerSubjectId) ||
+            string.IsNullOrWhiteSpace(
+                providerSubjectId))
+        {
+            return null;
+        }
+
+        return (
+            binding.PrimaryProvider.Trim()
+                .ToLowerInvariant(),
+            providerSubjectId.Trim());
     }
 
     private async Task<IReadOnlyList<Core.MetadataEnrichmentResult>>

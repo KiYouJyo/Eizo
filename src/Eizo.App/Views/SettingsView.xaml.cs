@@ -2,6 +2,7 @@ using Eizo.Localization;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Windows.System;
 
 namespace Eizo.Views;
 
@@ -27,6 +28,17 @@ public sealed partial class SettingsView : UserControl
 
     private string T(string key) => _localization.GetString(key);
 
+    private string L(
+        string zhCn,
+        string jaJp,
+        string enUs) =>
+        _localization.CurrentLanguage switch
+        {
+            "ja-JP" => jaJp,
+            "en-US" => enUs,
+            _ => zhCn,
+        };
+
     private async void SettingsView_Loaded(
         object sender,
         RoutedEventArgs e)
@@ -37,6 +49,7 @@ public sealed partial class SettingsView : UserControl
         AppSettingsStore.Changed += AppSettingsStore_Changed;
 
         SyncControlsFromSettings();
+        RefreshTmdbCredentialState();
         await RefreshBangumiAccountStateAsync(
             forceRefresh: false);
     }
@@ -131,6 +144,7 @@ public sealed partial class SettingsView : UserControl
                     100d);
 
             UpdateSubtitleSettingValueText();
+            RefreshTmdbCredentialState();
         }
         finally
         {
@@ -303,6 +317,153 @@ public sealed partial class SettingsView : UserControl
 
         SyncControlsFromSettings();
     }
+
+    private void RefreshTmdbCredentialState()
+    {
+        if (TmdbTokenStatusText is null)
+            return;
+
+        var source =
+            MediaScanCoordinator.Default
+                .TmdbConfigurationSource;
+        var configured =
+            !string.Equals(
+                source,
+                "None",
+                StringComparison.Ordinal);
+
+        TmdbTokenStatusText.Text =
+            source switch
+            {
+                "Environment" => L(
+                    "TMDB 已通过 EIZO_TMDB_READ_ACCESS_TOKEN 环境变量启用；环境变量优先于应用内保存的 Token。",
+                    "TMDB は EIZO_TMDB_READ_ACCESS_TOKEN 環境変数で有効です。環境変数はアプリ内保存 Token より優先されます。",
+                    "TMDB is enabled through EIZO_TMDB_READ_ACCESS_TOKEN; the environment value takes precedence over an in-app token."),
+                "PasswordVault" => L(
+                    "TMDB 已配置，将参与电影、电视剧与视觉元数据匹配。",
+                    "TMDB は設定済みです。映画・ドラマ・ビジュアルメタデータの照合に使用されます。",
+                    "TMDB is configured and will participate in movie, TV and visual metadata matching."),
+                _ => L(
+                    "TMDB 尚未配置；当前仅使用已可用的数据源。",
+                    "TMDB は未設定です。現在は利用可能な他のデータソースのみを使用します。",
+                    "TMDB is not configured; only other available providers are currently used."),
+            };
+
+        TmdbRemoveTokenButton.IsEnabled =
+            string.Equals(
+                source,
+                "PasswordVault",
+                StringComparison.Ordinal);
+    }
+
+    private async void TmdbGetTokenButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await Launcher.LaunchUriAsync(
+            new Uri(
+                "https://www.themoviedb.org/settings/api"));
+
+    private void TmdbSaveTokenButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var token = TmdbTokenBox.Password?.Trim();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            TmdbTokenStatusText.Text =
+                L(
+                    "请输入 TMDB Read Access Token。",
+                    "TMDB Read Access Token を入力してください。",
+                    "Enter a TMDB Read Access Token.");
+            return;
+        }
+
+        MediaCredentialStore.Default
+            .SaveTmdbReadAccessToken(token);
+        MediaScanCoordinator.Default
+            .ReloadMetadataService();
+        TmdbTokenBox.Password = string.Empty;
+        RefreshTmdbCredentialState();
+    }
+
+    private void TmdbRemoveTokenButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        MediaCredentialStore.Default
+            .RemoveTmdbReadAccessToken();
+        MediaScanCoordinator.Default
+            .ReloadMetadataService();
+        TmdbTokenBox.Password = string.Empty;
+        RefreshTmdbCredentialState();
+    }
+
+    private async void TmdbVerifyTokenButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var token =
+            string.IsNullOrWhiteSpace(
+                TmdbTokenBox.Password)
+                ? MediaCredentialStore.Default
+                    .GetTmdbReadAccessToken()
+                : TmdbTokenBox.Password.Trim();
+
+        TmdbGetTokenButton.IsEnabled = false;
+        TmdbSaveTokenButton.IsEnabled = false;
+        TmdbVerifyTokenButton.IsEnabled = false;
+        TmdbRemoveTokenButton.IsEnabled = false;
+        TmdbTokenStatusText.Text =
+            L(
+                "正在验证 TMDB 连接…",
+                "TMDB 接続を確認しています…",
+                "Checking TMDB connection…");
+
+        try
+        {
+            var result =
+                await TmdbConnectionVerifier.CheckAsync(
+                    token);
+
+            TmdbTokenStatusText.Text =
+                result.State switch
+                {
+                    "Connected" => L(
+                        "TMDB 连接正常。",
+                        "TMDB に接続できました。",
+                        "TMDB connection is working."),
+                    "Unauthorized" => L(
+                        "TMDB Token 无效或未获授权。",
+                        "TMDB Token が無効、または権限がありません。",
+                        "The TMDB token is invalid or unauthorized."),
+                    "MissingToken" => L(
+                        "请输入或保存 TMDB Read Access Token。",
+                        "TMDB Read Access Token を入力または保存してください。",
+                        "Enter or save a TMDB Read Access Token."),
+                    "Timeout" => L(
+                        "TMDB 连接超时。",
+                        "TMDB 接続がタイムアウトしました。",
+                        "TMDB connection timed out."),
+                    _ => L(
+                        "无法连接 TMDB，请检查网络后重试。",
+                        "TMDB に接続できません。ネットワークを確認して再試行してください。",
+                        "Unable to reach TMDB. Check your network and try again."),
+                };
+        }
+        finally
+        {
+            TmdbGetTokenButton.IsEnabled = true;
+            TmdbSaveTokenButton.IsEnabled = true;
+            TmdbVerifyTokenButton.IsEnabled = true;
+            TmdbRemoveTokenButton.IsEnabled =
+                string.Equals(
+                    MediaScanCoordinator.Default
+                        .TmdbConfigurationSource,
+                    "PasswordVault",
+                    StringComparison.Ordinal);
+        }
+    }
+
 
     private void MetadataAutoScrapeToggle_Toggled(
         object sender,
@@ -743,6 +904,24 @@ public sealed partial class SettingsView : UserControl
             T("Bangumi_Connect");
         BangumiDisconnectButton.Content =
             T("Bangumi_Disconnect");
+
+        TmdbSectionTitle.Text =
+            L("TMDB 数据源", "TMDB データソース", "TMDB provider");
+        TmdbTokenLabel.Text =
+            L("Read Access Token", "Read Access Token", "Read Access Token");
+        TmdbTokenDescription.Text =
+            L(
+                "用于 TMDB 电影、电视剧、季度、剧集、图片与演职人员元数据。Token 仅保存在 Windows PasswordVault 中。",
+                "TMDB の映画・ドラマ・シーズン・エピソード・画像・キャスト情報に使用します。Token は Windows PasswordVault のみに保存されます。",
+                "Used for TMDB movie, TV, season, episode, artwork and credits metadata. The token is stored only in Windows PasswordVault.");
+        TmdbGetTokenButton.Content =
+            L("获取 Token", "Token を取得", "Get token");
+        TmdbSaveTokenButton.Content =
+            L("保存", "保存", "Save");
+        TmdbVerifyTokenButton.Content =
+            L("验证", "確認", "Verify");
+        TmdbRemoveTokenButton.Content =
+            L("移除", "削除", "Remove");
 
         MetadataAutomationSectionTitle.Text =
             T("Settings_MetadataAutomation");

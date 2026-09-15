@@ -190,6 +190,56 @@
                     Visibility="Collapsed">
           <Border Style="{StaticResource SettingsSectionCardStyle}">
             <StackPanel Spacing="14">
+              <TextBlock x:Name="TmdbSectionTitle"
+                         Style="{StaticResource SectionTitleText}" />
+              <Border Style="{StaticResource SettingsInnerCardStyle}">
+                <Grid Padding="14"
+                      MinHeight="116"
+                      ColumnSpacing="18"
+                      RowSpacing="8"
+                      ColumnDefinitions="*,Auto"
+                      RowDefinitions="Auto,Auto,Auto">
+                  <StackPanel Grid.RowSpan="3"
+                              VerticalAlignment="Center"
+                              Spacing="3">
+                    <TextBlock x:Name="TmdbTokenLabel"
+                               Style="{StaticResource SettingsRowLabelStyle}" />
+                    <TextBlock x:Name="TmdbTokenDescription"
+                               Style="{StaticResource SettingsDescriptionStyle}"
+                               TextWrapping="Wrap" />
+                    <TextBlock x:Name="TmdbTokenStatusText"
+                               Margin="0,4,0,0"
+                               Style="{StaticResource MetadataText}"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+
+                  <PasswordBox x:Name="TmdbTokenBox"
+                               Grid.Column="1"
+                               Width="320"
+                               MinWidth="220"
+                               HorizontalAlignment="Right"
+                               PasswordRevealMode="Hidden" />
+
+                  <StackPanel Grid.Row="1"
+                              Grid.Column="1"
+                              Orientation="Horizontal"
+                              HorizontalAlignment="Right"
+                              Spacing="8">
+                    <Button x:Name="TmdbGetTokenButton"
+                            Click="TmdbGetTokenButton_Click" />
+                    <Button x:Name="TmdbSaveTokenButton"
+                            Click="TmdbSaveTokenButton_Click" />
+                    <Button x:Name="TmdbVerifyTokenButton"
+                            Click="TmdbVerifyTokenButton_Click" />
+                    <Button x:Name="TmdbRemoveTokenButton"
+                            Click="TmdbRemoveTokenButton_Click" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource SettingsSectionCardStyle}">
+            <StackPanel Spacing="14">
               <TextBlock x:Name="MetadataAutomationSectionTitle"
                          Style="{StaticResource SectionTitleText}" />
               <Border Style="{StaticResource SettingsInnerCardStyle}">

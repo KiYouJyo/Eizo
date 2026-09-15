@@ -29,6 +29,41 @@ public sealed class MediaScanCoordinator
 
     public event EventHandler? Changed;
 
+    public bool IsTmdbConfigured =>
+        !string.Equals(
+            TmdbConfigurationSource,
+            "None",
+            StringComparison.Ordinal);
+
+    public string TmdbConfigurationSource
+    {
+        get
+        {
+            var environmentToken =
+                Environment.GetEnvironmentVariable(
+                    "EIZO_TMDB_READ_ACCESS_TOKEN");
+            if (!string.IsNullOrWhiteSpace(
+                    environmentToken))
+            {
+                return "Environment";
+            }
+
+            return MediaCredentialStore.Default
+                    .HasTmdbReadAccessToken
+                ? "PasswordVault"
+                : "None";
+        }
+    }
+
+    public void ReloadMetadataService()
+    {
+        lock (_sync)
+        {
+            _metadataService =
+                CreateMetadataServiceLazy();
+        }
+    }
+
     public MediaScanSnapshot? SnapshotForSource(string sourceId)
     {
         lock (_sync)
@@ -421,6 +456,21 @@ public sealed class MediaScanCoordinator
         });
     }
 
+    private static string? ResolveTmdbReadAccessToken()
+    {
+        var environmentToken =
+            Environment.GetEnvironmentVariable(
+                "EIZO_TMDB_READ_ACCESS_TOKEN");
+        if (!string.IsNullOrWhiteSpace(
+                environmentToken))
+        {
+            return environmentToken.Trim();
+        }
+
+        return MediaCredentialStore.Default
+            .GetTmdbReadAccessToken();
+    }
+
     private static Lazy<MediaMetadataService?> CreateMetadataServiceLazy() =>
         new(
             CreateMetadataService,
@@ -442,12 +492,14 @@ public sealed class MediaScanCoordinator
             "MetadataCache");
 
         var options = new MediaMetadataServiceOptions(
-            EnableBangumi: true,
+            // v0.5.14: the local media library has a single online
+            // metadata authority. Bangumi remains available to the
+            // discovery/community product surface, not scraping.
+            EnableBangumi: false,
             PreferredLanguage:
                 AppLocalizationService.Default.CurrentLanguage,
             TmdbReadAccessToken:
-                Environment.GetEnvironmentVariable(
-                    "EIZO_TMDB_READ_ACCESS_TOKEN"),
+                ResolveTmdbReadAccessToken(),
             CacheDirectory: cacheDirectory,
             EnableArtworkProviders:
                 AppSettingsStore.Current.MetadataArtworkEnrichment);

@@ -12,6 +12,7 @@ public sealed partial class AboutView : UserControl
     private static readonly Uri ProductRepositoryUri = new("https://github.com/KiYouJyo/Eizo");
     private static readonly Uri ReleasesUri = new("https://github.com/KiYouJyo/Eizo/releases");
     private static readonly Uri PrivacyUri = new("https://github.com/KiYouJyo/Eizo/blob/main/PRIVACY.md");
+    private static readonly Uri TmdbUri = new("https://www.themoviedb.org");
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
     private readonly AboutUpdateSessionState _updates = AboutUpdateSessionState.Default;
     private double? _recognitionProgress;
@@ -188,6 +189,9 @@ public sealed partial class AboutView : UserControl
 
     private async void OpenPrivacyButton_Click(object sender, RoutedEventArgs e) =>
         await Launcher.LaunchUriAsync(PrivacyUri);
+
+    private async void OpenTmdbButton_Click(object sender, RoutedEventArgs e) =>
+        await Launcher.LaunchUriAsync(TmdbUri);
 
     private void RenderProductUpdate()
     {
@@ -403,6 +407,13 @@ public sealed partial class AboutView : UserControl
             "認識・メタデータコア",
             "Recognition & metadata runtime");
         CheckRecognitionUpdateButton.Content = T("About_CheckUpdates");
+
+        TmdbAttributionTitle.Text =
+            L("数据来源", "データソース", "Data source");
+        TmdbAttributionNotice.Text =
+            "This product uses the TMDB API but is not endorsed or certified by TMDB.";
+        OpenTmdbButton.Content =
+            L("访问 TMDB", "TMDB を開く", "Open TMDB");
 
         ProjectTitle.Text = T("About_ProjectOpenSource");
         GitHubDescription.Text = T("About_GitHubDescription");

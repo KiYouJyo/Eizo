@@ -144,6 +144,36 @@
           </StackPanel>
         </Border>
 
+        <Border Style="{StaticResource SettingsSectionCardStyle}">
+          <StackPanel Spacing="10">
+            <TextBlock x:Name="TmdbAttributionTitle"
+                       Style="{StaticResource SectionTitleText}" />
+            <Border Style="{StaticResource SettingsInnerCardStyle}"
+                    Padding="14">
+              <Grid ColumnDefinitions="*,Auto"
+                    ColumnSpacing="18">
+                <StackPanel Spacing="8">
+                  <Image Width="104"
+                         Height="42"
+                         HorizontalAlignment="Left"
+                         Stretch="Uniform">
+                    <Image.Source>
+                      <SvgImageSource UriSource="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_1-5bdc75aaebeb75dc7ae79426ddd9be3b2be1e342510f8202baf6bffa71d7f5c4.svg" />
+                    </Image.Source>
+                  </Image>
+                  <TextBlock x:Name="TmdbAttributionNotice"
+                             Style="{StaticResource SettingsDescriptionStyle}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <Button x:Name="OpenTmdbButton"
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Click="OpenTmdbButton_Click" />
+              </Grid>
+            </Border>
+          </StackPanel>
+        </Border>
+
         <Border Style="{StaticResource SettingsSectionCardStyle}" Margin="0,0,0,24">
           <StackPanel Spacing="14">
             <TextBlock x:Name="ProjectTitle" Style="{StaticResource SectionTitleText}" />

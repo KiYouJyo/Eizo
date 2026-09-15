@@ -640,12 +640,14 @@ public sealed class MediaMetadataServiceTests
     public async Task EnrichAsync_ManualBindingResolvesExactTmdbSubjectWhenSearchIsEmpty()
     {
         using var cache = new TempDirectory();
+        var searchCalls = 0;
         var handler = new RecordingHandler(request =>
         {
             var path = request.RequestUri!.AbsolutePath;
 
             if (path.EndsWith("/search/tv", StringComparison.Ordinal))
             {
+                searchCalls++;
                 return Json("""{"results":[]}""");
             }
 
@@ -737,6 +739,295 @@ public sealed class MediaMetadataServiceTests
         Assert.Equal(
             "Bound exact subject.",
             result.Overview);
+        Assert.Equal(0, searchCalls);
+    }
+
+    [Fact]
+    public async Task EnrichAsync_AutomaticTmdbBindingSkipsFuzzySearch()
+    {
+        using var cache = new TempDirectory();
+        var searchCalls = 0;
+        var handler = new RecordingHandler(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+
+            if (path.EndsWith("/search/tv", StringComparison.Ordinal))
+            {
+                searchCalls++;
+                return Json("""{"results":[]}""");
+            }
+
+            if (path.EndsWith("/tv/1396", StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "id": 1396,
+                  "name": "Breaking Bad",
+                  "original_name": "Breaking Bad",
+                  "overview": "Exact persisted identity.",
+                  "first_air_date": "2008-01-20",
+                  "number_of_episodes": 62,
+                  "poster_path": "/poster.jpg",
+                  "backdrop_path": "/backdrop.jpg",
+                  "episode_run_time": [47],
+                  "status": "Ended",
+                  "original_language": "en",
+                  "origin_country": ["US"],
+                  "genres": [{"id": 18, "name": "Drama"}],
+                  "production_companies": [],
+                  "credits": {"cast": [], "crew": []},
+                  "external_ids": {"imdb_id": "tt0903747"}
+                }
+                """);
+            }
+
+            if (path.EndsWith("/tv/1396/season/1", StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "id": 3572,
+                  "name": "Season 1",
+                  "season_number": 1,
+                  "episodes": [
+                    {
+                      "id": 62086,
+                      "episode_number": 2,
+                      "name": "Cat's in the Bag...",
+                      "still_path": "/episode2.jpg"
+                    }
+                  ]
+                }
+                """);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var service = new MediaMetadataService(
+            new MediaMetadataServiceOptions(
+                EnableBangumi: false,
+                TmdbReadAccessToken: "test-token",
+                CacheDirectory: cache.Path,
+                EnableArtworkProviders: false),
+            tmdbHttpClient: new HttpClient(handler));
+
+        var binding = new MediaIdentityBindingHint(
+            "eizo:series:breaking-bad",
+            "tmdb",
+            new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["tmdb"] = "1396",
+            },
+            IsManual: false);
+
+        var result = await service.EnrichAsync(
+            Recognition("Breaking Bad", 2008, 2),
+            binding,
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.True(result.IsResolved);
+        Assert.Equal("tmdb", result.Provider);
+        Assert.Equal("1396", result.ProviderSubjectId);
+        Assert.Equal("PersistedIdentityBinding", result.RoutingReason);
+        Assert.False(result.IdentityBindingManual);
+        Assert.Equal("Cat's in the Bag...", result.EpisodeTitle);
+        Assert.EndsWith("/episode2.jpg", result.EpisodeThumbnailUrl);
+        Assert.Equal(0, searchCalls);
+    }
+
+    [Fact]
+    public async Task EnrichAsync_BoundBangumiIdentityUsesBoundTmdbVisualSupplementWithoutSearch()
+    {
+        using var cache = new TempDirectory();
+        var bangumiSearchCalls = 0;
+        var tmdbSearchCalls = 0;
+
+        var bangumiHandler = new RecordingHandler(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+
+            if (path.EndsWith("/v0/search/subjects", StringComparison.Ordinal))
+            {
+                bangumiSearchCalls++;
+                return Json("""{"data":[],"total":0}""");
+            }
+
+            if (path.EndsWith("/v0/subjects/400", StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "id": 400,
+                  "type": 2,
+                  "name": "葬送のフリーレン",
+                  "name_cn": "葬送的芙莉莲",
+                  "date": "2023-09-29",
+                  "platform": "TV",
+                  "summary": "Bangumi overview.",
+                  "eps": 28,
+                  "images": {
+                    "large": "https://example.test/bangumi-poster.jpg"
+                  }
+                }
+                """);
+            }
+
+            if (path.EndsWith("/v0/episodes", StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "data": [
+                    {
+                      "id": 40001,
+                      "type": 0,
+                      "sort": 1,
+                      "name": "冒険の終わり",
+                      "name_cn": "冒险的结束",
+                      "airdate": "2023-09-29"
+                    }
+                  ],
+                  "total": 1
+                }
+                """);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var tmdbHandler = new RecordingHandler(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+
+            if (path.EndsWith("/search/tv", StringComparison.Ordinal))
+            {
+                tmdbSearchCalls++;
+                return Json("""{"results":[]}""");
+            }
+
+            if (path.EndsWith("/tv/209867", StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "id": 209867,
+                  "name": "Frieren: Beyond Journey's End",
+                  "original_name": "葬送のフリーレン",
+                  "overview": "TMDB overview.",
+                  "first_air_date": "2023-09-29",
+                  "number_of_episodes": 28,
+                  "poster_path": "/tmdb-poster.jpg",
+                  "backdrop_path": "/tmdb-backdrop.jpg",
+                  "episode_run_time": [24],
+                  "status": "Ended",
+                  "original_language": "ja",
+                  "origin_country": ["JP"],
+                  "genres": [{"id": 16, "name": "Animation"}],
+                  "production_companies": [],
+                  "credits": {"cast": [], "crew": []},
+                  "external_ids": {}
+                }
+                """);
+            }
+
+            if (path.EndsWith("/tv/209867/season/1", StringComparison.Ordinal))
+            {
+                return Json("""
+                {
+                  "id": 30001,
+                  "name": "Season 1",
+                  "season_number": 1,
+                  "episodes": [
+                    {
+                      "id": 50001,
+                      "episode_number": 1,
+                      "name": "The Journey's End",
+                      "still_path": "/tmdb-episode1.jpg"
+                    }
+                  ]
+                }
+                """);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var service = new MediaMetadataService(
+            new MediaMetadataServiceOptions(
+                TmdbReadAccessToken: "test-token",
+                CacheDirectory: cache.Path,
+                EnableArtworkProviders: false),
+            bangumiHttpClient: new HttpClient(bangumiHandler),
+            tmdbHttpClient: new HttpClient(tmdbHandler));
+
+        var binding = new MediaIdentityBindingHint(
+            "eizo:series:frieren",
+            "bangumi",
+            new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["bangumi"] = "400",
+                ["tmdb"] = "209867",
+            },
+            IsManual: false);
+
+        var result = await service.EnrichAsync(
+            Recognition("葬送のフリーレン", 2023, 1),
+            binding,
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.True(result.IsResolved);
+        Assert.Equal("bangumi", result.Provider);
+        Assert.Equal("400", result.ProviderSubjectId);
+        Assert.Equal("PersistedIdentityBinding", result.RoutingReason);
+        Assert.Equal("209867", result.ExternalIds["tmdb"]);
+        Assert.EndsWith("/tmdb-backdrop.jpg", result.BackdropUrl);
+        Assert.EndsWith("/tmdb-poster.jpg", result.PosterUrl);
+        Assert.EndsWith("/tmdb-episode1.jpg", result.EpisodeThumbnailUrl);
+        Assert.Equal("tmdb", result.FieldSources["BackdropUrl"]);
+        Assert.Equal("tmdb", result.FieldSources["EpisodeThumbnailUrl"]);
+        Assert.Equal(0, bangumiSearchCalls);
+        Assert.Equal(0, tmdbSearchCalls);
+    }
+
+    [Fact]
+    public async Task SearchCandidatesAsync_RequestedUnavailableProviderDoesNotFallback()
+    {
+        using var cache = new TempDirectory();
+        var bangumiCalls = 0;
+        var handler = new RecordingHandler(_ =>
+        {
+            bangumiCalls++;
+            return Json("""{"data":[],"total":0}""");
+        });
+
+        var service = new MediaMetadataService(
+            new MediaMetadataServiceOptions(
+                CacheDirectory: cache.Path),
+            bangumiHttpClient:
+                new HttpClient(handler));
+
+        Assert.True(
+            service.IsProviderAvailable("bangumi"));
+        Assert.False(
+            service.IsProviderAvailable("tmdb"));
+        Assert.DoesNotContain(
+            "tmdb",
+            service.AvailableProviders,
+            StringComparer.OrdinalIgnoreCase);
+
+        var candidates =
+            await service.SearchCandidatesAsync(
+                Recognition(
+                    "Breaking Bad",
+                    2008,
+                    1),
+                query: "Breaking Bad",
+                provider: "tmdb",
+                TestContext.Current.CancellationToken);
+
+        Assert.Empty(candidates);
+        Assert.Equal(0, bangumiCalls);
     }
 
     [Fact]

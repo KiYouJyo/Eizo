@@ -52,7 +52,7 @@ foreach ($required in @(
     'MetadataTransportFailuresBeforeCooldown',
     'CommitSourceScan',
     'Changed?.Invoke(this, EventArgs.Empty)',
-    'MediaMetadataStatus.Unresolved',
+    'unresolved++',
     'MediaMetadataStatus.Error')) {
     if ($catalog -notmatch [regex]::Escape($required)) {
         throw "Metadata source-scan contract missing: $required"

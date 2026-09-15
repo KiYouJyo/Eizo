@@ -134,29 +134,8 @@ if ($detailXaml.Contains(
     throw 'Nonfunctional FavoriteButton must not remain in the real-content detail UI.'
 }
 
-foreach ($required in @(
-    '<Version>0.5.12</Version>',
-    '<AssemblyVersion>0.5.12.0</AssemblyVersion>',
-    '<FileVersion>0.5.12.0</FileVersion>',
-    '<InformationalVersion>0.5.12</InformationalVersion>')) {
-    if (-not $project.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Project version is not closed on 0.5.12: $required"
-    }
-}
-
-if (-not $manifest.Contains(
-        'Version="0.5.12.0"',
-        [StringComparison]::Ordinal)) {
-    throw 'Package manifest is not 0.5.12.0.'
-}
-
-foreach ($required in @(
-    '"version": "0.5.12"',
-    '"packageVersion": "0.5.12.0"',
-    '"en-US": "Real-content UI Close-out"')) {
-    if (-not $release.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Release metadata is not closed on 0.5.12: $required"
-    }
-}
+# Product version is validated separately by Test-ReleaseVersionContract.ps1.
+# Keep this historical contract focused on the UI behavior introduced in 0.5.12,
+# so it remains a valid regression test for later releases.
 
 Write-Host 'Eizo 0.5.12 real-content UI close-out contract PASS.'
