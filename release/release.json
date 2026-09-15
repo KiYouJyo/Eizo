@@ -1,12 +1,12 @@
 {
     "schemaVersion": 1,
     "product": {
-        "version": "0.5.13",
-        "packageVersion": "0.5.13.0",
+        "version": "0.5.14",
+        "packageVersion": "0.5.14.0",
         "title": {
-            "zh-CN": "TMDB 正式接入",
-            "ja-JP": "TMDB 本番統合",
-            "en-US": "TMDB Production Integration"
+            "zh-CN": "刮削架构解耦与优化",
+            "ja-JP": "スクレイピング構成の分離と最適化",
+            "en-US": "Scraping Architecture Simplification"
         }
     },
     "channels": {
