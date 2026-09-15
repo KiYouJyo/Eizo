@@ -33,7 +33,10 @@ public sealed partial class MainWindow : Window
 
     public MainWindow()
     {
+        StartupTrace.Mark("MainWindow.ctor:begin");
+        StartupTrace.Mark("MainWindow.InitializeComponent:begin");
         InitializeComponent();
+        StartupTrace.Mark("MainWindow.InitializeComponent:end");
 
         Title = "Eizo 映藏";
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Eizo.ico"));
@@ -44,7 +47,9 @@ public sealed partial class MainWindow : Window
         WindowRoot.RequestedTheme = ThemePreferenceStore.Load();
         UpdateTitleBarColors();
 
+        StartupTrace.Mark("RestoreWindowPlacement:begin");
         RestoreWindowPlacement();
+        StartupTrace.Mark("RestoreWindowPlacement:end");
         AppWindow.Changed += MainWindow_AppWindowChanged;
         Closed += MainWindow_WindowPlacementClosed;
 
@@ -59,7 +64,10 @@ public sealed partial class MainWindow : Window
             QueueNavigationPaneBackgroundUpdate();
         };
 
+        StartupTrace.Mark("CreateWorkspaceTab(home):begin");
         CreateWorkspaceTab(select: true);
+        StartupTrace.Mark("CreateWorkspaceTab(home):end");
+        StartupTrace.Mark("MainWindow.ctor:end");
     }
 
     private void RestoreWindowPlacement()
