@@ -10,6 +10,8 @@ public sealed partial class SettingsView : UserControl
 {
     private static readonly double[] PlaybackRates =
         [0.5d, 0.75d, 1d, 1.25d, 1.5d, 2d];
+    private static readonly int[] FullscreenControlTimeouts =
+        [2, 4, 6, 10];
 
     private readonly AppLocalizationService _localization =
         AppLocalizationService.Default;
@@ -104,6 +106,9 @@ public sealed partial class SettingsView : UserControl
                 settings.MetadataArtworkEnrichment;
             AutoPlayNextToggle.IsOn =
                 settings.AutoPlayNextEpisode;
+            FullscreenControlsTimeoutCombo.SelectedIndex =
+                FindFullscreenControlsTimeoutIndex(
+                    settings.FullscreenControlsTimeoutSeconds);
             RememberPlaybackRateToggle.IsOn =
                 settings.RememberPlaybackRate;
             RememberSubtitleTrackToggle.IsOn =
@@ -632,6 +637,27 @@ public sealed partial class SettingsView : UserControl
             });
     }
 
+    private void FullscreenControlsTimeoutCombo_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_isSynchronizing ||
+            FullscreenControlsTimeoutCombo.SelectedIndex < 0 ||
+            FullscreenControlsTimeoutCombo.SelectedIndex >=
+                FullscreenControlTimeouts.Length)
+        {
+            return;
+        }
+
+        AppSettingsStore.Update(settings =>
+            settings with
+            {
+                FullscreenControlsTimeoutSeconds =
+                    FullscreenControlTimeouts[
+                        FullscreenControlsTimeoutCombo.SelectedIndex]
+            });
+    }
+
     private void RememberPlaybackRateToggle_Toggled(
         object sender,
         RoutedEventArgs e)
@@ -820,6 +846,19 @@ public sealed partial class SettingsView : UserControl
             $"{SecondarySubtitleOpacitySettingsSlider.Value:0}%";
     }
 
+    private static int FindFullscreenControlsTimeoutIndex(
+        int value)
+    {
+        var normalized =
+            AppSettingsStore.NormalizeFullscreenControlsTimeout(
+                value);
+        var index =
+            Array.IndexOf(
+                FullscreenControlTimeouts,
+                normalized);
+        return index >= 0 ? index : 1;
+    }
+
     private static int FindPlaybackRateIndex(double value)
     {
         var bestIndex = 0;
@@ -955,6 +994,24 @@ public sealed partial class SettingsView : UserControl
             T("Settings_AutoPlayNext");
         AutoPlayNextDescription.Text =
             T("Settings_AutoPlayNextDescription");
+        FullscreenControlsTimeoutLabel.Text =
+            L(
+                "全屏控制区驻留时间",
+                "全画面コントロール表示時間",
+                "Fullscreen controls timeout");
+        FullscreenControlsTimeoutDescription.Text =
+            L(
+                "鼠标停止移动后，播放控制区继续显示的时间。",
+                "マウス操作を止めてから再生コントロールを表示し続ける時間です。",
+                "How long playback controls stay visible after pointer activity stops.");
+        FullscreenControlsTimeoutCombo.ItemsSource =
+            FullscreenControlTimeouts
+                .Select(seconds =>
+                    L(
+                        $"{seconds} 秒",
+                        $"{seconds} 秒",
+                        $"{seconds} sec"))
+                .ToArray();
         RememberPlaybackRateLabel.Text =
             T("Settings_RememberPlaybackRate");
         RememberPlaybackRateDescription.Text =
