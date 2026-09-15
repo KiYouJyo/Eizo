@@ -101,9 +101,16 @@ public sealed partial class HomeView : UserControl
         RefreshLibraryContent();
         Eizo.StartupTrace.Mark("HomeView.RefreshLibraryContent(deferred):end");
 
-        // Network/cache-backed seasonal content is deliberately not part of the
-        // startup gate. It can fill in after the local home surface is ready.
-        _ = LoadCurrentSeasonAsync();
+        if (ProductFlavor.IsDemo)
+        {
+            LoadDemoSeasonCards();
+        }
+        else
+        {
+            // Network/cache-backed seasonal content is deliberately not part of the
+            // startup gate. It can fill in after the local home surface is ready.
+            _ = LoadCurrentSeasonAsync();
+        }
 
         Eizo.StartupTrace.Mark("HomeView.InitializeInitialContent:end");
     }
@@ -238,9 +245,17 @@ public sealed partial class HomeView : UserControl
 
         _featuredSubject = heroCandidates.Length == 0
             ? null
-            : heroCandidates[
-                DateTimeOffset.Now.DayOfYear %
-                Math.Min(heroCandidates.Length, 8)];
+            : ProductFlavor.IsDemo
+                ? heroCandidates.FirstOrDefault(subject =>
+                    subject.Items.Any(item =>
+                        string.Equals(
+                            item.Metadata?.ProviderSubjectId,
+                            "after-rain-terminal",
+                            StringComparison.Ordinal))) ??
+                  heroCandidates[0]
+                : heroCandidates[
+                    DateTimeOffset.Now.DayOfYear %
+                    Math.Min(heroCandidates.Length, 8)];
 
         _featuredItem =
             _featuredSubject?.FirstPlayableItem ??
@@ -356,6 +371,53 @@ public sealed partial class HomeView : UserControl
         Grid.SetColumnSpan(
             HeroText,
             showArtwork ? 1 : 2);
+    }
+
+    private void LoadDemoSeasonCards()
+    {
+        var catalog = _catalog;
+        if (catalog is null)
+            return;
+
+        var aggregation = CatalogSubjectAggregator.Build(
+            catalog.SnapshotForDisplay());
+
+        _bangumiSeasonSubjects.Clear();
+        _seasonItems = aggregation.Subjects
+            .Where(static subject =>
+                subject.Category == MediaCategoryKind.Anime)
+            .OrderBy(static subject => subject.Title)
+            .Take(4)
+            .Select(subject =>
+            {
+                var presentation =
+                    CatalogSubjectPresentation.Create(subject);
+
+                return new MediaCardModel(
+                    presentation.Title,
+                    presentation.SecondaryTitle,
+                    string.Join(
+                        " · ",
+                        new[]
+                        {
+                            presentation.ReleaseYear?.ToString(
+                                CultureInfo.InvariantCulture),
+                            presentation.Genres.FirstOrDefault(),
+                        }.Where(static value =>
+                            !string.IsNullOrWhiteSpace(value))),
+                    Progress: 0,
+                    ExternalKey: null,
+                    ArtworkUrl: presentation.PosterUrl);
+            })
+            .ToArray();
+
+        SeasonLoadingRing.IsActive = false;
+        SeasonLoadingRing.Visibility = Visibility.Collapsed;
+        SeasonStatusText.Text = L(
+            "Eizo Demo · 虚构宣传内容",
+            "Eizo Demo · 架空のプロモーション作品",
+            "Eizo Demo · Fictional showcase");
+        RebuildMediaGrids();
     }
 
     private async Task LoadCurrentSeasonAsync()
