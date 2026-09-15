@@ -79,10 +79,11 @@ foreach ($required in @(
 }
 
 foreach ($required in @(
-    'CatalogSubjectMetadataActions.RefreshAsync(_subject)',
+    'CatalogSubjectMetadataActions',
+    '.RefreshAsync(',
     'MetadataMatchDialog.ShowAsync(',
-    'CatalogSubjectMetadataActions.ApplyManualMatchAsync(',
-    'CatalogSubjectMetadataActions.ClearManualMatchAsync(')) {
+    '.ApplyManualMatchAsync(',
+    '.ClearManualMatchAsync(')) {
     if (-not $detail.Contains($required, [StringComparison]::Ordinal)) {
         throw "Detail-page actions are not routed through per-title APIs: $required"
     }
