@@ -1,3 +1,4 @@
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 
 namespace Eizo.Models;
@@ -30,6 +31,11 @@ public sealed record EpisodeDisplayItemModel(
         string.IsNullOrWhiteSpace(Duration)
             ? Status
             : $"{Status} / {Duration}";
+
+    public Visibility ProgressVisibility =>
+        Progress > 0d
+            ? Visibility.Visible
+            : Visibility.Collapsed;
 
     public bool CanCache =>
         MediaItem?.Location?.Kind ==
