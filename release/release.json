@@ -1,12 +1,12 @@
 {
     "schemaVersion": 1,
     "product": {
-        "version": "0.5.12",
-        "packageVersion": "0.5.12.0",
+        "version": "0.5.13",
+        "packageVersion": "0.5.13.0",
         "title": {
-            "zh-CN": "真实内容 UI 收口",
-            "ja-JP": "実コンテンツ UI 仕上げ",
-            "en-US": "Real-content UI Close-out"
+            "zh-CN": "TMDB 正式接入",
+            "ja-JP": "TMDB 本番統合",
+            "en-US": "TMDB Production Integration"
         }
     },
     "channels": {
