@@ -8,6 +8,10 @@ function Assert-LastExitCode([string]$message) {
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$manifestPath = Join-Path $repoRoot 'src/Eizo.App/Package.appxmanifest'
+$storeIdentityPath = Join-Path $repoRoot 'release/MicrosoftStore/store-identity.json'
+$originalManifestText = $null
+
 Push-Location $repoRoot
 try {
     $runnerTemp = if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) { [IO.Path]::GetTempPath() } else { $env:RUNNER_TEMP }
@@ -22,20 +26,61 @@ try {
     & ./scripts/Test-ReleaseVersionContract.ps1
     & ./scripts/Test-FirstRunGuideV100Contract.ps1
 
-    [xml]$manifest = Get-Content -LiteralPath 'src/Eizo.App/Package.appxmanifest' -Raw
+    if (-not (Test-Path -LiteralPath $storeIdentityPath -PathType Leaf)) {
+        throw "Partner Center identity file is missing: $storeIdentityPath"
+    }
+    $storeIdentity = Get-Content -LiteralPath $storeIdentityPath -Raw | ConvertFrom-Json
+    $expectedIdentityName = [string]$storeIdentity.packageIdentityName
+    $expectedPublisher = [string]$storeIdentity.publisher
+    $expectedPublisherDisplayName = [string]$storeIdentity.publisherDisplayName
+    $expectedPackageFamilyName = [string]$storeIdentity.packageFamilyName
+
+    foreach ($requiredValue in @(
+        $expectedIdentityName,
+        $expectedPublisher,
+        $expectedPublisherDisplayName,
+        $expectedPackageFamilyName)) {
+        if ([string]::IsNullOrWhiteSpace($requiredValue)) {
+            throw 'Partner Center identity configuration contains an empty required value.'
+        }
+    }
+
+    $originalManifestText = [IO.File]::ReadAllText($manifestPath, [Text.Encoding]::UTF8)
+    [xml]$sourceManifest = $originalManifestText
+    $sourceIdentity = $sourceManifest.Package.Identity
+    if ([string]$sourceIdentity.Version -ne '1.0.0.0') {
+        throw "Store package version mismatch: $($sourceIdentity.Version)"
+    }
+    if ([string]$sourceIdentity.Name -cne 'Eizo' -or
+        [string]$sourceIdentity.Publisher -cne 'CN=AppPublisher') {
+        throw "Source manifest must retain the GitHub sideload identity. Actual Name='$($sourceIdentity.Name)' Publisher='$($sourceIdentity.Publisher)'."
+    }
+
+    $sourceIdentity.SetAttribute('Name', $expectedIdentityName)
+    $sourceIdentity.SetAttribute('Publisher', $expectedPublisher)
+    $sourceManifest.Package.Properties.PublisherDisplayName = $expectedPublisherDisplayName
+
+    $writerSettings = [Xml.XmlWriterSettings]::new()
+    $writerSettings.Encoding = [Text.UTF8Encoding]::new($false)
+    $writerSettings.Indent = $true
+    $writer = [Xml.XmlWriter]::Create($manifestPath, $writerSettings)
+    try {
+        $sourceManifest.Save($writer)
+    }
+    finally {
+        $writer.Dispose()
+    }
+
+    [xml]$manifest = Get-Content -LiteralPath $manifestPath -Raw
     $identity = $manifest.Package.Identity
-    $expectedPublisherDisplayName = 'Jo Kiyō'
     $publisherDisplayName = [string]$manifest.Package.Properties.PublisherDisplayName
-    if ([string]$identity.Version -ne '1.0.0.0') {
-        throw "Store package version mismatch: $($identity.Version)"
+    if ([string]$identity.Name -cne $expectedIdentityName -or
+        [string]$identity.Publisher -cne $expectedPublisher -or
+        $publisherDisplayName -cne $expectedPublisherDisplayName) {
+        throw "Store identity injection failed: Name='$($identity.Name)' Publisher='$($identity.Publisher)' PublisherDisplayName='$publisherDisplayName'"
     }
-    if ($publisherDisplayName -cne $expectedPublisherDisplayName) {
-        throw "Store PublisherDisplayName mismatch before build: actual='$publisherDisplayName' expected='$expectedPublisherDisplayName'"
-    }
-    $isPlaceholderIdentity = ([string]$identity.Name -eq 'Eizo' -and [string]$identity.Publisher -eq 'CN=AppPublisher')
-    if ($isPlaceholderIdentity) {
-        Write-Warning 'Store Identity Publisher is still the sideload placeholder CN=AppPublisher. Do not replace it with the display name; use the exact Partner Center Publisher ID before final certification if required.'
-    }
+
+    Write-Host "Partner Center identity injected: Name='$expectedIdentityName' Publisher='$expectedPublisher' PublisherDisplayName='$expectedPublisherDisplayName' ExpectedPFN='$expectedPackageFamilyName'"
 
     Write-Host '== Restore pinned dependencies =='
     & ./scripts/Restore-EizoPlayback.ps1
@@ -107,15 +152,24 @@ try {
             }
             finally { $stream.Dispose() }
 
+            $innerIdentityName = $innerManifest.Package.Identity.GetAttribute('Name')
+            $innerPublisher = $innerManifest.Package.Identity.GetAttribute('Publisher')
             $innerPublisherDisplayName = [string]$innerManifest.Package.Properties.PublisherDisplayName
+            if ($innerIdentityName -cne $expectedIdentityName) {
+                throw "Identity Name mismatch in $($package.Name): actual='$innerIdentityName' expected='$expectedIdentityName'"
+            }
+            if ($innerPublisher -cne $expectedPublisher) {
+                throw "Publisher mismatch in $($package.Name): actual='$innerPublisher' expected='$expectedPublisher'"
+            }
             if ($innerPublisherDisplayName -cne $expectedPublisherDisplayName) {
                 throw "PublisherDisplayName mismatch in $($package.Name): actual='$innerPublisherDisplayName' expected='$expectedPublisherDisplayName'"
             }
 
             [pscustomobject]@{
                 Package = $package.Name
+                IdentityName = $innerIdentityName
+                Publisher = $innerPublisher
                 PublisherDisplayName = $innerPublisherDisplayName
-                Publisher = $innerManifest.Package.Identity.GetAttribute('Publisher')
                 ResourceId = $innerManifest.Package.Identity.GetAttribute('ResourceId')
             }
         }
@@ -126,23 +180,24 @@ try {
     if ($publisherResults.Count -ne $innerPackages.Count) {
         throw 'Not every inner package was verified for PublisherDisplayName.'
     }
-    Write-Host "PublisherDisplayName deep verification PASS: $($publisherResults.Count) package manifests = '$expectedPublisherDisplayName'."
+    Write-Host "Partner Center identity deep verification PASS: $($publisherResults.Count) inner package manifests."
+    Write-Host "Expected Package Family Name: $expectedPackageFamilyName"
 
     $bundle = @(Get-ChildItem $appPackages -Recurse -Filter '*.msixbundle' -File | Sort-Object Length -Descending) | Select-Object -First 1
     if ($bundle) {
         Copy-Item -LiteralPath $bundle.FullName -Destination (Join-Path $assets 'Eizo_1.0.0.0_x64_store-inner.msixbundle') -Force
     }
 
-    $identityStatus = if ($isPlaceholderIdentity) { 'PLACEHOLDER - replace from Partner Center before submission' } else { 'Partner Center identity applied' }
     @(
-        'Eizo StoreUpload candidate'
+        'Eizo StoreUpload'
         'Version: 1.0.0.0'
         'Architecture: x64'
         "Identity Name: $($identity.Name)"
         "Publisher: $($identity.Publisher)"
         "Publisher display name: $publisherDisplayName"
+        "Expected package family name: $expectedPackageFamilyName"
         "Verified inner package manifests: $($publisherResults.Count)"
-        "Identity status: $identityStatus"
+        'Identity status: Partner Center identity applied'
         "Upload: $(Split-Path -Leaf $storeUpload)"
     ) | Set-Content -LiteralPath (Join-Path $assets 'STORE-IDENTITY.txt') -Encoding utf8
 
@@ -155,5 +210,11 @@ try {
     Write-Host "Eizo 1.0.0 StoreUpload candidate PASS. Assets=$assets"
 }
 finally {
+    if ($null -ne $originalManifestText) {
+        [IO.File]::WriteAllText(
+            $manifestPath,
+            $originalManifestText,
+            [Text.UTF8Encoding]::new($false))
+    }
     Pop-Location
 }
