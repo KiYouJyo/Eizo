@@ -59,6 +59,26 @@ if ($publisherDisplayName -cne $expectedPublisherDisplayName) {
     throw "Store publisher display name mismatch: actual='$publisherDisplayName' expected='$expectedPublisherDisplayName'"
 }
 
+if ([string]$manifest.Package.Identity.Name -cne 'Eizo' -or
+    [string]$manifest.Package.Identity.Publisher -cne 'CN=AppPublisher') {
+    throw "Source manifest must retain GitHub sideload identity Eizo / CN=AppPublisher."
+}
+
+$storeIdentityPath = Join-Path $repoRoot 'release/MicrosoftStore/store-identity.json'
+$storeIdentity = Get-Content -LiteralPath $storeIdentityPath -Raw | ConvertFrom-Json
+$expectedStoreIdentity = @{
+    Name = 'JoKiy.Eizo'
+    Publisher = 'CN=C4E4B33A-7B77-4121-897C-7D720A5471F8'
+    PublisherDisplayName = 'Jo Kiyō'
+    PackageFamilyName = 'JoKiy.Eizo_4wdwgytaw3v2m'
+}
+if ([string]$storeIdentity.packageIdentityName -cne $expectedStoreIdentity.Name -or
+    [string]$storeIdentity.publisher -cne $expectedStoreIdentity.Publisher -or
+    [string]$storeIdentity.publisherDisplayName -cne $expectedStoreIdentity.PublisherDisplayName -or
+    [string]$storeIdentity.packageFamilyName -cne $expectedStoreIdentity.PackageFamilyName) {
+    throw "Partner Center Store identity mismatch: $($storeIdentity | ConvertTo-Json -Compress)"
+}
+
 $appVersionProvider = Read-Text 'src/Eizo.App/AppVersionProvider.cs'
 if ($appVersionProvider -match 'const\s+string\s+(?:Version|DisplayVersion)' -or
     $appVersionProvider -match '(?<!\d)0\.3\.\d+(?!\d)') {
