@@ -1773,6 +1773,12 @@ public sealed partial class PlayerView : UserControl
             _sidebarCollapsedByUser = !_sidebarCollapsedByUser;
 
         UpdateSidebarVisibility();
+
+        if (_isVideoFullscreen)
+        {
+            ShowFullscreenControls(restartAutoHide: true);
+            Focus(FocusState.Programmatic);
+        }
     }
 
     private void SidebarDismissLayer_PointerPressed(
@@ -1785,6 +1791,8 @@ public sealed partial class PlayerView : UserControl
         e.Handled = true;
         _sidebarVisibleInFullscreen = false;
         UpdateSidebarVisibility();
+        ShowFullscreenControls(restartAutoHide: true);
+        Focus(FocusState.Programmatic);
     }
 
     private void PlaybackRateSlider_ValueChanged(
@@ -2504,10 +2512,14 @@ public sealed partial class PlayerView : UserControl
             : SplitViewDisplayMode.Inline;
 
         PlayerSplitView.IsPaneOpen = shouldShow;
+        var dismissSidebar =
+            _isVideoFullscreen && shouldShow;
         SidebarDismissLayer.Visibility =
-            _isVideoFullscreen && shouldShow
+            dismissSidebar
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+        SidebarDismissLayer.IsHitTestVisible =
+            dismissSidebar;
 
         SidebarToggleIcon.Symbol = shouldShow
             ? Symbol.ClosePane
@@ -2541,8 +2553,16 @@ public sealed partial class PlayerView : UserControl
     {
         _fullscreenControlsTimer.Stop();
 
+        var timeoutSeconds =
+            AppSettingsStore.NormalizeFullscreenControlsTimeout(
+                AppSettingsStore.Current.FullscreenControlsTimeoutSeconds);
+        _fullscreenControlsTimer.Interval =
+            TimeSpan.FromSeconds(timeoutSeconds);
+
         if (_isVideoFullscreen &&
-            _engine?.State == PlaybackState.Playing)
+            _engine?.State == PlaybackState.Playing &&
+            !_isScrubbingTimeline &&
+            _heldDirectionKey is null)
         {
             _fullscreenControlsTimer.Start();
         }
