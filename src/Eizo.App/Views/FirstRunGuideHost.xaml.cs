@@ -352,7 +352,7 @@ public sealed partial class FirstRunGuideHost : UserControl
             if (Visibility == Visibility.Visible) await RefreshBangumiStatusAsync(false);
         });
 
-    private void Localization_LanguageChanged(object? sender, LanguageChangedEventArgs e) =>
+    private void Localization_LanguageChanged(object? sender, AppLanguageChangedEventArgs e) =>
         DispatcherQueue.TryEnqueue(() =>
         {
             ApplyStaticText();
