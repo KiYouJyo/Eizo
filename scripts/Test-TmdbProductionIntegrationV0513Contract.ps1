@@ -95,12 +95,15 @@ foreach ($required in @(
 
 foreach ($required in @(
     'IsTmdbConfigured',
-    '"TMDB"',
-    '"tmdb"')) {
+    'SearchMetadataMatchesAsync(',
+    'provider: "tmdb"')) {
     if (-not $matchDialog.Contains($required, [StringComparison]::Ordinal)) {
         throw "TMDB manual matching integration is incomplete: $required"
     }
 }
+
+# v0.5.13 introduced TMDB-aware manual matching. It does not require
+# later releases to retain the original multi-provider selector or label.
 
 $notice = 'This product uses the TMDB API but is not endorsed or certified by TMDB.'
 if (-not $about.Contains($notice, [StringComparison]::Ordinal)) {
