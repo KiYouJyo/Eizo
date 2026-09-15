@@ -376,6 +376,26 @@
                         ColumnSpacing="24"
                         ColumnDefinitions="*,Auto">
                     <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="FullscreenControlsTimeoutLabel"
+                                 Style="{StaticResource SettingsRowLabelStyle}" />
+                      <TextBlock x:Name="FullscreenControlsTimeoutDescription"
+                                 Style="{StaticResource SettingsDescriptionStyle}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ComboBox x:Name="FullscreenControlsTimeoutCombo"
+                              Grid.Column="1"
+                              Width="150"
+                              HorizontalAlignment="Right"
+                              controls:TransientComboBoxTheme.Apply="True"
+                              SelectionChanged="FullscreenControlsTimeoutCombo_SelectionChanged" />
+                  </Grid>
+                  <Border Height="1"
+                          Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                  <Grid Padding="14"
+                        MinHeight="72"
+                        ColumnSpacing="24"
+                        ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
                       <TextBlock x:Name="RememberPlaybackRateLabel"
                                  Style="{StaticResource SettingsRowLabelStyle}" />
                       <TextBlock x:Name="RememberPlaybackRateDescription"
