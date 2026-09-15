@@ -1093,15 +1093,27 @@ public sealed class MediaCatalogStore
         if (item.Metadata is
             {
                 IsResolved: true,
-            } metadata &&
-            string.Equals(
-                metadata.RuntimeVersion,
-                MediaMetadataService.RuntimeVersion,
-                StringComparison.OrdinalIgnoreCase) &&
-            metadata.MatchesRecognitionRuntime(
-                recognition.RuntimeVersion))
+            } metadata)
         {
-            return false;
+            // v0.5.14 upgrades legacy Bangumi-led library snapshots into
+            // the TMDB-only authority even when runtime versions still match.
+            if (!string.Equals(
+                    metadata.Provider,
+                    "tmdb",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (string.Equals(
+                    metadata.RuntimeVersion,
+                    MediaMetadataService.RuntimeVersion,
+                    StringComparison.OrdinalIgnoreCase) &&
+                metadata.MatchesRecognitionRuntime(
+                    recognition.RuntimeVersion))
+            {
+                return false;
+            }
         }
 
         return true;
@@ -1421,6 +1433,10 @@ public sealed class MediaCatalogStore
             {
                 IsResolved: true,
             } metadata ||
+            !string.Equals(
+                metadata.Provider,
+                "tmdb",
+                StringComparison.OrdinalIgnoreCase) ||
             existing.Recognition is null ||
             discovered.Recognition is null ||
             !string.Equals(
