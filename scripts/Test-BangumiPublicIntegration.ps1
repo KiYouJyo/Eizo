@@ -25,7 +25,7 @@ $shell = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
 foreach ($required in @(
     '../Eizo.Bangumi/Eizo.Bangumi.csproj',
     'https://api.bgm.tv/',
-    'Eizo/0.5.10',
+    'Eizo/0.5.11',
     '"type=2"',
     '"sort=" + sort',
     'GetSeasonMonthAsync',
@@ -122,4 +122,4 @@ foreach ($required in @(
     }
 }
 
-Write-Host 'Eizo v0.5.10 Bangumi public integration contract PASS.'
+Write-Host 'Eizo v0.5.11 Bangumi public integration contract PASS.'

@@ -400,6 +400,19 @@ public sealed partial class CatalogView : UserControl
 
         var flyout = new MenuFlyout();
 
+        if (viewModel.Subject is { } subject)
+        {
+            AddSubjectMetadataActions(
+                flyout,
+                subject);
+
+            if (flyout.Items.Count > 0)
+            {
+                flyout.Items.Add(
+                    new MenuFlyoutSeparator());
+            }
+        }
+
         if (viewModel.Item is { Recognition: { } } item)
         {
             var detailsItem = new MenuFlyoutItem
@@ -431,6 +444,129 @@ public sealed partial class CatalogView : UserControl
             flyout.Items.Count > 0
                 ? flyout
                 : null;
+    }
+
+    private void AddSubjectMetadataActions(
+        MenuFlyout flyout,
+        CatalogSubjectModel subject)
+    {
+        var refreshItem = new MenuFlyoutItem
+        {
+            Text = L(
+                "重新刮削",
+                "メタデータを再取得",
+                "Re-scrape metadata"),
+            Icon = new FontIcon
+            {
+                Glyph = "\uE72C",
+            },
+            Tag = subject,
+        };
+        refreshItem.Click += SubjectRefresh_Click;
+        flyout.Items.Add(refreshItem);
+
+        var matchItem = new MenuFlyoutItem
+        {
+            Text = L(
+                "手动匹配…",
+                "手動で照合…",
+                "Manual match…"),
+            Icon = new FontIcon
+            {
+                Glyph = "\uE8A7",
+            },
+            Tag = subject,
+        };
+        matchItem.Click += SubjectManualMatch_Click;
+        flyout.Items.Add(matchItem);
+
+        var binding =
+            CatalogSubjectMetadataActions.GetBinding(
+                subject);
+        if (binding is
+            {
+                IsManual: true,
+                PrimaryProvider.Length: > 0,
+            })
+        {
+            var clearItem = new MenuFlyoutItem
+            {
+                Text = L(
+                    "清除手动匹配",
+                    "手動照合を解除",
+                    "Clear manual match"),
+                Icon = new FontIcon
+                {
+                    Glyph = "\uE711",
+                },
+                Tag = new SubjectProviderTag(
+                    subject,
+                    binding.PrimaryProvider),
+            };
+            clearItem.Click +=
+                SubjectClearManualMatch_Click;
+            flyout.Items.Add(clearItem);
+        }
+    }
+
+    private async void SubjectRefresh_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem
+            {
+                Tag: CatalogSubjectModel subject,
+            })
+        {
+            return;
+        }
+
+        await CatalogSubjectMetadataActions
+            .RefreshAsync(subject);
+    }
+
+    private async void SubjectManualMatch_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (XamlRoot is null ||
+            sender is not MenuFlyoutItem
+            {
+                Tag: CatalogSubjectModel subject,
+            })
+        {
+            return;
+        }
+
+        var candidate =
+            await MetadataMatchDialog.ShowAsync(
+                XamlRoot,
+                subject);
+        if (candidate is null)
+            return;
+
+        await CatalogSubjectMetadataActions
+            .ApplyManualMatchAsync(
+                subject,
+                candidate);
+    }
+
+    private async void SubjectClearManualMatch_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem
+            {
+                Tag: SubjectProviderTag tag,
+            })
+        {
+            return;
+        }
+
+        await CatalogSubjectMetadataActions
+            .ClearManualMatchAsync(
+                tag.Subject,
+                tag.Provider);
     }
 
     private async void RecognitionDetails_Click(
@@ -1274,6 +1410,10 @@ public sealed partial class CatalogView : UserControl
                 CatalogCategoryClassifier.Resolve(item),
                 item.DisplayTitle);
     }
+
+    private sealed record SubjectProviderTag(
+        CatalogSubjectModel Subject,
+        string Provider);
 
     private sealed record CatalogListItemViewModel(
         CatalogSubjectModel? Subject,
