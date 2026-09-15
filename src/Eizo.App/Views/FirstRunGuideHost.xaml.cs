@@ -35,7 +35,7 @@ public sealed partial class FirstRunGuideHost : UserControl
     public void Show()
     {
         if (Visibility == Visibility.Visible) return;
-        _step = 0;
+        _step = _state.GetResumeStep();
         _isBusy = false;
         ApplyStaticText();
         SyncPlaybackControls();
@@ -397,6 +397,7 @@ public sealed partial class FirstRunGuideHost : UserControl
         if (_step < 5)
         {
             _step++;
+            _state.RecordStep(_step);
             RefreshStep();
             DispatcherQueue.TryEnqueue(() => NextButton.Focus(FocusState.Programmatic));
             return;
@@ -418,6 +419,7 @@ public sealed partial class FirstRunGuideHost : UserControl
     {
         if (_isBusy || _step is < 1 or > 4) return;
         _step++;
+        _state.RecordStep(_step);
         RefreshStep();
     }
 
@@ -425,6 +427,7 @@ public sealed partial class FirstRunGuideHost : UserControl
     {
         if (_isBusy || _step == 0) return;
         _step--;
+        _state.RecordStep(_step);
         RefreshStep();
     }
 
