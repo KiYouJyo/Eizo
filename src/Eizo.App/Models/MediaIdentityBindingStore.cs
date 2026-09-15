@@ -63,6 +63,37 @@ public sealed class MediaIdentityBindingStore
         }
     }
 
+    public MediaIdentityBindingHint? GetTmdbHint(
+        string? eizoMediaId)
+    {
+        if (string.IsNullOrWhiteSpace(eizoMediaId))
+            return null;
+
+        lock (_sync)
+        {
+            if (!_bindings.TryGetValue(
+                    eizoMediaId,
+                    out var record) ||
+                !record.ExternalIds.TryGetValue(
+                    "tmdb",
+                    out var tmdbId) ||
+                string.IsNullOrWhiteSpace(tmdbId))
+            {
+                return null;
+            }
+
+            return new MediaIdentityBindingHint(
+                record.EizoMediaId,
+                "tmdb",
+                new Dictionary<string, string>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+                    ["tmdb"] = tmdbId.Trim(),
+                },
+                record.ManualProviders.Contains("tmdb"));
+        }
+    }
+
     public IReadOnlyList<MediaIdentityBindingRecord> Snapshot()
     {
         lock (_sync)
@@ -126,9 +157,27 @@ public sealed class MediaIdentityBindingStore
                     metadata.ProviderSubjectId.Trim();
             }
 
+            var manualProviders =
+                existing?.ManualProviders is null
+                    ? new HashSet<string>(
+                        StringComparer.OrdinalIgnoreCase)
+                    : new HashSet<string>(
+                        existing.ManualProviders,
+                        StringComparer.OrdinalIgnoreCase);
+
             var primary = existing?.PrimaryProvider;
-            if (string.IsNullOrWhiteSpace(primary) &&
-                !string.IsNullOrWhiteSpace(metadata.Provider))
+            if (string.Equals(
+                    metadata.Provider,
+                    "tmdb",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                // Bangumi no longer participates in local-library identity.
+                ids.Remove("bangumi");
+                manualProviders.Remove("bangumi");
+                primary = "tmdb";
+            }
+            else if (string.IsNullOrWhiteSpace(primary) &&
+                     !string.IsNullOrWhiteSpace(metadata.Provider))
             {
                 primary = metadata.Provider.Trim().ToLowerInvariant();
             }
@@ -138,12 +187,7 @@ public sealed class MediaIdentityBindingStore
                     eizoMediaId,
                     ids,
                     primary,
-                    existing?.ManualProviders is null
-                        ? new HashSet<string>(
-                            StringComparer.OrdinalIgnoreCase)
-                        : new HashSet<string>(
-                            existing.ManualProviders,
-                            StringComparer.OrdinalIgnoreCase),
+                    manualProviders,
                     DateTimeOffset.UtcNow);
             SaveCore();
         }
