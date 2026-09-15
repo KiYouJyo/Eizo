@@ -173,7 +173,14 @@ try {
     [System.IO.Compression.ZipFile]::ExtractToDirectory($bundlePath, $bundleExtract)
     $innerCandidates = @(Get-ChildItem $bundleExtract -Recurse -Filter '*.msix' -File)
     $inner = @($innerCandidates |
-        Where-Object { $_.Name -match '_x64\.msix
+        Where-Object { $_.Name.EndsWith('_x64.msix', [StringComparison]::OrdinalIgnoreCase) } |
+        Sort-Object Length -Descending) | Select-Object -First 1
+    if (-not $inner) {
+        $inner = @($innerCandidates | Sort-Object Length -Descending) | Select-Object -First 1
+    }
+    if (-not $inner) { throw 'Bundle contains no inner MSIX.' }
+    Write-Host "Inspecting architecture package: $($inner.Name)"
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($inner.FullName)
     try {
         $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
         foreach ($name in @('libvlc.dll', 'libvlccore.dll')) {
