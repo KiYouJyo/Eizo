@@ -30,8 +30,30 @@ public sealed class MediaScanCoordinator
     public event EventHandler? Changed;
 
     public bool IsTmdbConfigured =>
-        !string.IsNullOrWhiteSpace(
-            ResolveTmdbReadAccessToken());
+        !string.Equals(
+            TmdbConfigurationSource,
+            "None",
+            StringComparison.Ordinal);
+
+    public string TmdbConfigurationSource
+    {
+        get
+        {
+            var environmentToken =
+                Environment.GetEnvironmentVariable(
+                    "EIZO_TMDB_READ_ACCESS_TOKEN");
+            if (!string.IsNullOrWhiteSpace(
+                    environmentToken))
+            {
+                return "Environment";
+            }
+
+            return MediaCredentialStore.Default
+                    .HasTmdbReadAccessToken
+                ? "PasswordVault"
+                : "None";
+        }
+    }
 
     public void ReloadMetadataService()
     {
