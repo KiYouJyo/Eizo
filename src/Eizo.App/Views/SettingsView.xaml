@@ -183,6 +183,33 @@
             </Border>
           </StackPanel>
         </Border>
+
+        <Border Style="{StaticResource SettingsSectionCardStyle}">
+          <StackPanel Spacing="14">
+            <TextBlock x:Name="OnboardingSectionTitle"
+                       Style="{StaticResource SectionTitleText}" />
+            <Border Style="{StaticResource SettingsInnerCardStyle}">
+              <Grid Padding="14"
+                    MinHeight="82"
+                    ColumnSpacing="24"
+                    ColumnDefinitions="*,Auto">
+                <StackPanel VerticalAlignment="Center"
+                            Spacing="3">
+                  <TextBlock x:Name="OnboardingTitle"
+                             Style="{StaticResource SettingsRowLabelStyle}" />
+                  <TextBlock x:Name="OnboardingDescription"
+                             Style="{StaticResource SettingsDescriptionStyle}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <Button x:Name="ReopenFirstRunGuideButton"
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Right"
+                        Click="ReopenFirstRunGuideButton_Click" />
+              </Grid>
+            </Border>
+          </StackPanel>
+        </Border>
         </StackPanel>
 
         <StackPanel x:Name="MetadataSettingsPanel"

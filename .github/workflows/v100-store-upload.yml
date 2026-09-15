@@ -1,0 +1,48 @@
+name: Eizo v1.0.0 StoreUpload candidate
+
+on:
+  push:
+    branches:
+      - "release/v1.0.0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eizo-v100-store-upload-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  store-upload:
+    name: Build x64 StoreUpload candidate
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build StoreUpload candidate
+        shell: pwsh
+        env:
+          EIZO_METADATA_DISABLE: "1"
+        run: ./scripts/Build-EizoV100StoreUpload.ps1
+
+      - name: Upload StoreUpload assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: Eizo-v1.0.0-store-upload-candidate
+          path: |
+            ${{ runner.temp }}/Eizo-v1.0.0-store-upload/*
+          if-no-files-found: error
+          retention-days: 14

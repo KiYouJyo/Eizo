@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "0.6.1",
-    "packageVersion": "0.6.1.0",
+    "version": "1.0.0",
+    "packageVersion": "1.0.0.0",
     "title": {
-      "zh-CN": "视觉资产、启动体验与详情页完善",
-      "ja-JP": "ビジュアル、起動体験、詳細画面の改善",
-      "en-US": "Visual Assets, Startup Experience, and Detail Polish"
+      "zh-CN": "首次使用向导与 Microsoft Store 发布准备",
+      "ja-JP": "初回セットアップと Microsoft Store リリース準備",
+      "en-US": "First-run setup and Microsoft Store readiness"
     }
   },
   "channels": {

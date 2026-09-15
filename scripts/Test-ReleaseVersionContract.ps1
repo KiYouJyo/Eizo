@@ -53,6 +53,32 @@ if ($expected.Project -ne $version -or
     throw "Release version mismatch: $($expected | ConvertTo-Json -Compress) expected=$version/$packageVersion"
 }
 
+$expectedPublisherDisplayName = 'Jo Kiyō'
+$publisherDisplayName = [string]$manifest.Package.Properties.PublisherDisplayName
+if ($publisherDisplayName -cne $expectedPublisherDisplayName) {
+    throw "Store publisher display name mismatch: actual='$publisherDisplayName' expected='$expectedPublisherDisplayName'"
+}
+
+if ([string]$manifest.Package.Identity.Name -cne 'Eizo' -or
+    [string]$manifest.Package.Identity.Publisher -cne 'CN=AppPublisher') {
+    throw "Source manifest must retain GitHub sideload identity Eizo / CN=AppPublisher."
+}
+
+$storeIdentityPath = Join-Path $repoRoot 'release/MicrosoftStore/store-identity.json'
+$storeIdentity = Get-Content -LiteralPath $storeIdentityPath -Raw | ConvertFrom-Json
+$expectedStoreIdentity = @{
+    Name = 'JoKiy.Eizo'
+    Publisher = 'CN=C4E4B33A-7B77-4121-897C-7D720A5471F8'
+    PublisherDisplayName = 'Jo Kiyō'
+    PackageFamilyName = 'JoKiy.Eizo_4wdwgytaw3v2m'
+}
+if ([string]$storeIdentity.packageIdentityName -cne $expectedStoreIdentity.Name -or
+    [string]$storeIdentity.publisher -cne $expectedStoreIdentity.Publisher -or
+    [string]$storeIdentity.publisherDisplayName -cne $expectedStoreIdentity.PublisherDisplayName -or
+    [string]$storeIdentity.packageFamilyName -cne $expectedStoreIdentity.PackageFamilyName) {
+    throw "Partner Center Store identity mismatch: $($storeIdentity | ConvertTo-Json -Compress)"
+}
+
 $appVersionProvider = Read-Text 'src/Eizo.App/AppVersionProvider.cs'
 if ($appVersionProvider -match 'const\s+string\s+(?:Version|DisplayVersion)' -or
     $appVersionProvider -match '(?<!\d)0\.3\.\d+(?!\d)') {
@@ -112,11 +138,13 @@ finally {
     Remove-Item -LiteralPath $releaseBodyPath -Force -ErrorAction SilentlyContinue
 }
 
-$currentAcceptanceScript = "scripts/Build-EizoV$($version.Replace('.', '').PadLeft(4,'0'))Acceptance.ps1"
-# Current naming convention is V0311 for 0.3.11 and V042 for 0.4.2.
-$currentAcceptanceScript = "scripts/Build-EizoV0$($version.Split('.')[1])$($version.Split('.')[2])Acceptance.ps1"
+# Acceptance assets use all numeric SemVer components without dots:
+# 0.6.1 -> 061, 0.3.11 -> 0311, 1.0.0 -> 100.
+$versionParts = $version.Split('.')
+$acceptanceKey = "$($versionParts[0])$($versionParts[1])$($versionParts[2])"
+$currentAcceptanceScript = "scripts/Build-EizoV${acceptanceKey}Acceptance.ps1"
 
-$workflowPrefix = "v0$($version.Split('.')[1])$($version.Split('.')[2])-"
+$workflowPrefix = "v${acceptanceKey}-"
 $currentAcceptanceWorkflow = @(
     Get-ChildItem -LiteralPath (Join-Path $repoRoot '.github/workflows') -File -Filter "$workflowPrefix*acceptance.yml"
     | Sort-Object Name
