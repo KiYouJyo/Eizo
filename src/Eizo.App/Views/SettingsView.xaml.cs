@@ -2,6 +2,7 @@ using Eizo.Localization;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Windows.System;
 
 namespace Eizo.Views;
 
@@ -322,23 +323,45 @@ public sealed partial class SettingsView : UserControl
         if (TmdbTokenStatusText is null)
             return;
 
+        var source =
+            MediaScanCoordinator.Default
+                .TmdbConfigurationSource;
         var configured =
-            MediaCredentialStore.Default
-                .HasTmdbReadAccessToken;
+            !string.Equals(
+                source,
+                "None",
+                StringComparison.Ordinal);
 
-        TmdbTokenStatusText.Text = configured
-            ? L(
-                "TMDB 已配置，将参与电影、电视剧与视觉元数据匹配。",
-                "TMDB は設定済みです。映画・ドラマ・ビジュアルメタデータの照合に使用されます。",
-                "TMDB is configured and will participate in movie, TV and visual metadata matching.")
-            : L(
-                "TMDB 尚未配置；当前仅使用已可用的数据源。",
-                "TMDB は未設定です。現在は利用可能な他のデータソースのみを使用します。",
-                "TMDB is not configured; only other available providers are currently used.");
+        TmdbTokenStatusText.Text =
+            source switch
+            {
+                "Environment" => L(
+                    "TMDB 已通过 EIZO_TMDB_READ_ACCESS_TOKEN 环境变量启用；环境变量优先于应用内保存的 Token。",
+                    "TMDB は EIZO_TMDB_READ_ACCESS_TOKEN 環境変数で有効です。環境変数はアプリ内保存 Token より優先されます。",
+                    "TMDB is enabled through EIZO_TMDB_READ_ACCESS_TOKEN; the environment value takes precedence over an in-app token."),
+                "PasswordVault" => L(
+                    "TMDB 已配置，将参与电影、电视剧与视觉元数据匹配。",
+                    "TMDB は設定済みです。映画・ドラマ・ビジュアルメタデータの照合に使用されます。",
+                    "TMDB is configured and will participate in movie, TV and visual metadata matching."),
+                _ => L(
+                    "TMDB 尚未配置；当前仅使用已可用的数据源。",
+                    "TMDB は未設定です。現在は利用可能な他のデータソースのみを使用します。",
+                    "TMDB is not configured; only other available providers are currently used."),
+            };
 
         TmdbRemoveTokenButton.IsEnabled =
-            configured;
+            string.Equals(
+                source,
+                "PasswordVault",
+                StringComparison.Ordinal);
     }
+
+    private async void TmdbGetTokenButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await Launcher.LaunchUriAsync(
+            new Uri(
+                "https://www.themoviedb.org/settings/api"));
 
     private void TmdbSaveTokenButton_Click(
         object sender,
@@ -386,6 +409,7 @@ public sealed partial class SettingsView : UserControl
                     .GetTmdbReadAccessToken()
                 : TmdbTokenBox.Password.Trim();
 
+        TmdbGetTokenButton.IsEnabled = false;
         TmdbSaveTokenButton.IsEnabled = false;
         TmdbVerifyTokenButton.IsEnabled = false;
         TmdbRemoveTokenButton.IsEnabled = false;
@@ -428,11 +452,15 @@ public sealed partial class SettingsView : UserControl
         }
         finally
         {
+            TmdbGetTokenButton.IsEnabled = true;
             TmdbSaveTokenButton.IsEnabled = true;
             TmdbVerifyTokenButton.IsEnabled = true;
             TmdbRemoveTokenButton.IsEnabled =
-                MediaCredentialStore.Default
-                    .HasTmdbReadAccessToken;
+                string.Equals(
+                    MediaScanCoordinator.Default
+                        .TmdbConfigurationSource,
+                    "PasswordVault",
+                    StringComparison.Ordinal);
         }
     }
 
@@ -886,6 +914,8 @@ public sealed partial class SettingsView : UserControl
                 "用于 TMDB 电影、电视剧、季度、剧集、图片与演职人员元数据。Token 仅保存在 Windows PasswordVault 中。",
                 "TMDB の映画・ドラマ・シーズン・エピソード・画像・キャスト情報に使用します。Token は Windows PasswordVault のみに保存されます。",
                 "Used for TMDB movie, TV, season, episode, artwork and credits metadata. The token is stored only in Windows PasswordVault.");
+        TmdbGetTokenButton.Content =
+            L("获取 Token", "Token を取得", "Get token");
         TmdbSaveTokenButton.Content =
             L("保存", "保存", "Save");
         TmdbVerifyTokenButton.Content =
