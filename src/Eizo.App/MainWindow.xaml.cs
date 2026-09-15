@@ -845,9 +845,6 @@ public sealed partial class MainWindow : Window
         }
         else
         {
-            if (item.IsParsed)
-                OpenDetail(item.DisplayTitle, startPlaying: false);
-
             return;
         }
 
@@ -1186,56 +1183,6 @@ public sealed partial class MainWindow : Window
             Content = message,
             CloseButtonText = T("Common_Close")
         }.ShowAsync();
-    }
-
-    private void OpenDetail(string title, bool startPlaying)
-    {
-        var key = "detail:" + title;
-
-        if (_tabs.TryGetValue(key, out var existing))
-        {
-            if (startPlaying)
-                ShowPlayerInDetailTab(existing, title, "第18话");
-            else
-                ShowDetailInTab(existing, title);
-
-            SelectTab(existing.Key);
-            return;
-        }
-
-        var state = new ShellTabState(
-            key,
-            ShellTabKind.Detail,
-            pageKey: null,
-            title,
-            "\uE8B2",
-            new Grid(),
-            navItem: null,
-            PreferredTabWidth)
-        {
-            MediaTitle = title
-        };
-
-        if (startPlaying)
-            ShowPlayerInDetailTab(state, title, "第18话");
-        else
-            ShowDetailInTab(state, title);
-
-        AddTab(state, select: true);
-    }
-
-    private void ShowDetailInTab(ShellTabState state, string title)
-    {
-        var view = new DetailView(title);
-        view.PlayRequested += (_, episode) =>
-            ShowPlayerInDetailTab(state, title, episode);
-
-        state.MediaTitle = title;
-        state.Episode = null;
-        ReplaceTabView(state, view);
-        state.Title = title;
-        state.Glyph = "\uE8B2";
-        UpdateTabIdentity(state);
     }
 
     private void ShowPlayerInDetailTab(ShellTabState state, string title, string episode)
