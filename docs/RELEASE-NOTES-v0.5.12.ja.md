@@ -1,4 +1,8 @@
-# Eizo 0.5.12 — 実コンテンツ UI 仕上げ
+[简体中文](RELEASE-NOTES-v0.5.12.md) | 日本語 | [English](RELEASE-NOTES-v0.5.12.en.md)
+
+# Eizo v0.5.12
+
+## Real Content UI / Close-out：実コンテンツ UI 仕上げ
 
 0.5.12 は既存の UI フレームワークを維持し、0.5.9–0.5.11 で接続した実データを通常利用向けの表示状態へ仕上げます。AniList の追加や大規模なレイアウト変更は行いません。
 
