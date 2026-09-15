@@ -32,9 +32,10 @@ foreach ($name in @(
     }
 }
 
-if (-not $xaml.Contains('<views:SourcesView') -or
+if (-not $xaml.Contains('x:Name="SourceSetupHost"') -or
+    -not $code.Contains('SourceSetupHost.Content = new SourcesView()') -or
     -not $code.Contains('MediaSourceStore.Default')) {
-    throw 'First-run media-source setup must reuse the production SourcesView/store.'
+    throw 'First-run media-source setup must lazily reuse the production SourcesView/store.'
 }
 
 foreach ($required in @(
