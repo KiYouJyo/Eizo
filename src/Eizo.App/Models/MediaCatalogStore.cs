@@ -45,15 +45,11 @@ public sealed class MediaCatalogStore
 
     private MediaCatalogStore()
     {
-        Eizo.StartupTrace.Mark("MediaCatalogStore.ctor:begin");
         _items = LoadCore();
-        Eizo.StartupTrace.Mark($"MediaCatalogStore.LoadCore:end items={_items.Count}");
         if (PruneMissingLocalFilesCore())
         {
-            Eizo.StartupTrace.Mark("MediaCatalogStore.PruneMissingLocalFiles:changed");
             SaveCore(_items);
         }
-        Eizo.StartupTrace.Mark($"MediaCatalogStore.ctor:end items={_items.Count}");
     }
 
     public static MediaCatalogStore Default { get; } = new();
