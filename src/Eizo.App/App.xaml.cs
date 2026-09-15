@@ -102,9 +102,8 @@ public partial class App : Application
             _window = MainWindow = new MainWindow();
             StartupTrace.Mark("MainWindow ctor:end");
 
-            StartupTrace.Mark("CacheRuntime.RunStartupMaintenanceAsync:invoke");
-            _ = CacheRuntime.RunStartupMaintenanceAsync();
-
+            // Cache maintenance is deferred until the Mica startup overlay has
+            // painted its first compositor frame. Keep OnLaunched free of disk work.
             ActivatePendingRedirectedWindow();
             StartupTrace.Mark("MainWindow.Activate:begin");
             _window.Activate();
