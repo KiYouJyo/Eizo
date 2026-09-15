@@ -219,6 +219,10 @@ public sealed partial class MainWindow
             StartupOverlay.Visibility = Visibility.Collapsed;
             StartupOverlay.Opacity = 1;
             MainContent.IsHitTestVisible = true;
+
+            Eizo.Models.FirstRunExperienceService.Default.PrepareForLaunch();
+            if (Eizo.Models.FirstRunExperienceService.Default.ShouldShowAutomatically())
+                FirstRunGuideHost.Show();
         }
     }
 }
