@@ -154,10 +154,10 @@ try {
         }
     }
     $playbackPin = Get-Content -LiteralPath 'eng/Eizo.Playback.json' -Raw | ConvertFrom-Json
-    if ([string]$playbackPin.version -ne '0.2.2' -or [string]$playbackPin.commit -ne 'cf3619fb8227d311273a13ca73925d2bb4f9dbe5') {
+    if ([string]$playbackPin.version -ne '0.2.3' -or [string]$playbackPin.commit -ne 'caa985c78e8c2c74523d1cf76ea511aff9872cbb') {
         throw "Playback pin mismatch: version=$($playbackPin.version) commit=$($playbackPin.commit)"
     }
-    Write-Host 'Relocatable component output contract PASS. Playback=0.2.2 official merge commit.'
+    Write-Host 'Relocatable component output contract PASS. Playback=0.2.3 official merge commit.'
 
     Write-Host '== Build MSIX bundle =='
     msbuild src\Eizo.App\Eizo.App.csproj /restore /m /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Always /p:AppxBundlePlatforms=x64 /p:UapAppxPackageBuildMode=SideloadOnly "/p:AppxPackageDir=$appPackages\"
