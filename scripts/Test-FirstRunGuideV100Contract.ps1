@@ -55,8 +55,11 @@ foreach ($required in @(
 
 if (-not $service.Contains('CurrentVersion = 1') -or
     -not $service.Contains('CompletedGuideVersion') -or
-    -not $state.Contains('CompletedGuideVersion')) {
-    throw 'First-run guide lifecycle state contract is missing.'
+    -not $service.Contains('GetResumeStep') -or
+    -not $service.Contains('RecordStep') -or
+    -not $state.Contains('CompletedGuideVersion') -or
+    -not $state.Contains('LastStep')) {
+    throw 'First-run guide lifecycle/resume state contract is missing.'
 }
 
 if (-not $window.Contains('FirstRunGuideHost') -or
