@@ -225,6 +225,8 @@
                               Orientation="Horizontal"
                               HorizontalAlignment="Right"
                               Spacing="8">
+                    <Button x:Name="TmdbGetTokenButton"
+                            Click="TmdbGetTokenButton_Click" />
                     <Button x:Name="TmdbSaveTokenButton"
                             Click="TmdbSaveTokenButton_Click" />
                     <Button x:Name="TmdbVerifyTokenButton"
