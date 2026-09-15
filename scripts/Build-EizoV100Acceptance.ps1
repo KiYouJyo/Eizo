@@ -106,7 +106,8 @@ try {
     & ./scripts/Test-BangumiOAuthIntegration.ps1
     & ./scripts/Test-BangumiCommunityIntegration.ps1
     & ./scripts/Test-CacheSystemContract.ps1
-    & ./scripts/Test-SettingsContentIntegrationContract.ps1\n    & ./scripts/Test-FirstRunGuideV100Contract.ps1
+    & ./scripts/Test-SettingsContentIntegrationContract.ps1
+    & ./scripts/Test-FirstRunGuideV100Contract.ps1
     & ./scripts/Test-LibraryAggregationUiContract.ps1
     dotnet run --project tools/Eizo.WebDavV030Probe/Eizo.WebDavV030Probe.csproj --configuration Release
     Assert-LastExitCode 'WebDAV range runtime probe failed'
