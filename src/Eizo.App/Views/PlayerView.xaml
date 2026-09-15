@@ -137,11 +137,6 @@
                   Value="0"
                   StepFrequency="1"
                   IsThumbToolTipEnabled="False"
-                  PointerPressed="PlaybackSlider_PointerPressed"
-                  PointerMoved="PlaybackSlider_PointerMoved"
-                  PointerReleased="PlaybackSlider_PointerReleased"
-                  PointerCanceled="PlaybackSlider_PointerCanceled"
-                  PointerCaptureLost="PlaybackSlider_PointerCaptureLost"
                   ValueChanged="PlaybackSlider_ValueChanged" />
           <TextBlock x:Name="CurrentTimeText"
                      Style="{StaticResource MetadataText}"

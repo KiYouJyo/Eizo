@@ -6,29 +6,55 @@
   <ScrollViewer>
     <StackPanel Margin="28"
                 Spacing="18">
-      <Border MinHeight="224"
+      <Border Height="278"
+              MaxHeight="278"
               CornerRadius="12"
               Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
               BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
               BorderThickness="1">
-        <Grid>
-          <Image x:Name="BackdropImage"
-                 Stretch="UniformToFill"
-                 Opacity="0.14" />
-          <Rectangle Fill="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                     Opacity="0.72" />
+        <Grid x:Name="HeroLayout"
+              ColumnDefinitions="1.08*,0.92*">
+          <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+              <VisualState x:Name="DetailHeroCompact">
+                <VisualState.StateTriggers>
+                  <AdaptiveTrigger MinWindowWidth="0" />
+                </VisualState.StateTriggers>
+                <VisualState.Setters>
+                  <Setter Target="HeroContent.(Grid.ColumnSpan)"
+                          Value="2" />
+                  <Setter Target="HeroArtwork.Visibility"
+                          Value="Collapsed" />
+                </VisualState.Setters>
+              </VisualState>
+              <VisualState x:Name="DetailHeroWide">
+                <VisualState.StateTriggers>
+                  <AdaptiveTrigger MinWindowWidth="900" />
+                </VisualState.StateTriggers>
+                <VisualState.Setters>
+                  <Setter Target="HeroContent.(Grid.ColumnSpan)"
+                          Value="1" />
+                  <Setter Target="HeroArtwork.Visibility"
+                          Value="Visible" />
+                </VisualState.Setters>
+              </VisualState>
+            </VisualStateGroup>
+          </VisualStateManager.VisualStateGroups>
 
-          <Grid ColumnDefinitions="164,*"
-                Padding="18">
-            <Border Width="142"
-                    Height="212"
+          <Grid x:Name="HeroContent"
+                Grid.ColumnSpan="2"
+                Padding="22"
+                ColumnDefinitions="126,*"
+                ColumnSpacing="18">
+            <Border Width="118"
+                    Height="176"
                     CornerRadius="8"
                     Background="{ThemeResource EizoSelectionBrush}"
                     VerticalAlignment="Center">
               <Grid>
                 <FontIcon x:Name="PosterPlaceholder"
                           Glyph="&#xE8B9;"
-                          FontSize="48"
+                          FontSize="40"
                           Opacity="0.22"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Center" />
@@ -38,8 +64,7 @@
             </Border>
 
             <StackPanel Grid.Column="1"
-                        Padding="18,4"
-                        Spacing="8"
+                        Spacing="7"
                         VerticalAlignment="Center">
               <TextBlock x:Name="TitleText"
                          FontSize="28"
@@ -84,8 +109,16 @@
               <TextBlock x:Name="MetaText"
                          Style="{StaticResource MetadataText}"
                          TextWrapping="Wrap"
-                         MaxLines="2"
+                         MaxLines="1"
                          TextTrimming="CharacterEllipsis"
+                         Visibility="Collapsed" />
+
+              <TextBlock x:Name="OverviewText"
+                         MaxHeight="60"
+                         TextWrapping="Wrap"
+                         MaxLines="3"
+                         TextTrimming="CharacterEllipsis"
+                         Style="{StaticResource BodyText}"
                          Visibility="Collapsed" />
 
               <StackPanel Orientation="Horizontal"
@@ -106,22 +139,37 @@
               </StackPanel>
             </StackPanel>
           </Grid>
-        </Grid>
-      </Border>
 
-      <Border x:Name="OverviewCard"
-              Padding="16,12"
-              CornerRadius="10"
-              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-              BorderThickness="1"
-              Visibility="Collapsed">
-        <TextBlock x:Name="OverviewText"
-                   MaxHeight="62"
-                   TextWrapping="Wrap"
-                   MaxLines="3"
-                   TextTrimming="CharacterEllipsis"
-                   Style="{StaticResource BodyText}" />
+          <Border x:Name="HeroArtwork"
+                  Grid.Column="1"
+                  Margin="12"
+                  Visibility="Collapsed"
+                  CornerRadius="9"
+                  Background="{ThemeResource EizoSelectionBrush}">
+            <Grid>
+              <FontIcon Glyph="&#xE8B9;"
+                        FontSize="72"
+                        Opacity="0.18"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" />
+              <Image x:Name="BackdropImage"
+                     Stretch="UniformToFill" />
+              <Rectangle>
+                <Rectangle.Fill>
+                  <LinearGradientBrush StartPoint="0,0.5"
+                                       EndPoint="1,0.5">
+                    <GradientStop Offset="0"
+                                  Color="#88202525" />
+                    <GradientStop Offset="0.35"
+                                  Color="#30202525" />
+                    <GradientStop Offset="1"
+                                  Color="#00202525" />
+                  </LinearGradientBrush>
+                </Rectangle.Fill>
+              </Rectangle>
+            </Grid>
+          </Border>
+        </Grid>
       </Border>
 
       <InfoBar x:Name="MetadataActionStatusBar"

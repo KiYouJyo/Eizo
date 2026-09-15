@@ -135,10 +135,6 @@ public sealed partial class DetailView : UserControl
             hasOverview
                 ? Visibility.Visible
                 : Visibility.Collapsed;
-        OverviewCard.Visibility =
-            hasOverview
-                ? Visibility.Visible
-                : Visibility.Collapsed;
 
         ApplyPoster(presentation.PosterUrl);
         ApplyBackdrop(presentation.BackdropUrl);
