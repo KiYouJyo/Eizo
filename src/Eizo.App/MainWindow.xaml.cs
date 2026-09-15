@@ -64,9 +64,9 @@ public sealed partial class MainWindow : Window
             QueueNavigationPaneBackgroundUpdate();
         };
 
-        StartupTrace.Mark("CreateWorkspaceTab(home):begin");
-        CreateWorkspaceTab(select: true);
-        StartupTrace.Mark("CreateWorkspaceTab(home):end");
+        // The real home page is intentionally created only after the startup
+        // overlay has painted its first frame. HomeView owns catalog/history
+        // initialization, which must never delay the first Mica splash frame.
         StartupTrace.Mark("MainWindow.ctor:end");
     }
 
