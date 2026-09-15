@@ -14,6 +14,9 @@ public sealed partial class MainWindow
     private static readonly TimeSpan StartupFadeOutDuration = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan StartupFadeOutFallbackDuration = TimeSpan.FromMilliseconds(300);
 
+    private readonly TaskCompletionSource<bool> _startupSurfacePresented =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     private bool _startupImageReady;
     private bool _startupSplashRenderRequested;
     private bool _startupSplashShown;
@@ -22,6 +25,8 @@ public sealed partial class MainWindow
     private bool _startupVisualCompleted;
     private bool _startupWatchdogStarted;
     private readonly Stopwatch _startupSplashVisibleClock = new();
+
+    internal Task WaitForStartupSurfaceAsync() => _startupSurfacePresented.Task;
 
     private void OnStartupWindowRootLoaded(object sender, RoutedEventArgs e)
     {
@@ -86,6 +91,7 @@ public sealed partial class MainWindow
     private void OnStartupSplashRendered(object? sender, object e)
     {
         CompositionTarget.Rendering -= OnStartupSplashRendered;
+        _startupSurfacePresented.TrySetResult(true);
         StartMinimumSplashDuration();
     }
 
@@ -125,6 +131,9 @@ public sealed partial class MainWindow
         if (_startupVisualCompleted) return;
         _startupVisualCompleted = true;
 
+        // Fail-open path for the outer startup handoff as well. If the logo gate
+        // watchdog completed the startup visual, the main surface is still safe to reveal.
+        _startupSurfacePresented.TrySetResult(true);
         MainContent.Opacity = 1;
         _ = FadeOutStartupOverlayAsync();
     }
