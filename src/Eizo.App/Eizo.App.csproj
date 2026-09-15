@@ -18,6 +18,10 @@
     <InformationalVersion>1.0.0</InformationalVersion>
     <ApplicationIcon>Assets\Eizo.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(EizoDemo)' == 'true'">
+    <DefineConstants>$(DefineConstants);EIZO_DEMO</DefineConstants>
+    <AssemblyName>Eizo.Demo</AssemblyName>
+  </PropertyGroup>
   <ItemGroup>
     <!-- Keep every supplied MSIX qualifier asset in the package layout.  The manifest
          selects the resource groups; retaining the full set prevents a build host's
