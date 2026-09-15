@@ -331,7 +331,7 @@ public sealed partial class PlayerView : UserControl
             QueueTrackUiUpdate();
             UpdateNavigationAvailability();
             UpdateDiagnosticsUi(engine.Diagnostics.Current);
-            PlaybackRateSlider.Value = RateToSliderValue(engine.PlaybackRate);
+            UpdatePlaybackRateUi(engine.PlaybackRate);
             UpdateVolumeUi(_volume);
         });
     }
@@ -2160,7 +2160,10 @@ public sealed partial class PlayerView : UserControl
     private void PlayerView_Unloaded(object sender, RoutedEventArgs e)
     {
         _fullscreenControlsTimer.Stop();
+        _directionHoldTimer.Stop();
         _loadingMetricsTimer.Stop();
+        CancelDirectionKeyGesture(restoreRate: true);
+        EndTimelineScrub();
         RemovePointerWheelHandler();
 
         if (_isVideoFullscreen)
@@ -2223,11 +2226,110 @@ public sealed partial class PlayerView : UserControl
 
     private void PlayerView_KeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (!_isVideoFullscreen || e.Key != VirtualKey.Escape)
+        if (!_isVideoFullscreen)
             return;
 
-        SetVideoFullscreen(false);
+        if (e.Key == VirtualKey.Escape)
+        {
+            CancelDirectionKeyGesture(restoreRate: true);
+            SetVideoFullscreen(false);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key is not (VirtualKey.Left or VirtualKey.Right) ||
+            _engine is null ||
+            _currentSource is null)
+        {
+            return;
+        }
+
+        // Ignore keyboard auto-repeat. A single timer decides whether the
+        // gesture is a tap (10-second seek) or a hold (temporary speed).
+        if (_heldDirectionKey == e.Key)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        CancelDirectionKeyGesture(restoreRate: true);
+        _heldDirectionKey = e.Key;
+        _directionHoldActive = false;
+        _rateBeforeDirectionHold =
+            Math.Clamp(_engine.PlaybackRate, 0.5d, 2d);
+        _directionHoldTimer.Stop();
+        _directionHoldTimer.Start();
+        ShowFullscreenControls(restartAutoHide: false);
         e.Handled = true;
+    }
+
+    private void PlayerView_KeyUp(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key is not (VirtualKey.Left or VirtualKey.Right) ||
+            _heldDirectionKey != e.Key)
+        {
+            return;
+        }
+
+        _directionHoldTimer.Stop();
+        var wasHold = _directionHoldActive;
+        var key = _heldDirectionKey.Value;
+        _heldDirectionKey = null;
+        _directionHoldActive = false;
+
+        if (wasHold)
+        {
+            SetTemporaryPlaybackRate(
+                _rateBeforeDirectionHold);
+        }
+        else
+        {
+            _ = SeekRelativeAsync(
+                key == VirtualKey.Left
+                    ? TimeSpan.FromSeconds(-10)
+                    : TimeSpan.FromSeconds(10));
+        }
+
+        ShowFullscreenControls(restartAutoHide: true);
+        e.Handled = true;
+    }
+
+    private void DirectionHoldTimer_Tick(
+        object? sender,
+        object e)
+    {
+        _directionHoldTimer.Stop();
+
+        if (!_isVideoFullscreen ||
+            _heldDirectionKey is not { } key ||
+            _engine is null)
+        {
+            CancelDirectionKeyGesture(
+                restoreRate: true);
+            return;
+        }
+
+        _directionHoldActive = true;
+        SetTemporaryPlaybackRate(
+            key == VirtualKey.Left ? 0.5d : 2d);
+        ShowFullscreenControls(restartAutoHide: false);
+    }
+
+    private void CancelDirectionKeyGesture(
+        bool restoreRate)
+    {
+        _directionHoldTimer.Stop();
+
+        if (restoreRate &&
+            _directionHoldActive &&
+            _engine is not null)
+        {
+            SetTemporaryPlaybackRate(
+                _rateBeforeDirectionHold);
+        }
+
+        _heldDirectionKey = null;
+        _directionHoldActive = false;
     }
 
     private void FullscreenControlsTimer_Tick(object? sender, object e)
@@ -2247,6 +2349,13 @@ public sealed partial class PlayerView : UserControl
     private void SetVideoFullscreen(bool enabled)
     {
         if (_isPreparingForDetach || _isVideoFullscreen == enabled) return;
+
+        if (!enabled)
+        {
+            CancelDirectionKeyGesture(restoreRate: true);
+            EndTimelineScrub();
+        }
+
         _isVideoFullscreen = enabled;
         var generation = ++_fullscreenGeneration;
         PlaybackTrace.Write("view", "fullscreen", "requested", enabled.ToString());
