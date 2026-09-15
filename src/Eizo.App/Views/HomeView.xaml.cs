@@ -45,13 +45,18 @@ public sealed partial class HomeView : UserControl
 
     public HomeView()
     {
+        Eizo.StartupTrace.Mark("HomeView.ctor:begin");
         InitializeComponent();
+        Eizo.StartupTrace.Mark("HomeView.InitializeComponent:end");
         ApplyText();
+        Eizo.StartupTrace.Mark("HomeView.RefreshLibraryContent(ctor):begin");
         RefreshLibraryContent();
+        Eizo.StartupTrace.Mark("HomeView.RefreshLibraryContent(ctor):end");
         RebuildMediaGrids();
 
         Loaded += HomeView_Loaded;
         Unloaded += HomeView_Unloaded;
+        Eizo.StartupTrace.Mark("HomeView.ctor:end");
     }
 
     internal void SetResponsiveMode(ResponsiveLayoutMode mode)
@@ -72,13 +77,18 @@ public sealed partial class HomeView : UserControl
         object sender,
         RoutedEventArgs e)
     {
+        Eizo.StartupTrace.Mark("HomeView.Loaded:begin");
         _catalog.Changed -= Catalog_Changed;
         _catalog.Changed += Catalog_Changed;
         _history.Changed -= History_Changed;
         _history.Changed += History_Changed;
 
+        Eizo.StartupTrace.Mark("HomeView.RefreshLibraryContent(Loaded):begin");
         RefreshLibraryContent();
+        Eizo.StartupTrace.Mark("HomeView.RefreshLibraryContent(Loaded):end");
+        Eizo.StartupTrace.Mark("HomeView.LoadCurrentSeasonAsync:invoke");
         await LoadCurrentSeasonAsync();
+        Eizo.StartupTrace.Mark("HomeView.Loaded:end");
     }
 
     private void HomeView_Unloaded(
@@ -106,7 +116,9 @@ public sealed partial class HomeView : UserControl
     private void RefreshLibraryContent()
     {
         var items = _catalog.SnapshotForDisplay();
+        Eizo.StartupTrace.Mark($"HomeView.SnapshotForDisplay:end items={items.Count}");
         var aggregation = CatalogSubjectAggregator.Build(items);
+        Eizo.StartupTrace.Mark($"HomeView.CatalogSubjectAggregator.Build:end subjects={aggregation.Subjects.Count} standalone={aggregation.StandaloneItems.Count}");
 
         var itemsByKey = items.ToDictionary(
             MediaCatalogStore.ItemKey,
