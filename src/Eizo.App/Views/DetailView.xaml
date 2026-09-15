@@ -6,7 +6,7 @@
   <ScrollViewer>
     <StackPanel Margin="28"
                 Spacing="18">
-      <Border MinHeight="330"
+      <Border MinHeight="224"
               CornerRadius="12"
               Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
               BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -18,17 +18,17 @@
           <Rectangle Fill="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                      Opacity="0.72" />
 
-          <Grid ColumnDefinitions="220,*"
-                Padding="22">
-            <Border Width="190"
-                    Height="286"
-                    CornerRadius="9"
+          <Grid ColumnDefinitions="164,*"
+                Padding="18">
+            <Border Width="142"
+                    Height="212"
+                    CornerRadius="8"
                     Background="{ThemeResource EizoSelectionBrush}"
                     VerticalAlignment="Center">
               <Grid>
                 <FontIcon x:Name="PosterPlaceholder"
                           Glyph="&#xE8B9;"
-                          FontSize="64"
+                          FontSize="48"
                           Opacity="0.22"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Center" />
@@ -38,15 +38,17 @@
             </Border>
 
             <StackPanel Grid.Column="1"
-                        Padding="24,8"
-                        Spacing="10"
+                        Padding="18,4"
+                        Spacing="8"
                         VerticalAlignment="Center">
               <TextBlock x:Name="TitleText"
-                         FontSize="30"
+                         FontSize="28"
                          FontWeight="SemiBold"
-                         TextWrapping="Wrap" />
+                         TextWrapping="Wrap"
+                         MaxLines="2"
+                         TextTrimming="CharacterEllipsis" />
               <TextBlock x:Name="NativeTitleText"
-                         FontSize="15"
+                         FontSize="14"
                          Opacity="0.72"
                          TextWrapping="Wrap"
                          Visibility="Collapsed" />
@@ -82,30 +84,44 @@
               <TextBlock x:Name="MetaText"
                          Style="{StaticResource MetadataText}"
                          TextWrapping="Wrap"
-                         Visibility="Collapsed" />
-              <TextBlock x:Name="OverviewText"
-                         MaxWidth="820"
-                         MaxHeight="118"
-                         TextWrapping="Wrap"
+                         MaxLines="2"
                          TextTrimming="CharacterEllipsis"
-                         Style="{StaticResource BodyText}"
                          Visibility="Collapsed" />
+
               <StackPanel Orientation="Horizontal"
                           Spacing="8">
                 <Button x:Name="PlayButton"
                         Style="{StaticResource CompactActionButton}"
                         Click="PlayButton_Click" />
-                <Button x:Name="MoreButton"
+                <Button x:Name="RescrapeButton"
                         Style="{StaticResource CompactActionButton}"
-                        Click="MoreButton_Click"
-                        ToolTipService.ToolTip="More">
-                  <FontIcon Glyph="&#xE712;"
-                            FontSize="15" />
-                </Button>
+                        Click="RescrapeButton_Click" />
+                <Button x:Name="ManualMatchButton"
+                        Style="{StaticResource CompactActionButton}"
+                        Click="ManualMatchButton_Click" />
+                <Button x:Name="ClearManualMatchButton"
+                        Style="{StaticResource CompactActionButton}"
+                        Visibility="Collapsed"
+                        Click="ClearManualMatchButton_Click" />
               </StackPanel>
             </StackPanel>
           </Grid>
         </Grid>
+      </Border>
+
+      <Border x:Name="OverviewCard"
+              Padding="16,12"
+              CornerRadius="10"
+              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+              BorderThickness="1"
+              Visibility="Collapsed">
+        <TextBlock x:Name="OverviewText"
+                   MaxHeight="62"
+                   TextWrapping="Wrap"
+                   MaxLines="3"
+                   TextTrimming="CharacterEllipsis"
+                   Style="{StaticResource BodyText}" />
       </Border>
 
       <InfoBar x:Name="MetadataActionStatusBar"
