@@ -79,7 +79,8 @@ foreach ($required in @(
 
 foreach ($forbidden in @(
     'SourceStatText.Text = L("示例", "サンプル", "Sample")',
-    'new(' + [Environment]::NewLine + '                "18",' )) {
+    '"一级魔法使考试"',
+    '"一級魔法使試験"')) {
     if ($detail.Contains($forbidden, [StringComparison]::Ordinal)) {
         throw "Legacy sample detail content remains reachable: $forbidden"
     }
