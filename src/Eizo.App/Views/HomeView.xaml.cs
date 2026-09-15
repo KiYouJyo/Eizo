@@ -4,7 +4,7 @@ using Eizo.Localization;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Media;
 
 namespace Eizo.Views;
 
@@ -1043,40 +1043,10 @@ public sealed partial class HomeView : UserControl
         !string.IsNullOrWhiteSpace(
             item.Metadata?.EpisodeThumbnailUrl);
 
-    private static BitmapImage? CreateArtwork(
+    private static ImageSource? CreateArtwork(
         string? url,
-        int decodePixelWidth)
-    {
-        if (string.IsNullOrWhiteSpace(url) ||
-            !Uri.TryCreate(
-                url,
-                UriKind.Absolute,
-                out var uri) ||
-            (!string.Equals(
-                 uri.Scheme,
-                 Uri.UriSchemeHttp,
-                 StringComparison.OrdinalIgnoreCase) &&
-             !string.Equals(
-                 uri.Scheme,
-                 Uri.UriSchemeHttps,
-                 StringComparison.OrdinalIgnoreCase)))
-        {
-            return null;
-        }
-
-        try
-        {
-            return new BitmapImage
-            {
-                UriSource = uri,
-                DecodePixelWidth = decodePixelWidth,
-            };
-        }
-        catch
-        {
-            return null;
-        }
-    }
+        int decodePixelWidth) =>
+        ArtworkImageSource.Create(url, decodePixelWidth);
 
     private static string FirstNonEmpty(
         params string?[] values) =>
