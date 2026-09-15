@@ -1,6 +1,6 @@
 <Window x:Class="Eizo.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"\n        xmlns:views="using:Eizo.Views">
   <Window.SystemBackdrop>
     <MicaBackdrop />
   </Window.SystemBackdrop>
@@ -146,7 +146,7 @@
       </Grid>
     </Grid>
 
-    <Grid x:Name="StartupOverlay"
+    <views:FirstRunGuideHost x:Name="FirstRunGuideHost"\n                             Visibility="Collapsed"\n                             Canvas.ZIndex="90" />\n\n    <Grid x:Name="StartupOverlay"
           Background="Transparent"
           Canvas.ZIndex="100">
       <StackPanel HorizontalAlignment="Center"
