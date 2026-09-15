@@ -1,33 +1,56 @@
 # Roadmap
 
-The version numbers below describe development milestones, not promised release dates.
+Version numbers below describe development milestones rather than promised dates. Some capabilities may land earlier when they are needed to validate later stages.
 
-## 0.1 — Foundation
-Repository and CI infrastructure, localization framework, solution/project skeleton, navigation shell, settings, logging, dependency injection, and the domain-model baseline.
+## Current baseline — 0.6.1
 
-## 0.2 — Japanese media recognition
-Anime and Japanese-drama filename parsers, parent-folder context, episode/season extraction, release-group and technical-tag separation, OVA/OAD/ONA/SP/Extra classification, confidence scoring, and parser tests.
+Eizo now has:
 
-## 0.3 — Anime metadata
-Bangumi and AniList providers, multilingual titles and aliases, staff, cast/voice actors, studios, related-work graph, and seasonal-anime metadata.
+- a WinUI 3 shell with Simplified Chinese, Japanese, and English;
+- local and WebDAV media sources;
+- Japanese-media recognition and the external Recognition runtime path;
+- TMDB and Bangumi metadata/integration work;
+- title, season, episode, cast/staff, and artwork presentation;
+- LibVLC playback, resume state, queue, fullscreen, seek, speed control, and subtitle work;
+- dual/external subtitle handling;
+- cache/download management for remote media;
+- signed GitHub MSIXBundle and one-click distribution;
+- application visual assets and a public product-site foundation.
 
-## 0.4 — Japanese drama and general video metadata
-TMDB provider, Japanese drama/movie matching, general movie/TV compatibility, artwork cache, and detail pages.
+## 0.7 — Remote-source reliability
 
-## 0.5 — Playback
-Playback-engine abstraction, baseline backend, MKV/MP4, H.264/HEVC 10-bit/AV1, ASS/SSA/SRT/PGS, multiple tracks, seek, fullscreen, resume, next episode, and HDR acceptance testing.
+- harden WebDAV incremental scan and change detection;
+- improve reconnect, timeout, retry, and remote-file diagnostics;
+- refine range/seek behavior for large remote media;
+- make scan/scrape/cache jobs observable without blocking the UI.
 
-## 0.6 — Library UX
-Continue watching, recently added, seasonal anime, related works, unwatched episodes, multiple media versions, search, and filtering.
+## 0.8 — Streaming gateway and cache policy
 
-## 0.7 — WebDAV
-Source configuration, incremental scan, remote indexing, and seekable playback.
+- provider-neutral stream descriptors;
+- HTTP range handling and retry policy;
+- chunk cache and eviction strategy;
+- stronger background download/resume semantics;
+- bandwidth and cache diagnostics.
 
-## 0.8 — Streaming Gateway
-HTTP range handling, retry/timeout policy, chunk cache, and provider-neutral stream descriptors.
+## 0.9 — Additional cloud providers
 
-## 0.9 — Cloud drives
-Official OAuth flows, OneDrive, Google Drive, and token persistence through Windows credential facilities.
+- official OAuth flows where supported;
+- provider abstractions beyond WebDAV;
+- secure token persistence through Windows credential facilities;
+- source-specific capability and failure reporting.
 
 ## 1.0 — Stable release
-Regression, performance, accessibility, packaging, Microsoft Store validation, privacy, and third-party notices.
+
+- regression and performance close-out;
+- accessibility and keyboard navigation;
+- packaging and Microsoft Store validation;
+- privacy / third-party notices review;
+- updater and rollback hardening;
+- long-running playback and large-library acceptance.
+
+## Ongoing priorities
+
+- Japanese anime and drama remain first-class content.
+- General movies and TV should remain fully usable.
+- Recognition, metadata, playback, and app-shell boundaries should stay independently testable.
+- Expensive indexing or network work must not block first-render UI.
