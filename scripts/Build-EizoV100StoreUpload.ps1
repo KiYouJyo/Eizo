@@ -115,8 +115,8 @@ try {
             [pscustomobject]@{
                 Package = $package.Name
                 PublisherDisplayName = $innerPublisherDisplayName
-                Publisher = [string]$innerManifest.Package.Identity.Publisher
-                ResourceId = [string]$innerManifest.Package.Identity.ResourceId
+                Publisher = $innerManifest.Package.Identity.GetAttribute('Publisher')
+                ResourceId = $innerManifest.Package.Identity.GetAttribute('ResourceId')
             }
         }
         finally { $archive.Dispose() }
