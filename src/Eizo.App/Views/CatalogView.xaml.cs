@@ -128,7 +128,6 @@ public sealed partial class CatalogView : UserControl
         var query = SearchBox?.Text?.Trim() ?? string.Empty;
         var snapshot = _catalog.SnapshotForDisplay();
         var aggregation = CatalogSubjectAggregator.Build(snapshot);
-        UpdateRecognitionSummary(snapshot, aggregation);
         var displayEntries = aggregation.Subjects
             .Select(static subject =>
                 CatalogDisplayEntry.FromSubject(subject))
@@ -340,7 +339,7 @@ public sealed partial class CatalogView : UserControl
             subtitle,
             string.Join(" · ", metaParts),
             sourceLabel,
-            RecognitionLabel(item) ?? CategoryLabel(category));
+            CategoryLabel(category));
     }
 
     private static BitmapImage? CreateArtwork(
@@ -405,39 +404,6 @@ public sealed partial class CatalogView : UserControl
             AddSubjectMetadataActions(
                 flyout,
                 subject);
-
-            if (flyout.Items.Count > 0)
-            {
-                flyout.Items.Add(
-                    new MenuFlyoutSeparator());
-            }
-        }
-
-        if (viewModel.Item is { Recognition: { } } item)
-        {
-            var detailsItem = new MenuFlyoutItem
-            {
-                Text = "Recognition details",
-                Tag = item
-            };
-            detailsItem.Click += RecognitionDetails_Click;
-            flyout.Items.Add(detailsItem);
-        }
-
-        var metadataOwner = viewModel.Item?.Metadata is not null
-            ? viewModel.Item
-            : viewModel.Subject?.Items.FirstOrDefault(static item =>
-                item.Metadata is not null);
-
-        if (metadataOwner is not null)
-        {
-            var metadataItem = new MenuFlyoutItem
-            {
-                Text = "Metadata details",
-                Tag = metadataOwner
-            };
-            metadataItem.Click += MetadataDetails_Click;
-            flyout.Items.Add(metadataItem);
         }
 
         container.ContextFlyout =
@@ -521,8 +487,30 @@ public sealed partial class CatalogView : UserControl
             return;
         }
 
-        await CatalogSubjectMetadataActions
-            .RefreshAsync(subject);
+        ShowActionStatus(
+            L("正在重新刮削此作品…", "この作品のメタデータを再取得しています…", "Refreshing this title…"),
+            InfoBarSeverity.Informational);
+
+        try
+        {
+            var refreshed =
+                await CatalogSubjectMetadataActions
+                    .RefreshAsync(subject);
+
+            ShowActionStatus(
+                refreshed is null
+                    ? L("重新刮削已完成，但未找到更新后的作品。", "再取得は完了しましたが、更新後の作品を確認できませんでした。", "Refresh finished, but the updated title could not be found.")
+                    : L("作品信息已更新。", "作品情報を更新しました。", "Title metadata updated."),
+                refreshed is null
+                    ? InfoBarSeverity.Warning
+                    : InfoBarSeverity.Success);
+        }
+        catch
+        {
+            ShowActionStatus(
+                L("重新刮削失败，请稍后重试。", "メタデータの再取得に失敗しました。後でもう一度お試しください。", "Metadata refresh failed. Try again later."),
+                InfoBarSeverity.Error);
+        }
     }
 
     private async void SubjectManualMatch_Click(
@@ -545,10 +533,32 @@ public sealed partial class CatalogView : UserControl
         if (candidate is null)
             return;
 
-        await CatalogSubjectMetadataActions
-            .ApplyManualMatchAsync(
-                subject,
-                candidate);
+        ShowActionStatus(
+            L("正在应用手动匹配…", "手動照合を適用しています…", "Applying manual match…"),
+            InfoBarSeverity.Informational);
+
+        try
+        {
+            var refreshed =
+                await CatalogSubjectMetadataActions
+                    .ApplyManualMatchAsync(
+                        subject,
+                        candidate);
+
+            ShowActionStatus(
+                refreshed is null
+                    ? L("匹配已保存，但未找到更新后的作品。", "照合は保存されましたが、更新後の作品を確認できませんでした。", "The match was saved, but the updated title could not be found.")
+                    : L("手动匹配已应用。", "手動照合を適用しました。", "Manual match applied."),
+                refreshed is null
+                    ? InfoBarSeverity.Warning
+                    : InfoBarSeverity.Success);
+        }
+        catch
+        {
+            ShowActionStatus(
+                L("应用手动匹配失败，请稍后重试。", "手動照合の適用に失敗しました。後でもう一度お試しください。", "Could not apply the manual match. Try again later."),
+                InfoBarSeverity.Error);
+        }
     }
 
     private async void SubjectClearManualMatch_Click(
@@ -563,10 +573,41 @@ public sealed partial class CatalogView : UserControl
             return;
         }
 
-        await CatalogSubjectMetadataActions
-            .ClearManualMatchAsync(
-                tag.Subject,
-                tag.Provider);
+        ShowActionStatus(
+            L("正在清除手动匹配…", "手動照合を解除しています…", "Clearing manual match…"),
+            InfoBarSeverity.Informational);
+
+        try
+        {
+            var refreshed =
+                await CatalogSubjectMetadataActions
+                    .ClearManualMatchAsync(
+                        tag.Subject,
+                        tag.Provider);
+
+            ShowActionStatus(
+                refreshed is null
+                    ? L("手动匹配已清除，但未找到更新后的作品。", "手動照合は解除されましたが、更新後の作品を確認できませんでした。", "The manual match was cleared, but the updated title could not be found.")
+                    : L("手动匹配已清除。", "手動照合を解除しました。", "Manual match cleared."),
+                refreshed is null
+                    ? InfoBarSeverity.Warning
+                    : InfoBarSeverity.Success);
+        }
+        catch
+        {
+            ShowActionStatus(
+                L("清除手动匹配失败，请稍后重试。", "手動照合の解除に失敗しました。後でもう一度お試しください。", "Could not clear the manual match. Try again later."),
+                InfoBarSeverity.Error);
+        }
+    }
+
+    private void ShowActionStatus(
+        string message,
+        InfoBarSeverity severity)
+    {
+        ActionStatusBar.Message = message;
+        ActionStatusBar.Severity = severity;
+        ActionStatusBar.IsOpen = true;
     }
 
     private async void RecognitionDetails_Click(
