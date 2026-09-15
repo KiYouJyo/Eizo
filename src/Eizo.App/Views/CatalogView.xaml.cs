@@ -184,64 +184,54 @@ public sealed partial class CatalogView : UserControl
     private CatalogListItemViewModel CreateSubjectListItem(
         CatalogSubjectModel subject)
     {
-        var metadata = subject.Metadata;
-        var subtitle = !string.IsNullOrWhiteSpace(subject.NativeTitle) &&
-                       !string.Equals(
-                           subject.NativeTitle,
-                           subject.Title,
-                           StringComparison.CurrentCultureIgnoreCase)
-            ? subject.NativeTitle
-            : string.Empty;
+        var presentation =
+            CatalogSubjectPresentation.Create(subject);
 
         var metaParts = new List<string>();
-        if (metadata?.ReleaseDate is { Length: > 0 } release &&
-            DateOnly.TryParse(release, out var releaseDate))
-        {
-            metaParts.Add(releaseDate.Year.ToString(CultureInfo.InvariantCulture));
-        }
-        else if (subject.Items
-                 .Select(static item => item.Recognition?.Year)
-                 .FirstOrDefault(static value => value is not null) is { } recognitionYear)
-        {
-            metaParts.Add(recognitionYear.ToString(CultureInfo.InvariantCulture));
-        }
-
-        if (subject.IsMovieSubject)
-        {
-            metaParts.Add(L("电影", "映画", "Movie"));
-        }
-        else
+        if (presentation.ReleaseYear is { } year)
         {
             metaParts.Add(
-                L(
-                    $"{subject.EpisodeCount} 集",
-                    $"{subject.EpisodeCount} 話",
-                    $"{subject.EpisodeCount} episodes"));
+                year.ToString(
+                    CultureInfo.InvariantCulture));
         }
 
-        var sourceIds = subject.Items
-            .Select(static item => item.Location?.SourceId)
-            .Where(static value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.Ordinal)
-            .Count();
-        var hasLocal = subject.Items.Any(static item =>
-            item.Location?.Kind == MediaLocationKind.LocalFile);
-        var hasRemote = subject.Items.Any(static item =>
-            item.Location?.Kind == MediaLocationKind.RemoteUri);
-        var sourceKind = (hasLocal, hasRemote) switch
-        {
-            (true, true) => L("本地 + 网盘", "ローカル + リモート", "Local + remote"),
-            (true, false) => L("本地", "ローカル", "Local"),
-            (false, true) => L("网盘", "リモート", "Remote"),
-            _ => L("未知来源", "不明なソース", "Unknown source"),
-        };
+        metaParts.Add(
+            presentation.IsMovie
+                ? L("电影", "映画", "Movie")
+                : L(
+                    $"{presentation.EpisodeCount} 集",
+                    $"{presentation.EpisodeCount} 話",
+                    $"{presentation.EpisodeCount} episodes"));
 
-        var sourceLabel = sourceIds > 0
-            ? L(
-                $"{sourceKind} · {sourceIds} 个来源",
-                $"{sourceKind} · {sourceIds} ソース",
-                $"{sourceKind} · {sourceIds} sources")
-            : sourceKind;
+        if (presentation.Genres.Count > 0)
+        {
+            metaParts.Add(
+                string.Join(
+                    " / ",
+                    presentation.Genres.Take(2)));
+        }
+
+        var sourceKind =
+            (presentation.HasLocalSource,
+             presentation.HasRemoteSource) switch
+            {
+                (true, true) =>
+                    L("本地 + 网盘", "ローカル + リモート", "Local + remote"),
+                (true, false) =>
+                    L("本地", "ローカル", "Local"),
+                (false, true) =>
+                    L("网盘", "リモート", "Remote"),
+                _ =>
+                    L("未知来源", "不明なソース", "Unknown source"),
+            };
+
+        var sourceLabel =
+            presentation.SourceCount > 0
+                ? L(
+                    $"{sourceKind} · {presentation.SourceCount} 个来源",
+                    $"{sourceKind} · {presentation.SourceCount} ソース",
+                    $"{sourceKind} · {presentation.SourceCount} sources")
+                : sourceKind;
 
         return new CatalogListItemViewModel(
             subject,
@@ -254,17 +244,19 @@ public sealed partial class CatalogView : UserControl
                 MediaCategoryKind.Movies => "\uE714",
                 _ => "\uE8FD",
             },
-            CreateArtwork(metadata?.PosterUrl, 360),
-            subject.Title,
-            subtitle,
+            CreateArtwork(
+                presentation.PosterUrl,
+                360),
+            presentation.Title,
+            presentation.SecondaryTitle,
             string.Join(" · ", metaParts),
             sourceLabel,
-            subject.IsMovieSubject
+            presentation.IsMovie
                 ? L("电影", "映画", "Movie")
                 : L(
-                    $"{subject.EpisodeCount} 集",
-                    $"{subject.EpisodeCount} 話",
-                    $"{subject.EpisodeCount} eps"));
+                    $"{presentation.EpisodeCount} 集",
+                    $"{presentation.EpisodeCount} 話",
+                    $"{presentation.EpisodeCount} eps"));
     }
 
     private CatalogListItemViewModel CreateListItem(

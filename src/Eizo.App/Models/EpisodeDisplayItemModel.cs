@@ -12,7 +12,19 @@ public sealed record EpisodeDisplayItemModel(
     CatalogMediaItemModel? MediaItem = null,
     ImageSource? Thumbnail = null)
 {
+    public string AirDate { get; init; } = string.Empty;
+
     public EpisodeDisplayItemModel Self => this;
+
+    public string SecondaryText =>
+        string.Join(
+            " · ",
+            new[]
+            {
+                NativeTitle,
+                AirDate,
+            }.Where(static value =>
+                !string.IsNullOrWhiteSpace(value)));
 
     public string PlaybackText =>
         string.IsNullOrWhiteSpace(Duration)

@@ -9,6 +9,7 @@ $catalogCode = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Views
 $detailXaml = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Views/DetailView.xaml') -Raw
 $detailCode = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Views/DetailView.xaml.cs') -Raw
 $aggregation = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Models/CatalogSubjectModel.cs') -Raw
+$presentation = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Models/CatalogSubjectPresentation.cs') -Raw
 
 foreach ($required in @(
     '<GridView x:Name="ResultsList"',
@@ -36,10 +37,10 @@ if ($catalogXaml -match '<Border[^>]+Margin="4,4,4,8"') {
 
 foreach ($required in @(
     'CatalogSubjectAggregator.Build(snapshot)',
-    'CreateArtwork(metadata?.PosterUrl',
+    'CatalogSubjectPresentation.Create(subject)',
+    'CreateArtwork(',
+    'presentation.PosterUrl',
     'CreateArtwork(item.Metadata?.PosterUrl',
-    'MediaLocationKind.RemoteUri',
-    'MediaLocationKind.LocalFile',
     'private readonly MediaCategoryKind? _categoryFilter',
     'entry.Category == _categoryFilter',
     '.ThenBy(PreferredMetadataOrder)',
@@ -47,6 +48,19 @@ foreach ($required in @(
     '!string.IsNullOrWhiteSpace(metadata.PosterUrl)')) {
     if ($catalogCode -notmatch [regex]::Escape($required)) {
         throw "Library visual-card code contract missing: $required"
+    }
+}
+
+
+foreach ($required in @(
+    'CatalogSubjectPresentation(',
+    'MediaLocationKind.RemoteUri',
+    'MediaLocationKind.LocalFile',
+    'SourceCount',
+    'HasLocalSource',
+    'HasRemoteSource')) {
+    if ($presentation -notmatch [regex]::Escape($required)) {
+        throw "Library presentation contract missing: $required"
     }
 }
 
@@ -65,8 +79,9 @@ foreach ($required in @(
 }
 
 foreach ($required in @(
-    'ApplyPoster(metadata?.PosterUrl)',
-    'ApplyBackdrop(metadata?.BackdropUrl)',
+    'CatalogSubjectPresentation.Create(_subject)',
+    'ApplyPoster(presentation.PosterUrl)',
+    'ApplyBackdrop(presentation.BackdropUrl)',
     'EpisodeThumbnailUrl',
     'RebuildEpisodeList()',
     'MediaPlayRequested?.Invoke')) {
@@ -89,4 +104,4 @@ foreach ($required in @(
     }
 }
 
-Write-Host 'Eizo v0.4.1 library aggregation and ordering UI contract PASS.'
+Write-Host 'Eizo v0.5.10 library aggregation and unified presentation UI contract PASS.'

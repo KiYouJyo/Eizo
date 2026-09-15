@@ -175,7 +175,7 @@
                       <TextBlock Text="{x:Bind Title}"
                                  Style="{StaticResource CardTitleText}"
                                  TextTrimming="CharacterEllipsis" />
-                      <TextBlock Text="{x:Bind NativeTitle}"
+                      <TextBlock Text="{x:Bind SecondaryText}"
                                  Style="{StaticResource MetadataText}"
                                  TextTrimming="CharacterEllipsis" />
                       <TextBlock Text="{x:Bind PlaybackText}"
