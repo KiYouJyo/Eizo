@@ -79,9 +79,12 @@ public sealed partial class DetailView : UserControl
     private void ApplyText()
     {
         PlayButton.Content = T("Common_Continue");
-        ToolTipService.SetToolTip(
-            MoreButton,
-            L("更多", "その他", "More"));
+        RescrapeButton.Content =
+            L("重新刮削", "メタデータを再取得", "Re-scrape");
+        ManualMatchButton.Content =
+            L("手动匹配…", "手動で照合…", "Manual match…");
+        ClearManualMatchButton.Content =
+            L("清除匹配", "手動照合を解除", "Clear match");
         EpisodesTitle.Text = _subject?.IsMovieSubject == true
             ? L("影片", "作品", "Films")
             : T("Media_Episodes");
@@ -125,11 +128,17 @@ public sealed partial class DetailView : UserControl
 
         OverviewText.Text =
             presentation.Overview;
+        var hasOverview =
+            !string.IsNullOrWhiteSpace(
+                presentation.Overview);
         OverviewText.Visibility =
-            string.IsNullOrWhiteSpace(
-                presentation.Overview)
-                ? Visibility.Collapsed
-                : Visibility.Visible;
+            hasOverview
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        OverviewCard.Visibility =
+            hasOverview
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
         ApplyPoster(presentation.PosterUrl);
         ApplyBackdrop(presentation.BackdropUrl);
@@ -232,6 +241,7 @@ public sealed partial class DetailView : UserControl
                     : Visibility.Collapsed;
         }
 
+        UpdateMetadataActionButtons();
         ApplySeasonContext();
         RebuildEpisodeList();
     }
@@ -583,86 +593,63 @@ public sealed partial class DetailView : UserControl
         return 20;
     }
 
-    private void MoreButton_Click(
+    private async void RescrapeButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await RefreshSubjectMetadataAsync();
+
+    private async void ManualMatchButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await ShowManualMatchDialogAsync();
+
+    private async void ClearManualMatchButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        if (_subject is null ||
-            sender is not FrameworkElement target)
-        {
+        if (_subject is null)
             return;
-        }
-
-        var menu = new MenuFlyout();
-
-        var refreshItem = new MenuFlyoutItem
-        {
-            Text = L(
-                "重新刮削",
-                "メタデータを再取得",
-                "Re-scrape metadata"),
-            Icon = new FontIcon
-            {
-                Glyph = "\uE72C",
-            },
-        };
-        refreshItem.Click += async (_, _) =>
-            await RefreshSubjectMetadataAsync();
-        menu.Items.Add(refreshItem);
-
-        var matchItem = new MenuFlyoutItem
-        {
-            Text = L(
-                "手动匹配…",
-                "手動で照合…",
-                "Manual match…"),
-            Icon = new FontIcon
-            {
-                Glyph = "\uE8A7",
-            },
-        };
-        matchItem.Click += async (_, _) =>
-            await ShowManualMatchDialogAsync();
-        menu.Items.Add(matchItem);
 
         var binding =
             CatalogSubjectMetadataActions.GetBinding(
                 _subject);
-        if (binding is
+        if (binding is not
             {
                 IsManual: true,
                 PrimaryProvider.Length: > 0,
             })
         {
-            menu.Items.Add(
-                new MenuFlyoutSeparator());
-
-            var clearItem = new MenuFlyoutItem
-            {
-                Text = L(
-                    "清除手动匹配",
-                    "手動照合を解除",
-                    "Clear manual match"),
-                Icon = new FontIcon
-                {
-                    Glyph = "\uE711",
-                },
-                Tag = binding.PrimaryProvider,
-            };
-            clearItem.Click += async (menuSender, _) =>
-            {
-                if (menuSender is MenuFlyoutItem
-                    {
-                        Tag: string provider
-                    })
-                {
-                    await ClearManualMatchAsync(provider);
-                }
-            };
-            menu.Items.Add(clearItem);
+            return;
         }
 
-        menu.ShowAt(target);
+        await ClearManualMatchAsync(
+            binding.PrimaryProvider);
+    }
+
+    private void UpdateMetadataActionButtons()
+    {
+        if (_subject is null)
+            return;
+
+        var binding =
+            CatalogSubjectMetadataActions.GetBinding(
+                _subject);
+        ClearManualMatchButton.Visibility =
+            binding is
+            {
+                IsManual: true,
+                PrimaryProvider.Length: > 0,
+            }
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+    }
+
+    private void SetMetadataActionButtonsEnabled(
+        bool enabled)
+    {
+        RescrapeButton.IsEnabled = enabled;
+        ManualMatchButton.IsEnabled = enabled;
+        ClearManualMatchButton.IsEnabled = enabled;
     }
 
     private async Task ShowManualMatchDialogAsync()
@@ -680,7 +667,7 @@ public sealed partial class DetailView : UserControl
         if (candidate is null)
             return;
 
-        MoreButton.IsEnabled = false;
+        SetMetadataActionButtonsEnabled(false);
         ShowMetadataActionStatus(
             L("正在应用手动匹配…", "手動照合を適用しています…", "Applying manual match…"),
             InfoBarSeverity.Informational);
@@ -713,7 +700,7 @@ public sealed partial class DetailView : UserControl
         }
         finally
         {
-            MoreButton.IsEnabled = true;
+            SetMetadataActionButtonsEnabled(true);
         }
     }
 
@@ -722,7 +709,7 @@ public sealed partial class DetailView : UserControl
         if (_subject is null)
             return;
 
-        MoreButton.IsEnabled = false;
+        SetMetadataActionButtonsEnabled(false);
         ShowMetadataActionStatus(
             L("正在重新刮削此作品…", "この作品のメタデータを再取得しています…", "Refreshing this title…"),
             InfoBarSeverity.Informational);
@@ -753,7 +740,7 @@ public sealed partial class DetailView : UserControl
         }
         finally
         {
-            MoreButton.IsEnabled = true;
+            SetMetadataActionButtonsEnabled(true);
         }
     }
 
@@ -763,7 +750,7 @@ public sealed partial class DetailView : UserControl
         if (_subject is null)
             return;
 
-        MoreButton.IsEnabled = false;
+        SetMetadataActionButtonsEnabled(false);
         ShowMetadataActionStatus(
             L("正在清除手动匹配…", "手動照合を解除しています…", "Clearing manual match…"),
             InfoBarSeverity.Informational);
@@ -796,7 +783,7 @@ public sealed partial class DetailView : UserControl
         }
         finally
         {
-            MoreButton.IsEnabled = true;
+            SetMetadataActionButtonsEnabled(true);
         }
     }
 
