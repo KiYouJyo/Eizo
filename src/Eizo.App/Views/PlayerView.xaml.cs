@@ -11,7 +11,9 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Foundation;
+using Windows.Storage.Streams;
 using Windows.System;
 
 namespace Eizo.Views;
@@ -23,6 +25,7 @@ public sealed partial class PlayerView : UserControl
     private PlaybackOperationSession _session = new();
     private Task? _detachTask;
     private readonly DispatcherTimer _fullscreenControlsTimer;
+    private readonly DispatcherTimer _directionHoldTimer;
     private readonly DispatcherTimer _loadingMetricsTimer;
 
     private IPlaybackEngine? _engine;
@@ -54,6 +57,11 @@ public sealed partial class PlayerView : UserControl
     private bool _positionUiUpdatePending;
     private PointerEventHandler? _pointerWheelHandler;
     private CancellationTokenSource? _seekDebounce;
+    private bool _isScrubbingTimeline;
+    private VirtualKey? _heldDirectionKey;
+    private bool _directionHoldActive;
+    private double _rateBeforeDirectionHold = 1d;
+    private bool _isUpdatingPlaybackRateUi;
     private bool _loadingMetricsRefreshInFlight;
     private bool _isLoadingStatusVisible;
     private long? _lastLoadingReadBytes;
@@ -134,9 +142,17 @@ public sealed partial class PlayerView : UserControl
 
         _fullscreenControlsTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromSeconds(2.5)
+            Interval = TimeSpan.FromSeconds(
+                AppSettingsStore.NormalizeFullscreenControlsTimeout(
+                    AppSettingsStore.Current.FullscreenControlsTimeoutSeconds))
         };
         _fullscreenControlsTimer.Tick += FullscreenControlsTimer_Tick;
+
+        _directionHoldTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(420)
+        };
+        _directionHoldTimer.Tick += DirectionHoldTimer_Tick;
 
         _loadingMetricsTimer = new DispatcherTimer
         {
