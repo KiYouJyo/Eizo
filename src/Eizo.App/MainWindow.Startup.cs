@@ -25,12 +25,14 @@ public sealed partial class MainWindow
 
     private void OnStartupWindowRootLoaded(object sender, RoutedEventArgs e)
     {
+        StartupTrace.Mark("Startup.WindowRoot.Loaded");
         WindowRoot.Loaded -= OnStartupWindowRootLoaded;
         StartStartupSafetyNets();
     }
 
     private void OnStartupMainContentLoaded(object sender, RoutedEventArgs e)
     {
+        StartupTrace.Mark("Startup.RootGrid.Loaded");
         RootGrid.Loaded -= OnStartupMainContentLoaded;
         _startupMainContentLoaded = true;
         TryCompleteStartupVisual();
@@ -86,6 +88,8 @@ public sealed partial class MainWindow
     private void OnStartupSplashRendered(object? sender, object e)
     {
         CompositionTarget.Rendering -= OnStartupSplashRendered;
+        StartupTrace.Mark("Startup.FirstCompositionFrame");
+        StartupTrace.FlushSoon();
         StartMinimumSplashDuration();
     }
 
@@ -125,6 +129,7 @@ public sealed partial class MainWindow
         if (_startupVisualCompleted) return;
         _startupVisualCompleted = true;
 
+        StartupTrace.Mark("Startup.PresentMainContent");
         MainContent.Opacity = 1;
         _ = FadeOutStartupOverlayAsync();
     }
