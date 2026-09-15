@@ -19,6 +19,32 @@ internal sealed class PlaybackHistoryStore
 
     private PlaybackHistoryStore()
     {
+        if (ProductFlavor.IsDemo)
+        {
+            var demoItems = DemoCatalogData.Create();
+            var now = new DateTimeOffset(
+                2026, 9, 15, 10, 0, 0,
+                TimeSpan.Zero);
+
+            var seeds = new[]
+            {
+                (Item: demoItems[2], Position: 1012d, Duration: 1440d, OffsetHours: 0),
+                (Item: demoItems[7], Position: 642d, Duration: 1440d, OffsetHours: 1),
+                (Item: demoItems[13], Position: 318d, Duration: 1440d, OffsetHours: 2),
+                (Item: demoItems[24], Position: 1280d, Duration: 2760d, OffsetHours: 3),
+            };
+
+            _entries = seeds.ToDictionary(
+                static seed => MediaCatalogStore.ItemKey(seed.Item),
+                seed => new PlaybackHistoryEntry(
+                    MediaCatalogStore.ItemKey(seed.Item),
+                    seed.Position,
+                    seed.Duration,
+                    now.AddHours(-seed.OffsetHours)),
+                StringComparer.Ordinal);
+            return;
+        }
+
         _entries = LoadCore()
             .ToDictionary(
                 static entry => entry.ItemKey,
@@ -174,6 +200,9 @@ internal sealed class PlaybackHistoryStore
 
     private void SaveCoreLocked(DateTimeOffset now)
     {
+        if (ProductFlavor.IsDemo)
+            return;
+
         try
         {
             Directory.CreateDirectory(
