@@ -27,6 +27,17 @@ public sealed partial class SettingsView : UserControl
 
     private string T(string key) => _localization.GetString(key);
 
+    private string L(
+        string zhCn,
+        string jaJp,
+        string enUs) =>
+        _localization.CurrentLanguage switch
+        {
+            "ja-JP" => jaJp,
+            "en-US" => enUs,
+            _ => zhCn,
+        };
+
     private async void SettingsView_Loaded(
         object sender,
         RoutedEventArgs e)
@@ -37,6 +48,7 @@ public sealed partial class SettingsView : UserControl
         AppSettingsStore.Changed += AppSettingsStore_Changed;
 
         SyncControlsFromSettings();
+        RefreshTmdbCredentialState();
         await RefreshBangumiAccountStateAsync(
             forceRefresh: false);
     }
@@ -131,6 +143,7 @@ public sealed partial class SettingsView : UserControl
                     100d);
 
             UpdateSubtitleSettingValueText();
+            RefreshTmdbCredentialState();
         }
         finally
         {
@@ -302,6 +315,64 @@ public sealed partial class SettingsView : UserControl
             return;
 
         SyncControlsFromSettings();
+    }
+
+    private void RefreshTmdbCredentialState()
+    {
+        if (TmdbTokenStatusText is null)
+            return;
+
+        var configured =
+            MediaCredentialStore.Default
+                .HasTmdbReadAccessToken;
+
+        TmdbTokenStatusText.Text = configured
+            ? L(
+                "TMDB 已配置，将参与电影、电视剧与视觉元数据匹配。",
+                "TMDB は設定済みです。映画・ドラマ・ビジュアルメタデータの照合に使用されます。",
+                "TMDB is configured and will participate in movie, TV and visual metadata matching.")
+            : L(
+                "TMDB 尚未配置；当前仅使用已可用的数据源。",
+                "TMDB は未設定です。現在は利用可能な他のデータソースのみを使用します。",
+                "TMDB is not configured; only other available providers are currently used.");
+
+        TmdbRemoveTokenButton.IsEnabled =
+            configured;
+    }
+
+    private void TmdbSaveTokenButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var token = TmdbTokenBox.Password?.Trim();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            TmdbTokenStatusText.Text =
+                L(
+                    "请输入 TMDB Read Access Token。",
+                    "TMDB Read Access Token を入力してください。",
+                    "Enter a TMDB Read Access Token.");
+            return;
+        }
+
+        MediaCredentialStore.Default
+            .SaveTmdbReadAccessToken(token);
+        MediaScanCoordinator.Default
+            .ReloadMetadataService();
+        TmdbTokenBox.Password = string.Empty;
+        RefreshTmdbCredentialState();
+    }
+
+    private void TmdbRemoveTokenButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        MediaCredentialStore.Default
+            .RemoveTmdbReadAccessToken();
+        MediaScanCoordinator.Default
+            .ReloadMetadataService();
+        TmdbTokenBox.Password = string.Empty;
+        RefreshTmdbCredentialState();
     }
 
     private void MetadataAutoScrapeToggle_Toggled(
@@ -743,6 +814,20 @@ public sealed partial class SettingsView : UserControl
             T("Bangumi_Connect");
         BangumiDisconnectButton.Content =
             T("Bangumi_Disconnect");
+
+        TmdbSectionTitle.Text =
+            L("TMDB 数据源", "TMDB データソース", "TMDB provider");
+        TmdbTokenLabel.Text =
+            L("Read Access Token", "Read Access Token", "Read Access Token");
+        TmdbTokenDescription.Text =
+            L(
+                "用于 TMDB 电影、电视剧、季度、剧集、图片与演职人员元数据。Token 仅保存在 Windows PasswordVault 中。",
+                "TMDB の映画・ドラマ・シーズン・エピソード・画像・キャスト情報に使用します。Token は Windows PasswordVault のみに保存されます。",
+                "Used for TMDB movie, TV, season, episode, artwork and credits metadata. The token is stored only in Windows PasswordVault.");
+        TmdbSaveTokenButton.Content =
+            L("保存", "保存", "Save");
+        TmdbRemoveTokenButton.Content =
+            L("移除", "削除", "Remove");
 
         MetadataAutomationSectionTitle.Text =
             T("Settings_MetadataAutomation");
