@@ -1799,13 +1799,11 @@ public sealed partial class PlayerView : UserControl
         object sender,
         Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
+        if (_isUpdatingPlaybackRateUi)
+            return;
+
         var rate = SliderValueToRate(e.NewValue);
-
-        if (PlaybackRateValueText is not null)
-            PlaybackRateValueText.Text = $"{rate:0.00}×";
-
-        if (PlaybackRateButton is not null)
-            PlaybackRateButton.Content = $"{rate:0.##}×";
+        UpdatePlaybackRateLabels(rate);
 
         if (_engine is not { } engine)
             return;
@@ -1826,6 +1824,54 @@ public sealed partial class PlayerView : UserControl
         {
             ShowStatus(T("Status_Error"));
         }
+    }
+
+    private void SetTemporaryPlaybackRate(
+        double rate)
+    {
+        if (_engine is not { } engine)
+            return;
+
+        var normalized =
+            Math.Clamp(rate, 0.5d, 2d);
+        try
+        {
+            engine.PlaybackRate = normalized;
+            UpdatePlaybackRateUi(normalized);
+        }
+        catch
+        {
+            ShowStatus(T("Status_Error"));
+        }
+    }
+
+    private void UpdatePlaybackRateUi(
+        double rate)
+    {
+        var normalized =
+            Math.Clamp(rate, 0.5d, 2d);
+
+        _isUpdatingPlaybackRateUi = true;
+        try
+        {
+            PlaybackRateSlider.Value =
+                RateToSliderValue(normalized);
+            UpdatePlaybackRateLabels(normalized);
+        }
+        finally
+        {
+            _isUpdatingPlaybackRateUi = false;
+        }
+    }
+
+    private void UpdatePlaybackRateLabels(
+        double rate)
+    {
+        if (PlaybackRateValueText is not null)
+            PlaybackRateValueText.Text = $"{rate:0.00}×";
+
+        if (PlaybackRateButton is not null)
+            PlaybackRateButton.Content = $"{rate:0.##}×";
     }
 
     private static double SliderValueToRate(double sliderValue)
