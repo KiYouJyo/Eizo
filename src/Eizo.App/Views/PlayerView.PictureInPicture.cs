@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Windows.System;
 
 namespace Eizo.Views;
 
@@ -26,6 +27,7 @@ public sealed partial class PlayerView
     private bool _pictureInPicturePointerOverControls;
     private bool _pictureInPictureHandlersAttached;
     private IPlaybackEngine? _pictureInPictureObservedEngine;
+    private PointerEventHandler? _pictureInPicturePointerWheelHandler;
 
     internal bool IsPictureInPicture => _isPictureInPicture;
 
@@ -107,6 +109,7 @@ public sealed partial class PlayerView
             ApplyPictureInPictureControlLayout();
             UpdatePictureInPictureAccessibility();
             ShowPictureInPictureControls(restartAutoHide: true);
+            Focus(FocusState.Programmatic);
             return;
         }
 
@@ -164,6 +167,12 @@ public sealed partial class PlayerView
         PlayerRoot.SizeChanged += PictureInPictureRoot_SizeChanged;
         PlayerControlsPanel.PointerEntered += PictureInPictureControls_PointerEntered;
         PlayerControlsPanel.PointerExited += PictureInPictureControls_PointerExited;
+        KeyDown += PictureInPicture_KeyDown;
+        _pictureInPicturePointerWheelHandler ??= PictureInPictureRoot_PointerWheelChanged;
+        PlayerRoot.AddHandler(
+            UIElement.PointerWheelChangedEvent,
+            _pictureInPicturePointerWheelHandler,
+            true);
         Unloaded += PlayerView_PictureInPictureUnloaded;
         _pictureInPictureHandlersAttached = true;
     }
@@ -177,6 +186,13 @@ public sealed partial class PlayerView
         PlayerRoot.SizeChanged -= PictureInPictureRoot_SizeChanged;
         PlayerControlsPanel.PointerEntered -= PictureInPictureControls_PointerEntered;
         PlayerControlsPanel.PointerExited -= PictureInPictureControls_PointerExited;
+        KeyDown -= PictureInPicture_KeyDown;
+        if (_pictureInPicturePointerWheelHandler is not null)
+        {
+            PlayerRoot.RemoveHandler(
+                UIElement.PointerWheelChangedEvent,
+                _pictureInPicturePointerWheelHandler);
+        }
         Unloaded -= PlayerView_PictureInPictureUnloaded;
         _pictureInPictureHandlersAttached = false;
     }
@@ -211,6 +227,24 @@ public sealed partial class PlayerView
             ShowPictureInPictureControls(restartAutoHide: true);
     }
 
+    private void PictureInPictureRoot_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        if (!_isPictureInPicture ||
+            _engine is null ||
+            _currentSource is null)
+        {
+            return;
+        }
+
+        var delta = e.GetCurrentPoint(PlayerRoot).Properties.MouseWheelDelta;
+        if (delta == 0)
+            return;
+
+        SetVolume(_volume + (Math.Sign(delta) * 0.05d));
+        ShowPictureInPictureControls(restartAutoHide: true);
+        e.Handled = true;
+    }
+
     private void PictureInPictureRoot_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (!_isPictureInPicture)
@@ -239,6 +273,15 @@ public sealed partial class PlayerView
 
         _pictureInPicturePointerOverControls = false;
         RestartPictureInPictureAutoHide();
+    }
+
+    private void PictureInPicture_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (!_isPictureInPicture || e.Key != VirtualKey.Escape)
+            return;
+
+        App.MainWindow?.SetPlayerPictureInPicture(false, this);
+        e.Handled = true;
     }
 
     private void PictureInPictureEngine_StateChanged(object? sender, PlaybackStateChangedEventArgs e)
