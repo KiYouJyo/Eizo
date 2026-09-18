@@ -417,17 +417,99 @@ public sealed partial class BangumiSubjectDetailView : UserControl
             CollectionStateStatusText.Text =
                 T("Bangumi_CommunitySignInToInteract");
         }
-        catch
+        catch (BangumiApiException ex)
         {
             ApplyCollectionStateButtons();
             CollectionStateStatusText.Text =
-                T("Bangumi_CommunityWriteFailed");
+                FormatCollectionWriteError(ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            ApplyCollectionStateButtons();
+            CollectionStateStatusText.Text =
+                L(
+                    $"收藏提交失败：{CompactDiagnosticText(ex.Message)}",
+                    $"收藏状態の送信に失敗しました：{CompactDiagnosticText(ex.Message)}",
+                    $"Collection submission failed: {CompactDiagnosticText(ex.Message)}");
+        }
+        catch (Exception ex)
+        {
+            ApplyCollectionStateButtons();
+            CollectionStateStatusText.Text =
+                L(
+                    $"收藏提交失败：{CompactDiagnosticText(ex.Message)}",
+                    $"收藏状態の送信に失敗しました：{CompactDiagnosticText(ex.Message)}",
+                    $"Collection submission failed: {CompactDiagnosticText(ex.Message)}");
         }
         finally
         {
             _collectionWriteInProgress = false;
             SetCollectionStateButtonsEnabled(true);
         }
+    }
+
+    private string FormatCollectionWriteError(
+        BangumiApiException exception)
+    {
+        var code =
+            ((int)(exception.StatusCode ??
+                   HttpStatusCode.InternalServerError))
+                .ToString(CultureInfo.InvariantCulture);
+        var detail =
+            CompactDiagnosticText(
+                exception.DisplayDetail);
+
+        return exception.StatusCode switch
+        {
+            HttpStatusCode.BadRequest =>
+                L(
+                    $"Bangumi 无法接受本次收藏修改（HTTP {code}）：{detail}",
+                    $"Bangumi が收藏状態の変更を受け付けませんでした（HTTP {code}）：{detail}",
+                    $"Bangumi could not accept this collection change (HTTP {code}): {detail}"),
+            HttpStatusCode.Forbidden =>
+                L(
+                    $"Bangumi 拒绝收藏写入（HTTP {code}）：{detail}",
+                    $"Bangumi が收藏状態の書き込みを拒否しました（HTTP {code}）：{detail}",
+                    $"Bangumi refused the collection write (HTTP {code}): {detail}"),
+            HttpStatusCode.NotFound =>
+                L(
+                    $"Bangumi 未找到目标条目或收藏（HTTP {code}）：{detail}",
+                    $"Bangumi で対象の項目または收藏情報が見つかりません（HTTP {code}）：{detail}",
+                    $"Bangumi could not find the subject or collection (HTTP {code}): {detail}"),
+            HttpStatusCode.TooManyRequests =>
+                L(
+                    $"Bangumi 请求过于频繁（HTTP {code}）：{detail}",
+                    $"Bangumi へのリクエストが多すぎます（HTTP {code}）：{detail}",
+                    $"Too many requests to Bangumi (HTTP {code}): {detail}"),
+            >= HttpStatusCode.InternalServerError =>
+                L(
+                    $"Bangumi 服务暂时异常（HTTP {code}）：{detail}",
+                    $"Bangumi のサービスで一時的なエラーが発生しています（HTTP {code}）：{detail}",
+                    $"Bangumi is temporarily unavailable (HTTP {code}): {detail}"),
+            _ =>
+                L(
+                    $"Bangumi 收藏写入失败（HTTP {code}）：{detail}",
+                    $"Bangumi の收藏状態を書き込めませんでした（HTTP {code}）：{detail}",
+                    $"Bangumi collection write failed (HTTP {code}): {detail}"),
+        };
+    }
+
+    private static string CompactDiagnosticText(
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "unknown error";
+
+        var normalized =
+            string.Join(
+                " ",
+                value.Split(
+                    (char[]?)null,
+                    StringSplitOptions.RemoveEmptyEntries));
+
+        return normalized.Length <= 240
+            ? normalized
+            : normalized[..240] + "…";
     }
 
     private void ApplyCollectionStateButtons()
