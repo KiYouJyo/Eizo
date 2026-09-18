@@ -4,9 +4,9 @@
     "version": "1.1.0",
     "packageVersion": "1.1.0.0",
     "title": {
-      "zh-CN": "原生画中画与播放体验完善",
-      "ja-JP": "ネイティブ ピクチャー イン ピクチャーと再生体験の改善",
-      "en-US": "Native picture-in-picture and playback refinements"
+      "zh-CN": "原生画中画与 Bangumi 收藏同步",
+      "ja-JP": "ネイティブ PiP と Bangumi コレクション同期",
+      "en-US": "Native picture-in-picture and Bangumi collection sync"
     }
   },
   "channels": {
