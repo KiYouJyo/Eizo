@@ -152,6 +152,51 @@ internal sealed class BangumiApiClient
             cancellationToken,
             NormalizeAccessToken(accessToken));
 
+    public Task<string> GetUserSubjectCollectionAsync(
+        string userName,
+        int subjectId,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userName);
+        if (subjectId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(subjectId));
+
+        return GetStringAsync(
+            "v0/users/" +
+            Uri.EscapeDataString(userName.Trim()) +
+            "/collections/" +
+            subjectId.ToString(CultureInfo.InvariantCulture),
+            cancellationToken,
+            NormalizeAccessToken(accessToken));
+    }
+
+    public Task<string> SetUserSubjectCollectionTypeAsync(
+        int subjectId,
+        BangumiCollectionType type,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        if (subjectId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(subjectId));
+        if (!Enum.IsDefined(type))
+            throw new ArgumentOutOfRangeException(nameof(type));
+
+        var body = JsonSerializer.Serialize(
+            new
+            {
+                type = (int)type,
+            });
+
+        return SendJsonAsync(
+            HttpMethod.Post,
+            "v0/users/-/collections/" +
+            subjectId.ToString(CultureInfo.InvariantCulture),
+            body,
+            cancellationToken,
+            NormalizeAccessToken(accessToken));
+    }
+
     public Task<string> GetUserCollectionsAsync(
         string userName,
         BangumiCollectionType type,
@@ -186,7 +231,8 @@ internal sealed class BangumiApiClient
         HttpMethod method,
         string relativeUri,
         string json,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? bearerToken = null)
     {
         using var request = new HttpRequestMessage(
             method,
@@ -197,6 +243,14 @@ internal sealed class BangumiApiClient
                 Encoding.UTF8,
                 "application/json"),
         };
+
+        if (!string.IsNullOrWhiteSpace(bearerToken))
+        {
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    bearerToken);
+        }
 
         using var response = await _httpClient.SendAsync(
             request,

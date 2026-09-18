@@ -474,4 +474,155 @@ public sealed class BangumiRepositoryTests
     }
 
 
+    [Fact]
+    public async Task SubjectCollection_ReadsBearerTokenAndCurrentType()
+    {
+        const string token = "secret-test-token";
+        HttpMethod? method = null;
+        string? requestUri = null;
+        string? authScheme = null;
+        string? authToken = null;
+
+        var handler = new CallbackHandler(request =>
+        {
+            method = request.Method;
+            requestUri = request.RequestUri!.ToString();
+            authScheme = request.Headers.Authorization?.Scheme;
+            authToken = request.Headers.Authorization?.Parameter;
+
+            return JsonResponse("""
+            {
+              "subject_id": 123,
+              "subject_type": 2,
+              "rate": 8,
+              "type": 3,
+              "ep_status": 4,
+              "vol_status": 0,
+              "updated_at": "2026-09-18T12:00:00+08:00",
+              "private": false
+            }
+            """);
+        });
+
+        var cacheRoot = CreateTempDirectory();
+        try
+        {
+            using var client = CreateClient(handler);
+            var repository = new BangumiRepository(
+                new BangumiApiClient(client),
+                new BangumiCacheStore(cacheRoot));
+
+            var result =
+                await repository.GetUserSubjectCollectionAsync(
+                    token,
+                    "eizo-user",
+                    123,
+                    TestContext.Current.CancellationToken);
+
+            Assert.NotNull(result);
+            Assert.Equal(
+                BangumiCollectionType.Doing,
+                result.Type);
+            Assert.Equal(HttpMethod.Get, method);
+            Assert.Contains(
+                "/v0/users/eizo-user/collections/123",
+                requestUri,
+                StringComparison.Ordinal);
+            Assert.Equal("Bearer", authScheme);
+            Assert.Equal(token, authToken);
+        }
+        finally
+        {
+            Directory.Delete(cacheRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SubjectCollection_ReturnsNullWhenNotCollected()
+    {
+        var handler = new CallbackHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.NotFound));
+
+        var cacheRoot = CreateTempDirectory();
+        try
+        {
+            using var client = CreateClient(handler);
+            var repository = new BangumiRepository(
+                new BangumiApiClient(client),
+                new BangumiCacheStore(cacheRoot));
+
+            var result =
+                await repository.GetUserSubjectCollectionAsync(
+                    "secret-test-token",
+                    "eizo-user",
+                    123,
+                    TestContext.Current.CancellationToken);
+
+            Assert.Null(result);
+        }
+        finally
+        {
+            Directory.Delete(cacheRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SetSubjectCollectionType_PostsBearerTokenAndType()
+    {
+        const string token = "secret-test-token";
+        HttpMethod? method = null;
+        string? requestUri = null;
+        string? authScheme = null;
+        string? authToken = null;
+        string? requestBody = null;
+
+        var handler = new CallbackHandler(request =>
+        {
+            method = request.Method;
+            requestUri = request.RequestUri!.ToString();
+            authScheme = request.Headers.Authorization?.Scheme;
+            authToken = request.Headers.Authorization?.Parameter;
+            requestBody = request.Content?.ReadAsStringAsync()
+                .GetAwaiter()
+                .GetResult();
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        });
+
+        var cacheRoot = CreateTempDirectory();
+        try
+        {
+            using var client = CreateClient(handler);
+            var repository = new BangumiRepository(
+                new BangumiApiClient(client),
+                new BangumiCacheStore(cacheRoot));
+
+            await repository.SetUserSubjectCollectionTypeAsync(
+                token,
+                123,
+                BangumiCollectionType.OnHold,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(HttpMethod.Post, method);
+            Assert.Contains(
+                "/v0/users/-/collections/123",
+                requestUri,
+                StringComparison.Ordinal);
+            Assert.Equal("Bearer", authScheme);
+            Assert.Equal(token, authToken);
+
+            using var requestJson =
+                System.Text.Json.JsonDocument.Parse(
+                    requestBody!);
+            Assert.Equal(
+                (int)BangumiCollectionType.OnHold,
+                requestJson.RootElement
+                    .GetProperty("type")
+                    .GetInt32());
+        }
+        finally
+        {
+            Directory.Delete(cacheRoot, recursive: true);
+        }
+    }
+
 }

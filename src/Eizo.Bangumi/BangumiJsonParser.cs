@@ -156,6 +156,33 @@ internal static class BangumiJsonParser
             user.Avatar?.Small);
     }
 
+    public static BangumiUserSubjectCollection ParseUserSubjectCollection(
+        string json)
+    {
+        var item =
+            JsonSerializer.Deserialize<UserCollectionDto>(
+                json,
+                SerializerOptions)
+            ?? throw new JsonException(
+                "Bangumi user subject collection response was empty.");
+
+        if (!Enum.IsDefined(
+                typeof(BangumiCollectionType),
+                item.Type))
+        {
+            throw new JsonException(
+                "Bangumi user subject collection type was invalid.");
+        }
+
+        return new BangumiUserSubjectCollection(
+            item.SubjectId,
+            (BangumiCollectionType)item.Type,
+            item.EpisodeStatus,
+            item.Rate,
+            item.IsPrivate,
+            ParseDateTimeOffset(item.UpdatedAt));
+    }
+
     public static BangumiUserCollectionPage ParseUserCollectionPage(
         string json)
     {

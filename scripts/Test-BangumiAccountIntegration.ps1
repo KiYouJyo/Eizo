@@ -22,6 +22,8 @@ $parser = Read-Text 'src/Eizo.Bangumi/BangumiJsonParser.cs'
 $credentialStore = Read-Text 'src/Eizo.App/Models/BangumiAccountCredentialStore.cs'
 $accountService = Read-Text 'src/Eizo.App/Models/BangumiAccountService.cs'
 $following = Read-Text 'src/Eizo.App/Views/BangumiFollowingView.xaml.cs'
+$detail = Read-Text 'src/Eizo.App/Views/BangumiSubjectDetailView.xaml'
+$detailCode = Read-Text 'src/Eizo.App/Views/BangumiSubjectDetailView.xaml.cs'
 $dialog = Read-Text 'src/Eizo.App/Views/BangumiAccountDialogService.cs'
 $settings = Read-Text 'src/Eizo.App/Views/SettingsView.xaml.cs'
 $appSettings = Read-Text 'src/Eizo.App/AppSettingsStore.cs'
@@ -31,7 +33,10 @@ foreach ($required in @(
     '"v0/me"',
     'Authorization',
     '"Bearer"',
-    '/collections?subject_type=2&type=')) {
+    '/collections?subject_type=2&type=',
+    'GetUserSubjectCollectionAsync',
+    'SetUserSubjectCollectionTypeAsync',
+    '"v0/users/-/collections/"')) {
     if (-not $client.Contains(
             $required,
             [StringComparison]::Ordinal)) {
@@ -42,8 +47,11 @@ foreach ($required in @(
 foreach ($required in @(
     'GetMyselfAsync',
     'GetFollowingAsync',
+    'GetUserSubjectCollectionAsync',
+    'SetUserSubjectCollectionTypeAsync',
     'BangumiCollectionType.Doing',
     'ParseUserProfile',
+    'ParseUserSubjectCollection',
     'ParseUserCollectionPage')) {
     $haystack = $repository + $parser
     if (-not $haystack.Contains(
@@ -107,6 +115,55 @@ foreach ($required in @(
     }
 }
 
+foreach ($required in @(
+    'x:Name="CollectionStateButtons"',
+    'x:Name="CollectionWishButton"',
+    'x:Name="CollectionDoneButton"',
+    'x:Name="CollectionDoingButton"',
+    'x:Name="CollectionOnHoldButton"',
+    'x:Name="CollectionDroppedButton"',
+    'Grid.Column="1"',
+    'HorizontalAlignment="Right"',
+    'Click="CollectionStateButton_Click"')) {
+    if (-not $detail.Contains(
+            $required,
+            [StringComparison]::Ordinal)) {
+        throw "Bangumi subject collection-state UI contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'LoadCollectionStateAsync',
+    'GetUserSubjectCollectionAsync',
+    'SetUserSubjectCollectionTypeAsync',
+    'CollectionStateButton_Click',
+    'ApplyCollectionStateButtons',
+    'Bangumi_CommunitySignInToInteract',
+    'Bangumi_CommunityWriteFailed')) {
+    if (-not $detailCode.Contains(
+            $required,
+            [StringComparison]::Ordinal)) {
+        throw "Bangumi subject collection-state behavior contract missing: $required"
+    }
+}
+
+$buttonsIndex = $detail.IndexOf(
+    'x:Name="CollectionStateButtons"',
+    [StringComparison]::Ordinal)
+$dividerIndex = $detail.IndexOf(
+    '<Border Height="1"',
+    $buttonsIndex,
+    [StringComparison]::Ordinal)
+$summaryIndex = $detail.IndexOf(
+    'x:Name="SummaryTitle"',
+    $dividerIndex,
+    [StringComparison]::Ordinal)
+if ($buttonsIndex -lt 0 -or
+    $dividerIndex -le $buttonsIndex -or
+    $summaryIndex -le $dividerIndex) {
+    throw 'Bangumi collection-state buttons must remain directly above the basic-info/summary divider.'
+}
+
 foreach ($forbidden in @(
     'https://next.bgm.tv/demo/access-token',
     'PasswordBox',
@@ -140,4 +197,4 @@ foreach ($required in @(
     }
 }
 
-Write-Host 'Eizo v0.4.6 Bangumi account and five-state collection contract PASS.'
+Write-Host 'Eizo v1.1.0 Bangumi account and five-state subject collection contract PASS.'
