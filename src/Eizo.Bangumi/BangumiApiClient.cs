@@ -235,14 +235,19 @@ internal sealed class BangumiApiClient
         CancellationToken cancellationToken,
         string? bearerToken = null)
     {
+        using var content =
+            new StringContent(
+                json,
+                Encoding.UTF8);
+        content.Headers.ContentType =
+            new MediaTypeHeaderValue(
+                "application/json");
+
         using var request = new HttpRequestMessage(
             method,
             relativeUri)
         {
-            Content = new StringContent(
-                json,
-                Encoding.UTF8,
-                "application/json"),
+            Content = content,
         };
 
         if (!string.IsNullOrWhiteSpace(bearerToken))
