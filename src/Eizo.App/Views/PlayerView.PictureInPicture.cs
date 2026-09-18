@@ -29,6 +29,8 @@ public sealed partial class PlayerView
     private double _pictureInPicturePreviousSecondarySubtitleFontSize;
     private Thickness _pictureInPicturePreviousPrimarySubtitlePadding;
     private Thickness _pictureInPicturePreviousSecondarySubtitlePadding;
+    private CornerRadius _pictureInPicturePreviousPrimarySubtitleCornerRadius;
+    private CornerRadius _pictureInPicturePreviousSecondarySubtitleCornerRadius;
     private DispatcherTimer? _pictureInPictureControlsTimer;
     private bool _pictureInPicturePointerOverControls;
     private bool _pictureInPictureHandlersAttached;
@@ -83,6 +85,8 @@ public sealed partial class PlayerView
             _pictureInPicturePreviousSecondarySubtitleFontSize = SecondarySubtitleText.FontSize;
             _pictureInPicturePreviousPrimarySubtitlePadding = PrimarySubtitleOverlay.Padding;
             _pictureInPicturePreviousSecondarySubtitlePadding = SecondarySubtitleOverlay.Padding;
+            _pictureInPicturePreviousPrimarySubtitleCornerRadius = PrimarySubtitleOverlay.CornerRadius;
+            _pictureInPicturePreviousSecondarySubtitleCornerRadius = SecondarySubtitleOverlay.CornerRadius;
             _pictureInPictureSidebarWasOpen = PlayerSplitView.IsPaneOpen;
 
             _isPictureInPicture = true;
@@ -156,6 +160,8 @@ public sealed partial class PlayerView
         SecondarySubtitleText.FontSize = _pictureInPicturePreviousSecondarySubtitleFontSize;
         PrimarySubtitleOverlay.Padding = _pictureInPicturePreviousPrimarySubtitlePadding;
         SecondarySubtitleOverlay.Padding = _pictureInPicturePreviousSecondarySubtitlePadding;
+        PrimarySubtitleOverlay.CornerRadius = _pictureInPicturePreviousPrimarySubtitleCornerRadius;
+        SecondarySubtitleOverlay.CornerRadius = _pictureInPicturePreviousSecondarySubtitleCornerRadius;
 
         FullscreenButton.Click -= ExitPictureInPictureButton_Click;
         FullscreenButton.Click += FullscreenButton_Click;
