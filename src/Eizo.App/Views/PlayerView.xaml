@@ -36,6 +36,16 @@
           <TextBlock x:Name="NowPlayingTitle" Style="{StaticResource CardTitleText}" />
           <TextBlock x:Name="NowPlayingEpisode" Style="{StaticResource MetadataText}" />
         </StackPanel>
+        <Button x:Name="PictureInPictureButton"
+                Width="40"
+                Height="36"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Click="PictureInPictureButton_Click">
+          <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                    Glyph="&#xE93A;"
+                    FontSize="16" />
+        </Button>
       </Grid>
 
       <Grid x:Name="PlaybackSurfaceHost"
@@ -128,8 +138,27 @@
             Grid.Row="2"
             Padding="20,10"
             RowDefinitions="Auto,*"
+            Background="Transparent"
             PointerEntered="PlayerControlsPanel_PointerEntered"
             PointerExited="PlayerControlsPanel_PointerExited">
+        <Border x:Name="PictureInPictureControlsBackdrop"
+                Grid.RowSpan="2"
+                Margin="-10,-8,-10,-8"
+                IsHitTestVisible="False"
+                Visibility="Collapsed">
+          <Border.Background>
+            <LinearGradientBrush StartPoint="0,0"
+                                 EndPoint="0,1">
+              <GradientStop Offset="0"
+                            Color="#00000000" />
+              <GradientStop Offset="0.45"
+                            Color="#66000000" />
+              <GradientStop Offset="1"
+                            Color="#CC000000" />
+            </LinearGradientBrush>
+          </Border.Background>
+        </Border>
+
         <Grid>
           <Slider x:Name="PlaybackSlider"
                   Minimum="0"

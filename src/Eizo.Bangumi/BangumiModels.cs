@@ -93,6 +93,14 @@ public sealed record BangumiUserCollectionItem(
     bool IsPrivate,
     DateTimeOffset? UpdatedAt);
 
+public sealed record BangumiUserSubjectCollection(
+    int SubjectId,
+    BangumiCollectionType Type,
+    int EpisodeStatus,
+    int Rate,
+    bool IsPrivate,
+    DateTimeOffset? UpdatedAt);
+
 public sealed record BangumiUserCollectionPage(
     int Total,
     int Limit,

@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Net;
 using Eizo.Bangumi;
 using Eizo.Localization;
 using Eizo.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.System;
 
@@ -35,6 +37,8 @@ public sealed partial class BangumiSubjectDetailView : UserControl
     private bool _suppressCommentsFilterChanged;
     private int _reviewsOffset;
     private int _topicsOffset;
+    private BangumiCollectionType? _collectionType;
+    private bool _collectionWriteInProgress;
 
     public BangumiSubjectDetailView(
         BangumiSubjectCard subject)
@@ -99,6 +103,17 @@ public sealed partial class BangumiSubjectDetailView : UserControl
 
         TopicsLoadMoreButton.Content =
             T("Bangumi_LoadMore");
+
+        CollectionWishButton.Content =
+            T("Bangumi_CollectionWish");
+        CollectionDoneButton.Content =
+            T("Bangumi_CollectionDone");
+        CollectionDoingButton.Content =
+            T("Bangumi_CollectionDoing");
+        CollectionOnHoldButton.Content =
+            T("Bangumi_CollectionOnHold");
+        CollectionDroppedButton.Content =
+            T("Bangumi_CollectionDropped");
 
         _suppressCommentsFilterChanged = true;
         CommentsFilterCombo.Items.Clear();
@@ -225,9 +240,10 @@ public sealed partial class BangumiSubjectDetailView : UserControl
         bool reset,
         CancellationToken cancellationToken)
     {
+        BangumiUserProfile? profile = null;
         if (_account.IsConnected)
         {
-            var profile = await _account.GetProfileAsync(
+            profile = await _account.GetProfileAsync(
                 forceRefresh: false,
                 cancellationToken);
             _viewerUserId = profile?.Id ?? 0;
@@ -272,12 +288,254 @@ public sealed partial class BangumiSubjectDetailView : UserControl
                 cancellationToken);
         var relatedTask =
             LoadRelatedAsync(cancellationToken);
+        var collectionStateTask =
+            LoadCollectionStateAsync(
+                profile,
+                cancellationToken);
 
         await Task.WhenAll(
             commentsTask,
             reviewsTask,
             topicsTask,
-            relatedTask);
+            relatedTask,
+            collectionStateTask);
+    }
+
+    private async Task LoadCollectionStateAsync(
+        BangumiUserProfile? profile,
+        CancellationToken cancellationToken)
+    {
+        CollectionStateStatusText.Text = string.Empty;
+
+        var token = _account.GetAccessTokenForRequest();
+        if (profile is null ||
+            string.IsNullOrWhiteSpace(token))
+        {
+            _collectionType = null;
+            ApplyCollectionStateButtons();
+            return;
+        }
+
+        try
+        {
+            var collection =
+                await _repository.GetUserSubjectCollectionAsync(
+                    token,
+                    profile.UserName,
+                    _subjectId,
+                    cancellationToken);
+            _collectionType = collection?.Type;
+            ApplyCollectionStateButtons();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+            when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            _account.Disconnect();
+            _collectionType = null;
+            ApplyCollectionStateButtons();
+            CollectionStateStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+        }
+        catch
+        {
+            CollectionStateStatusText.Text =
+                T("Bangumi_CommunityUnavailable");
+        }
+    }
+
+    private async void CollectionStateButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton button ||
+            !int.TryParse(
+                button.Tag?.ToString(),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var rawType) ||
+            !Enum.IsDefined(
+                typeof(BangumiCollectionType),
+                rawType))
+        {
+            return;
+        }
+
+        var requestedType =
+            (BangumiCollectionType)rawType;
+
+        if (_collectionType == requestedType)
+        {
+            ApplyCollectionStateButtons();
+            return;
+        }
+
+        var token =
+            _account.GetAccessTokenForRequest();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            ApplyCollectionStateButtons();
+            CollectionStateStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+            return;
+        }
+
+        if (_collectionWriteInProgress)
+        {
+            ApplyCollectionStateButtons();
+            return;
+        }
+
+        _collectionWriteInProgress = true;
+        SetCollectionStateButtonsEnabled(false);
+        CollectionStateStatusText.Text = string.Empty;
+
+        try
+        {
+            await _repository.SetUserSubjectCollectionTypeAsync(
+                token,
+                _subjectId,
+                requestedType,
+                _loadCancellation?.Token ??
+                CancellationToken.None);
+            _collectionType = requestedType;
+            ApplyCollectionStateButtons();
+        }
+        catch (OperationCanceledException)
+        {
+            ApplyCollectionStateButtons();
+        }
+        catch (HttpRequestException ex)
+            when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            _account.Disconnect();
+            _collectionType = null;
+            ApplyCollectionStateButtons();
+            CollectionStateStatusText.Text =
+                T("Bangumi_CommunitySignInToInteract");
+        }
+        catch (BangumiApiException ex)
+        {
+            ApplyCollectionStateButtons();
+            CollectionStateStatusText.Text =
+                FormatCollectionWriteError(ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            ApplyCollectionStateButtons();
+            CollectionStateStatusText.Text =
+                L(
+                    $"收藏提交失败：{CompactDiagnosticText(ex.Message)}",
+                    $"收藏状態の送信に失敗しました：{CompactDiagnosticText(ex.Message)}",
+                    $"Collection submission failed: {CompactDiagnosticText(ex.Message)}");
+        }
+        catch (Exception ex)
+        {
+            ApplyCollectionStateButtons();
+            CollectionStateStatusText.Text =
+                L(
+                    $"收藏提交失败：{CompactDiagnosticText(ex.Message)}",
+                    $"收藏状態の送信に失敗しました：{CompactDiagnosticText(ex.Message)}",
+                    $"Collection submission failed: {CompactDiagnosticText(ex.Message)}");
+        }
+        finally
+        {
+            _collectionWriteInProgress = false;
+            SetCollectionStateButtonsEnabled(true);
+        }
+    }
+
+    private string FormatCollectionWriteError(
+        BangumiApiException exception)
+    {
+        var code =
+            ((int)(exception.StatusCode ??
+                   HttpStatusCode.InternalServerError))
+                .ToString(CultureInfo.InvariantCulture);
+        var detail =
+            CompactDiagnosticText(
+                exception.DisplayDetail);
+
+        return exception.StatusCode switch
+        {
+            HttpStatusCode.BadRequest =>
+                L(
+                    $"Bangumi 无法接受本次收藏修改（HTTP {code}）：{detail}",
+                    $"Bangumi が收藏状態の変更を受け付けませんでした（HTTP {code}）：{detail}",
+                    $"Bangumi could not accept this collection change (HTTP {code}): {detail}"),
+            HttpStatusCode.Forbidden =>
+                L(
+                    $"Bangumi 拒绝收藏写入（HTTP {code}）：{detail}",
+                    $"Bangumi が收藏状態の書き込みを拒否しました（HTTP {code}）：{detail}",
+                    $"Bangumi refused the collection write (HTTP {code}): {detail}"),
+            HttpStatusCode.NotFound =>
+                L(
+                    $"Bangumi 未找到目标条目或收藏（HTTP {code}）：{detail}",
+                    $"Bangumi で対象の項目または收藏情報が見つかりません（HTTP {code}）：{detail}",
+                    $"Bangumi could not find the subject or collection (HTTP {code}): {detail}"),
+            HttpStatusCode.TooManyRequests =>
+                L(
+                    $"Bangumi 请求过于频繁（HTTP {code}）：{detail}",
+                    $"Bangumi へのリクエストが多すぎます（HTTP {code}）：{detail}",
+                    $"Too many requests to Bangumi (HTTP {code}): {detail}"),
+            _ when
+                (int)(exception.StatusCode ??
+                      HttpStatusCode.InternalServerError) >= 500 =>
+                L(
+                    $"Bangumi 服务暂时异常（HTTP {code}）：{detail}",
+                    $"Bangumi のサービスで一時的なエラーが発生しています（HTTP {code}）：{detail}",
+                    $"Bangumi is temporarily unavailable (HTTP {code}): {detail}"),
+            _ =>
+                L(
+                    $"Bangumi 收藏写入失败（HTTP {code}）：{detail}",
+                    $"Bangumi の收藏状態を書き込めませんでした（HTTP {code}）：{detail}",
+                    $"Bangumi collection write failed (HTTP {code}): {detail}"),
+        };
+    }
+
+    private static string CompactDiagnosticText(
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "unknown error";
+
+        var normalized =
+            string.Join(
+                " ",
+                value.Split(
+                    (char[]?)null,
+                    StringSplitOptions.RemoveEmptyEntries));
+
+        return normalized.Length <= 240
+            ? normalized
+            : normalized[..240] + "…";
+    }
+
+    private void ApplyCollectionStateButtons()
+    {
+        CollectionWishButton.IsChecked =
+            _collectionType == BangumiCollectionType.Wish;
+        CollectionDoneButton.IsChecked =
+            _collectionType == BangumiCollectionType.Done;
+        CollectionDoingButton.IsChecked =
+            _collectionType == BangumiCollectionType.Doing;
+        CollectionOnHoldButton.IsChecked =
+            _collectionType == BangumiCollectionType.OnHold;
+        CollectionDroppedButton.IsChecked =
+            _collectionType == BangumiCollectionType.Dropped;
+    }
+
+    private void SetCollectionStateButtonsEnabled(
+        bool isEnabled)
+    {
+        CollectionWishButton.IsEnabled = isEnabled;
+        CollectionDoneButton.IsEnabled = isEnabled;
+        CollectionDoingButton.IsEnabled = isEnabled;
+        CollectionOnHoldButton.IsEnabled = isEnabled;
+        CollectionDroppedButton.IsEnabled = isEnabled;
     }
 
     private async Task LoadCommentsPageAsync(

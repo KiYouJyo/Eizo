@@ -281,6 +281,54 @@ public sealed class BangumiRepository
         return BangumiJsonParser.ParseUserProfile(payload);
     }
 
+    public async Task<BangumiUserSubjectCollection?>
+        GetUserSubjectCollectionAsync(
+            string accessToken,
+            string userName,
+            int subjectId,
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userName);
+        if (subjectId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(subjectId));
+
+        try
+        {
+            var payload =
+                await _client.GetUserSubjectCollectionAsync(
+                    userName,
+                    subjectId,
+                    accessToken,
+                    cancellationToken);
+            return BangumiJsonParser.ParseUserSubjectCollection(
+                payload);
+        }
+        catch (HttpRequestException ex)
+            when (ex.StatusCode ==
+                  System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
+    public Task SetUserSubjectCollectionTypeAsync(
+        string accessToken,
+        int subjectId,
+        BangumiCollectionType type,
+        CancellationToken cancellationToken = default)
+    {
+        if (subjectId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(subjectId));
+        if (!Enum.IsDefined(type))
+            throw new ArgumentOutOfRangeException(nameof(type));
+
+        return _client.SetUserSubjectCollectionTypeAsync(
+            subjectId,
+            type,
+            accessToken,
+            cancellationToken);
+    }
+
     public Task<BangumiUserCollectionPage>
         GetFollowingAsync(
             string accessToken,

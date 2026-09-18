@@ -2006,6 +2006,9 @@ public sealed partial class PlayerView : UserControl
             secondaryOverlayActive;
 
         UpdateNavigationAvailability();
+
+        if (_isPictureInPicture)
+            ApplySubtitlePositions();
     }
 
     private void FullscreenButton_Click(object sender, RoutedEventArgs e) =>
@@ -2378,6 +2381,12 @@ public sealed partial class PlayerView : UserControl
         var height = PlaybackSurfaceHost.ActualHeight;
         if (height <= 0d)
             return;
+
+        if (_isPictureInPicture)
+        {
+            ApplyPictureInPictureSubtitlePositions(height);
+            return;
+        }
 
         ApplySubtitlePosition(
             PrimarySubtitleOverlay,
