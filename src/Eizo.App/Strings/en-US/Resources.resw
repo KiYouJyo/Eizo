@@ -256,6 +256,12 @@
   <data name="Playback_Speed" xml:space="preserve">
     <value>Playback speed</value>
   </data>
+  <data name="Playback_PictureInPicture" xml:space="preserve">
+    <value>Picture in picture</value>
+  </data>
+  <data name="Playback_ExitPictureInPicture" xml:space="preserve">
+    <value>Exit picture in picture</value>
+  </data>
   <data name="Playback_FullScreen" xml:space="preserve">
     <value>Full screen</value>
   </data>
