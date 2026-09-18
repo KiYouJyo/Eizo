@@ -16,6 +16,12 @@ public sealed partial class PlayerView
     private GridLength _pictureInPicturePreviousHeaderHeight;
     private GridLength _pictureInPicturePreviousControlsHeight;
     private Thickness _pictureInPicturePreviousControlsPadding;
+    private int _pictureInPicturePreviousPlaybackSurfaceRow;
+    private int _pictureInPicturePreviousPlaybackSurfaceRowSpan;
+    private int _pictureInPicturePreviousControlsRow;
+    private int _pictureInPicturePreviousControlsRowSpan;
+    private VerticalAlignment _pictureInPicturePreviousControlsVerticalAlignment;
+    private double _pictureInPicturePreviousControlsPanelHeight;
     private ElementTheme _pictureInPicturePreviousTheme;
     private Visibility _pictureInPicturePreviousCurrentTimeVisibility;
     private Visibility _pictureInPicturePreviousDurationVisibility;
@@ -64,6 +70,12 @@ public sealed partial class PlayerView
             _pictureInPicturePreviousHeaderHeight = HeaderRow.Height;
             _pictureInPicturePreviousControlsHeight = ControlsRow.Height;
             _pictureInPicturePreviousControlsPadding = PlayerControlsPanel.Padding;
+            _pictureInPicturePreviousPlaybackSurfaceRow = Grid.GetRow(PlaybackSurfaceHost);
+            _pictureInPicturePreviousPlaybackSurfaceRowSpan = Grid.GetRowSpan(PlaybackSurfaceHost);
+            _pictureInPicturePreviousControlsRow = Grid.GetRow(PlayerControlsPanel);
+            _pictureInPicturePreviousControlsRowSpan = Grid.GetRowSpan(PlayerControlsPanel);
+            _pictureInPicturePreviousControlsVerticalAlignment = PlayerControlsPanel.VerticalAlignment;
+            _pictureInPicturePreviousControlsPanelHeight = PlayerControlsPanel.Height;
             _pictureInPicturePreviousTheme = PlayerRoot.RequestedTheme;
             _pictureInPicturePreviousCurrentTimeVisibility = CurrentTimeText.Visibility;
             _pictureInPicturePreviousDurationVisibility = DurationText.Visibility;
@@ -93,12 +105,9 @@ public sealed partial class PlayerView
             CurrentTimeText.Visibility = Visibility.Collapsed;
             DurationText.Visibility = Visibility.Collapsed;
 
-            // Smaller subtitle typography keeps two-language subtitles readable in
-            // CompactOverlay without changing the user's persisted subtitle offsets.
-            PrimarySubtitleText.FontSize = 16d;
-            SecondarySubtitleText.FontSize = 14d;
-            PrimarySubtitleOverlay.Padding = new Thickness(10, 5, 10, 5);
-            SecondarySubtitleOverlay.Padding = new Thickness(10, 5, 10, 5);
+            // PiP subtitle typography and collision-free placement are derived from
+            // the compact video surface instead of reusing desktop subtitle offsets.
+            ApplyPictureInPictureSubtitleTypography();
 
             FullscreenButton.Click -= FullscreenButton_Click;
             FullscreenButton.Click += ExitPictureInPictureButton_Click;
@@ -126,6 +135,13 @@ public sealed partial class PlayerView
         PlayerHeader.Visibility = Visibility.Visible;
         ControlsRow.Height = _pictureInPicturePreviousControlsHeight;
         PlayerControlsPanel.Padding = _pictureInPicturePreviousControlsPadding;
+        Grid.SetRow(PlaybackSurfaceHost, _pictureInPicturePreviousPlaybackSurfaceRow);
+        Grid.SetRowSpan(PlaybackSurfaceHost, _pictureInPicturePreviousPlaybackSurfaceRowSpan);
+        Grid.SetRow(PlayerControlsPanel, _pictureInPicturePreviousControlsRow);
+        Grid.SetRowSpan(PlayerControlsPanel, _pictureInPicturePreviousControlsRowSpan);
+        PlayerControlsPanel.VerticalAlignment = _pictureInPicturePreviousControlsVerticalAlignment;
+        PlayerControlsPanel.Height = _pictureInPicturePreviousControlsPanelHeight;
+        PictureInPictureControlsBackdrop.Visibility = Visibility.Collapsed;
         PlayerControlsPanel.Opacity = 1d;
         PlayerControlsPanel.IsHitTestVisible = true;
 
@@ -312,6 +328,7 @@ public sealed partial class PlayerView
 
         PlayerControlsPanel.Opacity = 0d;
         PlayerControlsPanel.IsHitTestVisible = false;
+        ApplySubtitlePositions();
     }
 
     private void ShowPictureInPictureControls(bool restartAutoHide)
@@ -321,6 +338,7 @@ public sealed partial class PlayerView
 
         PlayerControlsPanel.Opacity = 1d;
         PlayerControlsPanel.IsHitTestVisible = true;
+        ApplySubtitlePositions();
 
         if (restartAutoHide)
             RestartPictureInPictureAutoHide();
@@ -352,7 +370,17 @@ public sealed partial class PlayerView
 
     private void ApplyPictureInPictureControlLayout()
     {
-        ControlsRow.Height = new GridLength(88d);
+        // In CompactOverlay the video owns the entire client area. The transport
+        // becomes a transparent overlay instead of reserving a permanent bottom row.
+        ControlsRow.Height = new GridLength(0d);
+        Grid.SetRow(PlaybackSurfaceHost, 0);
+        Grid.SetRowSpan(PlaybackSurfaceHost, 3);
+        Grid.SetRow(PlayerControlsPanel, 0);
+        Grid.SetRowSpan(PlayerControlsPanel, 3);
+        PlayerControlsPanel.VerticalAlignment = VerticalAlignment.Bottom;
+        PlayerControlsPanel.Height = 96d;
+        PlayerControlsPanel.Padding = new Thickness(10, 8, 10, 8);
+        PictureInPictureControlsBackdrop.Visibility = Visibility.Visible;
 
         LeftPlaybackColumn.Width = new GridLength(1d, GridUnitType.Star);
         CenterPlaybackColumn.Width = GridLength.Auto;
@@ -362,6 +390,143 @@ public sealed partial class PlayerView
         Grid.SetColumn(CenterPlaybackControls, 1);
         Grid.SetColumnSpan(CenterPlaybackControls, 1);
         CenterPlaybackControls.Margin = new Thickness(0);
+
+        ApplyPictureInPictureSubtitleTypography();
+        ApplySubtitlePositions();
+    }
+
+    private void ApplyPictureInPictureSubtitleTypography()
+    {
+        if (!_isPictureInPicture ||
+            PlaybackSurfaceHost is null ||
+            PrimarySubtitleText is null ||
+            SecondarySubtitleText is null)
+        {
+            return;
+        }
+
+        var surfaceHeight = PlaybackSurfaceHost.ActualHeight;
+        if (surfaceHeight <= 0d)
+            surfaceHeight = Math.Max(PlayerRoot.ActualHeight, 270d);
+
+        // Scale against the compact surface, with conservative caps so two-language
+        // subtitles remain readable without dominating a small always-on-top window.
+        PrimarySubtitleText.FontSize = Math.Clamp(surfaceHeight * 0.026d, 11d, 14d);
+        SecondarySubtitleText.FontSize = Math.Clamp(surfaceHeight * 0.022d, 10d, 12d);
+        PrimarySubtitleOverlay.Padding = new Thickness(8, 3, 8, 3);
+        SecondarySubtitleOverlay.Padding = new Thickness(8, 3, 8, 3);
+        PrimarySubtitleOverlay.CornerRadius = new CornerRadius(4d);
+        SecondarySubtitleOverlay.CornerRadius = new CornerRadius(4d);
+    }
+
+    private void ApplyPictureInPictureSubtitlePositions(double surfaceHeight)
+    {
+        ApplyPictureInPictureSubtitleTypography();
+
+        var surfaceWidth = PlaybackSurfaceHost.ActualWidth;
+        var horizontalMargin = Math.Clamp(surfaceWidth * 0.035d, 12d, 24d);
+        var gap = 4d;
+        var topSafe = 8d;
+        var controlsVisible =
+            PlayerControlsPanel.Opacity > 0.01d &&
+            PlayerControlsPanel.IsHitTestVisible;
+        var preferredBottom = controlsVisible
+            ? Math.Max(PlayerControlsPanel.ActualHeight, PlayerControlsPanel.Height) + 8d
+            : 12d;
+
+        var primaryVisible =
+            PrimarySubtitleOverlay.Visibility == Visibility.Visible &&
+            !string.IsNullOrWhiteSpace(PrimarySubtitleText.Text);
+        var secondaryVisible =
+            SecondarySubtitleOverlay.Visibility == Visibility.Visible &&
+            !string.IsNullOrWhiteSpace(SecondarySubtitleText.Text);
+
+        var primaryHeight = EstimatePictureInPictureSubtitleHeight(
+            PrimarySubtitleOverlay,
+            PrimarySubtitleText);
+        var secondaryHeight = EstimatePictureInPictureSubtitleHeight(
+            SecondarySubtitleOverlay,
+            SecondarySubtitleText);
+
+        if (primaryVisible && secondaryVisible)
+        {
+            // Stack the secondary subtitle below the primary one. Clamp the lower
+            // subtitle first so the pair always has room and can never overlap.
+            var requiredHeight = primaryHeight + gap + secondaryHeight;
+            var maxLowerBottom = Math.Max(
+                topSafe,
+                surfaceHeight - requiredHeight - topSafe);
+            var lowerBottom = Math.Clamp(
+                preferredBottom,
+                topSafe,
+                maxLowerBottom);
+
+            SecondarySubtitleOverlay.Margin = new Thickness(
+                horizontalMargin,
+                0d,
+                horizontalMargin,
+                lowerBottom);
+            PrimarySubtitleOverlay.Margin = new Thickness(
+                horizontalMargin,
+                0d,
+                horizontalMargin,
+                lowerBottom + secondaryHeight + gap);
+            return;
+        }
+
+        if (primaryVisible)
+        {
+            ApplySinglePictureInPictureSubtitlePosition(
+                PrimarySubtitleOverlay,
+                primaryHeight,
+                surfaceHeight,
+                preferredBottom,
+                horizontalMargin,
+                topSafe);
+        }
+
+        if (secondaryVisible)
+        {
+            ApplySinglePictureInPictureSubtitlePosition(
+                SecondarySubtitleOverlay,
+                secondaryHeight,
+                surfaceHeight,
+                preferredBottom,
+                horizontalMargin,
+                topSafe);
+        }
+    }
+
+    private static void ApplySinglePictureInPictureSubtitlePosition(
+        FrameworkElement overlay,
+        double overlayHeight,
+        double surfaceHeight,
+        double preferredBottom,
+        double horizontalMargin,
+        double topSafe)
+    {
+        var maxBottom = Math.Max(
+            topSafe,
+            surfaceHeight - overlayHeight - topSafe);
+        var bottom = Math.Clamp(
+            preferredBottom,
+            topSafe,
+            maxBottom);
+
+        overlay.Margin = new Thickness(
+            horizontalMargin,
+            0d,
+            horizontalMargin,
+            bottom);
+    }
+
+    private static double EstimatePictureInPictureSubtitleHeight(
+        Border overlay,
+        TextBlock text)
+    {
+        var estimatedLineHeight = Math.Max(text.FontSize * 1.35d, 16d);
+        var estimated = estimatedLineHeight + overlay.Padding.Top + overlay.Padding.Bottom;
+        return Math.Max(overlay.ActualHeight, estimated);
     }
 
     private void UpdatePictureInPictureAccessibility()
