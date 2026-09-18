@@ -4,7 +4,7 @@
 
 - Added native Windows picture-in-picture using Windows App SDK CompactOverlay.
 - Preserved the active PlaybackView and LibVLC session while entering and leaving PiP.
-- Added compact native transport controls as a transparent bottom overlay over full-surface video, with automatic hiding, keyboard escape, mouse-wheel volume control, responsive subtitle sizing, and non-overlapping bilingual subtitle placement.
+- Added compact native transport controls as a transparent bottom overlay over full-surface video, with automatic hiding, keyboard escape, mouse-wheel volume control, responsive subtitle sizing, non-overlapping bilingual subtitle placement, and top-of-window secondary subtitles when an embedded subtitle track is active.
 - Restored the previous window geometry/maximized state and sidebar state when leaving PiP.
 - Added Simplified Chinese, Japanese, and English PiP accessibility/tooltip strings.
 - Added a dedicated v1.1.0 acceptance contract and signed x64 acceptance package pipeline.
