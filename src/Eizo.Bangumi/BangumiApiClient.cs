@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -256,9 +257,9 @@ internal sealed class BangumiApiClient
             request,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
-        response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadAsStringAsync(
+        return await ReadResponseAsync(
+            response,
             cancellationToken);
     }
 
@@ -282,8 +283,27 @@ internal sealed class BangumiApiClient
             request,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStringAsync(cancellationToken);
+
+        return await ReadResponseAsync(
+            response,
+            cancellationToken);
+    }
+
+    private static async Task<string> ReadResponseAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        var body =
+            await response.Content.ReadAsStringAsync(
+                cancellationToken);
+
+        if (response.IsSuccessStatusCode)
+            return body;
+
+        throw new BangumiApiException(
+            response.StatusCode,
+            response.ReasonPhrase,
+            body);
     }
 
     private static HttpClient CreateHttpClient()
@@ -322,5 +342,138 @@ internal sealed class BangumiApiClient
                 nameof(accessToken));
 
         return token;
+    }
+}
+
+
+public sealed class BangumiApiException : HttpRequestException
+{
+    public BangumiApiException(
+        HttpStatusCode statusCode,
+        string? reasonPhrase,
+        string? responseBody)
+        : base(
+            BuildMessage(statusCode, reasonPhrase, responseBody),
+            inner: null,
+            statusCode)
+    {
+        ReasonPhrase = reasonPhrase?.Trim();
+        ResponseBody = responseBody?.Trim() ?? string.Empty;
+        (ServerTitle, ServerDescription) = ParseError(ResponseBody);
+    }
+
+    public string? ReasonPhrase { get; }
+    public string ResponseBody { get; }
+    public string? ServerTitle { get; }
+    public string? ServerDescription { get; }
+
+    public string DisplayDetail
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(ServerTitle) &&
+                !string.IsNullOrWhiteSpace(ServerDescription))
+            {
+                return string.Equals(
+                    ServerTitle,
+                    ServerDescription,
+                    StringComparison.OrdinalIgnoreCase)
+                    ? ServerDescription
+                    : ServerTitle + ": " + ServerDescription;
+            }
+
+            if (!string.IsNullOrWhiteSpace(ServerDescription))
+                return ServerDescription;
+            if (!string.IsNullOrWhiteSpace(ServerTitle))
+                return ServerTitle;
+            if (!string.IsNullOrWhiteSpace(ResponseBody))
+                return Compact(ResponseBody, 240);
+            if (!string.IsNullOrWhiteSpace(ReasonPhrase))
+                return ReasonPhrase;
+
+            return "Unknown Bangumi API error";
+        }
+    }
+
+    private static string BuildMessage(
+        HttpStatusCode statusCode,
+        string? reasonPhrase,
+        string? responseBody)
+    {
+        var status = ((int)statusCode).ToString(CultureInfo.InvariantCulture);
+        var reason = string.IsNullOrWhiteSpace(reasonPhrase)
+            ? statusCode.ToString()
+            : reasonPhrase.Trim();
+        var (_, description) = ParseError(responseBody?.Trim() ?? string.Empty);
+
+        return string.IsNullOrWhiteSpace(description)
+            ? $"Bangumi API returned HTTP {status} {reason}."
+            : $"Bangumi API returned HTTP {status} {reason}: {description}";
+    }
+
+    private static (string? Title, string? Description)
+        ParseError(string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+            return (null, null);
+
+        try
+        {
+            using var json = JsonDocument.Parse(responseBody);
+            if (json.RootElement.ValueKind != JsonValueKind.Object)
+                return (null, null);
+
+            var root = json.RootElement;
+            var title = ReadString(root, "title") ?? ReadString(root, "error");
+            var description =
+                ReadString(root, "description") ??
+                ReadString(root, "message") ??
+                ReadString(root, "detail");
+
+            if (string.IsNullOrWhiteSpace(description) &&
+                root.TryGetProperty("details", out var details))
+            {
+                description = details.ValueKind switch
+                {
+                    JsonValueKind.String => details.GetString(),
+                    JsonValueKind.Object =>
+                        ReadString(details, "error") ??
+                        ReadString(details, "message"),
+                    _ => null,
+                };
+            }
+
+            return (
+                string.IsNullOrWhiteSpace(title) ? null : Compact(title, 120),
+                string.IsNullOrWhiteSpace(description) ? null : Compact(description, 240));
+        }
+        catch (JsonException)
+        {
+            return (null, null);
+        }
+    }
+
+    private static string? ReadString(
+        JsonElement element,
+        string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var value) ||
+            value.ValueKind != JsonValueKind.String)
+            return null;
+
+        return value.GetString();
+    }
+
+    private static string Compact(string value, int maxLength)
+    {
+        var normalized = string.Join(
+            " ",
+            value.Split(
+                (char[]?)null,
+                StringSplitOptions.RemoveEmptyEntries));
+
+        return normalized.Length <= maxLength
+            ? normalized
+            : normalized[..maxLength] + "…";
     }
 }
