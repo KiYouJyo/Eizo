@@ -256,6 +256,12 @@
   <data name="Playback_Speed" xml:space="preserve">
     <value>再生速度</value>
   </data>
+  <data name="Playback_PictureInPicture" xml:space="preserve">
+    <value>ピクチャー イン ピクチャー</value>
+  </data>
+  <data name="Playback_ExitPictureInPicture" xml:space="preserve">
+    <value>ピクチャー イン ピクチャーを終了</value>
+  </data>
   <data name="Playback_FullScreen" xml:space="preserve">
     <value>全画面</value>
   </data>
