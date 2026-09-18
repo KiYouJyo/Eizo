@@ -2006,6 +2006,9 @@ public sealed partial class PlayerView : UserControl
             secondaryOverlayActive;
 
         UpdateNavigationAvailability();
+
+        if (_isPictureInPicture)
+            ApplySubtitlePositions();
     }
 
     private void FullscreenButton_Click(object sender, RoutedEventArgs e) =>
