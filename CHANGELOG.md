@@ -7,6 +7,8 @@
 - Added compact native transport controls as a transparent bottom overlay over full-surface video, with automatic hiding, keyboard escape, mouse-wheel volume control, responsive subtitle sizing, non-overlapping bilingual subtitle placement, and top-of-window secondary subtitles when an embedded subtitle track is active.
 - Restored the previous window geometry/maximized state and sidebar state when leaving PiP.
 - Added Simplified Chinese, Japanese, and English PiP accessibility/tooltip strings.
+- Added five-state Bangumi collection controls (Wish / Done / Doing / On Hold / Dropped) to subject details with authenticated state loading and updates.
+- Hardened Bangumi collection writes with exact `application/json` media type handling and surfaced HTTP/server diagnostics instead of generic submission failures.
 - Added a dedicated v1.1.0 acceptance contract and signed x64 acceptance package pipeline.
 
 See: [简体中文](docs/RELEASE-NOTES-v1.1.0.md) · [日本語](docs/RELEASE-NOTES-v1.1.0.ja.md) · [English](docs/RELEASE-NOTES-v1.1.0.en.md)
