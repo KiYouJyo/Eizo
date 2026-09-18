@@ -481,7 +481,9 @@ public sealed partial class BangumiSubjectDetailView : UserControl
                     $"Bangumi 请求过于频繁（HTTP {code}）：{detail}",
                     $"Bangumi へのリクエストが多すぎます（HTTP {code}）：{detail}",
                     $"Too many requests to Bangumi (HTTP {code}): {detail}"),
-            >= HttpStatusCode.InternalServerError =>
+            _ when
+                (int)(exception.StatusCode ??
+                      HttpStatusCode.InternalServerError) >= 500 =>
                 L(
                     $"Bangumi 服务暂时异常（HTTP {code}）：{detail}",
                     $"Bangumi のサービスで一時的なエラーが発生しています（HTTP {code}）：{detail}",
