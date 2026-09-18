@@ -138,8 +138,10 @@ foreach ($required in @(
     'SetUserSubjectCollectionTypeAsync',
     'CollectionStateButton_Click',
     'ApplyCollectionStateButtons',
-    'Bangumi_CommunitySignInToInteract',
-    'Bangumi_CommunityWriteFailed')) {
+    'BangumiApiException',
+    'FormatCollectionWriteError',
+    'CompactDiagnosticText',
+    'Bangumi_CommunitySignInToInteract')) {
     if (-not $detailCode.Contains(
             $required,
             [StringComparison]::Ordinal)) {
@@ -162,6 +164,18 @@ if ($buttonsIndex -lt 0 -or
     $dividerIndex -le $buttonsIndex -or
     $summaryIndex -le $dividerIndex) {
     throw 'Bangumi collection-state buttons must remain directly above the basic-info/summary divider.'
+}
+
+foreach ($required in @(
+    'BangumiApiException',
+    'ReadResponseAsync',
+    'ServerDescription',
+    'DisplayDetail')) {
+    if (-not $client.Contains(
+            $required,
+            [StringComparison]::Ordinal)) {
+        throw "Bangumi API diagnostic contract missing: $required"
+    }
 }
 
 foreach ($forbidden in @(
