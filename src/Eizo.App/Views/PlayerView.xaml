@@ -43,7 +43,7 @@
                 VerticalAlignment="Center"
                 Click="PictureInPictureButton_Click">
           <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
-                    Glyph="&#xE78B;"
+                    Glyph="&#xE93A;"
                     FontSize="16" />
         </Button>
       </Grid>
