@@ -446,6 +446,8 @@ public sealed partial class PlayerView
         var secondaryVisible =
             SecondarySubtitleOverlay.Visibility == Visibility.Visible &&
             !string.IsNullOrWhiteSpace(SecondarySubtitleText.Text);
+        var nativeSubtitleActive =
+            _engine?.Tracks.SelectedSubtitleTrackId is not null;
 
         var primaryHeight = EstimatePictureInPictureSubtitleHeight(
             PrimarySubtitleOverlay,
@@ -453,6 +455,31 @@ public sealed partial class PlayerView
         var secondaryHeight = EstimatePictureInPictureSubtitleHeight(
             SecondarySubtitleOverlay,
             SecondarySubtitleText);
+
+        if (nativeSubtitleActive && secondaryVisible)
+        {
+            // LibVLC renders embedded subtitles inside the video surface, so WinUI
+            // cannot measure their actual bounds. In PiP, keep Eizo's secondary
+            // external subtitle at the top instead of guessing a bottom safe area.
+            ApplyPictureInPictureTopSubtitlePosition(
+                SecondarySubtitleOverlay,
+                secondaryHeight,
+                surfaceHeight,
+                Math.Max(horizontalMargin, 24d));
+
+            if (primaryVisible)
+            {
+                ApplySinglePictureInPictureSubtitlePosition(
+                    PrimarySubtitleOverlay,
+                    primaryHeight,
+                    surfaceHeight,
+                    preferredBottom,
+                    horizontalMargin,
+                    topSafe);
+            }
+
+            return;
+        }
 
         if (primaryVisible && secondaryVisible)
         {
@@ -501,6 +528,24 @@ public sealed partial class PlayerView
                 horizontalMargin,
                 topSafe);
         }
+    }
+
+    private static void ApplyPictureInPictureTopSubtitlePosition(
+        FrameworkElement overlay,
+        double overlayHeight,
+        double surfaceHeight,
+        double horizontalMargin)
+    {
+        const double topInset = 12d;
+        var bottom = Math.Max(
+            0d,
+            surfaceHeight - overlayHeight - topInset);
+
+        overlay.Margin = new Thickness(
+            horizontalMargin,
+            0d,
+            horizontalMargin,
+            bottom);
     }
 
     private static void ApplySinglePictureInPictureSubtitlePosition(
