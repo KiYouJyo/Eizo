@@ -465,7 +465,7 @@ public sealed partial class PlayerView
                 SecondarySubtitleOverlay,
                 secondaryHeight,
                 surfaceHeight,
-                Math.Max(horizontalMargin, 24d));
+                Math.Max(horizontalMargin, 52d));
 
             if (primaryVisible)
             {
