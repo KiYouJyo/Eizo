@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0 — 2026-09-18
+
+- Added native Windows picture-in-picture using Windows App SDK CompactOverlay.
+- Preserved the active PlaybackView and LibVLC session while entering and leaving PiP.
+- Added compact native transport controls with automatic hiding, keyboard escape, mouse-wheel volume control, and responsive subtitle sizing.
+- Restored the previous window geometry/maximized state and sidebar state when leaving PiP.
+- Added Simplified Chinese, Japanese, and English PiP accessibility/tooltip strings.
+- Added a dedicated v1.1.0 acceptance contract and signed x64 acceptance package pipeline.
+
+See: [简体中文](docs/RELEASE-NOTES-v1.1.0.md) · [日本語](docs/RELEASE-NOTES-v1.1.0.ja.md) · [English](docs/RELEASE-NOTES-v1.1.0.en.md)
+
 All notable user-facing changes are summarized here. Detailed multilingual notes remain under `docs/RELEASE-NOTES-v*.md`.
 
 ## 0.6.1 — 2026-09-15
