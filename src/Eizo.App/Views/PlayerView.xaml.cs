@@ -2379,6 +2379,12 @@ public sealed partial class PlayerView : UserControl
         if (height <= 0d)
             return;
 
+        if (_isPictureInPicture)
+        {
+            ApplyPictureInPictureSubtitlePositions(height);
+            return;
+        }
+
         ApplySubtitlePosition(
             PrimarySubtitleOverlay,
             _primarySubtitleVerticalPosition,
