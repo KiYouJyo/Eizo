@@ -14,7 +14,7 @@ Eizo 1.1 adds native picture-in-picture through Windows App SDK CompactOverlay w
 - Keeps only high-frequency transport controls: back 10 seconds, play/pause, forward 10 seconds, and return to the normal window.
 - Expands video across the full PiP client area and renders transport controls as a transparent bottom gradient overlay; the whole overlay auto-hides during playback and reappears on pointer movement.
 - Supports Escape to leave PiP and mouse-wheel volume adjustment while the compact window is active.
-- Scales external subtitle typography with the compact-window height and uses collision-free primary/secondary stacking; subtitles move above visible controls so bilingual lines do not overlap each other or the transport overlay.
+- Scales external subtitle typography with the compact-window height. Without embedded subtitles, primary/secondary external subtitles use collision-free stacking; when an embedded subtitle track is active, the secondary external subtitle is pinned to the top of the PiP window to keep it separate from LibVLC's bottom-rendered subtitle.
 - Restores the pre-PiP window position, size, maximized state, and sidebar state. Eizo also synchronizes its UI if Windows leaves CompactOverlay outside the PiP button path.
 - Added Simplified Chinese, Japanese, and English PiP tooltips and accessibility names.
 - Bumped product / MSIX versions to 1.1.0 / 1.1.0.0 and added a dedicated acceptance contract plus signed x64 acceptance-package pipeline.
