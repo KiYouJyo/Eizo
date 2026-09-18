@@ -567,6 +567,64 @@ public sealed class BangumiRepositoryTests
     }
 
     [Fact]
+    public async Task SetSubjectCollectionType_ExposesBangumiErrorDetail()
+    {
+        var handler = new CallbackHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.Forbidden)
+            {
+                Content = new StringContent(
+                    """
+                    {
+                      "title": "Forbidden",
+                      "description": "insufficient token scope"
+                    }
+                    """,
+                    Encoding.UTF8,
+                    "application/json"),
+            });
+
+        var cacheRoot = CreateTempDirectory();
+        try
+        {
+            using var client = CreateClient(handler);
+            var repository = new BangumiRepository(
+                new BangumiApiClient(client),
+                new BangumiCacheStore(cacheRoot));
+
+            var error =
+                await Assert.ThrowsAsync<BangumiApiException>(
+                    () =>
+                        repository.SetUserSubjectCollectionTypeAsync(
+                            "secret-test-token",
+                            123,
+                            BangumiCollectionType.Doing,
+                            TestContext.Current.CancellationToken));
+
+            Assert.Equal(
+                HttpStatusCode.Forbidden,
+                error.StatusCode);
+            Assert.Equal(
+                "Forbidden",
+                error.ServerTitle);
+            Assert.Equal(
+                "insufficient token scope",
+                error.ServerDescription);
+            Assert.Contains(
+                "insufficient token scope",
+                error.DisplayDetail,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "\"description\"",
+                error.ResponseBody,
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(cacheRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task SetSubjectCollectionType_PostsBearerTokenAndType()
     {
         const string token = "secret-test-token";
