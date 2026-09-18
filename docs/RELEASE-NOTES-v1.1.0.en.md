@@ -2,9 +2,9 @@
 
 # Eizo v1.1.0
 
-## Native picture-in-picture and playback refinements
+## Native picture-in-picture, playback refinements, and Bangumi collection sync
 
-Eizo 1.1 adds native picture-in-picture through Windows App SDK CompactOverlay while keeping the current playback session alive instead of rebuilding the playback engine.
+Eizo 1.1 adds native picture-in-picture through Windows App SDK CompactOverlay while keeping the current playback session alive instead of rebuilding the playback engine. It also adds authenticated five-state Bangumi collection synchronization on subject pages.
 
 ## Included
 
@@ -17,6 +17,8 @@ Eizo 1.1 adds native picture-in-picture through Windows App SDK CompactOverlay w
 - Scales external subtitle typography with the compact-window height. Without embedded subtitles, primary/secondary external subtitles use collision-free stacking; when an embedded subtitle track is active, the secondary external subtitle is pinned to the top of the PiP window to keep it separate from LibVLC's bottom-rendered subtitle.
 - Restores the pre-PiP window position, size, maximized state, and sidebar state. Eizo also synchronizes its UI if Windows leaves CompactOverlay outside the PiP button path.
 - Added Simplified Chinese, Japanese, and English PiP tooltips and accessibility names.
+- Added five-state Bangumi collection controls (Wish / Done / Doing / On Hold / Dropped) to subject details. Signed-in users see the current state and can write changes directly back to Bangumi.
+- Uses the OAuth collection read/write permission for updates, sends the exact `Content-Type: application/json` required by the current Bangumi API, and surfaces HTTP/server diagnostics when a write fails.
 - Bumped product / MSIX versions to 1.1.0 / 1.1.0.0 and added a dedicated acceptance contract plus signed x64 acceptance-package pipeline.
 
 ## Acceptance focus
@@ -25,6 +27,7 @@ Eizo 1.1 adds native picture-in-picture through Windows App SDK CompactOverlay w
 - Confirm CompactOverlay stays above ordinary windows, remains resizable, and automatically hides/reveals controls as expected.
 - Confirm primary and secondary external subtitles remain visible with compact sizing.
 - Exit with Escape or the return-window button and confirm the original window geometry/maximized state, sidebar, and normal player layout are restored.
+- Change each Bangumi collection state and confirm the new state is selected immediately and remains consistent with Bangumi after reloading the subject.
 
 ## Compatibility
 
