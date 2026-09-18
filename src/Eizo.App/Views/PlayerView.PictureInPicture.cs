@@ -382,14 +382,9 @@ public sealed partial class PlayerView
     }
 
     private string GetPictureInPictureLabel(bool exit) =>
-        _localization.CurrentLanguage switch
-        {
-            "ja-JP" => exit
-                ? "ピクチャー イン ピクチャーを終了"
-                : "ピクチャー イン ピクチャー",
-            "zh-CN" => exit ? "退出画中画" : "画中画",
-            _ => exit ? "Exit picture in picture" : "Picture in picture"
-        };
+        T(exit
+            ? "Playback_ExitPictureInPicture"
+            : "Playback_PictureInPicture");
 
     private void PlayerView_PictureInPictureUnloaded(object sender, RoutedEventArgs e)
     {
