@@ -632,6 +632,7 @@ public sealed class BangumiRepositoryTests
         string? requestUri = null;
         string? authScheme = null;
         string? authToken = null;
+        string? contentType = null;
         string? requestBody = null;
 
         var handler = new CallbackHandler(request =>
@@ -640,6 +641,8 @@ public sealed class BangumiRepositoryTests
             requestUri = request.RequestUri!.ToString();
             authScheme = request.Headers.Authorization?.Scheme;
             authToken = request.Headers.Authorization?.Parameter;
+            contentType =
+                request.Content?.Headers.ContentType?.ToString();
             requestBody = request.Content?.ReadAsStringAsync()
                 .GetAwaiter()
                 .GetResult();
@@ -667,6 +670,7 @@ public sealed class BangumiRepositoryTests
                 StringComparison.Ordinal);
             Assert.Equal("Bearer", authScheme);
             Assert.Equal(token, authToken);
+            Assert.Equal("application/json", contentType);
 
             using var requestJson =
                 System.Text.Json.JsonDocument.Parse(
