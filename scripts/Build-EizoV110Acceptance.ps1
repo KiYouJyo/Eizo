@@ -309,7 +309,7 @@ try {
     Write-Host '== Build one-click acceptance assets =='
     Get-AppxPackage -Name Eizo -ErrorAction SilentlyContinue | Remove-AppxPackage -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $componentsRoot -Recurse -Force -ErrorAction SilentlyContinue
-    & ./packaging/New-GitHubOneClickInstallerPackage.ps1 -SignedBundlePath $bundlePath -PublicCertificatePath $cer -OutputDirectory $oneClickStaging -DisplayVersion '1.0.0' -PackageVersion '1.1.0.0'
+    & ./packaging/New-GitHubOneClickInstallerPackage.ps1 -SignedBundlePath $bundlePath -PublicCertificatePath $cer -OutputDirectory $oneClickStaging -DisplayVersion '1.1.0' -PackageVersion '1.1.0.0'
     $packageRoot = Join-Path $oneClickStaging 'Eizo-v1.1.0-x64-one-click'
     & ./packaging/Test-GitHubOneClickInstallerPackage.ps1 -ReleaseDirectory $packageRoot
     $oneClickZip = Join-Path $assets 'Eizo-v1.1.0-x64-one-click.zip'
