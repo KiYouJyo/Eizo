@@ -32,12 +32,13 @@ foreach ($required in @(
     }
 }
 
-foreach ($required in @(
-    'Text="{Binding SourceLabel}"',
-    'Visibility="Collapsed"')) {
-    if (-not $catalogXaml.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Catalog source diagnostics are not safely hidden: $required"
-    }
+if ($catalogXaml.Contains(
+        'FooterLine="{Binding SourceLabel}"',
+        [StringComparison]::Ordinal) -or
+    $catalogXaml.Contains(
+        'Text="{Binding SourceLabel}"',
+        [StringComparison]::Ordinal)) {
+    throw 'Catalog source diagnostics must remain hidden from the normal shared media card.'
 }
 
 foreach ($required in @(
