@@ -4,8 +4,9 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$expectedVersion = '1.1.0'
-$expectedPackageVersion = '1.1.0.0'
+$release = Get-Content -LiteralPath (Join-Path $repoRoot 'release/release.json') -Raw | ConvertFrom-Json
+$expectedVersion = [string]$release.product.version
+$expectedPackageVersion = [string]$release.product.packageVersion
 
 function Read-Text([string]$relativePath) {
     $path = Join-Path $repoRoot $relativePath
@@ -27,8 +28,8 @@ $window = Read-Text 'src/Eizo.App/MainWindow.PictureInPicture.cs'
 $project = Read-Text 'src/Eizo.App/Eizo.App.csproj'
 $manifest = Read-Text 'src/Eizo.App/Package.appxmanifest'
 
-Assert-Contains $project '<Version>1.1.0</Version>' 'product version'
-Assert-Contains $manifest 'Version="1.1.0.0"' 'package version'
+Assert-Contains $project "<Version>$expectedVersion</Version>" 'product version'
+Assert-Contains $manifest "Version=\"$expectedPackageVersion\"" 'package version'
 
 Assert-Contains $xaml 'x:Name="PictureInPictureButton"' 'player-header PiP button'
 Assert-Contains $xaml 'Click="PictureInPictureButton_Click"' 'PiP button click handler'
