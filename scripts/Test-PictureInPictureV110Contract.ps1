@@ -29,7 +29,8 @@ $project = Read-Text 'src/Eizo.App/Eizo.App.csproj'
 $manifest = Read-Text 'src/Eizo.App/Package.appxmanifest'
 
 Assert-Contains $project "<Version>$expectedVersion</Version>" 'product version'
-Assert-Contains $manifest "Version=\"$expectedPackageVersion\"" 'package version'
+$expectedManifestVersion = 'Version="' + $expectedPackageVersion + '"'
+Assert-Contains $manifest $expectedManifestVersion 'package version'
 
 Assert-Contains $xaml 'x:Name="PictureInPictureButton"' 'player-header PiP button'
 Assert-Contains $xaml 'Click="PictureInPictureButton_Click"' 'PiP button click handler'
