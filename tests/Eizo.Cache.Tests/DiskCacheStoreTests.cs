@@ -47,6 +47,50 @@ public sealed class DiskCacheStoreTests
     }
 
     [Fact]
+    public async Task ImportFile_StoresSinglePinnedMediaFile()
+    {
+        var root = CreateTempDirectory();
+
+        try
+        {
+            var source = Path.Combine(
+                root,
+                "manual-download.part");
+            await File.WriteAllBytesAsync(
+                source,
+                new byte[12 * 1024]);
+
+            var store = new DiskCacheStore(root);
+            var entry = await store.ImportFileAsync(
+                CacheCategory.Media,
+                "manual:episode",
+                source,
+                new CacheWriteOptions(
+                    "Episode",
+                    "第 2 集",
+                    ".mkv",
+                    Pinned: true,
+                    GroupKey: "manual-video:episode"));
+
+            Assert.False(File.Exists(source));
+            Assert.True(File.Exists(entry.Path));
+            Assert.Equal(".mkv", Path.GetExtension(entry.Path));
+            Assert.Equal(12 * 1024, new FileInfo(entry.Path).Length);
+            Assert.True(entry.Pinned);
+            Assert.Equal("manual-video:episode", entry.GroupKey);
+
+            var snapshot = await store.GetSnapshotAsync();
+            var media = Assert.Single(snapshot.Entries);
+            Assert.Equal(entry.Path, media.Path);
+            Assert.Equal(CacheCategory.Media, media.Category);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task EnforceLimit_RemovesLeastRecentUnpinnedEntry()
     {
         var root = CreateTempDirectory();
