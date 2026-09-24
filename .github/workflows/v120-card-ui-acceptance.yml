@@ -1,0 +1,44 @@
+name: Eizo v1.2.0 unified card UI acceptance
+
+on:
+  push:
+    branches:
+      - "feat/v1.2-card-ui"
+      - "release/v1.2.0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eizo-v120-card-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    name: Validate Eizo 1.2.0 / 1.2.0.0 card UI
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Validate release/version contract
+        shell: pwsh
+        run: ./scripts/Test-ReleaseVersionContract.ps1
+
+      - name: Validate unified card UI
+        shell: pwsh
+        env:
+          EIZO_METADATA_DISABLE: "1"
+        run: ./scripts/Build-EizoV120Acceptance.ps1
