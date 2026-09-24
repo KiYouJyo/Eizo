@@ -139,7 +139,8 @@ public sealed record CachedVideoPlaybackRequest(
     string GroupKey,
     string Title,
     string Source,
-    long SizeBytes);
+    long SizeBytes,
+    string? LocalPath = null);
 
 public sealed class CacheItemModel : INotifyPropertyChanged
 {
