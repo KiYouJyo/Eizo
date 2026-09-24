@@ -252,6 +252,116 @@ public sealed class DiskCacheStore
         }
     }
 
+    public async Task<CacheEntrySnapshot> ImportFileAsync(
+        CacheCategory category,
+        string key,
+        string sourcePath,
+        CacheWriteOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+
+        var fullSourcePath =
+            Path.GetFullPath(sourcePath);
+
+        if (!File.Exists(fullSourcePath))
+        {
+            throw new FileNotFoundException(
+                "The cache import source file does not exist.",
+                fullSourcePath);
+        }
+
+        options ??= new CacheWriteOptions();
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            Directory.CreateDirectory(_rootPath);
+
+            var index = LoadIndexCore();
+            var id = CreateId(category, key);
+            index.Entries.TryGetValue(id, out var existing);
+
+            var relativePath = existing?.RelativePath;
+            if (string.IsNullOrWhiteSpace(relativePath))
+            {
+                var extension = NormalizeExtension(
+                    options.Extension);
+                relativePath = Path.Combine(
+                        CategoryFolder(category),
+                        id + extension)
+                    .Replace(
+                        Path.DirectorySeparatorChar,
+                        '/');
+            }
+
+            var path = ResolveEntryPath(relativePath);
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(path)!);
+
+            if (!string.Equals(
+                    fullSourcePath,
+                    path,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    File.Move(
+                        fullSourcePath,
+                        path,
+                        overwrite: true);
+                }
+                catch (IOException)
+                {
+                    File.Copy(
+                        fullSourcePath,
+                        path,
+                        overwrite: true);
+                    File.Delete(fullSourcePath);
+                }
+            }
+
+            var file = new FileInfo(path);
+            var now = DateTimeOffset.UtcNow;
+            var entry = new CacheIndexEntry(
+                id,
+                category,
+                relativePath,
+                string.IsNullOrWhiteSpace(options.DisplayName)
+                    ? key
+                    : options.DisplayName!,
+                string.IsNullOrWhiteSpace(options.Source)
+                    ? category.ToString()
+                    : options.Source!,
+                file.Length,
+                existing?.CreatedAtUtc ?? now,
+                now,
+                options.Pinned ??
+                existing?.Pinned ??
+                false)
+            {
+                GroupKey =
+                    string.IsNullOrWhiteSpace(options.GroupKey)
+                        ? existing?.GroupKey
+                        : options.GroupKey
+            };
+
+            index.Entries[id] = entry;
+            await SaveIndexCoreAsync(
+                index,
+                cancellationToken);
+
+            return ToSnapshot(
+                entry,
+                path);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<CacheSnapshot> GetSnapshotAsync(
         CancellationToken cancellationToken = default)
     {
