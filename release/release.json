@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "product": {
-    "version": "1.2.0",
-    "packageVersion": "1.2.0.0",
+    "version": "1.2.1",
+    "packageVersion": "1.2.1.0",
     "title": {
-      "zh-CN": "统一卡片设计与缓存管理",
-      "ja-JP": "統一カードデザインとキャッシュ管理",
-      "en-US": "Unified card design and cache management"
+      "zh-CN": "手动视频缓存单文件化",
+      "ja-JP": "手動動画キャッシュの単一ファイル化",
+      "en-US": "Single-file manual video cache"
     }
   },
   "channels": {
