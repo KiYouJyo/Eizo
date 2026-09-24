@@ -3,7 +3,6 @@ name: Eizo v1.2.0 unified card UI acceptance
 on:
   push:
     branches:
-      - "feat/v1.2-card-ui"
       - "release/v1.2.0"
   workflow_dispatch:
 
@@ -16,17 +15,17 @@ concurrency:
 
 jobs:
   acceptance:
-    name: Validate Eizo 1.2.0 / 1.2.0.0 card UI
-    runs-on: windows-latest
-    timeout-minutes: 35
+    name: Build, sign, package and validate Eizo 1.2.0 / 1.2.0.0
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 55
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 
@@ -37,8 +36,22 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-ReleaseVersionContract.ps1
 
-      - name: Validate unified card UI
+      - name: Build and validate signed acceptance assets
         shell: pwsh
         env:
+          RELEASE_CERTIFICATE_BASE64: ${{ secrets.GH_RELEASE_CERTIFICATE_BASE64 }}
+          RELEASE_CERTIFICATE_PASSWORD: ${{ secrets.GH_RELEASE_CERTIFICATE_PASSWORD }}
           EIZO_METADATA_DISABLE: "1"
         run: ./scripts/Build-EizoV120Acceptance.ps1
+
+      - name: Upload acceptance assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: Eizo-v1.2.0-unified-card-ui-acceptance-assets
+          path: |
+            ${{ runner.temp }}/Eizo-v1.2.0-acceptance/Eizo_1.2.0.0_x64.msixbundle
+            ${{ runner.temp }}/Eizo-v1.2.0-acceptance/Eizo-v1.2.0-AppPublisher.cer
+            ${{ runner.temp }}/Eizo-v1.2.0-acceptance/Eizo-v1.2.0-x64-one-click.zip
+            ${{ runner.temp }}/Eizo-v1.2.0-acceptance/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
