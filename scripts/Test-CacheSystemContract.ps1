@@ -73,8 +73,14 @@ Assert-Contains $webDavCache 'TrimGroupAsync' 'Per-media cache working-set trimm
 Assert-Contains $webDavCache 'RecordDiskHit' 'WebDAV disk-cache hit diagnostics are missing.'
 Assert-Contains $webDavCache 'RecordRangeDownload' 'WebDAV range-download diagnostics are missing.'
 Assert-Contains $webDavDiagnostics 'HitRate' 'WebDAV cache hit-rate diagnostics are missing.'
-Assert-Contains $webDavVideoCache 'SetGroupPinnedAsync' 'Explicit video caching does not pin a completed media group.'
-Assert-Contains $webDavVideoCache 'WebDavMediaCacheKeys.BlockCount' 'Explicit video caching does not download the full media block set.'
+Assert-Contains $webDavVideoCache 'ImportFileAsync' 'Explicit video caching does not commit a completed single media file.'
+Assert-Contains $webDavVideoCache 'BuildManualGroupKey' 'Explicit video caching is not isolated from automatic playback cache groups.'
+Assert-Contains $webDavVideoCache 'WebDavMediaCacheKeys.BlockCount' 'Explicit video caching does not stream the complete media range.'
+if ($webDavVideoCache.Contains(
+        'CacheRuntime.Store.WriteBytesAsync',
+        [StringComparison]::Ordinal)) {
+    throw 'Manual video caching must not write per-range .blk cache entries.'
+}
 Assert-Contains $detailView 'CacheEpisodeButton_Click' 'Episode cards do not expose the cache action.'
 Assert-Contains $detailView 'Tag="{x:Bind Self}"' 'Episode cache action does not carry the episode number context.'
 Assert-Contains $detailCode 'VideoCacheDownloadManager.Default.StartAsync' 'Episode cache action is not registered with the global video-download manager.'
@@ -110,7 +116,8 @@ Assert-Contains $cardStyles 'Property="BorderThickness"' 'Cache-card template do
 Assert-Contains $cardStyles 'x:Key="DangerMenuFlyoutItemStyle"' 'Shared destructive menu style is missing.'
 Assert-Contains $cacheView 'Mode=OneWay' 'Video-cache card bindings are not live.'
 Assert-Contains $cachedPlayback 'IPlaybackRandomAccessSource' 'Completed video cache does not expose a cache-only playback source.'
-Assert-Contains $cachedPlayback 'CacheRuntime.Store.ReadBytesAsync' 'Completed video playback does not read from local cache blocks.'
+Assert-Contains $cachedPlayback 'CacheRuntime.Store.ReadBytesAsync' 'Legacy completed block-cache playback support is missing.'
+Assert-Contains $mainWindow 'PlaybackSource.FromFile' 'Single-file manual video cache playback is not wired.'
 Assert-Contains $mainWindow 'PlaybackSource.FromRandomAccess' 'WebDAV playback is not wired to the cache-backed random-access source.'
 Assert-Contains $mainWindow 'TryGetKnownRangeSupport' 'Playback queue does not reuse verified WebDAV range capability.'
 Assert-Contains $mainWindow 'OpenCachedVideo' 'Main window does not handle completed cache-card playback.'
