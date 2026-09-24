@@ -486,6 +486,11 @@ public sealed partial class MainWindow : Window
                     request.LocalPath,
                     request.Title);
         }
+        else if (WebDavMediaCacheKeys.IsManualGroupKey(
+                     request.GroupKey))
+        {
+            return;
+        }
         else
         {
             playbackSource =
