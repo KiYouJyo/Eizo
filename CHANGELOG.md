@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.1 — 2026-09-24
+
+- Changed only explicit/manual WebDAV video caching to persist one complete media file instead of many 4 MB `.blk` files.
+- Isolated manual downloads under dedicated `manual-video:` cache groups while leaving automatic playback block caching unchanged.
+- Preserved range-download pause/resume, progress, speed tracking, cache accounting, pinned protection, deletion, and open-folder behavior.
+- Added direct local-file playback for completed manual caches while retaining compatibility with legacy block-based offline caches.
+- Preserved the source media extension and added single-file cache regression coverage.
+- Existing legacy `.blk` manual caches remain compatible and can be deleted/re-cached to convert them to the new representation.
+
+See: [简体中文](docs/RELEASE-NOTES-v1.2.1.md) · [日本語](docs/RELEASE-NOTES-v1.2.1.ja.md) · [English](docs/RELEASE-NOTES-v1.2.1.en.md)
+
 ## 1.2.0 — 2026-09-24
 
 - Added a shared card design system with reusable poster-card sizing, hover, pressed, focus, border, typography, and cache-row styles.

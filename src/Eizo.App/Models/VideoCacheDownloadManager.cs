@@ -16,6 +16,7 @@ internal sealed record VideoCacheDownloadSnapshot(
     string SourceId,
     string Locator,
     string? GroupKey,
+    string? LocalPath,
     VideoCacheDownloadStatus Status,
     long CompletedBytes,
     long TotalBytes,
@@ -117,6 +118,7 @@ internal sealed class VideoCacheDownloadManager
                     location.SourceId,
                     location.Locator,
                     GroupKey: null,
+                    LocalPath: null,
                     VideoCacheDownloadStatus.Downloading,
                     CompletedBytes: 0,
                     TotalBytes:
@@ -363,6 +365,7 @@ internal sealed class VideoCacheDownloadManager
                 snapshot => snapshot with
                 {
                     GroupKey = result.GroupKey,
+                    LocalPath = result.Path,
                     Status =
                         VideoCacheDownloadStatus.Completed,
                     CompletedBytes =

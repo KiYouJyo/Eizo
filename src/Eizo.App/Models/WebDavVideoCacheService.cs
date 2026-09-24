@@ -12,11 +12,15 @@ internal sealed record WebDavVideoCacheProgress(
 
 internal sealed record WebDavVideoCacheResult(
     string GroupKey,
+    string Path,
     long SizeBytes,
     long BlockCount);
 
 internal sealed class WebDavVideoCacheService
 {
+    private const string ManualStagingFolder =
+        "manual-video-staging";
+
     public static WebDavVideoCacheService Default { get; } = new();
 
     public bool CanCache(
@@ -92,103 +96,253 @@ internal sealed class WebDavVideoCacheService
 
         var contentLength =
             probe.ContentLength.Value;
-        var groupKey =
+        var automaticGroupKey =
             WebDavMediaCacheKeys.BuildGroupKey(
                 source,
                 mediaUri,
                 probe);
+        var manualGroupKey =
+            WebDavMediaCacheKeys.BuildManualGroupKey(
+                source,
+                mediaUri,
+                probe);
+        var manualFileKey =
+            WebDavMediaCacheKeys.BuildManualFileKey(
+                manualGroupKey);
         var blockCount =
             WebDavMediaCacheKeys.BlockCount(
                 contentLength);
+
+        var existingPath =
+            await global::Eizo.CacheRuntime.Store.TryGetPathAsync(
+                CacheCategory.Media,
+                manualFileKey,
+                cancellationToken);
+
+        if (existingPath is not null &&
+            new FileInfo(existingPath).Length ==
+            contentLength)
+        {
+            progress?.Report(
+                new WebDavVideoCacheProgress(
+                    manualGroupKey,
+                    contentLength,
+                    contentLength,
+                    blockCount,
+                    blockCount,
+                    NetworkDownloadedBytes: 0));
+
+            return new WebDavVideoCacheResult(
+                manualGroupKey,
+                existingPath,
+                contentLength,
+                blockCount);
+        }
+
+        var stagingRoot =
+            Path.Combine(
+                global::Eizo.CacheRuntime.Store.RootPath,
+                ManualStagingFolder);
+        Directory.CreateDirectory(
+            stagingRoot);
+        CleanupStaleStagingFiles(
+            stagingRoot);
+
+        var temporaryPath =
+            Path.Combine(
+                stagingRoot,
+                Guid.NewGuid().ToString("N") +
+                ".part");
+
         long completedBytes = 0;
         long networkDownloadedBytes = 0;
 
-        for (long blockIndex = 0;
-             blockIndex < blockCount;
-             blockIndex++)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (waitForResume is not null)
+            await using (var output =
+                         new FileStream(
+                             temporaryPath,
+                             FileMode.Create,
+                             FileAccess.Write,
+                             FileShare.Read,
+                             1024 * 1024,
+                             FileOptions.Asynchronous |
+                             FileOptions.SequentialScan))
             {
-                await waitForResume(
-                    cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-            }
+                for (long blockIndex = 0;
+                     blockIndex < blockCount;
+                     blockIndex++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
 
-            var expected =
-                WebDavMediaCacheKeys.ExpectedBlockLength(
-                    contentLength,
-                    blockIndex);
-            var cacheKey =
-                WebDavMediaCacheKeys.BuildBlockKey(
-                    groupKey,
-                    blockIndex);
+                    if (waitForResume is not null)
+                    {
+                        await waitForResume(
+                            cancellationToken);
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
 
-            var bytes =
-                await global::Eizo.CacheRuntime.Store.ReadBytesAsync(
-                    CacheCategory.Media,
-                    cacheKey,
-                    cancellationToken);
+                    var expected =
+                        WebDavMediaCacheKeys.ExpectedBlockLength(
+                            contentLength,
+                            blockIndex);
+                    var automaticCacheKey =
+                        WebDavMediaCacheKeys.BuildBlockKey(
+                            automaticGroupKey,
+                            blockIndex);
 
-            if (bytes is null ||
-                bytes.Length != expected)
-            {
-                var offset =
-                    checked(
-                        blockIndex *
-                        (long)WebDavMediaCacheKeys.BlockSize);
+                    var bytes =
+                        await global::Eizo.CacheRuntime.Store.ReadBytesAsync(
+                            CacheCategory.Media,
+                            automaticCacheKey,
+                            cancellationToken);
 
-                bytes =
-                    await webDavProvider.DownloadRangeAsync(
-                        source,
-                        mediaUri,
-                        offset,
-                        expected,
+                    if (bytes is null ||
+                        bytes.Length != expected)
+                    {
+                        var offset =
+                            checked(
+                                blockIndex *
+                                (long)WebDavMediaCacheKeys.BlockSize);
+
+                        bytes =
+                            await webDavProvider.DownloadRangeAsync(
+                                source,
+                                mediaUri,
+                                offset,
+                                expected,
+                                cancellationToken);
+
+                        if (bytes.Length != expected)
+                        {
+                            throw new IOException(
+                                $"WebDAV returned {bytes.Length} bytes for a {expected}-byte media range.");
+                        }
+
+                        networkDownloadedBytes +=
+                            bytes.Length;
+                    }
+
+                    await output.WriteAsync(
+                        bytes,
                         cancellationToken);
 
-                if (bytes.Length != expected)
-                {
-                    throw new IOException(
-                        $"WebDAV returned {bytes.Length} bytes for a {expected}-byte media block.");
+                    completedBytes += expected;
+                    progress?.Report(
+                        new WebDavVideoCacheProgress(
+                            manualGroupKey,
+                            completedBytes,
+                            contentLength,
+                            blockIndex + 1,
+                            blockCount,
+                            networkDownloadedBytes));
                 }
 
-                networkDownloadedBytes += bytes.Length;
+                await output.FlushAsync(
+                    cancellationToken);
+            }
 
-                await global::Eizo.CacheRuntime.Store.WriteBytesAsync(
+            var imported =
+                await global::Eizo.CacheRuntime.Store.ImportFileAsync(
                     CacheCategory.Media,
-                    cacheKey,
-                    bytes,
+                    manualFileKey,
+                    temporaryPath,
                     new CacheWriteOptions(
                         item.DisplayTitle,
                         string.IsNullOrWhiteSpace(displayMeta)
                             ? source.DisplayName
                             : displayMeta,
-                        ".blk",
-                        Pinned: false,
-                        GroupKey: groupKey),
+                        ResolveMediaExtension(mediaUri),
+                        Pinned: true,
+                        GroupKey: manualGroupKey),
                     cancellationToken);
-            }
 
-            completedBytes += expected;
-            progress?.Report(
-                new WebDavVideoCacheProgress(
-                    groupKey,
-                    completedBytes,
-                    contentLength,
-                    blockIndex + 1,
-                    blockCount,
-                    networkDownloadedBytes));
+            return new WebDavVideoCacheResult(
+                manualGroupKey,
+                imported.Path,
+                imported.SizeBytes,
+                blockCount);
+        }
+        finally
+        {
+            TryDelete(
+                temporaryPath);
+        }
+    }
+
+    private static string ResolveMediaExtension(
+        Uri mediaUri)
+    {
+        var decodedPath =
+            Uri.UnescapeDataString(
+                mediaUri.AbsolutePath);
+        var extension =
+            Path.GetExtension(
+                decodedPath);
+
+        if (string.IsNullOrWhiteSpace(extension) ||
+            extension.Length > 16 ||
+            extension.Skip(1).Any(
+                static character =>
+                    !char.IsLetterOrDigit(character)))
+        {
+            return ".media";
         }
 
-        await global::Eizo.CacheRuntime.Store.SetGroupPinnedAsync(
-            groupKey,
-            pinned: true,
-            cancellationToken);
+        return extension.ToLowerInvariant();
+    }
 
-        return new WebDavVideoCacheResult(
-            groupKey,
-            contentLength,
-            blockCount);
+    private static void CleanupStaleStagingFiles(
+        string stagingRoot)
+    {
+        var cutoff =
+            DateTimeOffset.UtcNow -
+            TimeSpan.FromDays(1);
+
+        try
+        {
+            foreach (var path in Directory.EnumerateFiles(
+                         stagingRoot,
+                         "*.part",
+                         SearchOption.TopDirectoryOnly))
+            {
+                try
+                {
+                    if (File.GetLastWriteTimeUtc(path) <
+                        cutoff.UtcDateTime)
+                    {
+                        File.Delete(path);
+                    }
+                }
+                catch (
+                    Exception exception)
+                    when (exception is IOException or
+                          UnauthorizedAccessException)
+                {
+                }
+            }
+        }
+        catch (
+            Exception exception)
+            when (exception is IOException or
+                  UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private static void TryDelete(
+        string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch (
+            Exception exception)
+            when (exception is IOException or
+                  UnauthorizedAccessException)
+        {
+        }
     }
 }

@@ -26,6 +26,54 @@ internal static class WebDavMediaCacheKeys
             version);
     }
 
+    public static string BuildManualGroupKey(
+        MediaSourceDefinition source,
+        Uri mediaUri,
+        WebDavMediaProbeResult probe) =>
+        "manual-video:" +
+        BuildGroupKey(
+            source,
+            mediaUri,
+            probe);
+
+    public static string BuildManualFileKey(
+        string manualGroupKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            manualGroupKey);
+
+        return manualGroupKey +
+               ":file";
+    }
+
+    public static bool IsManualGroupKey(
+        string? groupKey) =>
+        !string.IsNullOrWhiteSpace(groupKey) &&
+        groupKey.StartsWith(
+            "manual-video:",
+            StringComparison.Ordinal);
+
+    public static bool TryParseAnyGroupKey(
+        string groupKey,
+        out string sourceId,
+        out Uri? mediaUri)
+    {
+        const string manualPrefix =
+            "manual-video:";
+
+        var value =
+            groupKey.StartsWith(
+                manualPrefix,
+                StringComparison.Ordinal)
+                ? groupKey[manualPrefix.Length..]
+                : groupKey;
+
+        return TryParseGroupKey(
+            value,
+            out sourceId,
+            out mediaUri);
+    }
+
     public static string BuildBlockKey(
         string groupKey,
         long blockIndex) =>

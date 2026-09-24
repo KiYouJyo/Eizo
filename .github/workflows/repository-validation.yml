@@ -150,6 +150,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-CardUiV120Contract.ps1
 
+      - name: Validate Eizo 1.2.1 manual video single-file cache contract
+        shell: pwsh
+        run: ./scripts/Test-ManualVideoSingleFileV121Contract.ps1
+
       - name: Validate player/source UI cleanup contract
         shell: pwsh
         run: ./scripts/Test-PlayerUiCleanupContract.ps1
