@@ -6,6 +6,8 @@ Set-StrictMode -Version Latest
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $catalogXaml = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Views/CatalogView.xaml') -Raw
 $catalogCode = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Views/CatalogView.xaml.cs') -Raw
+$cardStyles = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Themes/CardStyles.xaml') -Raw
+$posterCard = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Controls/MediaPosterCard.xaml') -Raw
 $detailXaml = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Views/DetailView.xaml') -Raw
 $detailCode = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Views/DetailView.xaml.cs') -Raw
 $aggregation = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Models/CatalogSubjectModel.cs') -Raw
@@ -13,25 +15,44 @@ $presentation = Get-Content -LiteralPath (Join-Path $repoRoot 'src/Eizo.App/Mode
 
 foreach ($required in @(
     '<GridView x:Name="ResultsList"',
-    '<ItemsWrapGrid',
-    'ItemWidth="204"',
-    'ItemHeight="408"',
-    '<Setter Property="Width" Value="192" />',
-    '<Setter Property="Height" Value="396" />',
-    '<Grid RowDefinitions="272,124">',
-    'Source="{Binding Artwork}"',
-    'Text="{Binding MetaLine}"',
-    'Text="{Binding SourceLabel}"')) {
+    'ItemsPanel="{StaticResource PosterCardItemsPanelTemplate}"',
+    'ItemContainerStyle="{StaticResource PosterCardGridViewItemStyle}"',
+    '<controls:MediaPosterCard',
+    'Artwork="{Binding Artwork}"',
+    'MetaLine="{Binding MetaLine}"')) {
     if ($catalogXaml -notmatch [regex]::Escape($required)) {
-        throw "Library visual-card contract missing from CatalogView.xaml: $required"
+        throw "Library shared-card contract missing from CatalogView.xaml: $required"
     }
 }
 
-if ($catalogXaml -match '<Border\s+Width="180"\s+Height="306"') {
+foreach ($required in @(
+    '<x:Double x:Key="EizoPosterCardItemWidth">204</x:Double>',
+    '<x:Double x:Key="EizoPosterCardItemHeight">408</x:Double>',
+    '<x:Double x:Key="EizoPosterCardWidth">192</x:Double>',
+    '<x:Double x:Key="EizoPosterCardHeight">396</x:Double>',
+    'x:Key="PosterCardGridViewItemStyle"',
+    'x:Name="InteractionOverlay"',
+    'CornerRadius="12"')) {
+    if ($cardStyles -notmatch [regex]::Escape($required)) {
+        throw "Shared poster-card style contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    '<Grid RowDefinitions="272,124">',
+    'Source="{x:Bind Artwork, Mode=OneWay}"',
+    'Text="{x:Bind MetaLine, Mode=OneWay}"')) {
+    if ($posterCard -notmatch [regex]::Escape($required)) {
+        throw "Reusable MediaPosterCard contract missing: $required"
+    }
+}
+
+$cardSurface = $catalogXaml + $cardStyles + $posterCard
+if ($cardSurface -match '<Border\s+Width="180"\s+Height="306"') {
     throw 'Library card must not reintroduce an inner fixed-size border smaller than the GridViewItem highlight bounds.'
 }
 
-if ($catalogXaml -match '<Border[^>]+Margin="4,4,4,8"') {
+if ($cardSurface -match '<Border[^>]+Margin="4,4,4,8"') {
     throw 'Library card must not reintroduce the old inner margin that desynchronizes pointer highlight and card bounds.'
 }
 
