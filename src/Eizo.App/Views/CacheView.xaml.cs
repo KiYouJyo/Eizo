@@ -428,7 +428,8 @@ public sealed partial class CacheView : UserControl
                             groupKey,
                             task.Title,
                             task.Source,
-                            total)
+                            total,
+                            task.LocalPath)
                         : null,
                     T("Cache_DeleteVideo"),
                     paused,
@@ -468,6 +469,15 @@ public sealed partial class CacheView : UserControl
                 ResolveCachedEpisodeLabel(
                     group.Key,
                     first.Source);
+            var localPath =
+                WebDavMediaCacheKeys.IsManualGroupKey(
+                    group.Key)
+                    ? entries
+                        .Select(static entry =>
+                            entry.Path)
+                        .FirstOrDefault(
+                            File.Exists)
+                    : null;
 
             desired.Add(
                 new CacheItemModel(
@@ -490,7 +500,8 @@ public sealed partial class CacheView : UserControl
                         group.Key,
                         first.DisplayName,
                         episodeLabel,
-                        size),
+                        size,
+                        localPath),
                     deleteText: T("Cache_DeleteVideo")));
         }
 
@@ -501,7 +512,7 @@ public sealed partial class CacheView : UserControl
         string groupKey,
         string fallback)
     {
-        if (!WebDavMediaCacheKeys.TryParseGroupKey(
+        if (!WebDavMediaCacheKeys.TryParseAnyGroupKey(
                 groupKey,
                 out var sourceId,
                 out var mediaUri) ||
