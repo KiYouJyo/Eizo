@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 — 2026-09-24
+
+- Added a shared card design system with reusable poster-card sizing, hover, pressed, focus, border, typography, and cache-row styles.
+- Replaced duplicated Media Library and Bangumi My Following poster markup with the reusable `MediaPosterCard` component.
+- Fixed Bangumi My Following pointer highlights so the interaction surface exactly follows the card bounds and corner radius.
+- Added whole-card cache context menus with “Open file location” and immediate “Delete cache” actions; delete remains a direct action with no confirmation dialog.
+- Added cache-folder resolution for completed media groups, with a safe fallback to the Eizo cache root for active tasks.
+- Added Eizo 1.2 card UI regression and acceptance contracts.
+
+See: [简体中文](docs/RELEASE-NOTES-v1.2.0.md) · [日本語](docs/RELEASE-NOTES-v1.2.0.ja.md) · [English](docs/RELEASE-NOTES-v1.2.0.en.md)
+
 ## 1.1.0 — 2026-09-18
 
 - Added native Windows picture-in-picture using Windows App SDK CompactOverlay.

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using Eizo.Cache;
 using Eizo.Localization;
@@ -55,6 +56,17 @@ public sealed partial class CacheView : UserControl
 
     private string T(string key) =>
         _localization.GetString(key);
+
+    private string L(
+        string zhCn,
+        string jaJp,
+        string enUs) =>
+        _localization.CurrentLanguage switch
+        {
+            "ja-JP" => jaJp,
+            "en-US" => enUs,
+            _ => zhCn,
+        };
 
     private async void CacheView_Loaded(
         object sender,
@@ -587,6 +599,152 @@ public sealed partial class CacheView : UserControl
             {
                 _items.RemoveAt(index);
             }
+        }
+    }
+
+    private void CacheList_ContainerContentChanging(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (args.ItemContainer is not ListViewItem container)
+            return;
+
+        if (args.InRecycleQueue ||
+            args.Item is not CacheItemModel item)
+        {
+            container.ContextFlyout = null;
+            return;
+        }
+
+        var flyout = new MenuFlyout();
+
+        var openFolderItem = new MenuFlyoutItem
+        {
+            Text = L(
+                "打开文件目录",
+                "ファイルの場所を開く",
+                "Open file location"),
+            Icon = new FontIcon
+            {
+                Glyph = "\uE838",
+            },
+            Tag = item,
+            IsEnabled =
+                ResolveCacheFolderPath(item) is not null,
+        };
+        openFolderItem.Click += OpenCacheFolder_Click;
+        flyout.Items.Add(openFolderItem);
+
+        flyout.Items.Add(
+            new MenuFlyoutSeparator());
+
+        var deleteItem = new MenuFlyoutItem
+        {
+            Text = T("Cache_DeleteVideo"),
+            Icon = new FontIcon
+            {
+                Glyph = "\uE74D",
+            },
+            Tag = item.Id,
+        };
+
+        if (Application.Current.Resources[
+                "DangerMenuFlyoutItemStyle"] is Style dangerStyle)
+        {
+            deleteItem.Style = dangerStyle;
+        }
+
+        deleteItem.Click += DeleteCacheItem_Click;
+        flyout.Items.Add(deleteItem);
+
+        container.ContextFlyout = flyout;
+    }
+
+    private string? ResolveCacheFolderPath(
+        CacheItemModel item)
+    {
+        if (!string.IsNullOrWhiteSpace(
+                item.GroupKey) &&
+            _lastSnapshot is { } snapshot)
+        {
+            var entry =
+                snapshot.Entries.FirstOrDefault(
+                    entry =>
+                        entry.Category ==
+                            CacheCategory.Media &&
+                        string.Equals(
+                            entry.GroupKey,
+                            item.GroupKey,
+                            StringComparison.Ordinal));
+
+            if (entry is not null &&
+                !string.IsNullOrWhiteSpace(
+                    entry.Path))
+            {
+                var directory =
+                    Path.GetDirectoryName(
+                        entry.Path);
+
+                if (!string.IsNullOrWhiteSpace(
+                        directory) &&
+                    Directory.Exists(
+                        directory))
+                {
+                    return directory;
+                }
+            }
+        }
+
+        var root =
+            CacheRuntime.Store.RootPath;
+
+        return Directory.Exists(root)
+            ? root
+            : null;
+    }
+
+    private void OpenCacheFolder_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement
+            {
+                Tag: CacheItemModel item
+            })
+        {
+            return;
+        }
+
+        var folderPath =
+            ResolveCacheFolderPath(item);
+
+        if (folderPath is null)
+            return;
+
+        try
+        {
+            var startInfo =
+                new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    UseShellExecute = true,
+                };
+            startInfo.ArgumentList.Add(
+                folderPath);
+
+            Process.Start(startInfo);
+            CacheStatusText.Visibility =
+                Visibility.Collapsed;
+        }
+        catch
+        {
+            CacheStatusText.Text =
+                L(
+                    "无法打开缓存目录。",
+                    "キャッシュフォルダーを開けませんでした。",
+                    "Could not open the cache folder.");
+            CacheStatusText.Visibility =
+                Visibility.Visible;
         }
     }
 

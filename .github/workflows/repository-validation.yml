@@ -146,6 +146,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-LibraryAggregationUiContract.ps1
 
+      - name: Validate Eizo 1.2 unified card UI contract
+        shell: pwsh
+        run: ./scripts/Test-CardUiV120Contract.ps1
+
       - name: Validate player/source UI cleanup contract
         shell: pwsh
         run: ./scripts/Test-PlayerUiCleanupContract.ps1
