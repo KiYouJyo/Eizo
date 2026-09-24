@@ -8,6 +8,7 @@
         <ResourceDictionary Source="Themes/Colors.xaml" />
         <ResourceDictionary Source="Themes/Typography.xaml" />
         <ResourceDictionary Source="Themes/Controls.xaml" />
+        <ResourceDictionary Source="Themes/CardStyles.xaml" />
       </ResourceDictionary.MergedDictionaries>
 
       <!-- Keep NavigationView content native. Only shell/transient surfaces are
