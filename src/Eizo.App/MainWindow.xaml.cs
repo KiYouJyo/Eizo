@@ -452,7 +452,7 @@ public sealed partial class MainWindow : Window
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!WebDavMediaCacheKeys.TryParseGroupKey(
+        if (!WebDavMediaCacheKeys.TryParseAnyGroupKey(
                 request.GroupKey,
                 out var sourceId,
                 out var mediaUri) ||
@@ -474,13 +474,28 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var playbackSource =
-            PlaybackSource.FromRandomAccess(
-                mediaUri,
-                new CachedVideoRandomAccessSource(
-                    request.GroupKey,
-                    request.SizeBytes),
-                request.Title);
+        PlaybackSource playbackSource;
+
+        if (!string.IsNullOrWhiteSpace(
+                request.LocalPath) &&
+            File.Exists(
+                request.LocalPath))
+        {
+            playbackSource =
+                PlaybackSource.FromFile(
+                    request.LocalPath,
+                    request.Title);
+        }
+        else
+        {
+            playbackSource =
+                PlaybackSource.FromRandomAccess(
+                    mediaUri,
+                    new CachedVideoRandomAccessSource(
+                        request.GroupKey,
+                        request.SizeBytes),
+                    request.Title);
+        }
 
         var item =
             new CatalogMediaItemModel(
