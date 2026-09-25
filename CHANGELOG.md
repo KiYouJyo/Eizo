@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.0 — 2026-09-25
+
+- Replaced the standalone Bangumi Anime Blogs page with a native WinUI 3 Anime Search/index workspace.
+- Added a native search box, rank/popularity/score/relevance sorting, and format/source/genre/region/audience/year filters.
+- Extended Bangumi subject search with meta-tag, tag, year, anime-type, and non-NSFW constraints.
+- Reused the unified MediaPosterCard component and preserved navigation into existing Bangumi subject details.
+- Removed the legacy Anime Blogs navigation and workspace wiring; no WebView/WebView2 is used.
+- Added Eizo 1.3 anime-index regression and advanced-search test coverage.
+- Bumped product / MSIX versions to 1.3.0 / 1.3.0.0.
+
+See: [简体中文](docs/RELEASE-NOTES-v1.3.0.md) · [日本語](docs/RELEASE-NOTES-v1.3.0.ja.md) · [English](docs/RELEASE-NOTES-v1.3.0.en.md)
+
 ## 1.2.1 — 2026-09-24
 
 - Changed only explicit/manual WebDAV video caching to persist one complete media file instead of many 4 MB `.blk` files.
