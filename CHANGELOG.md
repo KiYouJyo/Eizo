@@ -15,6 +15,7 @@
 - Made Anime Search a single vertically scrollable page, added collapsible filter rows, and right-aligned the Search / Reset / Sort action group.
 - Home Continue Watching now reconstructs the title subject before playback so the queue contains the same episode list as normal title playback.
 - Rounded the playback-queue selected/highlight surface to match the sidebar card geometry.
+- Added fullscreen Up/Down volume control in 5% steps; keyboard and mouse-wheel volume changes now use a transient top-center volume banner and never summon the bottom controls.
 - Reserved the primary subtitle selector for embedded subtitles when present; external subtitles move to the secondary selector.
 - Fullscreen long-press left/right speed control now uses a compact translucent top-center speed banner without summoning the bottom controls.
 - Clicking the video surface now toggles play/pause in both windowed and fullscreen modes.
