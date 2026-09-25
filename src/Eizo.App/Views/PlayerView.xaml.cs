@@ -1493,6 +1493,8 @@ public sealed partial class PlayerView : UserControl
             return;
 
         var tracks = engine.Tracks;
+        ReconcileEmbeddedPrimarySubtitleRouting(tracks);
+
         var subtitleKey =
             BuildTrackListKey(
                 tracks.SubtitleTracks.Select(static track => track.Id)) +
@@ -1536,6 +1538,52 @@ public sealed partial class PlayerView : UserControl
         }
 
         UpdateControlAvailability();
+    }
+
+    private void ReconcileEmbeddedPrimarySubtitleRouting(
+        IPlaybackTrackController tracks)
+    {
+        // Embedded subtitles always own the primary/native slot. If an external
+        // subtitle was promoted before LibVLC finished exposing the embedded
+        // tracks, move the already-loaded overlay to the secondary slot and clear
+        // the primary overlay. This keeps the UI stable across asynchronous track
+        // discovery: primary = embedded/native, secondary = external overlay.
+        if (tracks.SubtitleTracks.Count == 0 ||
+            _primarySubtitleUri is null)
+        {
+            return;
+        }
+
+        var externalUri = _primarySubtitleUri;
+        var externalDocument = _primarySubtitleDocument;
+        var isKnownExternal =
+            _externalSubtitles.Any(candidate =>
+                candidate.Uri == externalUri);
+
+        _primarySubtitleGeneration++;
+        _primarySubtitleUri = null;
+        _primarySubtitleDocument = null;
+        UpdatePrimarySubtitle(_lastKnownPosition);
+
+        if (isKnownExternal &&
+            externalDocument is not null &&
+            (_secondarySubtitleUri is null ||
+             _secondarySubtitleUri == externalUri))
+        {
+            _secondarySubtitleGeneration++;
+            _secondarySubtitleUri = externalUri;
+            _secondarySubtitleDocument = externalDocument;
+            UpdateSecondarySubtitle(_lastKnownPosition);
+        }
+
+        RebuildSecondarySubtitleCombo();
+
+        PlaybackTrace.Write(
+            "view",
+            "subtitle-routing",
+            isKnownExternal && externalDocument is not null
+                ? "primary-external-moved-to-secondary"
+                : "primary-external-cleared");
     }
 
     private static string BuildTrackListKey(IEnumerable<int> ids) =>
@@ -3444,14 +3492,53 @@ public sealed partial class PlayerView : UserControl
     {
         var parts = new[]
         {
-            track.Name,
+            CleanNativeTrackName(track.Name),
             track.Language,
             track.Codec
-        }.Where(static value => !string.IsNullOrWhiteSpace(value));
+        }
+        .Where(static value => !string.IsNullOrWhiteSpace(value))
+        .Distinct(StringComparer.CurrentCultureIgnoreCase);
 
         var text = string.Join(" · ", parts);
         return string.IsNullOrWhiteSpace(text)
             ? $"#{track.Id}"
+            : text;
+    }
+
+    private static string? CleanNativeTrackName(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var text = value.Trim();
+
+        // LibVLC commonly exposes generic labels such as
+        // "Track 1 - [Chinese]". Do not leak the internal track ordinal into
+        // Eizo's user-facing selector; retain the meaningful subtitle name.
+        if (text.StartsWith("Track ", StringComparison.OrdinalIgnoreCase))
+        {
+            var separator = text.IndexOf(
+                " - ",
+                StringComparison.Ordinal);
+
+            if (separator > 6 &&
+                int.TryParse(
+                    text[6..separator].Trim(),
+                    out _))
+            {
+                text = text[(separator + 3)..].Trim();
+            }
+        }
+
+        if (text.Length >= 2 &&
+            ((text[0] == '[' && text[^1] == ']') ||
+             (text[0] == '(' && text[^1] == ')')))
+        {
+            text = text[1..^1].Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(text)
+            ? null
             : text;
     }
 

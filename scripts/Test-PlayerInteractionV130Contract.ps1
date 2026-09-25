@@ -79,6 +79,41 @@ foreach ($required in @(
     }
 }
 
+$trackUi = [regex]::Match(
+    $code,
+    'private void UpdateTrackUi\(\)[\s\S]*?private static string BuildTrackListKey',
+    [System.Text.RegularExpressions.RegexOptions]::Singleline)
+if (-not $trackUi.Success) {
+    throw 'Player track UI region not found.'
+}
+foreach ($required in @(
+    'ReconcileEmbeddedPrimarySubtitleRouting(tracks);',
+    'tracks.SubtitleTracks.Count == 0',
+    '_primarySubtitleUri is null',
+    '_secondarySubtitleUri = externalUri;',
+    '_primarySubtitleUri = null;',
+    'RebuildSecondarySubtitleCombo();')) {
+    if (-not $trackUi.Value.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Embedded/external subtitle reconciliation contract missing: $required"
+    }
+}
+
+$formatter = [regex]::Match(
+    $code,
+    'private static string FormatSubtitleTrack[\s\S]*?private static string FormatAudioTrack',
+    [System.Text.RegularExpressions.RegexOptions]::Singleline)
+if (-not $formatter.Success) {
+    throw 'Subtitle track formatting region not found.'
+}
+foreach ($required in @(
+    'CleanNativeTrackName(track.Name)',
+    'text.StartsWith("Track ", StringComparison.OrdinalIgnoreCase)',
+    'text[1..^1].Trim()')) {
+    if (-not $formatter.Value.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Native subtitle display-name cleanup contract missing: $required"
+    }
+}
+
 $discover = [regex]::Match(
     $code,
     'private async Task DiscoverAndAttachExternalSubtitlesAsync[\s\S]*?private static async Task TryRestorePositionAsync',
