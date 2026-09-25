@@ -12,6 +12,9 @@
 - Reworked Anime Search filters from a right-side panel into full-width horizontal filter rows above the results.
 - Removed the manual Load More button; reaching the end of Anime Search now automatically fetches the next 50 entries.
 - Made the Seasonal Anime season strip open a native WinUI 3 year/season picker for direct year and quarter jumps.
+- Made Anime Search a single vertically scrollable page, added collapsible filter rows, and right-aligned the Search / Reset / Sort action group.
+- Home Continue Watching now reconstructs the title subject before playback so the queue contains the same episode list as normal title playback.
+- Rounded the playback-queue selected/highlight surface to match the sidebar card geometry.
 - Reserved the primary subtitle selector for embedded subtitles when present; external subtitles move to the secondary selector.
 - Fullscreen long-press left/right speed control now uses a compact translucent top-center speed banner without summoning the bottom controls.
 - Clicking the video surface now toggles play/pause in both windowed and fullscreen modes.

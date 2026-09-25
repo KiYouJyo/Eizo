@@ -1,0 +1,43 @@
+param()
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+$root = Split-Path -Parent $PSScriptRoot
+
+function Read-Text([string] $relativePath) {
+    $path = Join-Path $root $relativePath
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "Eizo v1.3 playback UX contract missing file: $relativePath"
+    }
+
+    return [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8)
+}
+
+$main = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
+$player = Read-Text 'src/Eizo.App/Views/PlayerView.xaml'
+
+foreach ($required in @(
+    'ResolveCatalogSubjectForItem(item)',
+    'CatalogSubjectAggregator.Build(',
+    'MediaCatalogStore.Default',
+    '.SnapshotForDisplay()',
+    'subject.Items.Any(candidate =>',
+    'SameCatalogLocation(')) {
+    if (-not $main.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Home continue-watching queue reconstruction contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'x:Key="PlaybackQueueListItemStyle"',
+    'BasedOn="{StaticResource SourceListItemStyle}"',
+    '<Setter Property="CornerRadius"',
+    'Value="8"',
+    'ItemContainerStyle="{StaticResource PlaybackQueueListItemStyle}"')) {
+    if (-not $player.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Playback queue rounded selection contract missing: $required"
+    }
+}
+
+Write-Host 'Eizo v1.3 home queue / playback queue highlight contract PASS.'

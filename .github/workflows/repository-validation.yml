@@ -162,6 +162,10 @@ jobs:
         shell: pwsh
         run: ./scripts/Test-PlayerInteractionV130Contract.ps1
 
+      - name: Validate Eizo 1.3 home/player queue UX contract
+        shell: pwsh
+        run: ./scripts/Test-PlaybackQueueUxV130Contract.ps1
+
   recognition-integration:
     name: Validate Recognition integration
     runs-on: ubuntu-latest

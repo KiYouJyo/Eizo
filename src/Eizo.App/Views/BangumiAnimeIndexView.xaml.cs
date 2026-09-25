@@ -143,6 +143,7 @@ public sealed partial class BangumiAnimeIndexView : UserControl
         SearchButtonText.Text = T("Bangumi_Search");
         ResetButton.Content = T("Bangumi_ResetFilters");
         RefreshButtonText.Text = T("Bangumi_Refresh");
+        FilterTitle.Text = T("Bangumi_FilterTitle");
         FormatFilterLabel.Text = T("Bangumi_FilterFormat");
         SourceFilterLabel.Text = T("Bangumi_FilterSource");
         GenreFilterLabel.Text = T("Bangumi_FilterGenre");
@@ -211,17 +212,24 @@ public sealed partial class BangumiAnimeIndexView : UserControl
     private async void RefreshButton_Click(object sender, RoutedEventArgs e) =>
         await LoadAsync(true, false);
 
-    private async void ResultsList_ContainerContentChanging(
-        ListViewBase sender,
-        ContainerContentChangingEventArgs args)
+    private async void PageScrollViewer_ViewChanged(
+        object sender,
+        ScrollViewerViewChangedEventArgs e)
     {
-        const int preloadThreshold = 8;
-
-        if (args.InRecycleQueue ||
+        if (sender is not ScrollViewer scrollViewer ||
             !_hasMore ||
             _isLoading ||
-            _items.Count == 0 ||
-            args.ItemIndex < Math.Max(0, _items.Count - preloadThreshold))
+            _items.Count == 0)
+        {
+            return;
+        }
+
+        const double preloadDistance = 520d;
+        if (scrollViewer.VerticalOffset <
+            Math.Max(
+                0d,
+                scrollViewer.ScrollableHeight -
+                preloadDistance))
         {
             return;
         }

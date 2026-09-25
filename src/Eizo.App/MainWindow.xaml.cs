@@ -763,7 +763,23 @@ public sealed partial class MainWindow : Window
         CatalogMediaItemModel item) =>
         OpenCatalogMediaAsync(
             item,
-            subject: null);
+            ResolveCatalogSubjectForItem(item));
+
+    private static CatalogSubjectModel? ResolveCatalogSubjectForItem(
+        CatalogMediaItemModel item)
+    {
+        var aggregation =
+            CatalogSubjectAggregator.Build(
+                MediaCatalogStore.Default
+                    .SnapshotForDisplay());
+
+        return aggregation.Subjects
+            .FirstOrDefault(subject =>
+                subject.Items.Any(candidate =>
+                    SameCatalogLocation(
+                        candidate,
+                        item)));
+    }
 
     private async Task OpenCatalogMediaAsync(
         CatalogMediaItemModel item,

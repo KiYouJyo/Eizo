@@ -7,6 +7,17 @@
              IsTabStop="True"
              KeyDown="PlayerView_KeyDown"
              KeyUp="PlayerView_KeyUp">
+  <UserControl.Resources>
+    <Style x:Key="PlaybackQueueListItemStyle"
+           TargetType="ListViewItem"
+           BasedOn="{StaticResource SourceListItemStyle}">
+      <Setter Property="CornerRadius"
+              Value="8" />
+      <Setter Property="Margin"
+              Value="0,2" />
+    </Style>
+  </UserControl.Resources>
+
   <Grid x:Name="PlayerRoot"
         Background="Transparent"
         PointerMoved="PlayerRoot_PointerMoved"
@@ -449,7 +460,7 @@
                   SelectionMode="Single"
                   SelectedIndex="-1"
                   SelectionChanged="QueueList_SelectionChanged"
-                  ItemContainerStyle="{StaticResource SourceListItemStyle}">
+                  ItemContainerStyle="{StaticResource PlaybackQueueListItemStyle}">
           <ListView.ItemTemplate>
             <DataTemplate x:DataType="models:PlaybackQueueItemModel">
               <Grid Height="58" ColumnDefinitions="44,*">
