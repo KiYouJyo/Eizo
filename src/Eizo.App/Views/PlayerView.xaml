@@ -56,6 +56,23 @@
                                HorizontalAlignment="Stretch"
                                VerticalAlignment="Stretch" />
 
+        <Border x:Name="DirectionSpeedBanner"
+                Margin="0,24,0,0"
+                Padding="14,7"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                CornerRadius="8"
+                Background="#99000000"
+                IsHitTestVisible="False"
+                Visibility="Collapsed"
+                Canvas.ZIndex="20">
+          <TextBlock x:Name="DirectionSpeedBannerText"
+                     Foreground="White"
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     TextAlignment="Center" />
+        </Border>
+
         <Border x:Name="SecondarySubtitleOverlay"
                 Margin="36,0,36,0"
                 Padding="14,7"

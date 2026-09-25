@@ -8,6 +8,9 @@
 - Reused the unified MediaPosterCard component and preserved navigation into existing Bangumi subject details.
 - Removed the legacy Anime Blogs navigation and workspace wiring; no WebView/WebView2 is used.
 - Added Eizo 1.3 anime-index regression and advanced-search test coverage.
+- Reserved the primary subtitle selector for embedded subtitles when present; external subtitles move to the secondary selector.
+- Fullscreen long-press left/right speed control now uses a compact translucent top-center speed banner without summoning the bottom controls.
+- Clicking the video surface now toggles play/pause in both windowed and fullscreen modes.
 - Bumped product / MSIX versions to 1.3.0 / 1.3.0.0.
 
 See: [简体中文](docs/RELEASE-NOTES-v1.3.0.md) · [日本語](docs/RELEASE-NOTES-v1.3.0.ja.md) · [English](docs/RELEASE-NOTES-v1.3.0.en.md)

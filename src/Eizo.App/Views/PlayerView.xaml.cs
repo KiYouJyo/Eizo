@@ -112,6 +112,14 @@ public sealed partial class PlayerView : UserControl
             new PointerEventHandler(PlaybackSlider_PointerCaptureLost),
             true);
 
+        // PlaybackView may mark pointer/tap events handled internally. Listen with
+        // handledEventsToo on the video host so a click anywhere on the picture
+        // toggles play/pause in both windowed and fullscreen modes.
+        PlaybackSurfaceHost.AddHandler(
+            UIElement.TappedEvent,
+            new TappedEventHandler(PlaybackSurfaceHost_Tapped),
+            true);
+
         InitializeSubtitlePositionControls();
 
         _queueItems = queue?
@@ -630,18 +638,21 @@ public sealed partial class PlayerView : UserControl
 
         SubtitleDocument? automaticPrimaryDocument = null;
         ExternalSubtitleCandidate? automaticPrimaryCandidate = null;
+        var hasInternalSubtitles =
+            engine.Tracks.SubtitleTracks.Count > 0;
 
         // External subtitles are rendered by Eizo's WinUI overlay rather than
-        // registered with LibVLC. Prefer the remembered semantic track for this
-        // title, then the global subtitle language, then the existing first-match
-        // fallback. Never persist or match LibVLC track IDs across episodes.
+        // registered with LibVLC. Embedded tracks own the primary subtitle slot
+        // whenever they exist; only media without embedded subtitles may promote
+        // an external candidate into the primary overlay.
         var settings = AppSettingsStore.Current;
         var remembered = settings.RememberSubtitleTrack
             ? PlaybackTrackPreferenceStore.GetSubtitlePreference(
                 catalogItem)
             : null;
 
-        if (candidates.Count > 0 &&
+        if (!hasInternalSubtitles &&
+            candidates.Count > 0 &&
             !string.Equals(
                 remembered?.Kind,
                 "off",
@@ -727,18 +738,31 @@ public sealed partial class PlayerView : UserControl
         SubtitleDocument? automaticSecondaryDocument = null;
         ExternalSubtitleCandidate? automaticSecondaryCandidate = null;
 
-        if (_secondarySubtitleUri is null &&
-            settings.PreferredSecondarySubtitleLanguage != "auto")
+        if (_secondarySubtitleUri is null)
         {
             var effectivePrimaryUri =
                 _primarySubtitleUri ??
                 automaticPrimaryCandidate?.Uri;
 
-            automaticSecondaryCandidate =
-                FindExternalSubtitleCandidate(
-                    candidates,
-                    settings.PreferredSecondarySubtitleLanguage,
-                    effectivePrimaryUri);
+            if (settings.PreferredSecondarySubtitleLanguage != "auto")
+            {
+                automaticSecondaryCandidate =
+                    FindExternalSubtitleCandidate(
+                        candidates,
+                        settings.PreferredSecondarySubtitleLanguage,
+                        effectivePrimaryUri);
+            }
+            else if (hasInternalSubtitles &&
+                     remembered is { Kind: "external" })
+            {
+                // Migrate the old "external primary" preference into the secondary
+                // slot now that an embedded subtitle owns the primary selector.
+                automaticSecondaryCandidate =
+                    FindExternalSubtitleCandidate(
+                        candidates,
+                        remembered.Language,
+                        effectivePrimaryUri);
+            }
 
             if (automaticSecondaryCandidate is not null)
             {
@@ -835,6 +859,22 @@ public sealed partial class PlayerView : UserControl
     private async void PlayPauseButton_Click(object sender, RoutedEventArgs e)
     {
         await TogglePlayPauseAsync();
+    }
+
+    private async void PlaybackSurfaceHost_Tapped(
+        object sender,
+        TappedRoutedEventArgs e)
+    {
+        if (_isPreparingForDetach ||
+            _currentSource is null ||
+            _engine is null)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        await TogglePlayPauseAsync();
+        Focus(FocusState.Programmatic);
     }
 
     internal async Task TogglePlayPauseAsync()
@@ -1507,6 +1547,8 @@ public sealed partial class PlayerView : UserControl
         SubtitleTrackCombo.Items.Add(_subtitleOffItem);
 
         ComboBoxItem? selected = _subtitleOffItem;
+        var hasInternalSubtitles =
+            tracks.SubtitleTracks.Count > 0;
 
         foreach (var track in tracks.SubtitleTracks)
         {
@@ -1525,18 +1567,25 @@ public sealed partial class PlayerView : UserControl
             }
         }
 
-        foreach (var candidate in _externalSubtitles)
+        // When the file contains embedded subtitles, the primary selector belongs
+        // exclusively to those native tracks. External subtitles remain available
+        // from the secondary subtitle selector. If there are no embedded tracks,
+        // preserve the previous behavior and allow an external subtitle as primary.
+        if (!hasInternalSubtitles)
         {
-            var item = new ComboBoxItem
+            foreach (var candidate in _externalSubtitles)
             {
-                Content = FormatExternalSubtitleCandidate(candidate),
-                Tag = candidate
-            };
+                var item = new ComboBoxItem
+                {
+                    Content = FormatExternalSubtitleCandidate(candidate),
+                    Tag = candidate
+                };
 
-            SubtitleTrackCombo.Items.Add(item);
+                SubtitleTrackCombo.Items.Add(item);
 
-            if (_primarySubtitleUri == candidate.Uri)
-                selected = item;
+                if (_primarySubtitleUri == candidate.Uri)
+                    selected = item;
+            }
         }
 
         SubtitleTrackCombo.SelectedItem = selected;
@@ -2568,7 +2617,6 @@ public sealed partial class PlayerView : UserControl
             Math.Clamp(_engine.PlaybackRate, 0.5d, 2d);
         _directionHoldTimer.Stop();
         _directionHoldTimer.Start();
-        ShowFullscreenControls(restartAutoHide: false);
         e.Handled = true;
     }
 
@@ -2590,6 +2638,7 @@ public sealed partial class PlayerView : UserControl
         {
             SetTemporaryPlaybackRate(
                 _rateBeforeDirectionHold);
+            HideDirectionSpeedBanner();
         }
         else
         {
@@ -2597,9 +2646,9 @@ public sealed partial class PlayerView : UserControl
                 key == VirtualKey.Left
                     ? TimeSpan.FromSeconds(-10)
                     : TimeSpan.FromSeconds(10));
+            ShowFullscreenControls(restartAutoHide: true);
         }
 
-        ShowFullscreenControls(restartAutoHide: true);
         e.Handled = true;
     }
 
@@ -2619,9 +2668,33 @@ public sealed partial class PlayerView : UserControl
         }
 
         _directionHoldActive = true;
-        SetTemporaryPlaybackRate(
-            key == VirtualKey.Left ? 0.5d : 2d);
-        ShowFullscreenControls(restartAutoHide: false);
+        var temporaryRate =
+            key == VirtualKey.Left ? 0.5d : 2d;
+        SetTemporaryPlaybackRate(temporaryRate);
+        ShowDirectionSpeedBanner(temporaryRate);
+    }
+
+    private void ShowDirectionSpeedBanner(
+        double rate)
+    {
+        if (!_isVideoFullscreen ||
+            DirectionSpeedBanner is null ||
+            DirectionSpeedBannerText is null)
+        {
+            return;
+        }
+
+        DirectionSpeedBannerText.Text =
+            $"{Math.Clamp(rate, 0.5d, 2d):0.##}×";
+        DirectionSpeedBanner.Visibility =
+            Visibility.Visible;
+    }
+
+    private void HideDirectionSpeedBanner()
+    {
+        if (DirectionSpeedBanner is not null)
+            DirectionSpeedBanner.Visibility =
+                Visibility.Collapsed;
     }
 
     private void CancelDirectionKeyGesture(
@@ -2639,6 +2712,7 @@ public sealed partial class PlayerView : UserControl
 
         _heldDirectionKey = null;
         _directionHoldActive = false;
+        HideDirectionSpeedBanner();
     }
 
     private void FullscreenControlsTimer_Tick(object? sender, object e)
@@ -2714,6 +2788,7 @@ public sealed partial class PlayerView : UserControl
     private void ApplyWindowedVisualState()
     {
         _fullscreenControlsTimer.Stop();
+        HideDirectionSpeedBanner();
         _sidebarVisibleInFullscreen = false;
         _hasPointerPosition = false;
 

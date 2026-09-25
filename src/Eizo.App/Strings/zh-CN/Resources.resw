@@ -248,7 +248,7 @@
     <value>第一字幕背景不透明度</value>
   </data>
   <data name="Playback_NativeSubtitleStyleManagedByEngine" xml:space="preserve">
-    <value>内封字幕由播放内核渲染。位置与背景设置仅适用于外挂字幕。</value>
+    <value>本视频包含内封字幕，该样式不可调整。</value>
   </data>
   <data name="Playback_SecondarySubtitleOpacity" xml:space="preserve">
     <value>第二字幕背景不透明度</value>
