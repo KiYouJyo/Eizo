@@ -102,7 +102,7 @@ foreach ($required in @(
     }
 }
 
-$formatter = [regex]::Match$formatter = [regex]::Match(
+$formatter = [regex]::Match(
     $code,
     'private static string FormatSubtitleTrack[\s\S]*?private static string FormatAudioTrack',
     [System.Text.RegularExpressions.RegexOptions]::Singleline)
@@ -132,6 +132,7 @@ foreach ($required in @(
     'var preferredNative =',
     'FindExternalSubtitleCandidate(',
     'automaticSecondaryCandidate',
+    'automaticPrimaryCandidate = candidates[0];',
     'settings.PreferredSecondarySubtitleLanguage != "auto"')) {
     if (-not $discover.Value.Contains($required, [StringComparison]::Ordinal)) {
         throw "Preference-driven embedded/external subtitle routing contract missing: $required"

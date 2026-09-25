@@ -711,9 +711,11 @@ public sealed partial class PlayerView : UserControl
 
             if (automaticPrimaryCandidate is null &&
                 !rememberedInternalAvailable &&
-                settings.PreferredSubtitleLanguage == "auto" &&
                 selectedNative is null)
             {
+                // A language preference is a preference, not a hard subtitle-off
+                // rule. If no source matches it and the file has no active native
+                // default, keep the historical first external candidate fallback.
                 automaticPrimaryCandidate = candidates[0];
             }
 
