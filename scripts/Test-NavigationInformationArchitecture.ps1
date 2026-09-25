@@ -34,10 +34,10 @@ $settingsIndex = Index-OrThrow $shell 'x:Name="SettingsNav"'
 
 if (-not ($homeIndex -lt $bangumiIndex -and
           $bangumiIndex -lt $animeSearchIndex -and
-          $animeSearchIndex -lt $calendarIndex -and
+          $animeSearchIndex -lt $discoverIndex -and
+          $discoverIndex -lt $calendarIndex -and
           $calendarIndex -lt $seasonalIndex -and
-          $seasonalIndex -lt $discoverIndex -and
-          $discoverIndex -lt $libraryIndex -and
+          $seasonalIndex -lt $libraryIndex -and
           $libraryIndex -lt $animeIndex -and
           $animeIndex -lt $moviesIndex -and
           $moviesIndex -lt $seriesIndex -and
@@ -49,7 +49,7 @@ if (-not ($homeIndex -lt $bangumiIndex -and
     throw 'Navigation IA contract violation: hamburger-menu ordering changed.'
 }
 
-$bangumiEndIndex = $shell.IndexOf('</NavigationViewItem>', $discoverIndex, [StringComparison]::Ordinal)
+$bangumiEndIndex = $shell.IndexOf('</NavigationViewItem>', $seasonalIndex, [StringComparison]::Ordinal)
 if ($bangumiEndIndex -lt 0) {
     throw 'Navigation IA contract violation: Bangumi group closing element is missing.'
 }

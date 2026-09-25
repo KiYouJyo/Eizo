@@ -18,6 +18,9 @@ Eizo 1.3 removes the standalone Bangumi Anime Blogs workspace and replaces that 
 - Search results continue into the existing Eizo Bangumi subject-detail flow, including collection and community features.
 - Cards prefer the original/native title and show the Chinese title as the secondary label.
 - Added a v1.3 anime-index regression contract and advanced Bangumi-search unit coverage.
+- Moved Ranking & Discover directly below Anime Search and replaced the duplicate search glyph with a dedicated discovery/star icon.
+- Moved the six Anime Search filter groups from the right sidebar into full-width horizontal rows above the results.
+- Removed the Load More button; reaching the end of the list automatically loads the next 50 entries.
 - When embedded subtitles exist, the primary subtitle selector is reserved for embedded tracks; the primary position/background controls stay disabled and a note explains that embedded-subtitle styling cannot be adjusted. External subtitles are selected from the secondary subtitle section.
 - Fullscreen left/right long-press temporary speed no longer summons the bottom controls; a compact translucent top-center speed banner is shown instead.
 - Clicking the video surface toggles play/pause in both windowed and fullscreen modes.
@@ -27,7 +30,7 @@ Eizo 1.3 removes the standalone Bangumi Anime Blogs workspace and replaces that 
 
 - Bangumi navigation must no longer expose Anime Blogs and must show Anime Search instead.
 - The page must not use WebView or WebView2.
-- Search, sorting, six filter groups, poster results, and load-more controls must be native WinUI 3 UI.
+- Search, sorting, six top horizontal filter groups, poster results, and automatic paging must be native WinUI 3 UI.
 - Filter combinations must map to Bangumi subject-search anime, tag, and year constraints.
 - Clicking a result must open the existing Bangumi subject detail.
 

@@ -3,122 +3,180 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:Eizo.Controls">
   <Grid Padding="24,16,24,32"
-        RowDefinitions="Auto,Auto,*,Auto"
+        RowDefinitions="Auto,Auto,Auto,*"
         HorizontalAlignment="Stretch"
         UseLayoutRounding="True">
-    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+    <Grid ColumnDefinitions="*,Auto"
+          ColumnSpacing="12">
       <StackPanel Spacing="4">
-        <TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleText}" />
+        <TextBlock x:Name="PageTitle"
+                   Style="{StaticResource PageTitleText}" />
         <TextBlock x:Name="PageSubtitle"
                    Style="{StaticResource MetadataText}"
                    TextWrapping="Wrap" />
       </StackPanel>
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-        <ProgressRing x:Name="LoadingRing" Width="22" Height="22" IsActive="False" Visibility="Collapsed" />
-        <Button x:Name="RefreshButton" MinWidth="96" Height="36" Click="RefreshButton_Click">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <FontIcon Glyph="&#xE72C;" FontSize="12" />
+
+      <StackPanel Grid.Column="1"
+                  Orientation="Horizontal"
+                  Spacing="8"
+                  VerticalAlignment="Center">
+        <ProgressRing x:Name="LoadingRing"
+                      Width="22"
+                      Height="22"
+                      IsActive="False"
+                      Visibility="Collapsed" />
+        <Button x:Name="RefreshButton"
+                MinWidth="96"
+                Height="36"
+                Click="RefreshButton_Click">
+          <StackPanel Orientation="Horizontal"
+                      Spacing="6">
+            <FontIcon Glyph="&#xE72C;"
+                      FontSize="12" />
             <TextBlock x:Name="RefreshButtonText" />
           </StackPanel>
         </Button>
       </StackPanel>
     </Grid>
 
-    <Grid Grid.Row="1" Margin="0,14,0,0"
-          ColumnDefinitions="*,Auto,Auto,180" ColumnSpacing="8">
+    <Grid Grid.Row="1"
+          Margin="0,14,0,0"
+          ColumnDefinitions="*,Auto,Auto,180"
+          ColumnSpacing="8">
       <AutoSuggestBox x:Name="SearchBox"
                       Height="38"
                       QueryIcon="Find"
                       QuerySubmitted="SearchBox_QuerySubmitted" />
-      <Button x:Name="SearchButton" Grid.Column="1" Height="38" MinWidth="92" Click="SearchButton_Click">
-        <StackPanel Orientation="Horizontal" Spacing="6">
+      <Button x:Name="SearchButton"
+              Grid.Column="1"
+              Height="38"
+              MinWidth="92"
+              Click="SearchButton_Click">
+        <StackPanel Orientation="Horizontal"
+                    Spacing="6">
           <SymbolIcon Symbol="Find" />
           <TextBlock x:Name="SearchButtonText" />
         </StackPanel>
       </Button>
-      <Button x:Name="ResetButton" Grid.Column="2" Height="38" MinWidth="104" Click="ResetButton_Click" />
-      <ComboBox x:Name="SortCombo" Grid.Column="3" Height="38"
-                SelectedIndex="0" SelectionChanged="SortCombo_SelectionChanged" />
+      <Button x:Name="ResetButton"
+              Grid.Column="2"
+              Height="38"
+              MinWidth="104"
+              Click="ResetButton_Click" />
+      <ComboBox x:Name="SortCombo"
+                Grid.Column="3"
+                Height="38"
+                SelectedIndex="0"
+                SelectionChanged="SortCombo_SelectionChanged" />
     </Grid>
 
-    <Grid Grid.Row="2" Margin="0,12,0,0" ColumnDefinitions="*,296" ColumnSpacing="16">
-      <Grid RowDefinitions="Auto,*">
-        <TextBlock x:Name="StatusText"
-                   Style="{StaticResource MetadataText}"
-                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                   TextWrapping="Wrap" />
-        <GridView x:Name="ResultsList"
-                  Grid.Row="1"
-                  Margin="0,10,0,0"
-                  ItemsPanel="{StaticResource PosterCardItemsPanelTemplate}"
-                  ItemContainerStyle="{StaticResource PosterCardGridViewItemStyle}"
-                  SelectionMode="None"
-                  IsItemClickEnabled="True"
-                  ItemClick="ResultsList_ItemClick"
-                  ScrollViewer.HorizontalScrollMode="Disabled"
-                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-          <GridView.ItemTemplate>
-            <DataTemplate>
-              <controls:MediaPosterCard Artwork="{Binding Artwork}"
-                                        IconGlyph="&#xE8B2;"
-                                        BadgeText="{Binding TypeLabel}"
-                                        Title="{Binding Title}"
-                                        Subtitle="{Binding Subtitle}"
-                                        MetaLine="{Binding MetaLine}"
-                                        FooterLine="{Binding SourceLabel}" />
-            </DataTemplate>
-          </GridView.ItemTemplate>
-        </GridView>
-      </Grid>
+    <Border Grid.Row="2"
+            Margin="0,12,0,0"
+            Padding="14,10"
+            CornerRadius="10"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1">
+      <StackPanel Spacing="4">
+        <Grid ColumnDefinitions="72,*">
+          <TextBlock x:Name="FormatFilterLabel"
+                     Margin="4,10,8,0"
+                     Style="{StaticResource CardTitleText}" />
+          <RadioButtons x:Name="FormatFilter"
+                        Grid.Column="1"
+                        MaxColumns="8"
+                        SelectedIndex="0"
+                        SelectionChanged="Filter_SelectionChanged" />
+        </Grid>
 
-      <Border Grid.Column="1"
-              CornerRadius="12"
-              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-              BorderThickness="1"
-              Padding="14,12">
-        <ScrollViewer VerticalScrollMode="Auto"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollMode="Disabled"
-                      HorizontalScrollBarVisibility="Disabled">
-          <StackPanel Spacing="4">
-            <TextBlock x:Name="FilterTitle" FontSize="18" FontWeight="SemiBold" Margin="2,0,0,6" />
-            <Expander x:Name="FormatExpander" IsExpanded="True">
-              <RadioButtons x:Name="FormatFilter" MaxColumns="2" SelectedIndex="0"
-                            SelectionChanged="Filter_SelectionChanged" />
-            </Expander>
-            <Expander x:Name="SourceExpander" IsExpanded="True">
-              <RadioButtons x:Name="SourceFilter" MaxColumns="2" SelectedIndex="0"
-                            SelectionChanged="Filter_SelectionChanged" />
-            </Expander>
-            <Expander x:Name="GenreExpander" IsExpanded="True">
-              <RadioButtons x:Name="GenreFilter" MaxColumns="2" SelectedIndex="0"
-                            SelectionChanged="Filter_SelectionChanged" />
-            </Expander>
-            <Expander x:Name="RegionExpander">
-              <RadioButtons x:Name="RegionFilter" MaxColumns="2" SelectedIndex="0"
-                            SelectionChanged="Filter_SelectionChanged" />
-            </Expander>
-            <Expander x:Name="AudienceExpander">
-              <RadioButtons x:Name="AudienceFilter" MaxColumns="2" SelectedIndex="0"
-                            SelectionChanged="Filter_SelectionChanged" />
-            </Expander>
-            <Expander x:Name="YearExpander">
-              <RadioButtons x:Name="YearFilter" MaxColumns="2" SelectedIndex="0"
-                            SelectionChanged="Filter_SelectionChanged" />
-            </Expander>
-          </StackPanel>
-        </ScrollViewer>
-      </Border>
+        <Grid ColumnDefinitions="72,*">
+          <TextBlock x:Name="SourceFilterLabel"
+                     Margin="4,10,8,0"
+                     Style="{StaticResource CardTitleText}" />
+          <RadioButtons x:Name="SourceFilter"
+                        Grid.Column="1"
+                        MaxColumns="8"
+                        SelectedIndex="0"
+                        SelectionChanged="Filter_SelectionChanged" />
+        </Grid>
+
+        <Grid ColumnDefinitions="72,*">
+          <TextBlock x:Name="GenreFilterLabel"
+                     Margin="4,10,8,0"
+                     Style="{StaticResource CardTitleText}" />
+          <RadioButtons x:Name="GenreFilter"
+                        Grid.Column="1"
+                        MaxColumns="12"
+                        SelectedIndex="0"
+                        SelectionChanged="Filter_SelectionChanged" />
+        </Grid>
+
+        <Grid ColumnDefinitions="72,*">
+          <TextBlock x:Name="RegionFilterLabel"
+                     Margin="4,10,8,0"
+                     Style="{StaticResource CardTitleText}" />
+          <RadioButtons x:Name="RegionFilter"
+                        Grid.Column="1"
+                        MaxColumns="10"
+                        SelectedIndex="0"
+                        SelectionChanged="Filter_SelectionChanged" />
+        </Grid>
+
+        <Grid ColumnDefinitions="72,*">
+          <TextBlock x:Name="AudienceFilterLabel"
+                     Margin="4,10,8,0"
+                     Style="{StaticResource CardTitleText}" />
+          <RadioButtons x:Name="AudienceFilter"
+                        Grid.Column="1"
+                        MaxColumns="8"
+                        SelectedIndex="0"
+                        SelectionChanged="Filter_SelectionChanged" />
+        </Grid>
+
+        <Grid ColumnDefinitions="72,*">
+          <TextBlock x:Name="YearFilterLabel"
+                     Margin="4,10,8,0"
+                     Style="{StaticResource CardTitleText}" />
+          <RadioButtons x:Name="YearFilter"
+                        Grid.Column="1"
+                        MaxColumns="10"
+                        SelectedIndex="0"
+                        SelectionChanged="Filter_SelectionChanged" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <Grid Grid.Row="3"
+          Margin="0,12,0,0"
+          RowDefinitions="Auto,*">
+      <TextBlock x:Name="StatusText"
+                 Style="{StaticResource MetadataText}"
+                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                 TextWrapping="Wrap" />
+
+      <GridView x:Name="ResultsList"
+                Grid.Row="1"
+                Margin="0,10,0,0"
+                ItemsPanel="{StaticResource PosterCardItemsPanelTemplate}"
+                ItemContainerStyle="{StaticResource PosterCardGridViewItemStyle}"
+                SelectionMode="None"
+                IsItemClickEnabled="True"
+                ItemClick="ResultsList_ItemClick"
+                ContainerContentChanging="ResultsList_ContainerContentChanging"
+                ScrollViewer.HorizontalScrollMode="Disabled"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <GridView.ItemTemplate>
+          <DataTemplate>
+            <controls:MediaPosterCard Artwork="{Binding Artwork}"
+                                      IconGlyph="&#xE8B2;"
+                                      BadgeText="{Binding TypeLabel}"
+                                      Title="{Binding Title}"
+                                      Subtitle="{Binding Subtitle}"
+                                      MetaLine="{Binding MetaLine}"
+                                      FooterLine="{Binding SourceLabel}" />
+          </DataTemplate>
+        </GridView.ItemTemplate>
+      </GridView>
     </Grid>
-
-    <Button x:Name="LoadMoreButton"
-            Grid.Row="3"
-            Margin="0,10,312,0"
-            HorizontalAlignment="Center"
-            MinWidth="132"
-            Height="36"
-            Visibility="Collapsed"
-            Click="LoadMoreButton_Click" />
   </Grid>
 </UserControl>
