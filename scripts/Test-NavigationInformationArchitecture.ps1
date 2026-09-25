@@ -18,7 +18,7 @@ function Index-OrThrow([string] $text, [string] $needle) {
 
 $homeIndex = Index-OrThrow $shell 'x:Name="HomeNav"'
 $bangumiIndex = Index-OrThrow $shell 'x:Name="BangumiNav"'
-$animeBlogsIndex = Index-OrThrow $shell 'x:Name="AnimeBlogsNav"'
+$animeSearchIndex = Index-OrThrow $shell 'x:Name="AnimeIndexNav"'
 $calendarIndex = Index-OrThrow $shell 'x:Name="CalendarNav"'
 $seasonalIndex = Index-OrThrow $shell 'x:Name="SeasonalNav"'
 $discoverIndex = Index-OrThrow $shell 'x:Name="DiscoverNav"'
@@ -33,8 +33,8 @@ $aboutIndex = Index-OrThrow $shell 'x:Name="AboutNav"'
 $settingsIndex = Index-OrThrow $shell 'x:Name="SettingsNav"'
 
 if (-not ($homeIndex -lt $bangumiIndex -and
-          $bangumiIndex -lt $animeBlogsIndex -and
-          $animeBlogsIndex -lt $calendarIndex -and
+          $bangumiIndex -lt $animeSearchIndex -and
+          $animeSearchIndex -lt $calendarIndex -and
           $calendarIndex -lt $seasonalIndex -and
           $seasonalIndex -lt $discoverIndex -and
           $discoverIndex -lt $libraryIndex -and
@@ -91,8 +91,8 @@ $requiredMappings = @(
     'return new AboutView();',
     'case "settings":',
     'return new SettingsView();',
-    'case "bangumi-anime-blogs":',
-    'new BangumiAnimeBlogsView()',
+    'case "bangumi-anime-index":',
+    'new BangumiAnimeIndexView()',
     'case "bangumi-calendar":',
     'case "bangumi-seasonal":'
     'case "bangumi-discover":',

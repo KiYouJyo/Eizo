@@ -27,8 +27,6 @@ $topicView = Read-Text 'src/Eizo.App/Views/BangumiTopicDetailView.xaml.cs'
 $reviewXaml = Read-Text 'src/Eizo.App/Views/BangumiReviewDetailView.xaml'
 $topicXaml = Read-Text 'src/Eizo.App/Views/BangumiTopicDetailView.xaml'
 $communityText = Read-Text 'src/Eizo.App/Models/BangumiCommunityText.cs'
-$animeBlogsView = Read-Text 'src/Eizo.App/Views/BangumiAnimeBlogsView.xaml.cs'
-$animeBlogsXaml = Read-Text 'src/Eizo.App/Views/BangumiAnimeBlogsView.xaml'
 $shell = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
 
 foreach ($required in @(
@@ -141,24 +139,6 @@ foreach ($required in @(
     }
 }
 
-foreach ($required in @(
-    'GetChannelBlogsAsync',
-    'AnimeSubjectType = 2',
-    'BlogRequested?.Invoke',
-    'https://bgm.tv/anime/blog')) {
-    if (-not $animeBlogsView.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Bangumi Anime Blogs view contract missing: $required"
-    }
-}
-
-foreach ($required in @(
-    'BlogsList',
-    'LoadMoreButton',
-    'OpenBangumiButton')) {
-    if (-not $animeBlogsXaml.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Bangumi Anime Blogs XAML contract missing: $required"
-    }
-}
 
 foreach ($required in @(
     'CommentsTab',
@@ -180,9 +160,7 @@ foreach ($required in @(
     'OpenBangumiReview',
     'OpenBangumiTopic',
     'new BangumiReviewDetailView',
-    'new BangumiTopicDetailView',
-    'new BangumiAnimeBlogsView',
-    'OpenBangumiChannelBlog')) {
+    'new BangumiTopicDetailView')) {
     if (-not $shell.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi in-app community navigation contract missing: $required"
     }
