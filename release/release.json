@@ -13,5 +13,6 @@
     "github": {
       "publish": true
     }
-  }
+  },
+  "publicationRevision": 2
 }
