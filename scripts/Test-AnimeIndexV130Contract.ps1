@@ -48,7 +48,11 @@ foreach ($required in @(
     'controls:MediaPosterCard',
     'PosterCardItemsPanelTemplate',
     'PosterCardGridViewItemStyle',
-    'ContainerContentChanging="ResultsList_ContainerContentChanging"')) {
+    'x:Name="PageScrollViewer"',
+    'ViewChanged="PageScrollViewer_ViewChanged"',
+    'x:Name="FilterExpander"',
+    'IsExpanded="True"',
+    'HorizontalAlignment="Right"')) {
     if (-not $xaml.Contains($required, [StringComparison]::Ordinal)) {
         throw "Native anime-index XAML contract missing: $required"
     }
@@ -60,7 +64,9 @@ foreach ($forbidden in @(
     'BangumiAnimeBlogsView',
     'BlogsList',
     'LoadMoreButton',
-    'Grid.Column="1"\r\n              CornerRadius="12"')) {
+    'Grid.Column="1"\r\n              CornerRadius="12"',
+    'ResultsList_ContainerContentChanging',
+    'ContainerContentChanging="ResultsList_ContainerContentChanging"')) {
     if ($xaml.Contains($forbidden, [StringComparison]::Ordinal) -or
         $code.Contains($forbidden, [StringComparison]::Ordinal) -or
         $shellCode.Contains($forbidden, [StringComparison]::Ordinal)) {
@@ -70,9 +76,10 @@ foreach ($forbidden in @(
 
 foreach ($required in @(
     'private const int PageSize = 50;',
-    'ResultsList_ContainerContentChanging',
-    'const int preloadThreshold = 8;',
-    'args.ItemIndex < Math.Max(0, _items.Count - preloadThreshold)',
+    'PageScrollViewer_ViewChanged',
+    'const double preloadDistance = 520d;',
+    'scrollViewer.ScrollableHeight -',
+    'await LoadAsync(false, true);',
     '_hasMore = page.HasMore;',
     'BuildSearchQuery',
     'BangumiAnimeSearchQuery',

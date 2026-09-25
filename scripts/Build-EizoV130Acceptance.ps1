@@ -117,6 +117,7 @@ try {
     Assert-LastExitCode 'WebDAV range runtime probe failed'
     & ./scripts/Test-PlayerContentV040Contract.ps1
     & ./scripts/Test-PlayerInteractionV130Contract.ps1
+    & ./scripts/Test-PlaybackQueueUxV130Contract.ps1
     dotnet test tests/Eizo.Media.Tests/Eizo.Media.Tests.csproj --configuration Release
     Assert-LastExitCode 'Media model tests failed'
     dotnet test tests/Eizo.MetadataIntegration.Tests/Eizo.MetadataIntegration.Tests.csproj --configuration Release
