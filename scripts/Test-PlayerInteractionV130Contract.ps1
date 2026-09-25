@@ -70,13 +70,16 @@ if (-not $rebuild.Success) {
     throw 'Primary subtitle selector region not found.'
 }
 foreach ($required in @(
-    'var hasInternalSubtitles =',
-    'tracks.SubtitleTracks.Count > 0',
-    'if (!hasInternalSubtitles)',
-    'foreach (var candidate in _externalSubtitles)')) {
+    'foreach (var track in tracks.SubtitleTracks)',
+    'foreach (var candidate in _externalSubtitles)',
+    'Content = FormatSubtitleTrack(track)',
+    'Content = FormatExternalSubtitleCandidate(candidate)')) {
     if (-not $rebuild.Value.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Embedded-primary subtitle contract missing: $required"
+        throw "Preference-driven primary subtitle selector contract missing: $required"
     }
+}
+if ($rebuild.Value.Contains('if (!hasInternalSubtitles)', [StringComparison]::Ordinal)) {
+    throw 'External primary subtitles must not be hidden merely because embedded tracks exist.'
 }
 
 $trackUi = [regex]::Match(
@@ -87,18 +90,19 @@ if (-not $trackUi.Success) {
     throw 'Player track UI region not found.'
 }
 foreach ($required in @(
-    'ReconcileEmbeddedPrimarySubtitleRouting(tracks);',
-    'tracks.SubtitleTracks.Count == 0',
-    '_primarySubtitleUri is null',
-    '_secondarySubtitleUri = externalUri;',
-    '_primarySubtitleUri = null;',
-    'RebuildSecondarySubtitleCombo();')) {
+    'ReconcilePrimarySubtitleRoutingWithPreferences(tracks);',
+    'rememberedInternal',
+    'rememberedExternal',
+    'PreferredSubtitleLanguage',
+    'PreferredSecondarySubtitleLanguage',
+    'moveExternalToSecondary',
+    'subtitle-preference-reconcile')) {
     if (-not $trackUi.Value.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Embedded/external subtitle reconciliation contract missing: $required"
+        throw "Preference-driven subtitle reconciliation contract missing: $required"
     }
 }
 
-$formatter = [regex]::Match(
+$formatter = [regex]::Match$formatter = [regex]::Match(
     $code,
     'private static string FormatSubtitleTrack[\s\S]*?private static string FormatAudioTrack',
     [System.Text.RegularExpressions.RegexOptions]::Singleline)
@@ -122,13 +126,19 @@ if (-not $discover.Success) {
     throw 'Subtitle discovery region not found.'
 }
 foreach ($required in @(
-    'engine.Tracks.SubtitleTracks.Count > 0',
-    'if (!hasInternalSubtitles &&',
+    'rememberedInternalAvailable',
     'remembered is { Kind: "external" }',
-    'automaticSecondaryCandidate')) {
+    'settings.PreferredSubtitleLanguage != "auto"',
+    'var preferredNative =',
+    'FindExternalSubtitleCandidate(',
+    'automaticSecondaryCandidate',
+    'settings.PreferredSecondarySubtitleLanguage != "auto"')) {
     if (-not $discover.Value.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Embedded/external subtitle routing contract missing: $required"
+        throw "Preference-driven embedded/external subtitle routing contract missing: $required"
     }
+}
+if ($discover.Value.Contains('if (!hasInternalSubtitles &&', [StringComparison]::Ordinal)) {
+    throw 'Primary external subtitle selection must not be blocked solely by embedded subtitle presence.'
 }
 
 $keyRegion = [regex]::Match(

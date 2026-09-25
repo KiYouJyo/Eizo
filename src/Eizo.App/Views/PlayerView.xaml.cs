@@ -648,24 +648,38 @@ public sealed partial class PlayerView : UserControl
         var hasInternalSubtitles =
             engine.Tracks.SubtitleTracks.Count > 0;
 
-        // External subtitles are rendered by Eizo's WinUI overlay rather than
-        // registered with LibVLC. Embedded tracks own the primary subtitle slot
-        // whenever they exist; only media without embedded subtitles may promote
-        // an external candidate into the primary overlay.
+        // Subtitle slots are preference-driven rather than source-type-driven.
+        // An embedded subtitle is preferred when it satisfies the remembered/global
+        // primary language; otherwise a matching external subtitle may own the
+        // primary overlay even when unrelated embedded tracks also exist.
         var settings = AppSettingsStore.Current;
         var remembered = settings.RememberSubtitleTrack
             ? PlaybackTrackPreferenceStore.GetSubtitlePreference(
                 catalogItem)
             : null;
 
-        if (!hasInternalSubtitles &&
-            candidates.Count > 0 &&
-            !string.Equals(
+        var rememberedOff =
+            string.Equals(
                 remembered?.Kind,
                 "off",
-                StringComparison.OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase);
+
+        if (candidates.Count > 0 &&
+            !rememberedOff)
         {
-            var explicitExternalPreference = false;
+            var selectedNative =
+                engine.Tracks.SelectedSubtitleTrackId is int nativeId
+                    ? engine.Tracks.SubtitleTracks.FirstOrDefault(
+                        track => track.Id == nativeId)
+                    : null;
+
+            var rememberedInternalAvailable =
+                remembered is { Kind: "internal" } &&
+                engine.Tracks.SubtitleTracks.Any(track =>
+                    SubtitleTrackMatchesPreference(
+                        track.Language,
+                        track.Name,
+                        remembered));
 
             if (remembered is { Kind: "external" })
             {
@@ -673,47 +687,42 @@ public sealed partial class PlayerView : UserControl
                     FindExternalSubtitleCandidate(
                         candidates,
                         remembered.Language);
-                explicitExternalPreference =
-                    automaticPrimaryCandidate is not null;
             }
 
             if (automaticPrimaryCandidate is null &&
+                !rememberedInternalAvailable &&
                 settings.PreferredSubtitleLanguage != "auto")
             {
-                var selectedNative =
-                    engine.Tracks.SelectedSubtitleTrackId is int nativeId
-                        ? engine.Tracks.SubtitleTracks.FirstOrDefault(
-                            track => track.Id == nativeId)
-                        : null;
+                var preferredNative =
+                    engine.Tracks.SubtitleTracks.FirstOrDefault(track =>
+                        TrackMatchesLanguage(
+                            track.Language,
+                            track.Name,
+                            settings.PreferredSubtitleLanguage));
 
-                var nativeMatchesPreference =
-                    selectedNative is not null &&
-                    TrackMatchesLanguage(
-                        selectedNative.Language,
-                        selectedNative.Name,
-                        settings.PreferredSubtitleLanguage);
-
-                if (!nativeMatchesPreference)
+                if (preferredNative is null)
                 {
                     automaticPrimaryCandidate =
                         FindExternalSubtitleCandidate(
                             candidates,
                             settings.PreferredSubtitleLanguage);
-                    explicitExternalPreference =
-                        automaticPrimaryCandidate is not null;
                 }
             }
 
             if (automaticPrimaryCandidate is null &&
-                engine.Tracks.SelectedSubtitleTrackId is null)
+                !rememberedInternalAvailable &&
+                settings.PreferredSubtitleLanguage == "auto" &&
+                selectedNative is null)
             {
                 automaticPrimaryCandidate = candidates[0];
             }
 
             if (automaticPrimaryCandidate is not null)
             {
-                if (explicitExternalPreference &&
-                    engine.Tracks.SelectedSubtitleTrackId is not null)
+                // LibVLC can render only one native subtitle track. When an external
+                // subtitle owns the primary slot, disable the native renderer so
+                // the two primary subtitles cannot overlap.
+                if (engine.Tracks.SelectedSubtitleTrackId is not null)
                 {
                     await engine.Tracks.SelectSubtitleTrackAsync(
                         null,
@@ -1493,7 +1502,6 @@ public sealed partial class PlayerView : UserControl
             return;
 
         var tracks = engine.Tracks;
-        ReconcileEmbeddedPrimarySubtitleRouting(tracks);
 
         var subtitleKey =
             BuildTrackListKey(
@@ -1514,6 +1522,7 @@ public sealed partial class PlayerView : UserControl
             // SelectedItem and never touch Items.
             if (!string.Equals(subtitleKey, _subtitleTrackListKey, StringComparison.Ordinal))
             {
+                ReconcilePrimarySubtitleRoutingWithPreferences(tracks);
                 RebuildSubtitleCombo(tracks);
                 _subtitleTrackListKey = subtitleKey;
             }
@@ -1540,35 +1549,136 @@ public sealed partial class PlayerView : UserControl
         UpdateControlAvailability();
     }
 
-    private void ReconcileEmbeddedPrimarySubtitleRouting(
+    private void ReconcilePrimarySubtitleRoutingWithPreferences(
         IPlaybackTrackController tracks)
     {
-        // Embedded subtitles always own the primary/native slot. If an external
-        // subtitle was promoted before LibVLC finished exposing the embedded
-        // tracks, move the already-loaded overlay to the secondary slot and clear
-        // the primary overlay. This keeps the UI stable across asynchronous track
-        // discovery: primary = embedded/native, secondary = external overlay.
-        if (tracks.SubtitleTracks.Count == 0 ||
-            _primarySubtitleUri is null)
+        if (_primarySubtitleUri is null)
+            return;
+
+        var primaryCandidate =
+            _externalSubtitles.FirstOrDefault(candidate =>
+                candidate.Uri == _primarySubtitleUri);
+        if (primaryCandidate is null)
+            return;
+
+        var settings = AppSettingsStore.Current;
+        var remembered = settings.RememberSubtitleTrack
+            ? PlaybackTrackPreferenceStore.GetSubtitlePreference(
+                CurrentQueueItem?.CatalogItem)
+            : null;
+
+        var rememberedOff =
+            string.Equals(
+                remembered?.Kind,
+                "off",
+                StringComparison.OrdinalIgnoreCase);
+
+        var rememberedInternal =
+            remembered is { Kind: "internal" }
+                ? tracks.SubtitleTracks.FirstOrDefault(track =>
+                    SubtitleTrackMatchesPreference(
+                        track.Language,
+                        track.Name,
+                        remembered))
+                : null;
+
+        var rememberedExternal =
+            remembered is { Kind: "external" }
+                ? FindExternalSubtitleCandidate(
+                    _externalSubtitles,
+                    remembered.Language)
+                : null;
+
+        SubtitleTrackInfo? desiredInternal = null;
+        var keepExternalPrimary = false;
+
+        if (rememberedOff)
         {
+            desiredInternal = null;
+        }
+        else if (rememberedInternal is not null)
+        {
+            desiredInternal = rememberedInternal;
+        }
+        else if (rememberedExternal is not null)
+        {
+            keepExternalPrimary =
+                rememberedExternal.Uri == primaryCandidate.Uri;
+        }
+        else if (settings.PreferredSubtitleLanguage != "auto")
+        {
+            desiredInternal =
+                tracks.SubtitleTracks.FirstOrDefault(track =>
+                    TrackMatchesLanguage(
+                        track.Language,
+                        track.Name,
+                        settings.PreferredSubtitleLanguage));
+
+            if (desiredInternal is null)
+            {
+                keepExternalPrimary =
+                    TrackMatchesLanguage(
+                        primaryCandidate.Language,
+                        primaryCandidate.DisplayName,
+                        settings.PreferredSubtitleLanguage);
+
+                // If no source satisfies the configured language, keep the current
+                // external subtitle when there is no native file-default subtitle.
+                if (!keepExternalPrimary &&
+                    tracks.SelectedSubtitleTrackId is null)
+                {
+                    keepExternalPrimary = true;
+                }
+            }
+        }
+        else
+        {
+            desiredInternal =
+                tracks.SelectedSubtitleTrackId is int selectedId
+                    ? tracks.SubtitleTracks.FirstOrDefault(
+                        track => track.Id == selectedId)
+                    : null;
+            keepExternalPrimary =
+                desiredInternal is null;
+        }
+
+        if (keepExternalPrimary)
+        {
+            if (tracks.SelectedSubtitleTrackId is not null &&
+                _engine is { } engine)
+            {
+                _ = RunOperationAsync(
+                    engine,
+                    "subtitle-preference-reconcile",
+                    async token =>
+                        await engine.Tracks.SelectSubtitleTrackAsync(
+                            null,
+                            token),
+                    latest: true);
+            }
+
             return;
         }
 
         var externalUri = _primarySubtitleUri;
         var externalDocument = _primarySubtitleDocument;
-        var isKnownExternal =
-            _externalSubtitles.Any(candidate =>
-                candidate.Uri == externalUri);
+        var moveExternalToSecondary =
+            !rememberedOff &&
+            externalDocument is not null &&
+            settings.PreferredSecondarySubtitleLanguage != "auto" &&
+            TrackMatchesLanguage(
+                primaryCandidate.Language,
+                primaryCandidate.DisplayName,
+                settings.PreferredSecondarySubtitleLanguage) &&
+            (_secondarySubtitleUri is null ||
+             _secondarySubtitleUri == externalUri);
 
         _primarySubtitleGeneration++;
         _primarySubtitleUri = null;
         _primarySubtitleDocument = null;
         UpdatePrimarySubtitle(_lastKnownPosition);
 
-        if (isKnownExternal &&
-            externalDocument is not null &&
-            (_secondarySubtitleUri is null ||
-             _secondarySubtitleUri == externalUri))
+        if (moveExternalToSecondary)
         {
             _secondarySubtitleGeneration++;
             _secondarySubtitleUri = externalUri;
@@ -1578,12 +1688,35 @@ public sealed partial class PlayerView : UserControl
 
         RebuildSecondarySubtitleCombo();
 
+        if (_engine is { } currentEngine)
+        {
+            var desiredTrackId =
+                rememberedOff
+                    ? (int?)null
+                    : desiredInternal?.Id;
+
+            if (tracks.SelectedSubtitleTrackId != desiredTrackId &&
+                (rememberedOff || desiredTrackId is not null))
+            {
+                _ = RunOperationAsync(
+                    currentEngine,
+                    "subtitle-preference-reconcile",
+                    async token =>
+                        await currentEngine.Tracks.SelectSubtitleTrackAsync(
+                            desiredTrackId,
+                            token),
+                    latest: true);
+            }
+        }
+
         PlaybackTrace.Write(
             "view",
             "subtitle-routing",
-            isKnownExternal && externalDocument is not null
+            moveExternalToSecondary
                 ? "primary-external-moved-to-secondary"
-                : "primary-external-cleared");
+                : rememberedOff
+                    ? "primary-disabled-by-remembered-preference"
+                    : "primary-external-replaced-by-native");
     }
 
     private static string BuildTrackListKey(IEnumerable<int> ids) =>
@@ -1602,8 +1735,6 @@ public sealed partial class PlayerView : UserControl
         SubtitleTrackCombo.Items.Add(_subtitleOffItem);
 
         ComboBoxItem? selected = _subtitleOffItem;
-        var hasInternalSubtitles =
-            tracks.SubtitleTracks.Count > 0;
 
         foreach (var track in tracks.SubtitleTracks)
         {
@@ -1622,25 +1753,18 @@ public sealed partial class PlayerView : UserControl
             }
         }
 
-        // When the file contains embedded subtitles, the primary selector belongs
-        // exclusively to those native tracks. External subtitles remain available
-        // from the secondary subtitle selector. If there are no embedded tracks,
-        // preserve the previous behavior and allow an external subtitle as primary.
-        if (!hasInternalSubtitles)
+        foreach (var candidate in _externalSubtitles)
         {
-            foreach (var candidate in _externalSubtitles)
+            var item = new ComboBoxItem
             {
-                var item = new ComboBoxItem
-                {
-                    Content = FormatExternalSubtitleCandidate(candidate),
-                    Tag = candidate
-                };
+                Content = FormatExternalSubtitleCandidate(candidate),
+                Tag = candidate
+            };
 
-                SubtitleTrackCombo.Items.Add(item);
+            SubtitleTrackCombo.Items.Add(item);
 
-                if (_primarySubtitleUri == candidate.Uri)
-                    selected = item;
-            }
+            if (_primarySubtitleUri == candidate.Uri)
+                selected = item;
         }
 
         SubtitleTrackCombo.SelectedItem = selected;
