@@ -15,6 +15,33 @@
               Value="8" />
       <Setter Property="Margin"
               Value="0,2" />
+      <!-- The stock ListViewItem template does not consistently apply the
+           container CornerRadius to its selected-state background. Keep the
+           optimized presenter, but bind its actual state surface to the queue
+           item's radius so selection / hover / press all clip identically. -->
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListViewItem">
+            <ListViewItemPresenter
+                Content="{TemplateBinding Content}"
+                ContentTemplate="{TemplateBinding ContentTemplate}"
+                ContentTransitions="{TemplateBinding ContentTransitions}"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}"
+                Padding="{TemplateBinding Padding}"
+                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                PointerOverBackground="{ThemeResource SubtleFillColorSecondaryBrush}"
+                PressedBackground="{ThemeResource SubtleFillColorTertiaryBrush}"
+                SelectedBackground="{ThemeResource SubtleFillColorTertiaryBrush}"
+                SelectedPointerOverBackground="{ThemeResource SubtleFillColorSecondaryBrush}"
+                SelectedPressedBackground="{ThemeResource SubtleFillColorTertiaryBrush}"
+                SelectionCheckMarkVisualEnabled="False" />
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
     </Style>
   </UserControl.Resources>
 
