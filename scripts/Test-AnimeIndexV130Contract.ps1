@@ -38,25 +38,42 @@ foreach ($required in @(
     'RadioButtons x:Name="RegionFilter"',
     'RadioButtons x:Name="AudienceFilter"',
     'RadioButtons x:Name="YearFilter"',
+    'x:Name="FormatFilterLabel"',
+    'x:Name="SourceFilterLabel"',
+    'x:Name="GenreFilterLabel"',
+    'x:Name="RegionFilterLabel"',
+    'x:Name="AudienceFilterLabel"',
+    'x:Name="YearFilterLabel"',
     'ComboBox x:Name="SortCombo"',
     'controls:MediaPosterCard',
     'PosterCardItemsPanelTemplate',
     'PosterCardGridViewItemStyle',
-    'LoadMoreButton')) {
+    'ContainerContentChanging="ResultsList_ContainerContentChanging"')) {
     if (-not $xaml.Contains($required, [StringComparison]::Ordinal)) {
         throw "Native anime-index XAML contract missing: $required"
     }
 }
 
-foreach ($forbidden in @('WebView2','<WebView','BangumiAnimeBlogsView','BlogsList')) {
+foreach ($forbidden in @(
+    'WebView2',
+    '<WebView',
+    'BangumiAnimeBlogsView',
+    'BlogsList',
+    'LoadMoreButton',
+    'Grid.Column="1"\r\n              CornerRadius="12"')) {
     if ($xaml.Contains($forbidden, [StringComparison]::Ordinal) -or
         $code.Contains($forbidden, [StringComparison]::Ordinal) -or
         $shellCode.Contains($forbidden, [StringComparison]::Ordinal)) {
-        throw "Anime index must not retain browser/blog workspace content: $forbidden"
+        throw "Anime index contains forbidden legacy/side-filter/manual-load content: $forbidden"
     }
 }
 
 foreach ($required in @(
+    'private const int PageSize = 50;',
+    'ResultsList_ContainerContentChanging',
+    'const int preloadThreshold = 8;',
+    'args.ItemIndex < Math.Max(0, _items.Count - preloadThreshold)',
+    '_hasMore = page.HasMore;',
     'BuildSearchQuery',
     'BangumiAnimeSearchQuery',
     'SearchAnimeAsync',
@@ -89,10 +106,19 @@ if (-not $repository.Contains('BangumiAnimeSearchQuery search',[StringComparison
     throw 'Anime-index repository search overload is missing.'
 }
 
-foreach ($required in @('x:Name="AnimeIndexNav"','Tag="bangumi-anime-index"')) {
-    if (-not $shellXaml.Contains($required, [StringComparison]::Ordinal)) {
-        throw "Anime-index shell XAML contract missing: $required"
-    }
+$searchIndex = $shellXaml.IndexOf('x:Name="AnimeIndexNav"', [StringComparison]::Ordinal)
+$discoverIndex = $shellXaml.IndexOf('x:Name="DiscoverNav"', [StringComparison]::Ordinal)
+$calendarIndex = $shellXaml.IndexOf('x:Name="CalendarNav"', [StringComparison]::Ordinal)
+if ($searchIndex -lt 0 -or
+    $discoverIndex -lt 0 -or
+    $calendarIndex -lt 0 -or
+    -not ($searchIndex -lt $discoverIndex -and $discoverIndex -lt $calendarIndex)) {
+    throw 'Bangumi navigation must place Ranking & Discover directly below Anime Search.'
+}
+if (-not $shellXaml.Contains(
+        '<NavigationViewItem.Icon><FontIcon Glyph="&#xE734;" /></NavigationViewItem.Icon>',
+        [StringComparison]::Ordinal)) {
+    throw 'Ranking & Discover must use its dedicated star/discovery icon.'
 }
 
 foreach ($required in @(
@@ -111,4 +137,4 @@ foreach ($forbidden in @('bangumi-anime-blogs','AnimeBlogsNav','Nav_AnimeBlogs')
     }
 }
 
-Write-Host 'Eizo v1.3.0 native Bangumi anime search/index contract PASS.'
+Write-Host 'Eizo v1.3.0 anime search top-filter / infinite-scroll contract PASS.'

@@ -93,14 +93,14 @@
                 <NavigationViewItem x:Name="AnimeIndexNav" Tag="bangumi-anime-index">
                   <NavigationViewItem.Icon><SymbolIcon Symbol="Find" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem x:Name="DiscoverNav" Tag="bangumi-discover">
+                  <NavigationViewItem.Icon><FontIcon Glyph="&#xE734;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Name="CalendarNav" Tag="bangumi-calendar">
                   <NavigationViewItem.Icon><FontIcon Glyph="&#xE787;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItem x:Name="SeasonalNav" Tag="bangumi-seasonal">
                   <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B2;" /></NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem x:Name="DiscoverNav" Tag="bangumi-discover">
-                  <NavigationViewItem.Icon><FontIcon Glyph="&#xE721;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
               </NavigationViewItem.MenuItems>
             </NavigationViewItem>

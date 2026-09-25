@@ -8,6 +8,10 @@
 - Reused the unified MediaPosterCard component and preserved navigation into existing Bangumi subject details.
 - Removed the legacy Anime Blogs navigation and workspace wiring; no WebView/WebView2 is used.
 - Added Eizo 1.3 anime-index regression and advanced-search test coverage.
+- Moved Ranking & Discover directly below Anime Search and replaced its duplicate search glyph with a dedicated discovery/star icon.
+- Reworked Anime Search filters from a right-side panel into full-width horizontal filter rows above the results.
+- Removed the manual Load More button; reaching the end of Anime Search now automatically fetches the next 50 entries.
+- Made the Seasonal Anime season strip open a native WinUI 3 year/season picker for direct year and quarter jumps.
 - Reserved the primary subtitle selector for embedded subtitles when present; external subtitles move to the secondary selector.
 - Fullscreen long-press left/right speed control now uses a compact translucent top-center speed banner without summoning the bottom controls.
 - Clicking the video surface now toggles play/pause in both windowed and fullscreen modes.

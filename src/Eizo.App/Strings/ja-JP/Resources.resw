@@ -933,6 +933,15 @@
   <data name="Bangumi_SeasonLabelFormat" xml:space="preserve">
     <value>{0}年 {1}クール</value>
   </data>
+  <data name="Bangumi_SeasonPickerTitle" xml:space="preserve">
+    <value>年・クールを選択</value>
+  </data>
+  <data name="Bangumi_SeasonPickerYear" xml:space="preserve">
+    <value>年</value>
+  </data>
+  <data name="Bangumi_SeasonPickerSeason" xml:space="preserve">
+    <value>クール</value>
+  </data>
 
   <data name="Bangumi_FollowingSubtitle" xml:space="preserve">
     <value>Bangumi アカウントの「見てる」アニメ</value>

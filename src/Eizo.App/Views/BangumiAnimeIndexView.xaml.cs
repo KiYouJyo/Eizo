@@ -11,7 +11,7 @@ namespace Eizo.Views;
 
 public sealed partial class BangumiAnimeIndexView : UserControl
 {
-    private const int PageSize = 30;
+    private const int PageSize = 50;
 
     private readonly AppLocalizationService _localization = AppLocalizationService.Default;
     private readonly BangumiRepository _repository = BangumiRepository.Default;
@@ -20,6 +20,8 @@ public sealed partial class BangumiAnimeIndexView : UserControl
     private CancellationTokenSource? _loadCancellation;
     private bool _controlsReady;
     private bool _synchronizingFilters;
+    private bool _isLoading;
+    private bool _hasMore = true;
     private int _nextOffset;
     private int _total;
 
@@ -141,14 +143,12 @@ public sealed partial class BangumiAnimeIndexView : UserControl
         SearchButtonText.Text = T("Bangumi_Search");
         ResetButton.Content = T("Bangumi_ResetFilters");
         RefreshButtonText.Text = T("Bangumi_Refresh");
-        LoadMoreButton.Content = T("Bangumi_LoadMore");
-        FilterTitle.Text = T("Bangumi_FilterTitle");
-        FormatExpander.Header = T("Bangumi_FilterFormat");
-        SourceExpander.Header = T("Bangumi_FilterSource");
-        GenreExpander.Header = T("Bangumi_FilterGenre");
-        RegionExpander.Header = T("Bangumi_FilterRegion");
-        AudienceExpander.Header = T("Bangumi_FilterAudience");
-        YearExpander.Header = T("Bangumi_FilterYear");
+        FormatFilterLabel.Text = T("Bangumi_FilterFormat");
+        SourceFilterLabel.Text = T("Bangumi_FilterSource");
+        GenreFilterLabel.Text = T("Bangumi_FilterGenre");
+        RegionFilterLabel.Text = T("Bangumi_FilterRegion");
+        AudienceFilterLabel.Text = T("Bangumi_FilterAudience");
+        YearFilterLabel.Text = T("Bangumi_FilterYear");
     }
 
     private void InitializeFilters()
@@ -211,8 +211,23 @@ public sealed partial class BangumiAnimeIndexView : UserControl
     private async void RefreshButton_Click(object sender, RoutedEventArgs e) =>
         await LoadAsync(true, false);
 
-    private async void LoadMoreButton_Click(object sender, RoutedEventArgs e) =>
+    private async void ResultsList_ContainerContentChanging(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        const int preloadThreshold = 8;
+
+        if (args.InRecycleQueue ||
+            !_hasMore ||
+            _isLoading ||
+            _items.Count == 0 ||
+            args.ItemIndex < Math.Max(0, _items.Count - preloadThreshold))
+        {
+            return;
+        }
+
         await LoadAsync(false, true);
+    }
 
     private async void ResetButton_Click(object sender, RoutedEventArgs e)
     {
@@ -292,14 +307,24 @@ public sealed partial class BangumiAnimeIndexView : UserControl
 
     private async Task LoadAsync(bool forceRefresh, bool append)
     {
-        _loadCancellation?.Cancel();
-        _loadCancellation?.Dispose();
-        _loadCancellation = new CancellationTokenSource();
-        var cancellationToken = _loadCancellation.Token;
+        if (append && (_isLoading || !_hasMore))
+            return;
+
+        if (!append)
+        {
+            _loadCancellation?.Cancel();
+            _loadCancellation?.Dispose();
+        }
+
+        var requestCancellation = new CancellationTokenSource();
+        _loadCancellation = requestCancellation;
+        var cancellationToken = requestCancellation.Token;
+        _isLoading = true;
 
         SetBusy(true);
-        LoadMoreButton.Visibility = Visibility.Collapsed;
-        StatusText.Text = append ? T("Bangumi_LoadingMore") : T("Bangumi_Loading");
+        StatusText.Text = append
+            ? T("Bangumi_LoadingMore")
+            : T("Bangumi_Loading");
 
         try
         {
@@ -336,9 +361,7 @@ public sealed partial class BangumiAnimeIndexView : UserControl
 
             _nextOffset = page.Offset + page.Items.Count;
             _total = page.Total;
-            LoadMoreButton.Visibility = page.HasMore
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+            _hasMore = page.HasMore;
 
             if (_items.Count == 0)
             {
@@ -363,13 +386,21 @@ public sealed partial class BangumiAnimeIndexView : UserControl
         {
             if (!append)
                 _items.Clear();
+
             StatusText.Text = append
                 ? T("Bangumi_LoadMoreError")
                 : T("Bangumi_NetworkError");
         }
         finally
         {
-            SetBusy(false);
+            if (ReferenceEquals(_loadCancellation, requestCancellation))
+            {
+                _loadCancellation = null;
+                _isLoading = false;
+                SetBusy(false);
+            }
+
+            requestCancellation.Dispose();
         }
     }
 
@@ -483,7 +514,6 @@ public sealed partial class BangumiAnimeIndexView : UserControl
         RegionFilter.IsEnabled = !busy;
         AudienceFilter.IsEnabled = !busy;
         YearFilter.IsEnabled = !busy;
-        LoadMoreButton.IsEnabled = !busy;
     }
 
     private static string FirstNonEmpty(params string?[] values) =>
