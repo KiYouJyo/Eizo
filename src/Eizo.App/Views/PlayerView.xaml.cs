@@ -645,9 +645,6 @@ public sealed partial class PlayerView : UserControl
 
         SubtitleDocument? automaticPrimaryDocument = null;
         ExternalSubtitleCandidate? automaticPrimaryCandidate = null;
-        var hasInternalSubtitles =
-            engine.Tracks.SubtitleTracks.Count > 0;
-
         // Subtitle slots are preference-driven rather than source-type-driven.
         // An embedded subtitle is preferred when it satisfies the remembered/global
         // primary language; otherwise a matching external subtitle may own the
@@ -768,17 +765,6 @@ public sealed partial class PlayerView : UserControl
                     FindExternalSubtitleCandidate(
                         candidates,
                         settings.PreferredSecondarySubtitleLanguage,
-                        effectivePrimaryUri);
-            }
-            else if (hasInternalSubtitles &&
-                     remembered is { Kind: "external" })
-            {
-                // Migrate the old "external primary" preference into the secondary
-                // slot now that an embedded subtitle owns the primary selector.
-                automaticSecondaryCandidate =
-                    FindExternalSubtitleCandidate(
-                        candidates,
-                        remembered.Language,
                         effectivePrimaryUri);
             }
 
