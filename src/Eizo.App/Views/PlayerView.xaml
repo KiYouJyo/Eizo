@@ -15,30 +15,70 @@
               Value="8" />
       <Setter Property="Margin"
               Value="0,2,12,2" />
-      <!-- The stock ListViewItem template does not consistently apply the
-           container CornerRadius to its selected-state background. Keep the
-           optimized presenter, but bind its actual state surface to the queue
-           item's radius so selection / hover / press all clip identically. -->
+      <!-- Use our own full-width interaction surface. ListViewItemPresenter
+           reserves internal selection chrome even when its checkmark is hidden,
+           which can make the text begin to the left of the visible highlight.
+           The content presenter now sits inside the exact same rounded bounds. -->
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="ListViewItem">
-            <ListViewItemPresenter
-                Content="{TemplateBinding Content}"
-                ContentTemplate="{TemplateBinding ContentTemplate}"
-                ContentTransitions="{TemplateBinding ContentTransitions}"
-                Background="{TemplateBinding Background}"
-                BorderBrush="{TemplateBinding BorderBrush}"
-                BorderThickness="{TemplateBinding BorderThickness}"
-                CornerRadius="{TemplateBinding CornerRadius}"
-                Padding="{TemplateBinding Padding}"
-                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                PointerOverBackground="{ThemeResource SubtleFillColorSecondaryBrush}"
-                PressedBackground="{ThemeResource SubtleFillColorTertiaryBrush}"
-                SelectedBackground="{ThemeResource SubtleFillColorTertiaryBrush}"
-                SelectedPointerOverBackground="{ThemeResource SubtleFillColorSecondaryBrush}"
-                SelectedPressedBackground="{ThemeResource SubtleFillColorTertiaryBrush}"
-                SelectionCheckMarkVisualEnabled="False" />
+            <Grid x:Name="QueueItemRoot"
+                  Background="Transparent">
+              <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup x:Name="CommonStates">
+                  <VisualState x:Name="Normal" />
+                  <VisualState x:Name="PointerOver">
+                    <VisualState.Setters>
+                      <Setter Target="QueueItemBackground.Background"
+                              Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                    </VisualState.Setters>
+                  </VisualState>
+                  <VisualState x:Name="Pressed">
+                    <VisualState.Setters>
+                      <Setter Target="QueueItemBackground.Background"
+                              Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                    </VisualState.Setters>
+                  </VisualState>
+                  <VisualState x:Name="Selected">
+                    <VisualState.Setters>
+                      <Setter Target="QueueItemBackground.Background"
+                              Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                    </VisualState.Setters>
+                  </VisualState>
+                  <VisualState x:Name="PointerOverSelected">
+                    <VisualState.Setters>
+                      <Setter Target="QueueItemBackground.Background"
+                              Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                    </VisualState.Setters>
+                  </VisualState>
+                  <VisualState x:Name="PressedSelected">
+                    <VisualState.Setters>
+                      <Setter Target="QueueItemBackground.Background"
+                              Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                    </VisualState.Setters>
+                  </VisualState>
+                  <VisualState x:Name="Disabled">
+                    <VisualState.Setters>
+                      <Setter Target="QueueItemRoot.Opacity"
+                              Value="0.56" />
+                    </VisualState.Setters>
+                  </VisualState>
+                </VisualStateGroup>
+              </VisualStateManager.VisualStateGroups>
+
+              <Border x:Name="QueueItemBackground"
+                      Background="{TemplateBinding Background}"
+                      BorderBrush="{TemplateBinding BorderBrush}"
+                      BorderThickness="{TemplateBinding BorderThickness}"
+                      CornerRadius="{TemplateBinding CornerRadius}" />
+
+              <ContentPresenter Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                ContentTransitions="{TemplateBinding ContentTransitions}"
+                                Padding="{TemplateBinding Padding}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+            </Grid>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
