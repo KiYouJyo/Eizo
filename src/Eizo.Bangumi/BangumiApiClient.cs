@@ -88,20 +88,69 @@ internal sealed class BangumiApiClient
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(keyword);
+
+        return SearchAnimeAsync(
+            new BangumiAnimeSearchQuery(
+                keyword.Trim(),
+                "match",
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                Year: null),
+            limit,
+            offset,
+            cancellationToken);
+    }
+
+    public Task<string> SearchAnimeAsync(
+        BangumiAnimeSearchQuery search,
+        int limit,
+        int offset,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(search);
         if (limit is < 1 or > 50)
             throw new ArgumentOutOfRangeException(nameof(limit));
         if (offset < 0)
             throw new ArgumentOutOfRangeException(nameof(offset));
 
+        var sort = string.IsNullOrWhiteSpace(search.Sort)
+            ? "rank"
+            : search.Sort.Trim().ToLowerInvariant();
+        if (sort is not ("match" or "heat" or "rank" or "score"))
+            throw new ArgumentOutOfRangeException(nameof(search));
+
+        var filter = new Dictionary<string, object>
+        {
+            ["type"] = new[] { 2 },
+            ["nsfw"] = false,
+        };
+
+        var metaTags = NormalizeSearchValues(search.MetaTags);
+        if (metaTags.Length > 0)
+            filter["meta_tags"] = metaTags;
+
+        var tags = NormalizeSearchValues(search.Tags);
+        if (tags.Length > 0)
+            filter["tag"] = tags;
+
+        if (search.Year is { } year)
+        {
+            if (year is < 1900 or > 2200)
+                throw new ArgumentOutOfRangeException(nameof(search));
+
+            filter["air_date"] = new[]
+            {
+                $">={year:0000}-01-01",
+                $"<{year + 1:0000}-01-01",
+            };
+        }
+
         var body = JsonSerializer.Serialize(
             new
             {
-                keyword = keyword.Trim(),
-                sort = "match",
-                filter = new
-                {
-                    type = new[] { 2 },
-                },
+                keyword = (search.Keyword ?? string.Empty).Trim(),
+                sort,
+                filter,
             });
 
         return SendJsonAsync(
@@ -113,6 +162,15 @@ internal sealed class BangumiApiClient
             body,
             cancellationToken);
     }
+
+    private static string[] NormalizeSearchValues(
+        IReadOnlyList<string>? values) =>
+        values?
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Select(static value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+        ?? Array.Empty<string>();
 
     public Task<string> GetCalendarAsync(
         CancellationToken cancellationToken) =>
