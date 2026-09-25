@@ -22,7 +22,10 @@ foreach ($required in @(
     'VerticalAlignment="Top"',
     'Background="#99000000"',
     'IsHitTestVisible="False"',
-    'x:Name="DirectionSpeedBannerText"')) {
+    'x:Name="DirectionSpeedBannerText"',
+    'x:Name="VolumeBanner"',
+    'x:Name="VolumeBannerText"',
+    'Glyph="&#xE767;"')) {
     if (-not $xaml.Contains($required, [StringComparison]::Ordinal)) {
         throw "Fullscreen speed banner contract missing: $required"
     }
@@ -104,6 +107,9 @@ foreach ($required in @(
     'ShowDirectionSpeedBanner(temporaryRate)',
     'HideDirectionSpeedBanner()',
     'if (wasHold)',
+    'VirtualKey.Up or VirtualKey.Down',
+    'e.Key == VirtualKey.Up ? 0.05d : -0.05d',
+    'ShowVolumeBanner(_volume)',
     'ShowFullscreenControls(restartAutoHide: true)')) {
     if (-not $keyRegion.Value.Contains($required, [StringComparison]::Ordinal)) {
         throw "Direction-hold interaction contract missing: $required"
@@ -120,4 +126,32 @@ if ($hold.Value.Contains('ShowFullscreenControls(', [StringComparison]::Ordinal)
     throw 'Long-press direction speed must not summon fullscreen bottom controls.'
 }
 
-Write-Host 'Eizo 1.3 player subtitle / fullscreen speed / surface-click contract PASS.'
+$wheel = [regex]::Match(
+    $code,
+    'private void PlayerRoot_PointerWheelChanged[\s\S]*?private void PlayerView_Loaded',
+    [System.Text.RegularExpressions.RegexOptions]::Singleline)
+if (-not $wheel.Success) {
+    throw 'Fullscreen wheel-volume handler not found.'
+}
+foreach ($required in @(
+    'SetVolume(_volume + (Math.Sign(delta) * 0.05d))',
+    'ShowVolumeBanner(_volume)')) {
+    if (-not $wheel.Value.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Fullscreen wheel-volume banner contract missing: $required"
+    }
+}
+if ($wheel.Value.Contains('ShowFullscreenControls(', [StringComparison]::Ordinal)) {
+    throw 'Mouse-wheel volume changes must not summon fullscreen bottom controls.'
+}
+
+$volumeBanner = [regex]::Match(
+    $code,
+    'private void ShowVolumeBanner[\s\S]*?private void CancelDirectionKeyGesture',
+    [System.Text.RegularExpressions.RegexOptions]::Singleline)
+if (-not $volumeBanner.Success -or
+    -not $volumeBanner.Value.Contains('_volumeBannerTimer.Start()', [StringComparison]::Ordinal) -or
+    -not $volumeBanner.Value.Contains('VolumeBanner.Visibility = Visibility.Visible', [StringComparison]::Ordinal)) {
+    throw 'Transient top-center volume banner contract missing.'
+}
+
+Write-Host 'Eizo 1.3 player subtitle / fullscreen speed / volume / surface-click contract PASS.'
