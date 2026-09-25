@@ -364,6 +364,13 @@ jobs:
           $releaseJson = gh api "repos/${{ github.repository }}/releases/tags/$tag" 2>&1
           if ($LASTEXITCODE -eq 0 -and $releaseJson) {
             $release = $releaseJson | ConvertFrom-Json
+
+            # Reconcile title/body as well as binary assets. This keeps an
+            # intentional same-version, never-downloaded republish fully
+            # self-consistent before the verification step.
+            & gh release edit $tag --title $title --notes-file $env:RELEASE_NOTES_PATH
+            if ($LASTEXITCODE -ne 0) { throw "GitHub Release metadata reconciliation failed: $LASTEXITCODE" }
+            $release = gh api "repos/${{ github.repository }}/releases/tags/$tag" | ConvertFrom-Json
           }
           elseif (($releaseJson -join ' ') -match '(?i)404|not found') {
             & gh release create $tag --verify-tag --title $title --notes-file $env:RELEASE_NOTES_PATH
