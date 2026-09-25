@@ -26,6 +26,7 @@ public sealed partial class PlayerView : UserControl
     private Task? _detachTask;
     private readonly DispatcherTimer _fullscreenControlsTimer;
     private readonly DispatcherTimer _directionHoldTimer;
+    private readonly DispatcherTimer _volumeBannerTimer;
     private readonly DispatcherTimer _loadingMetricsTimer;
 
     private IPlaybackEngine? _engine;
@@ -186,6 +187,12 @@ public sealed partial class PlayerView : UserControl
             Interval = TimeSpan.FromMilliseconds(420)
         };
         _directionHoldTimer.Tick += DirectionHoldTimer_Tick;
+
+        _volumeBannerTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(900)
+        };
+        _volumeBannerTimer.Tick += VolumeBannerTimer_Tick;
 
         _loadingMetricsTimer = new DispatcherTimer
         {
@@ -2495,7 +2502,7 @@ public sealed partial class PlayerView : UserControl
             return;
 
         SetVolume(_volume + (Math.Sign(delta) * 0.05d));
-        ShowFullscreenControls(restartAutoHide: true);
+        ShowVolumeBanner(_volume);
         e.Handled = true;
     }
 
@@ -2519,8 +2526,10 @@ public sealed partial class PlayerView : UserControl
     {
         _fullscreenControlsTimer.Stop();
         _directionHoldTimer.Stop();
+        _volumeBannerTimer.Stop();
         _loadingMetricsTimer.Stop();
         CancelDirectionKeyGesture(restoreRate: true);
+        HideVolumeBanner();
         EndTimelineScrub();
         RemovePointerWheelHandler();
 
@@ -2591,6 +2600,22 @@ public sealed partial class PlayerView : UserControl
         {
             CancelDirectionKeyGesture(restoreRate: true);
             SetVideoFullscreen(false);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key is VirtualKey.Up or VirtualKey.Down)
+        {
+            if (_engine is null ||
+                _currentSource is null)
+            {
+                return;
+            }
+
+            SetVolume(
+                _volume +
+                (e.Key == VirtualKey.Up ? 0.05d : -0.05d));
+            ShowVolumeBanner(_volume);
             e.Handled = true;
             return;
         }
@@ -2684,6 +2709,7 @@ public sealed partial class PlayerView : UserControl
             return;
         }
 
+        HideVolumeBanner();
         DirectionSpeedBannerText.Text =
             $"{Math.Clamp(rate, 0.5d, 2d):0.##}×";
         DirectionSpeedBanner.Visibility =
@@ -2695,6 +2721,45 @@ public sealed partial class PlayerView : UserControl
         if (DirectionSpeedBanner is not null)
             DirectionSpeedBanner.Visibility =
                 Visibility.Collapsed;
+    }
+
+    private void ShowVolumeBanner(
+        double volume)
+    {
+        if (!_isVideoFullscreen ||
+            VolumeBanner is null ||
+            VolumeBannerText is null)
+        {
+            return;
+        }
+
+        HideDirectionSpeedBanner();
+
+        var percent = (int)Math.Round(
+            Math.Clamp(volume, 0d, 1d) * 100d,
+            MidpointRounding.AwayFromZero);
+
+        VolumeBannerText.Text = $"{percent}%";
+        VolumeBanner.Visibility = Visibility.Visible;
+
+        _volumeBannerTimer.Stop();
+        _volumeBannerTimer.Start();
+    }
+
+    private void HideVolumeBanner()
+    {
+        _volumeBannerTimer.Stop();
+
+        if (VolumeBanner is not null)
+            VolumeBanner.Visibility =
+                Visibility.Collapsed;
+    }
+
+    private void VolumeBannerTimer_Tick(
+        object? sender,
+        object e)
+    {
+        HideVolumeBanner();
     }
 
     private void CancelDirectionKeyGesture(
@@ -2789,6 +2854,7 @@ public sealed partial class PlayerView : UserControl
     {
         _fullscreenControlsTimer.Stop();
         HideDirectionSpeedBanner();
+        HideVolumeBanner();
         _sidebarVisibleInFullscreen = false;
         _hasPointerPosition = false;
 
