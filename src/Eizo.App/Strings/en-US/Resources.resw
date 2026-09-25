@@ -933,6 +933,15 @@
   <data name="Bangumi_SeasonLabelFormat" xml:space="preserve">
     <value>{0} {1}</value>
   </data>
+  <data name="Bangumi_SeasonPickerTitle" xml:space="preserve">
+    <value>Select year and season</value>
+  </data>
+  <data name="Bangumi_SeasonPickerYear" xml:space="preserve">
+    <value>Year</value>
+  </data>
+  <data name="Bangumi_SeasonPickerSeason" xml:space="preserve">
+    <value>Season</value>
+  </data>
 
   <data name="Bangumi_FollowingSubtitle" xml:space="preserve">
     <value>Anime marked Watching on your Bangumi account</value>

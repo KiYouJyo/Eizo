@@ -18,6 +18,7 @@ $client = Read-Text 'src/Eizo.Bangumi/BangumiApiClient.cs'
 $repository = Read-Text 'src/Eizo.Bangumi/BangumiRepository.cs'
 $parser = Read-Text 'src/Eizo.Bangumi/BangumiJsonParser.cs'
 $view = Read-Text 'src/Eizo.App/Views/BangumiPublicView.xaml.cs'
+$viewXaml = Read-Text 'src/Eizo.App/Views/BangumiPublicView.xaml'
 $detail = Read-Text 'src/Eizo.App/Views/BangumiSubjectDetailView.xaml.cs'
 $homeView = Read-Text 'src/Eizo.App/Views/HomeView.xaml.cs'
 $shell = Read-Text 'src/Eizo.App/MainWindow.xaml.cs'
@@ -81,11 +82,26 @@ foreach ($required in @(
     'GetRankedAnimeForSeasonAsync',
     'PreviousSeasonButton_Click',
     'NextSeasonButton_Click',
+    'SeasonPickerButton_Click',
+    'new ContentDialog',
+    'XamlRoot = XamlRoot',
+    'new ComboBox',
+    'new RadioButtons',
+    'SeasonPickerOption',
     'LoadMoreButton_Click',
     'SubjectRequested?.Invoke',
     'Bangumi_StaleCacheFormat')) {
     if (-not $view.Contains($required, [StringComparison]::Ordinal)) {
         throw "Bangumi public view contract missing: $required"
+    }
+}
+
+foreach ($required in @(
+    'x:Name="SeasonPickerButton"',
+    'Click="SeasonPickerButton_Click"',
+    'x:Name="SelectedSeasonText"')) {
+    if (-not $viewXaml.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Bangumi seasonal picker XAML contract missing: $required"
     }
 }
 

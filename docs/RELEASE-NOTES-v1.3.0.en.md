@@ -21,6 +21,7 @@ Eizo 1.3 removes the standalone Bangumi Anime Blogs workspace and replaces that 
 - Moved Ranking & Discover directly below Anime Search and replaced the duplicate search glyph with a dedicated discovery/star icon.
 - Moved the six Anime Search filter groups from the right sidebar into full-width horizontal rows above the results.
 - Removed the Load More button; reaching the end of the list automatically loads the next 50 entries.
+- Made the Seasonal Anime season strip clickable; a native WinUI 3 year/season picker lets users jump directly to a chosen year and Winter/Spring/Summer/Fall season.
 - When embedded subtitles exist, the primary subtitle selector is reserved for embedded tracks; the primary position/background controls stay disabled and a note explains that embedded-subtitle styling cannot be adjusted. External subtitles are selected from the secondary subtitle section.
 - Fullscreen left/right long-press temporary speed no longer summons the bottom controls; a compact translucent top-center speed banner is shown instead.
 - Clicking the video surface toggles play/pause in both windowed and fullscreen modes.

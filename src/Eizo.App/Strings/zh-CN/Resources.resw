@@ -933,6 +933,15 @@
   <data name="Bangumi_SeasonLabelFormat" xml:space="preserve">
     <value>{0} {1}季</value>
   </data>
+  <data name="Bangumi_SeasonPickerTitle" xml:space="preserve">
+    <value>选择年度和季度</value>
+  </data>
+  <data name="Bangumi_SeasonPickerYear" xml:space="preserve">
+    <value>年度</value>
+  </data>
+  <data name="Bangumi_SeasonPickerSeason" xml:space="preserve">
+    <value>季度</value>
+  </data>
 
   <data name="Bangumi_FollowingSubtitle" xml:space="preserve">
     <value>来自 Bangumi 账户的“在看”动画</value>

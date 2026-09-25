@@ -40,6 +40,14 @@ public sealed partial class BangumiPublicView : UserControl
     private int _selectedSeasonStartMonth;
     private int _discoverNextOffset;
 
+    private sealed record SeasonPickerOption(
+        int StartMonth,
+        string Label)
+    {
+        public override string ToString() =>
+            Label;
+    }
+
     internal BangumiPublicView(BangumiPublicPageKind kind)
     {
         _kind = kind;
@@ -172,6 +180,91 @@ public sealed partial class BangumiPublicView : UserControl
     {
         ShiftSeason(1);
         await LoadAsync(forceRefresh: false);
+    }
+
+    private async void SeasonPickerButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_kind != BangumiPublicPageKind.Seasonal ||
+            XamlRoot is null)
+        {
+            return;
+        }
+
+        var yearOptions = Enumerable
+            .Range(2000, (DateTimeOffset.Now.Year + 2) - 2000)
+            .Reverse()
+            .ToArray();
+
+        var yearCombo = new ComboBox
+        {
+            Header = T("Bangumi_SeasonPickerYear"),
+            ItemsSource = yearOptions,
+            SelectedItem = _selectedSeasonYear,
+            MinWidth = 220,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+
+        var seasonOptions = new[]
+        {
+            new SeasonPickerOption(1, SeasonName(1)),
+            new SeasonPickerOption(4, SeasonName(4)),
+            new SeasonPickerOption(7, SeasonName(7)),
+            new SeasonPickerOption(10, SeasonName(10)),
+        };
+
+        var seasonButtons = new RadioButtons
+        {
+            Header = T("Bangumi_SeasonPickerSeason"),
+            ItemsSource = seasonOptions,
+            SelectedIndex = Array.FindIndex(
+                seasonOptions,
+                option =>
+                    option.StartMonth ==
+                    _selectedSeasonStartMonth),
+            MaxColumns = 4,
+        };
+
+        var content = new StackPanel
+        {
+            Spacing = 14,
+            MinWidth = 360,
+        };
+        content.Children.Add(yearCombo);
+        content.Children.Add(seasonButtons);
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = T("Bangumi_SeasonPickerTitle"),
+            PrimaryButtonText = T("Common_Confirm"),
+            CloseButtonText = T("Common_Cancel"),
+            DefaultButton = ContentDialogButton.Primary,
+            Content = content,
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result != ContentDialogResult.Primary ||
+            yearCombo.SelectedItem is not int year ||
+            seasonButtons.SelectedItem is not
+                SeasonPickerOption season)
+        {
+            return;
+        }
+
+        var changed =
+            year != _selectedSeasonYear ||
+            season.StartMonth !=
+                _selectedSeasonStartMonth;
+
+        _selectedSeasonYear = year;
+        _selectedSeasonStartMonth =
+            season.StartMonth;
+        UpdateSeasonHeader();
+
+        if (changed)
+            await LoadAsync(forceRefresh: false);
     }
 
     private async void CurrentSeasonButton_Click(
@@ -425,6 +518,7 @@ public sealed partial class BangumiPublicView : UserControl
             busy ? Visibility.Visible : Visibility.Collapsed;
         RefreshButton.IsEnabled = !busy;
         PreviousSeasonButton.IsEnabled = !busy;
+        SeasonPickerButton.IsEnabled = !busy;
         NextSeasonButton.IsEnabled = !busy;
         CurrentSeasonButton.IsEnabled = !busy;
         DiscoverScopeCombo.IsEnabled = !busy;
