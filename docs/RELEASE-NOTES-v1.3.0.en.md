@@ -18,6 +18,9 @@ Eizo 1.3 removes the standalone Bangumi Anime Blogs workspace and replaces that 
 - Search results continue into the existing Eizo Bangumi subject-detail flow, including collection and community features.
 - Cards prefer the original/native title and show the Chinese title as the secondary label.
 - Added a v1.3 anime-index regression contract and advanced Bangumi-search unit coverage.
+- When embedded subtitles exist, the primary subtitle selector is reserved for embedded tracks and external subtitles are selected from the secondary subtitle section.
+- Fullscreen left/right long-press temporary speed no longer summons the bottom controls; a compact translucent top-center speed banner is shown instead.
+- Clicking the video surface toggles play/pause in both windowed and fullscreen modes.
 - Bumped product / MSIX versions to 1.3.0 / 1.3.0.0.
 
 ## Acceptance focus
