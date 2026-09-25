@@ -39,6 +39,26 @@ foreach ($required in @(
     }
 }
 
+$availability = [regex]::Match(
+    $code,
+    'private void UpdateControlAvailability\(\)[\s\S]*?private void FullscreenButton_Click',
+    [System.Text.RegularExpressions.RegexOptions]::Singleline)
+if (-not $availability.Success) {
+    throw 'Player subtitle control-availability region not found.'
+}
+foreach ($required in @(
+    'var primaryExternalOverlayActive =',
+    'var primaryNativeSubtitleActive =',
+    'PrimarySubtitlePositionSlider.IsEnabled =',
+    'primaryExternalOverlayActive;',
+    'PrimarySubtitleOpacitySlider.IsEnabled =',
+    'PrimarySubtitleNativeHint.Visibility =',
+    'primaryNativeSubtitleActive')) {
+    if (-not $availability.Value.Contains($required, [StringComparison]::Ordinal)) {
+        throw "Embedded subtitle style-lock contract missing: $required"
+    }
+}
+
 $rebuild = [regex]::Match(
     $code,
     'private void RebuildSubtitleCombo\(IPlaybackTrackController tracks\)[\s\S]*?private void RebuildSecondarySubtitleCombo',
