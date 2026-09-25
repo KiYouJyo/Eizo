@@ -1184,17 +1184,44 @@
   <data name="Bangumi_CreateTopicContentPlaceholder" xml:space="preserve">
     <value>写下讨论正文（支持 Bangumi BBCode）…</value>
   </data>
-  <data name="Nav_AnimeBlogs" xml:space="preserve">
-    <value>动画日志</value>
+  <data name="Nav_AnimeIndex" xml:space="preserve">
+    <value>动漫搜索</value>
   </data>
-  <data name="Bangumi_AnimeBlogsSubtitle" xml:space="preserve">
-    <value>来自 Bangumi 动画频道的最新日志与评论。</value>
+  <data name="Bangumi_AnimeIndexSubtitle" xml:space="preserve">
+    <value>搜索并筛选 Bangumi 动画索引库。</value>
   </data>
-  <data name="Bangumi_AnimeBlogsEmpty" xml:space="preserve">
-    <value>暂无动画日志。</value>
+  <data name="Bangumi_AnimeSearchPlaceholder" xml:space="preserve">
+    <value>搜索动画名称、原名或关键词…</value>
   </data>
-  <data name="Bangumi_AnimeBlogsCountFormat" xml:space="preserve">
-    <value>已显示 {0} / {1} 篇日志</value>
+  <data name="Bangumi_Search" xml:space="preserve">
+    <value>搜索</value>
+  </data>
+  <data name="Bangumi_ResetFilters" xml:space="preserve">
+    <value>重置筛选</value>
+  </data>
+  <data name="Bangumi_FilterTitle" xml:space="preserve">
+    <value>筛选</value>
+  </data>
+  <data name="Bangumi_FilterFormat" xml:space="preserve">
+    <value>分类</value>
+  </data>
+  <data name="Bangumi_FilterSource" xml:space="preserve">
+    <value>来源</value>
+  </data>
+  <data name="Bangumi_FilterGenre" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="Bangumi_FilterRegion" xml:space="preserve">
+    <value>地区</value>
+  </data>
+  <data name="Bangumi_FilterAudience" xml:space="preserve">
+    <value>受众</value>
+  </data>
+  <data name="Bangumi_FilterYear" xml:space="preserve">
+    <value>时间</value>
+  </data>
+  <data name="Bangumi_AnimeIndexCountFormat" xml:space="preserve">
+    <value>已显示 {0} / {1} 部动画</value>
   </data>
   <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
     <value>正在回复 {0}</value>

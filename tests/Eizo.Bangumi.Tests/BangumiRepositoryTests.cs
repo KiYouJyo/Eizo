@@ -475,6 +475,63 @@ public sealed class BangumiRepositoryTests
 
 
     [Fact]
+    public async Task SearchAnime_IndexFiltersMapToBangumiSubjectSearch()
+    {
+        string? requestBody = null;
+        var handler = new CallbackHandler(request =>
+        {
+            requestBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return JsonResponse("""
+            {
+              "total": 0,
+              "limit": 30,
+              "offset": 0,
+              "data": []
+            }
+            """);
+        });
+
+        var cacheRoot = CreateTempDirectory();
+        try
+        {
+            using var client = CreateClient(handler);
+            var repository = new BangumiRepository(
+                new BangumiApiClient(client),
+                new BangumiCacheStore(cacheRoot));
+
+            var result = await repository.SearchAnimeAsync(
+                new BangumiAnimeSearchQuery(
+                    "",
+                    "heat",
+                    new[] { "TV", "原创" },
+                    new[] { "科幻", "日本" },
+                    2026),
+                limit: 30,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.Empty(result.Items);
+            using var requestJson = System.Text.Json.JsonDocument.Parse(requestBody!);
+            var root = requestJson.RootElement;
+            var filter = root.GetProperty("filter");
+
+            Assert.Equal("heat", root.GetProperty("sort").GetString());
+            Assert.Equal("", root.GetProperty("keyword").GetString());
+            Assert.Equal(2, filter.GetProperty("type")[0].GetInt32());
+            Assert.False(filter.GetProperty("nsfw").GetBoolean());
+            Assert.Equal("TV", filter.GetProperty("meta_tags")[0].GetString());
+            Assert.Equal("原创", filter.GetProperty("meta_tags")[1].GetString());
+            Assert.Equal("科幻", filter.GetProperty("tag")[0].GetString());
+            Assert.Equal("日本", filter.GetProperty("tag")[1].GetString());
+            Assert.Equal(">=2026-01-01", filter.GetProperty("air_date")[0].GetString());
+            Assert.Equal("<2027-01-01", filter.GetProperty("air_date")[1].GetString());
+        }
+        finally
+        {
+            Directory.Delete(cacheRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task SubjectCollection_ReadsBearerTokenAndCurrentType()
     {
         const string token = "secret-test-token";

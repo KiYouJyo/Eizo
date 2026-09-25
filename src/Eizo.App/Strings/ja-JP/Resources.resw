@@ -1184,17 +1184,44 @@
   <data name="Bangumi_CreateTopicContentPlaceholder" xml:space="preserve">
     <value>本文を入力（Bangumi BBCode 対応）…</value>
   </data>
-  <data name="Nav_AnimeBlogs" xml:space="preserve">
-    <value>アニメログ</value>
+  <data name="Nav_AnimeIndex" xml:space="preserve">
+    <value>アニメ検索</value>
   </data>
-  <data name="Bangumi_AnimeBlogsSubtitle" xml:space="preserve">
-    <value>Bangumi アニメチャンネルの最新ログ・レビュー。</value>
+  <data name="Bangumi_AnimeIndexSubtitle" xml:space="preserve">
+    <value>Bangumi のアニメインデックスを検索・絞り込みします。</value>
   </data>
-  <data name="Bangumi_AnimeBlogsEmpty" xml:space="preserve">
-    <value>アニメログはありません。</value>
+  <data name="Bangumi_AnimeSearchPlaceholder" xml:space="preserve">
+    <value>作品名・原題・キーワードを検索…</value>
   </data>
-  <data name="Bangumi_AnimeBlogsCountFormat" xml:space="preserve">
-    <value>{0} / {1} 件を表示</value>
+  <data name="Bangumi_Search" xml:space="preserve">
+    <value>検索</value>
+  </data>
+  <data name="Bangumi_ResetFilters" xml:space="preserve">
+    <value>絞り込みをリセット</value>
+  </data>
+  <data name="Bangumi_FilterTitle" xml:space="preserve">
+    <value>絞り込み</value>
+  </data>
+  <data name="Bangumi_FilterFormat" xml:space="preserve">
+    <value>分類</value>
+  </data>
+  <data name="Bangumi_FilterSource" xml:space="preserve">
+    <value>原作</value>
+  </data>
+  <data name="Bangumi_FilterGenre" xml:space="preserve">
+    <value>ジャンル</value>
+  </data>
+  <data name="Bangumi_FilterRegion" xml:space="preserve">
+    <value>地域</value>
+  </data>
+  <data name="Bangumi_FilterAudience" xml:space="preserve">
+    <value>対象</value>
+  </data>
+  <data name="Bangumi_FilterYear" xml:space="preserve">
+    <value>年</value>
+  </data>
+  <data name="Bangumi_AnimeIndexCountFormat" xml:space="preserve">
+    <value>{0} / {1} 作品を表示</value>
   </data>
   <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
     <value>{0} に返信中</value>

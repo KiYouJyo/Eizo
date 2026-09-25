@@ -1184,17 +1184,44 @@
   <data name="Bangumi_CreateTopicContentPlaceholder" xml:space="preserve">
     <value>Write your discussion (Bangumi BBCode supported)…</value>
   </data>
-  <data name="Nav_AnimeBlogs" xml:space="preserve">
-    <value>Anime Blogs</value>
+  <data name="Nav_AnimeIndex" xml:space="preserve">
+    <value>Anime Search</value>
   </data>
-  <data name="Bangumi_AnimeBlogsSubtitle" xml:space="preserve">
-    <value>Latest blogs and reviews from Bangumi's anime channel.</value>
+  <data name="Bangumi_AnimeIndexSubtitle" xml:space="preserve">
+    <value>Search and filter the Bangumi anime index.</value>
   </data>
-  <data name="Bangumi_AnimeBlogsEmpty" xml:space="preserve">
-    <value>No anime blogs are available.</value>
+  <data name="Bangumi_AnimeSearchPlaceholder" xml:space="preserve">
+    <value>Search titles, original names, or keywords…</value>
   </data>
-  <data name="Bangumi_AnimeBlogsCountFormat" xml:space="preserve">
-    <value>Showing {0} of {1} blogs</value>
+  <data name="Bangumi_Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Bangumi_ResetFilters" xml:space="preserve">
+    <value>Reset filters</value>
+  </data>
+  <data name="Bangumi_FilterTitle" xml:space="preserve">
+    <value>Filters</value>
+  </data>
+  <data name="Bangumi_FilterFormat" xml:space="preserve">
+    <value>Format</value>
+  </data>
+  <data name="Bangumi_FilterSource" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Bangumi_FilterGenre" xml:space="preserve">
+    <value>Genre</value>
+  </data>
+  <data name="Bangumi_FilterRegion" xml:space="preserve">
+    <value>Region</value>
+  </data>
+  <data name="Bangumi_FilterAudience" xml:space="preserve">
+    <value>Audience</value>
+  </data>
+  <data name="Bangumi_FilterYear" xml:space="preserve">
+    <value>Year</value>
+  </data>
+  <data name="Bangumi_AnimeIndexCountFormat" xml:space="preserve">
+    <value>Showing {0} of {1} anime</value>
   </data>
   <data name="Bangumi_ReplyingToFormat" xml:space="preserve">
     <value>Replying to {0}</value>

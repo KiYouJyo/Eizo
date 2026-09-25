@@ -104,6 +104,27 @@ public sealed class BangumiRepository
         return BangumiJsonParser.ParsePagedSubjectPage(payload);
     }
 
+    public async Task<BangumiSubjectPage> SearchAnimeAsync(
+        BangumiAnimeSearchQuery search,
+        int limit = 30,
+        int offset = 0,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(search);
+        if (limit is < 1 or > 50)
+            throw new ArgumentOutOfRangeException(nameof(limit));
+        if (offset < 0)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+
+        var payload = await _client.SearchAnimeAsync(
+            search,
+            limit,
+            offset,
+            cancellationToken);
+
+        return BangumiJsonParser.ParsePagedSubjectPage(payload);
+    }
+
     public Task<BangumiLoadResult<BangumiSubjectPage>>
         GetRankedAnimeAsync(
             int offset = 0,

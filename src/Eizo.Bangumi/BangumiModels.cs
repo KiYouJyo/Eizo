@@ -38,6 +38,13 @@ public sealed record BangumiSubjectPage(
         Offset + Items.Count < Total;
 }
 
+public sealed record BangumiAnimeSearchQuery(
+    string Keyword,
+    string Sort,
+    IReadOnlyList<string> MetaTags,
+    IReadOnlyList<string> Tags,
+    int? Year);
+
 public sealed record BangumiSubjectDetail(
     BangumiSubjectCard Card,
     IReadOnlyList<string> MetaTags,

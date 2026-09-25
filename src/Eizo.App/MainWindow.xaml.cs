@@ -254,7 +254,7 @@ public sealed partial class MainWindow : Window
     {
         HomeNav.Content = T("Nav_Home");
         BangumiNav.Content = T("Nav_Bangumi");
-        AnimeBlogsNav.Content = T("Nav_AnimeBlogs");
+        AnimeIndexNav.Content = T("Nav_AnimeIndex");
         CalendarNav.Content = T("Nav_BroadcastCalendar");
         SeasonalNav.Content = T("Nav_SeasonalAnime");
         DiscoverNav.Content = T("Nav_RankDiscover");
@@ -342,10 +342,10 @@ public sealed partial class MainWindow : Window
                 WireWorkspaceMediaView(view);
                 return view;
             }
-            case "bangumi-anime-blogs":
+            case "bangumi-anime-index":
             {
-                var view = new BangumiAnimeBlogsView();
-                WireBangumiAnimeBlogsView(view);
+                var view = new BangumiAnimeIndexView();
+                WireBangumiAnimeIndexView(view);
                 return view;
             }
             case "bangumi-calendar":
@@ -552,29 +552,11 @@ public sealed partial class MainWindow : Window
             select: true);
     }
 
-    private void WireBangumiAnimeBlogsView(
-        BangumiAnimeBlogsView view)
+    private void WireBangumiAnimeIndexView(
+        BangumiAnimeIndexView view)
     {
-        view.BlogRequested += (_, blog) =>
-            OpenBangumiChannelBlog(blog);
-    }
-
-    private void OpenBangumiChannelBlog(
-        Eizo.Bangumi.BangumiChannelBlog blog)
-    {
-        var review = new Eizo.Bangumi.BangumiSubjectReview(
-            blog.EntryId,
-            blog.User,
-            blog.EntryId,
-            blog.Title,
-            blog.Summary,
-            blog.ReplyCount,
-            blog.CreatedAt,
-            blog.UpdatedAt);
-
-        OpenBangumiReview(
-            review,
-            subject: null);
+        view.SubjectRequested += (_, subject) =>
+            OpenBangumiSubject(subject);
     }
 
     private void WireBangumiPublicView(BangumiPublicView view)
@@ -706,7 +688,7 @@ public sealed partial class MainWindow : Window
     private (string Title, string Glyph) DescribeWorkspacePage(string pageKey) => pageKey switch
     {
         "home" => (T("Nav_Home"), "\uE80F"),
-        "bangumi-anime-blogs" => (T("Nav_AnimeBlogs"), "\uE8A5"),
+        "bangumi-anime-index" => (T("Nav_AnimeIndex"), "\uE721"),
         "bangumi-calendar" => (T("Nav_BroadcastCalendar"), "\uE787"),
         "bangumi-seasonal" => (T("Nav_SeasonalAnime"), "\uE8B2"),
         "bangumi-discover" => (T("Nav_RankDiscover"), "\uE721"),
