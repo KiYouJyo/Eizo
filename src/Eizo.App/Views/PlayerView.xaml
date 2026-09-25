@@ -14,7 +14,7 @@
       <Setter Property="CornerRadius"
               Value="8" />
       <Setter Property="Margin"
-              Value="0,2" />
+              Value="0,2,12,2" />
       <!-- The stock ListViewItem template does not consistently apply the
            container CornerRadius to its selected-state background. Keep the
            optimized presenter, but bind its actual state surface to the queue
@@ -510,7 +510,10 @@
                   SelectionMode="Single"
                   SelectedIndex="-1"
                   SelectionChanged="QueueList_SelectionChanged"
-                  ItemContainerStyle="{StaticResource PlaybackQueueListItemStyle}">
+                  ItemContainerStyle="{StaticResource PlaybackQueueListItemStyle}"
+                  ScrollViewer.HorizontalScrollMode="Disabled"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  ScrollViewer.VerticalScrollBarVisibility="Auto">
           <ListView.ItemTemplate>
             <DataTemplate x:DataType="models:PlaybackQueueItemModel">
               <Grid Height="58" ColumnDefinitions="44,*">
@@ -518,9 +521,17 @@
                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                            VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1"
+                            MinWidth="0"
+                            HorizontalAlignment="Stretch"
                             VerticalAlignment="Center">
-                  <TextBlock Text="{x:Bind Title}" Style="{StaticResource CardTitleText}" />
-                  <TextBlock Text="{x:Bind Status}" Style="{StaticResource MetadataText}" />
+                  <TextBlock Text="{x:Bind Title}"
+                             Style="{StaticResource CardTitleText}"
+                             TextWrapping="NoWrap"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{x:Bind Status}"
+                             Style="{StaticResource MetadataText}"
+                             TextWrapping="NoWrap"
+                             TextTrimming="CharacterEllipsis" />
                 </StackPanel>
               </Grid>
             </DataTemplate>

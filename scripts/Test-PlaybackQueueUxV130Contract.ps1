@@ -34,6 +34,7 @@ foreach ($required in @(
     'BasedOn="{StaticResource SourceListItemStyle}"',
     '<Setter Property="CornerRadius"',
     'Value="8"',
+    'Value="0,2,12,2"',
     '<Setter Property="Template">',
     '<ControlTemplate TargetType="ListViewItem">',
     '<ListViewItemPresenter',
@@ -42,7 +43,13 @@ foreach ($required in @(
     'SelectedPointerOverBackground="{ThemeResource SubtleFillColorSecondaryBrush}"',
     'SelectedPressedBackground="{ThemeResource SubtleFillColorTertiaryBrush}"',
     'SelectionCheckMarkVisualEnabled="False"',
-    'ItemContainerStyle="{StaticResource PlaybackQueueListItemStyle}"')) {
+    'ItemContainerStyle="{StaticResource PlaybackQueueListItemStyle}"',
+    'ScrollViewer.HorizontalScrollMode="Disabled"',
+    'ScrollViewer.HorizontalScrollBarVisibility="Disabled"',
+    'ScrollViewer.VerticalScrollBarVisibility="Auto"',
+    'MinWidth="0"',
+    'TextWrapping="NoWrap"',
+    'TextTrimming="CharacterEllipsis"')) {
     if (-not $player.Contains($required, [StringComparison]::Ordinal)) {
         throw "Playback queue rounded selection contract missing: $required"
     }
